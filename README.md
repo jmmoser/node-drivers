@@ -1,4 +1,4 @@
-Exmaples can be found in the examples folder.
+Examples can be found in the examples folder.
 
 Current Drivers:
 - Modbus
