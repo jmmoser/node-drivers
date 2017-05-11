@@ -11,7 +11,7 @@ let cipLayer = new CIPLayer(eipLayer);
 let pcccObject = new PCCC(cipLayer);
 
 pcccObject.typedRead('N10:47', function(err, value) {
-  console.log(tag.scale(value));
+  console.log(value);
 
   tcpLayer.close(function() {
     console.log('closed');
