@@ -1,7 +1,3 @@
-## *Note*
-
-The NPM package does not currently include src.  I should be able to include it soon.
-
 # Install
 
 ```sh
