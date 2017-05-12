@@ -11,5 +11,6 @@
     "url": "https://github.com/jmmoser/node-drivers.git"
   },
   "author": "Justin Moser",
-  "dependencies": {}
+  "dependencies": {},
+  "license": "MIT"
 }
