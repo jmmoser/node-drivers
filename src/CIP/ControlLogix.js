@@ -25,6 +25,32 @@ class ControlLogix extends Connection {
       }
     });
   }
+
+  WriteTag(address, value, callback) {
+    if (!address || !callback) return;
+
+    let path = MessageRouter.ANSIExtSymbolSegment(address);
+    // let data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
+    // let data = Buffer.from([0xC4, 0x00, 0x01, 0x00])
+    let data = Buffer.alloc(8);
+    data.writeUInt16LE(DataTypes.Float, 0);
+    data.writeUInt16LE(1, 2);
+    data.writeFloatLE(value, 4);
+
+    let request = MessageRouter.Request(Services.WriteTag, path, data);
+
+    this.send(request, function(message) {
+      let reply = MessageRouter.Reply(message);
+      // let dataType = reply.Data.readUInt16LE(0);
+      // let dataConverter = DataConverters[dataType];
+      // if (dataConverter) {
+      //   callback(null, dataConverter(reply.Data, 2));
+      // } else {
+      //   callback('ControlLogix Error: No converter for data type: ' + dataType);
+      // }
+      callback(null, reply);
+    });
+  }
 }
 
 module.exports = ControlLogix;
@@ -40,6 +66,15 @@ const Services = {
 
   MultipleServicePacket: 0x0A // used to combine multiple requests in one message frame
 };
+
+const DataTypes = {
+  Byte: 0xC1,
+  Char: 0xC2,
+  Short: 0xC3,
+  Integer: 0xC4,
+  Float: 0xCA,
+  UnsignedInteger: 0xD3
+}
 
 const DataConverters = {
   0x00C1: function(buffer, offset) {
