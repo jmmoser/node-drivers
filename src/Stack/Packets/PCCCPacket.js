@@ -49,7 +49,7 @@ function TypedReadReplyParserArray(data) {
       break;
     case 4:
       readFunction = function(data, offset) {
-        return data.readUInt16LE(offset);
+        return data.readInt16LE(offset); // return data.readUInt16LE(offset);
       };
       break;
     case 8:
@@ -370,7 +370,8 @@ class PCCCPacket {
     return TypedReadReplyParser(data);
   }
 
-  static TypedWriteRequest(transaction, address, items) {
+
+  static TypedWriteRequest(transaction, address, items, values) {
     let packet = new PCCCPacket();
     packet.Command = 0x0F;
     packet.Transaction = transaction;
@@ -383,9 +384,18 @@ class PCCCPacket {
     offset += logicalASCIIAddress(address, data.slice(offset));
     data.writeUInt16LE(items, offset); offset += 2;
 
-    // not finished
+    let info = logicalASCIIAddressInfo(address);
 
-    packet.Data = data.slice(0, offset);
+    let dataTypeSize = info.size; // PCCCDataTypeSize[dataTypeSize];
+    let writeBuffer = new Buffer.alloc(items * dataTypeSize);
+    // let func = PCCCWriteFunction(buffer, dataType);
+
+    for (let i = 0; i < items; i++) {
+      // func(values[i], i * dataTypeSize);
+      info.writeFunction(buffer, i * dataTypeSize, values[i]);
+    }
+
+    packet.Data = Buffer.concat([data, writeBuffer], offset + items * dataTypeSize);
 
     return packet.toBuffer();
   }
@@ -441,16 +451,28 @@ function logicalASCIIAddressInfo(address) {
   		info.addrtype = prefix;
   		info.datatype = "INT";
   		info.size = 2;
+      // info.writeFunction = function(value, buffer, offset) {
+      //   buffer.writeInt16LE(value, offset);
+      // };
+      // info.readFunction = function(buffer, offset) {
+      //   return buffer.readInt16LE(offset);
+      // };
+      info.writeFunction = (buffer, offset, value) => buffer.writeInt16LE(value, offset);
+      info.readFunction = (buffer, offset) => buffer.readInt16LE(offset);
   		break;
   	case "L": // Micrologix Only
   		info.addrtype = prefix;
   		info.datatype = "DINT";
   		info.size = 4;
+      info.writeFunction = (buffer, offset, value) => buffer.writeInt32LE(value, offset);
+      info.readFunction = (buffer, offset) => buffer.readInt32LE(offset);
   		break;
   	case "F":
   		info.addrtype = prefix;
   		info.datatype = "REAL";
   		info.size = 4;
+      info.writeFunction = (buffer, offset, value) => buffer.writeFloatLE(value, offset);
+      info.readFunction = (buffer, offset) => buffer.readFloatLE(offset);
   		break;
   	case "T":
   		info.addrtype = prefix;
@@ -504,6 +526,35 @@ const PCCCDataType = {
   String: 0x1e,
   BlockTransfer: 0x20
 };
+
+const PCCCDataTypeSize = {
+  1: 1,
+  2: 1,
+  3: 1,
+  4: 2,
+  5: 6,
+  6: 6,
+  7: 6,
+  8: 4
+};
+
+// function PCCCWriteFunction(buffer, dataType) {
+//   let func;
+//   switch (dataType) {
+//     case 3:
+//       func = buffer.writeUInt8.bind(buffer);
+//       break;
+//     case 4:
+//       func = buffer.writeInt32LE.bind(buffer);
+//       break;
+//     case 8:
+//       func = buffer.writeFloatLE.bind(buffer);
+//       break;
+//     default:
+//
+//   }
+//   return func;
+// }
 
 
 const PCCCDataTypes = {
