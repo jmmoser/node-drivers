@@ -343,16 +343,6 @@ class PCCCPacket {
     return packet.toBuffer();
   }
 
-  static TypeReadReply(buffer) {
-    let packet = PCCCPacket.fromBufferReply(buffer);
-    if (packet.Status !== 0) {
-      return packet;
-    }
-
-    // handle packet.Data read data
-    return packet;
-  }
-
   static ParseTypedReadData(data) {
     return TypedReadReplyParser(data);
   }
