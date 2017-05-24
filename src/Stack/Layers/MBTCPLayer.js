@@ -55,7 +55,6 @@ class MBTCPLayer extends Layer {
   }
 
   writeMultipleCoils(unitID, address, values, callback) {
-
     let byteCount = Math.ceil(values.length / 8);
 
     for (let i = 0; i < values.length; i++) {
@@ -66,9 +65,10 @@ class MBTCPLayer extends Layer {
     this._send(unitID, data, callback);
   }
 
-  writeSingleRegister(unitID, address, values, callback) {
+  writeSingleRegister(unitID, address, value, callback) {
     const fn = MBPacket.Functions.WriteSingleRegister;
-
+    let data = this._writeRequest(fn, address, [value]);
+    this._send(unitID, data, callback);
   }
 
   writeMultipleRegisters(unitID, address, values, callback) {
@@ -84,15 +84,28 @@ class MBTCPLayer extends Layer {
     return buffer;
   }
 
+  // _writeRequest(functionCode, startingAddress, values) {
+  //   let buffer = Buffer.alloc(3 + 2 * values.length);
+  //   buffer.writeUInt8(functionCode, 0);
+  //   buffer.writeUInt16BE(startingAddress, 1);
+  //   for (let i = 0; i < values.length; i++) {
+  //     buffer.writeUInt16BE(values[i], 3 + 2 * i);
+  //   }
+  //   return buffer;
+  // }
+
   _writeRequest(functionCode, startingAddress, values) {
     let buffer = Buffer.alloc(3 + 2 * values.length);
     buffer.writeUInt8(functionCode, 0);
     buffer.writeUInt16BE(startingAddress, 1);
     for (let i = 0; i < values.length; i++) {
-      buffer.writeUInt16BE(values[i], 3 + 2 * i);
+      values[i].copy(buffer, 2 * i + 3, 0, 2);
+      // buffer.writeUInt16BE(values[i], 3 + 2 * i);
     }
     return buffer;
   }
+
+
 
 
   _incrementTransactionCounter() {
@@ -109,6 +122,9 @@ class MBTCPLayer extends Layer {
     packet.unitID = unitID;
     packet.data = data;
 
+    // console.log(packet.toBuffer());
+
+    // console.log(packet);
     // console.log(packet.toBuffer());
 
     this.send(packet.toBuffer(), null, false);

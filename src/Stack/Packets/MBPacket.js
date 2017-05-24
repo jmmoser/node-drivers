@@ -81,14 +81,18 @@ class MBPacket {
       let functionCode = packet.data.readUInt8(0);
 
       if (functionCode > 0x80) {
+        console.log('error');
         packet.reply.error = packet.data.readUInt8(1);
         if (MBErrorDescriptions[packet.reply.error]) {
           packet.reply.errorDescription = MBErrorDescriptions[packet.reply.error];
         }
+        console.log(packet);
       } else {
         packet.reply.functionCode = functionCode;
         if (ReplyFunctions[functionCode]) {
           packet.reply.data = ReplyFunctions[functionCode](packet.data, 0, packet.data.length);
+        } else {
+          packet.reply.data = packet.data.slice(1);
         }
       }
     }
@@ -137,6 +141,18 @@ ReplyFunctions[MBFunctions.ReadHoldingRegisters] = function(buffer, offset, leng
 };
 
 ReplyFunctions[MBFunctions.ReadInputRegisters] = ReplyFunctions[MBFunctions.ReadHoldingRegisters];
+
+ReplyFunctions[MBFunctions.WriteSingleRegister] = function(buffer, offset, length) {
+  return buffer.slice(offset + 3, 5);
+};
+
+ReplyFunctions[MBFunctions.WriteMultipleRegisters] = function(buffer, offset, length) {
+  return {
+    count: buffer.readUInt16BE(offset + 3);
+  };
+};
+
+
 
 const MBExceptionDescriptions = {
   0x01: 'Illegal function',
