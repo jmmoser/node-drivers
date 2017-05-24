@@ -73,6 +73,24 @@ function TypedReadReplyParserArray(data) {
   return values;
 }
 
+// const PCCCDataType = {
+//   Binary: 1,
+//   BitString: 2,
+//   Byte: 3,
+//   Integer: 4,
+//   Timer: 5,
+//   Counter: 6,
+//   Control: 7,
+//   Float: 8,
+//   Array: 9,
+//   Address: 0xf,
+//   BCD: 0x10,
+//   PID: 0x15,
+//   Message: 0x16,
+//   SFCStatus: 0x1d,
+//   String: 0x1e,
+//   BlockTransfer: 0x20
+// };
 
 function TypedReadReplyParser(data) {
   let info = TypedReadParserInfo(data);
@@ -80,18 +98,18 @@ function TypedReadReplyParser(data) {
   let value = null;
 
   switch (info.DataTypeID) {
-    case 1:
-    case 2:
-    case 3:
+    case PCCCDataType.Binary:
+    case PCCCDataType.BitString:
+    case PCCCDataType.Byte:
       value = buffer.readUInt8(offset);
       break;
-    case 4:
+    case PCCCDataType.Integer:
       value = buffer.readInt32LE(offset); // buffer.readInt16LE(offset) ??
       break;
-    case 8:
+    case PCCCDataType.Float:
       value = buffer.readFloatLE(offset);
       break;
-    case 9:
+    case PCCCDataType.Array:
       value = TypedReadReplyParserArray(data.slice(offset, offset + info.DataSize));
       break;
     default:
@@ -468,7 +486,24 @@ function logicalASCIIAddressInfo(address) {
 }
 
 
-
+const PCCCDataType = {
+  Binary: 1,
+  BitString: 2,
+  Byte: 3,
+  Integer: 4,
+  Timer: 5,
+  Counter: 6,
+  Control: 7,
+  Float: 8,
+  Array: 9,
+  Address: 0xf,
+  BCD: 0x10,
+  PID: 0x15,
+  Message: 0x16,
+  SFCStatus: 0x1d,
+  String: 0x1e,
+  BlockTransfer: 0x20
+};
 
 
 const PCCCDataTypes = {
