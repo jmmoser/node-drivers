@@ -81,7 +81,12 @@ function TypedReadReplyParser(data) {
 
   switch (info.DataTypeID) {
     case 1:
+    case 2:
+    case 3:
       value = buffer.readUInt8(offset);
+      break;
+    case 4:
+      value = buffer.readInt32LE(offset); // buffer.readInt16LE(offset) ??
       break;
     case 8:
       value = buffer.readFloatLE(offset);
@@ -345,6 +350,26 @@ class PCCCPacket {
 
   static ParseTypedReadData(data) {
     return TypedReadReplyParser(data);
+  }
+
+  static TypedWriteRequest(transaction, address, items) {
+    let packet = new PCCCPacket();
+    packet.Command = 0x0F;
+    packet.Transaction = transaction;
+
+    let offset = 0;
+    let data = Buffer.alloc(200);
+    data.writeUInt8(0x67, offset); offset += 1;
+    offset += 2;
+    data.writeUInt16LE(items, offset);
+    offset += logicalASCIIAddress(address, data.slice(offset));
+    data.writeUInt16LE(items, offset); offset += 2;
+
+    // not finished
+
+    packet.Data = data.slice(0, offset);
+
+    return packet.toBuffer();
   }
 
 
