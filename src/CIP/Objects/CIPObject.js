@@ -1,12 +1,13 @@
 'use strict';
 
-const Queueable = require('./../../Classes/Queueable');
+// const Queueable = require('./../../Classes/Queueable');
 
-// class CIPObject extends BaseLayer {
-class CIPObject extends Queueable {
+// CIPObjects exist in the context of the CIPLayer
+// class CIPObject extends Queueable {
+class CIPObject {
   constructor(layer, options) {
-    super();
-    this._options = options = {};
+    // super();
+    this._options = options || {};
     layer.addObject(this);
   }
 

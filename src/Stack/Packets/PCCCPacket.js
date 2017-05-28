@@ -41,7 +41,7 @@ function TypedReadReplyParserArray(data) {
 
   let readFunction = null;
 
-  switch (info.DataTypeID) {
+  switch (info.dataTypeID) {
     case 3:
       readFunction = function(data, offset) {
         return String.fromCharCode(data[offset]);
@@ -58,15 +58,15 @@ function TypedReadReplyParserArray(data) {
       };
       break;
     default:
-      console.log('PCCC Error: Unknown Type: ' + info.DataTypeID);
+      console.log('PCCC Error: Unknown Type: ' + info.dataTypeID);
   }
 
   if (readFunction) {
-    let lastOffset = data.length - info.DataSize;
+    let lastOffset = data.length - info.dataSize;
 
     while (offset <= lastOffset) {
       values.push(readFunction(data, offset));
-      offset += info.DataSize;
+      offset += info.dataSize;
     }
   }
 
@@ -97,7 +97,7 @@ function TypedReadReplyParser(data) {
   let offset = info.Length;
   let value = null;
 
-  switch (info.DataTypeID) {
+  switch (info.dataTypeID) {
     case PCCCDataType.Binary:
     case PCCCDataType.BitString:
     case PCCCDataType.Byte:
@@ -110,10 +110,10 @@ function TypedReadReplyParser(data) {
       value = buffer.readFloatLE(offset);
       break;
     case PCCCDataType.Array:
-      value = TypedReadReplyParserArray(data.slice(offset, offset + info.DataSize));
+      value = TypedReadReplyParserArray(data.slice(offset, offset + info.dataSize));
       break;
     default:
-      console.log('PCCC Error: Unknown Type: ' + info.DataTypeID);
+      console.log('PCCC Error: Unknown Type: ' + info.dataTypeID);
   }
   return value;
 }
@@ -168,33 +168,35 @@ function TypedReadParserInfo(data) {
 
   return {
     Length: offset,
-    DataTypeID: dataTypeID,
-    DataSize: dataSize
+    dataTypeID: dataTypeID,
+    dataSize: dataSize
   };
 }
 
-
+// function GetDataTypeID(info) {
+//   return info.dataType << 4 | info.size;
+// }
 
 // Programmable Controller Communication Command
 class PCCCPacket {
   constructor() {
-    // Header
-    this.Service = 0x4B;
-    this.setPath(Buffer.from([0x20, 0x67, 0x24, 0x01]));
-    this.setRequestor(Buffer.from([0x07, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03]));
+    // // Header
+    // this.service = 0x4B;
+    // this.setPath(Buffer.from([0x20, 0x67, 0x24, 0x01]));
+    // this.setRequestor(Buffer.from([0x07, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03]));
 
     // Message
-    this.Command = 0;
-    this.Status = 0;
-    this.Transaction = 0;
+    this.command = 0;
+    this.status = 0;
+    this.transaction = 0;
 
-    this.ExtendedStatus = 0;
+    this.extendedStatus = 0;
   }
 
   setPath(pathBuffer) {
     if (Buffer.isBuffer(pathBuffer)) {
       if (pathBuffer.length % 2 === 0) {
-        this.Path = pathBuffer;
+        this.path = pathBuffer;
       } else {
         console.log('PCCC Error: Set Path: Path size is not even');
       }
@@ -207,7 +209,7 @@ class PCCCPacket {
     if (Buffer.isBuffer(requestorBuffer)) {
       let length = requestorBuffer.readUInt8(0);
       if (length === requestorBuffer.length) {
-        this.Requestor = requestorBuffer;
+        this.requestor = requestorBuffer;
       } else {
         console.log('PCCC Error: Set Requestor: Specified requestor length is not equal to total length of requestor buffer');
       }
@@ -216,114 +218,123 @@ class PCCCPacket {
     }
   }
 
+  // TCP.EIP.CIP[MessageRouter].PCCC
+
+
   // this entire class method may not be needed
   // good for unit testing factory methods
   static fromBufferRequest(buffer) {
     let packet = new PCCCPacket();
 
     let offset = 0;
-    packet.Service = buffer.readUInt8(offset); offset += 1;
+    packet.service = buffer.readUInt8(offset); offset += 1;
     // packet.PathSize = 2 * buffer.readUInt8(offset); offset += 1; // PathSize is in bytes here
     // packet.Path = buffer.slice(offset, offset + packet.PathSize); offset += packet.PathSize;
     let pathSize = 2 * buffer.readUInt8(offset); offset += 1;
-    packet.Path = buffer.slice(offset, offset + pathSize); offset += pathSize;
+    packet.path = buffer.slice(offset, offset + pathSize); offset += pathSize;
     let requestorIDLength = buffer.readUInt8(offset); offset += 1;
-    packet.RequestorID = buffer.slice(offset, offset + requestorIDLength); // includes length
-    packet.VendorID = buffer.slice(offset, offset + 2); offset += 2;
-    packet.SerialNumber = buffer.slice(offset, offset + 4); offset += 4;
+    packet.requestorID = buffer.slice(offset, offset + requestorIDLength); // includes length
+    packet.vendorID = buffer.slice(offset, offset + 2); offset += 2;
+    packet.serialNumber = buffer.slice(offset, offset + 4); offset += 4;
     if (requestorIDLength > 7) {
-      packet.Other = buffer.slice(offset, offset + requestorIDLength - 7); offset += requestorIDLength - 7;
+      packet.other = buffer.slice(offset, offset + requestorIDLength - 7); offset += requestorIDLength - 7;
     }
 
-    packet.Command = buffer.readUInt8(offset); offset += 1;
-    packet.Status = buffer.readUInt8(offset); offset += 1;
-    packet.Transaction = buffer.readUInt16LE(offset); offset += 2;
-    packet.Data = buffer.slice(offset);
+    packet.command = buffer.readUInt8(offset); offset += 1;
+    packet.status = buffer.readUInt8(offset); offset += 1;
+    packet.transaction = buffer.readUInt16LE(offset); offset += 2;
+    packet.data = buffer.slice(offset);
 
     return packet;
   }
 
   static fromBufferReply(buffer) {
     let packet = new PCCCPacket();
-    packet.Buffer = Buffer.from(buffer); // May not be needed
+    // packet.buffer = Buffer.from(buffer); // May not be needed
+    //
+    // let offset = 0;
+    // packet.service = buffer.readUInt8(offset); offset += 1;
+    // offset += 1; // Reserved
+    // packet.status = buffer.readUInt8(offset); offset += 1;
+    // let additionalStatusSize = 2 * buffer.readUInt8(offset); offset += 1;
+    // if (additionalStatusSize > 0) {
+    //   packet.additionalStatus = buffer.slice(offset, offset + additionalStatusSize); offset += additionalStatusSize;
+    // }
+    //
+    // if (packet.status !== 0) {
+    //   return packet;
+    // }
+    // // SHOULD HANDLE: ONLY PRESENT IN REPLY TO UNCONNECTED SEND WITH ROUTE ERROR
+    // // packet.RemainingPathSize = buffer.readUInt8(offset); offset += 1;
+    //
+    // // let requestorIDLength = buffer.readUInt8(offset); offset += 1;
+    // // packet.VendorID = buffer.slice(offset, offset + 2); offset += 2;
+    // // packet.SerialNumber = buffer.slice(offset, offset + 4); offset += 4;
+    // // if (requestorIDLength > 7) {
+    // //   packet.Other = buffer.slice(offset, offset + requestorIDLength - 7); offset += requestorIDLength - 7;
+    // // }
+    //
+    // let requestorIDLength = buffer.readUInt8(offset);
+    // packet.requestor = buffer.slice(offset, offset + requestorIDLength); offset += requestorIDLength;
+
+
+    // Start here
 
     let offset = 0;
-    packet.Service = buffer.readUInt8(offset); offset += 1;
-    offset += 1; // Reserved
-    packet.Status = buffer.readUInt8(offset); offset += 1;
-    let additionalStatusSize = 2 * buffer.readUInt8(offset); offset += 1;
-    if (additionalStatusSize > 0) {
-      packet.AdditionalStatus = buffer.slice(offset, offset + additionalStatusSize); offset += additionalStatusSize;
+
+    packet.command = buffer.readUInt8(offset); offset += 1;
+    packet.status = buffer.readUInt8(offset); offset += 1;
+
+    packet.transaction = buffer.readUInt16LE(offset); offset += 2;
+    if (packet.status === 0xF0) {
+      packet.extendedStatus = buffer.readUInt8(offset); offset += 1;
     }
 
-    if (packet.Status !== 0) {
-      return packet;
-    }
-    // SHOULD HANDLE: ONLY PRESENT IN REPLY TO UNCONNECTED SEND WITH ROUTE ERROR
-    // packet.RemainingPathSize = buffer.readUInt8(offset); offset += 1;
+    packet.data = buffer.slice(offset);
 
-    // let requestorIDLength = buffer.readUInt8(offset); offset += 1;
-    // packet.VendorID = buffer.slice(offset, offset + 2); offset += 2;
-    // packet.SerialNumber = buffer.slice(offset, offset + 4); offset += 4;
-    // if (requestorIDLength > 7) {
-    //   packet.Other = buffer.slice(offset, offset + requestorIDLength - 7); offset += requestorIDLength - 7;
-    // }
-
-    let requestorIDLength = buffer.readUInt8(offset);
-    packet.Requestor = buffer.slice(offset, offset + requestorIDLength); offset += requestorIDLength;
-
-    packet.Command = buffer.readUInt8(offset); offset += 1;
-    packet.Status = buffer.readUInt8(offset); offset += 1;
-
-    packet.Transaction = buffer.readUInt16LE(offset); offset += 2;
-    if (packet.Status === 0xF0) {
-      packet.ExtendedStatus = buffer.readUInt8(offset); offset += 1;
+    if (STSCodeDescriptions[packet.status]) {
+      packet.statusDescription = STSCodeDescriptions[packet.status];
     }
 
-    packet.Data = buffer.slice(offset);
-
-    if (STSCodeDescriptions[packet.Status]) {
-      packet.StatusDescription = STSCodeDescriptions[packet.Status];
-    }
-
-    if (packet.ExtendedStatus !== 0x00 && EXTSTSCodeDescriptions[packet.ExtendedStatus]) {
-      packet.ExtendedStatusDescription = EXTSTSCodeDescriptions[packet.ExtendedStatus];
+    if (packet.extendedStatus !== 0x00 && EXTSTSCodeDescriptions[packet.extendedStatus]) {
+      // packet.extendedStatusDescription = EXTSTSCodeDescriptions[packet.extendedStatus];
+      packet.statusDescription = EXTSTSCodeDescriptions[packet.extendedStatus];
     }
 
     return packet;
   }
 
   toBuffer() {
-    if (this.Buffer) {
-      // This is just for reply messages
-      // Not sure why this would be needed
-      return this.Buffer;
-    }
+    // if (this.buffer) {
+    //   // This is just for reply messages
+    //   // Not sure why this would be needed
+    //   return this.buffer;
+    // }
+    //
+    // let buffer = Buffer.alloc(256); // 256 bytes should be big enough for any case
+    // let offset = 0;
+    //
+    // buffer.writeUInt8(this.service, offset); offset += 1;
+    // buffer.writeUInt8(this.path.length / 2, offset); offset += 1;
+    // this.path.copy(buffer, offset); offset += this.path.length;
+    // this.requestor.copy(buffer, offset); offset += this.requestor.length;
 
-    let buffer = Buffer.alloc(256); // 256 bytes should be big enough for any case
     let offset = 0;
-
-    buffer.writeUInt8(this.Service, offset); offset += 1;
-    // buffer.writeUInt8(this.PathSize, offset); offset += 1; // Path size needs to be in words
-    // this.Path.copy(buffer, offset); offset += this.PathSize;
-    buffer.writeUInt8(this.Path.length / 2, offset); offset += 1;
-    this.Path.copy(buffer, offset); offset += this.Path.length;
-    // buffer.writeUInt8(this.RequestorID.length, offset); offset += 1;
-    // this.RequestorID.copy(buffer, offset); offset += this.RequestorID.length - 1;
-    this.Requestor.copy(buffer, offset); offset += this.Requestor.length;
-    buffer.writeUInt8(this.Command, offset); offset += 1;
-    buffer.writeUInt8(this.Status, offset); offset += 1;
-    buffer.writeUInt16LE(this.Transaction, offset); offset += 2;
-    this.Data.copy(buffer, offset); offset += this.Data.length;
-    return buffer.slice(0, offset);
+    let buffer = Buffer.alloc(4 + this.data.length);
+    buffer.writeUInt8(this.command, offset); offset += 1;
+    buffer.writeUInt8(this.status, offset); offset += 1;
+    buffer.writeUInt16LE(this.transaction, offset); offset += 2;
+    this.data.copy(buffer, offset); offset += this.data.length;
+    // return buffer.slice(0, offset);
+    return buffer;
   }
 
 
 
   static WordRangeReadRequest(transaction, address) {
     let packet = new PCCCPacket();
-    packet.Command = 0x0F;
-    packet.Transaction = transaction;
+    packet.command = 0x0F;
+    packet.transaction = transaction;
 
     let data = Buffer.alloc(200);
     let offset = 0;
@@ -338,7 +349,7 @@ class PCCCPacket {
     } else {
       return null;
     }
-    packet.Data = data.slice(0, offset);
+    packet.data = data.slice(0, offset);
     return packet.toBuffer();
   }
 
@@ -351,8 +362,8 @@ class PCCCPacket {
 
   static TypedReadRequest(transaction, address, items) {
     let packet = new PCCCPacket();
-    packet.Command = 0x0F;
-    packet.Transaction = transaction;
+    packet.command = 0x0F;
+    packet.transaction = transaction;
 
     let data = Buffer.alloc(200);
     let offset = 0;
@@ -361,7 +372,7 @@ class PCCCPacket {
     data.writeUInt16LE(items, offset); offset += 2; // Total Trans
     offset += logicalASCIIAddress(address, data.slice(offset)); // PLC system address
     data.writeUInt16LE(items, offset); offset += 2; // Size, number of elements to read from the specified system address
-    packet.Data = data.slice(0, offset);
+    packet.data = data.slice(0, offset);
 
     return packet.toBuffer();
   }
@@ -370,21 +381,31 @@ class PCCCPacket {
     return TypedReadReplyParser(data);
   }
 
-
-  static TypedWriteRequest(transaction, address, items, values) {
+  static TypedWriteRequest(transaction, address, values) {
     let packet = new PCCCPacket();
-    packet.Command = 0x0F;
-    packet.Transaction = transaction;
+    packet.command = 0x0F;
+    packet.transaction = transaction;
+
+    let items = values.length;
 
     let offset = 0;
     let data = Buffer.alloc(200);
-    data.writeUInt8(0x67, offset); offset += 1;
+    data.writeUInt8(0x67, offset); offset += 1; // function
     offset += 2;
-    data.writeUInt16LE(items, offset);
-    offset += logicalASCIIAddress(address, data.slice(offset));
     data.writeUInt16LE(items, offset); offset += 2;
+    offset += logicalASCIIAddress(address, data.slice(offset));
+    // data.writeUInt16LE(items, offset); offset += 2;
+
 
     let info = logicalASCIIAddressInfo(address);
+
+    // data.writeUInt8(info.dataType, offset); offset += 1;
+    data.writeUInt8(info.dataType << 4 | info.size, offset); offset += 1;
+
+    // data.writeUInt8(0x99, offset); offset += 1;
+    // data.writeUInt8(0x09, offset); offset += 1;
+    // data.writeUInt8(0x03, offset); offset += 1;
+    // data.writeUInt8(0x42, offset); offset += 1;
 
     let dataTypeSize = info.size; // PCCCDataTypeSize[dataTypeSize];
     let writeBuffer = new Buffer.alloc(items * dataTypeSize);
@@ -392,10 +413,14 @@ class PCCCPacket {
 
     for (let i = 0; i < items; i++) {
       // func(values[i], i * dataTypeSize);
-      info.writeFunction(buffer, i * dataTypeSize, values[i]);
+      info.writeFunction(writeBuffer, i * dataTypeSize, values[i]);
     }
 
-    packet.Data = Buffer.concat([data, writeBuffer], offset + items * dataTypeSize);
+    data = data.slice(0, offset);
+
+    packet.data = Buffer.concat([data, writeBuffer], offset + items * dataTypeSize);
+
+    console.log(packet);
 
     return packet.toBuffer();
   }
@@ -403,19 +428,19 @@ class PCCCPacket {
 
   static DiagnosticStatusRequest(transaction) {
     let packet = new PCCCPacket();
-    packet.Command = 0x06;
-    packet.Transaction = transaction;
+    packet.command = 0x06;
+    packet.transaction = transaction;
 
     let data = Buffer.alloc(1);
     data[0] = 0x03;
-    packet.Data = data;
+    packet.data = data;
     return packet.toBuffer();
   }
 
   // static UnprotectedRead(address, transaction) {
   //   let packet = PCCCPacket();
-  //   packet.Command = 0x01;
-  //   packet.Transaction = transaction;
+  //   packet.command = 0x01;
+  //   packet.transaction = transaction;
   //
   //   let data = Buffer.alloc(200);
   //   let offset = 0;
@@ -451,12 +476,7 @@ function logicalASCIIAddressInfo(address) {
   		info.addrtype = prefix;
   		info.datatype = "INT";
   		info.size = 2;
-      // info.writeFunction = function(value, buffer, offset) {
-      //   buffer.writeInt16LE(value, offset);
-      // };
-      // info.readFunction = function(buffer, offset) {
-      //   return buffer.readInt16LE(offset);
-      // };
+      info.dataType = 4;
       info.writeFunction = (buffer, offset, value) => buffer.writeInt16LE(value, offset);
       info.readFunction = (buffer, offset) => buffer.readInt16LE(offset);
   		break;
@@ -471,6 +491,7 @@ function logicalASCIIAddressInfo(address) {
   		info.addrtype = prefix;
   		info.datatype = "REAL";
   		info.size = 4;
+      info.dataType = 8;
       info.writeFunction = (buffer, offset, value) => buffer.writeFloatLE(value, offset);
       info.readFunction = (buffer, offset) => buffer.readFloatLE(offset);
   		break;

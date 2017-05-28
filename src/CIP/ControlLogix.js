@@ -5,7 +5,12 @@ const MessageRouter = require('./Objects/MessageRouter');
 
 const Connection = require('./Objects/Connection');
 
-class ControlLogix extends Connection {
+// class ControlLogix extends Connection {
+class ControlLogix {
+  constructor(cipLayer, options) {
+    this.connection = new Connection(cipLayer, options);
+  }
+
   ReadTag(address, callback) {
     if (!address || !callback) return;
 
@@ -14,12 +19,12 @@ class ControlLogix extends Connection {
 
     let request = MessageRouter.Request(Services.ReadTag, path, data);
 
-    this.send(request, function(message) {
+    this.connection.send(request, function(message) {
       let reply = MessageRouter.Reply(message);
-      let dataType = reply.Data.readUInt16LE(0);
+      let dataType = reply.data.readUInt16LE(0);
       let dataConverter = DataConverters[dataType];
       if (dataConverter) {
-        callback(null, dataConverter(reply.Data, 2));
+        callback(null, dataConverter(reply.data, 2));
       } else {
         callback('ControlLogix Error: No converter for data type: ' + dataType);
       }
@@ -39,15 +44,8 @@ class ControlLogix extends Connection {
 
     let request = MessageRouter.Request(Services.WriteTag, path, data);
 
-    this.send(request, function(message) {
+    this.connection.send(request, function(message) {
       let reply = MessageRouter.Reply(message);
-      // let dataType = reply.Data.readUInt16LE(0);
-      // let dataConverter = DataConverters[dataType];
-      // if (dataConverter) {
-      //   callback(null, dataConverter(reply.Data, 2));
-      // } else {
-      //   callback('ControlLogix Error: No converter for data type: ' + dataType);
-      // }
       callback(null, reply);
     });
   }

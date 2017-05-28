@@ -48,7 +48,7 @@ class TCPLayer extends Layer {
   }
 
   handleData(data, info) {
-    this.forwardToUpperLayer(data, info);
+    this.forward(data, info);
   }
 
   disconnect(callback) {

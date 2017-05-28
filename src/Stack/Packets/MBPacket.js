@@ -148,7 +148,7 @@ ReplyFunctions[MBFunctions.WriteSingleRegister] = function(buffer, offset, lengt
 
 ReplyFunctions[MBFunctions.WriteMultipleRegisters] = function(buffer, offset, length) {
   return {
-    count: buffer.readUInt16BE(offset + 3);
+    count: buffer.readUInt16BE(offset + 3)
   };
 };
 

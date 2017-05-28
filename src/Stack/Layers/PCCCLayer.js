@@ -1,5 +1,7 @@
 'use strict';
 
+// REF: CIP and PCCC v1.pdf
+
 const Layer = require('./Layer');
 const PCCCPacket = require('./../Packets/PCCCPacket');
 
@@ -9,16 +11,22 @@ class PCCCLayer extends Layer {
 
     this._callbacks = {};
     this._transaction = 0;
+
+    // this.layer = new Layer(
+    //   lowerLayer,
+    //   null,
+    //   this.handleData.bind(this)
+    // );
   }
 
   wordRangeRead(address, callback) {
     if (callback) {
-      let transaction = this.incrementTransaction();
-      this._callbacks[transaction] = function(error, packet) {
-        if (error) {
-          callback(error);
+      let transaction = this._incrementTransaction();
+      this._callbacks[transaction] = function(err, reply) {
+        if (err) {
+          callback(err);
         } else {
-          callback(null, packet.Data);
+          callback(null, reply.Data);
         }
       };
       let message = PCCCPacket.WordRangeReadRequest(transaction, address);
@@ -28,14 +36,12 @@ class PCCCLayer extends Layer {
 
   typedRead(address, callback) {
     if (callback) {
-      let transaction = this.incrementTransaction();
-      this._callbacks[transaction] = function(error, packet) {
-        console.log(packet);
-        console.log(Buffer.from([packet.Service]));
-        if (error) {
-          callback(error);
+      let transaction = this._incrementTransaction();
+      this._callbacks[transaction] = function(err, reply) {
+        if (err) {
+          callback(err);
         } else {
-          let value = PCCCPacket.ParseTypedReadData(packet.Data);
+          let value = PCCCPacket.ParseTypedReadData(reply.data);
           if (Array.isArray(value) && value.length > 0) {
             callback(null, value[0]);
           } else {
@@ -48,9 +54,40 @@ class PCCCLayer extends Layer {
     }
   }
 
+  // typedRead(address, callback) {
+  //   if (callback) {
+  //     let transaction = this.incrementTransaction();
+  //
+  //     let message = PCCCPacket.TypedReadRequest(transaction, address, 1);
+  //
+  //     this._layer.sendUnconnected(message, function(data) {
+  //       let reply = PCCCPacket.fromBufferReply(data);
+  //       let value = PCCCPacket.ParseTypedReadData(reply.data);
+  //       if (Array.isArray(value) && value.length > 0) {
+  //         callback(null, value[0]);
+  //       } else {
+  //         callback(null, null);
+  //       }
+  //     });
+  //   }
+  // }
+
+  typedWrite(address, value, callback) {
+    if (callback) {
+      let transaction = this._incrementTransaction();
+      this._callbacks[transaction] = function(err, reply) {
+        if (err) callback(err, null);
+        else callback(reply.additionalStatus, reply);
+      };
+
+      let message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
+      this.send(message, false);
+    }
+  }
+
   diagnosticStatus(callback) {
     if (callback) {
-      let transaction = this.incrementTransaction();
+      let transaction = this._incrementTransaction();
       this._callbacks[transaction] = function(error, packet) {
         if (error) {
           callback(error);
@@ -69,10 +106,10 @@ class PCCCLayer extends Layer {
   handleData(data) {
     let packet = PCCCPacket.fromBufferReply(data);
 
-    if (this._callbacks[packet.Transaction]) {
-      this._callbacks[packet.Transaction]
-      let callback = this._callbacks[packet.Transaction];
-      delete this._callbacks[packet.Transaction];
+    if (this._callbacks[packet.transaction]) {
+      this._callbacks[packet.transaction]
+      let callback = this._callbacks[packet.transaction];
+      delete this._callbacks[packet.transaction];
       callback(getError(packet), packet);
     } else {
       console.log('PCCC Error: Unhandled packet:');
@@ -81,19 +118,43 @@ class PCCCLayer extends Layer {
     }
   }
 
-  incrementTransaction() {
+  _incrementTransaction() {
     this._transaction++;
-    return this._transaction;
+    return this._transaction % 0x10000;
   }
 }
 
 module.exports = PCCCLayer;
 
 function getError(packet) {
-  if (packet.Status === 0) return null;
+  if (packet.status === 0) return null;
 
-  if (packet.ExtendedStatusDescription)
-    return packet.ExtendedStatusDescription;
+  if (packet.extendedStatusDescription)
+    return packet.extendedStatusDescription;
 
-  return packet.StatusDescription;
+  return packet.statusDescription;
 }
+
+/*
+  PLC-2 Communication Commands
+    -Uprotected Read
+    -Protected Write
+    -Uprotected Write
+    -Protected Bit Write
+    -Unprotected Bit Write
+
+  PLC-5 Communication Commands
+    -Read MOdify Write
+    -Read Modify Write N
+    -Typed Read
+    -Typed Write
+    -Word Range Read
+    -Word Range Write
+    -Bit Write
+
+  SLC Communication Commands
+    -SLC Protected Typed Logical Read with 3 Address Fields
+    -SLC Protected Typed Logical Write with 3 Address Fields
+    -SLC Protected Typed Logical Read with 2 Address Fields
+    -SLC Protected Typed Logical Write with 2 Address Fields
+*/

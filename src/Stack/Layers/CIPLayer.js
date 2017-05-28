@@ -18,6 +18,7 @@ class CIPLayer extends Layer {
 
   _incrementContext() {
     this._context = (this._context + 1) % 0x100000000;
+    return this._context;
   }
 
   connect(callback) {
@@ -102,6 +103,10 @@ class CIPLayer extends Layer {
 
   sendNextMessage() {
     // No implementation needed
+
+    // This needs to be changed, unconnected sends may not even need cip layer
+    // Maybe they still need cip layer, not sure...
+    throw new Error('layer above EIPLayer called send');
   }
 
   handleData(message, info) {

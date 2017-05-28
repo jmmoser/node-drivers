@@ -8,9 +8,9 @@ const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
 
 // class Connection extends CIPObject {
-class Connection extends Queueable {
+class Connection {
   constructor(layer, options) {
-    super();
+    this._queue = new Queueable();
 
     layer.addObject(this);
 
@@ -45,9 +45,9 @@ class Connection extends Queueable {
     self._layer.sendUnconnected(ConnectionManager.ForwardOpen(self), function(data) {
       let message = MessageRouter.Reply(data);
 
-      if (message.Status === 0 && message.Service === (ConnectionManager.Services.ForwardOpen | (1 << 7))) {
+      if (message.status === 0 && message.service === (ConnectionManager.Services.ForwardOpen | (1 << 7))) {
         self._connectionStatus = 2;
-        let reply = ConnectionManager.ForwardOpenReply(message.Data);
+        let reply = ConnectionManager.ForwardOpenReply(message.data);
         self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
         self._TtoOConnectionID = reply.TtoONetworkConnectionID;
         self._OtoTPacketRate = reply.OtoTActualPacketRate;
@@ -76,7 +76,7 @@ class Connection extends Queueable {
 
     self._layer.sendUnconnected(ConnectionManager.ForwardClose(self), function(data) {
       let message = MessageRouter.Reply(data);
-      if (message.Status === 0 && message.Service === (ConnectionManager.Services.ForwardClose | (1 << 7))) {
+      if (message.status === 0 && message.service === (ConnectionManager.Services.ForwardClose | (1 << 7))) {
         self._connectionStatus = 0;
         self._layer.setConnectionResponseCallback(self._TtoOConnectionID, null);
         if (callback) callback();
@@ -85,25 +85,25 @@ class Connection extends Queueable {
   }
 
   send(message, callback) {
-    this.addToQueue({ message: message, callback: callback}, false);
+    this._queue.addToQueue({ message: message, callback: callback}, false);
     this.sendNextMessage();
   }
 
   sendNextMessage() {
     if (this._connectionStatus === 2) {
-      let request = this.getNext();
+      let request = this._queue.getNext();
 
       if (request) {
 
-        this._incrementSequenceCount();
+        let sequenceCount = this._incrementSequenceCount();
 
         let message = request.message;
         let callback = request.callback;
 
-        if (callback) this._callbacks[this._sequenceCount] = callback;
+        if (callback) this._callbacks[sequenceCount] = callback;
 
         let buffer = Buffer.alloc(message.length + 2);
-        buffer.writeUInt16LE(this._sequenceCount, 0);
+        buffer.writeUInt16LE(sequenceCount, 0);
         message.copy(buffer, 2);
 
         this._layer.sendConnected(this._OtoTConnectionID, buffer);
@@ -127,6 +127,7 @@ class Connection extends Queueable {
 
   _incrementSequenceCount() {
     this._sequenceCount = (this._sequenceCount + 1) % 0x10000;
+    return this._sequenceCount;
   }
 }
 

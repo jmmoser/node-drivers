@@ -2,7 +2,8 @@
 
 const Layer = require('./Layer');
 
-const Packetable = Layer.Packetable;
+// const Packetable = Layer.Packetable;
+// const Defragable = Layer.Defragable;
 
 const EIPPacket = require('./../Packets/EIPPacket');
 const EIPCommands = EIPPacket.Commands;
@@ -110,7 +111,10 @@ class EIPLayer extends Layer {
 
     this.connectionState = 0;
 
-    this.packetable = new Packetable(EIPPacket.IsComplete, EIPPacket.Length, this._handleResponse.bind(this));
+    // this.defragger = new Defragable(EIPPacket.IsComplete, EIPPacket.Length, this._handleResponse.bind(this));
+    // this.defragger = new Defragable(EIPPacket.IsComplete, EIPPacket.Length);
+
+    this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
 
     this._setupContext();
 
@@ -181,8 +185,48 @@ class EIPLayer extends Layer {
   }
 
 
+  // handleData(data, info) {
+  //   // this.defragger.handleData(data);
+  //   data = this.defragger.defrag(data);
+  //   if (data) {
+  //     let callback = null;
+  //     let command = EIPPacket.Command(buffer);
+  //     let packet = EIPPacket.fromBuffer(buffer);
+  //
+  //     if (this._userCallbacks[command]) {
+  //       callback = this._userCallbacks[command];
+  //     } else if (this._callbacks[command]) {
+  //       callback = this._callbacks[command];
+  //     }
+  //
+  //     if (callback) {
+  //       callback.apply(this, [packet]);
+  //       return;
+  //     }
+  //
+  //     console.log('EIP Error: Unandled packet:');
+  //     console.log(packet);
+  //   }
+  // }
+
   handleData(data, info) {
-    this.packetable.handleData(data);
+    let callback = null;
+    let command = EIPPacket.Command(data);
+    let packet = EIPPacket.fromBuffer(data);
+
+    if (this._userCallbacks[command]) {
+      callback = this._userCallbacks[command];
+    } else if (this._callbacks[command]) {
+      callback = this._callbacks[command];
+    }
+
+    if (callback) {
+      callback.apply(this, [packet]);
+      return;
+    }
+
+    console.log('EIP Error: Unhandled packet:');
+    console.log(packet);
   }
 
 
@@ -225,7 +269,7 @@ class EIPLayer extends Layer {
         console.log(this._unconnectedContexts);
       }
 
-      self.forwardToUpperLayer(packet.Items[1].data, info);
+      self.forward(packet.Items[1].data, info);
     };
 
     this._callbacks[EIPCommands.SendUnitData] = function(packet) {
@@ -234,7 +278,7 @@ class EIPLayer extends Layer {
           connected: true,
           connectionID: packet.Items[0].address
         };
-        self.forwardToUpperLayer(packet.Items[1].data, info);
+        self.forward(packet.Items[1].data, info);
       } else {
         console.log('EIPLayer Error: Packet Status:');
         console.log(packet);
@@ -242,25 +286,26 @@ class EIPLayer extends Layer {
     }
   }
 
-  _handleResponse(buffer) {
-    let callback = null;
-    let command = EIPPacket.Command(buffer);
-    let packet = EIPPacket.fromBuffer(buffer);
 
-    if (this._userCallbacks[command]) {
-      callback = this._userCallbacks[command];
-    } else if (this._callbacks[command]) {
-      callback = this._callbacks[command];
-    }
-
-    if (callback) {
-      callback.apply(this, [packet]);
-      return;
-    }
-
-    console.log('EIP Error: Unandled packet:');
-    console.log(packet);
-  }
+  // _handleResponse(buffer) {
+  //   let callback = null;
+  //   let command = EIPPacket.Command(buffer);
+  //   let packet = EIPPacket.fromBuffer(buffer);
+  //
+  //   if (this._userCallbacks[command]) {
+  //     callback = this._userCallbacks[command];
+  //   } else if (this._callbacks[command]) {
+  //     callback = this._callbacks[command];
+  //   }
+  //
+  //   if (callback) {
+  //     callback.apply(this, [packet]);
+  //     return;
+  //   }
+  //
+  //   console.log('EIP Error: Unandled packet:');
+  //   console.log(packet);
+  // }
 
 
   NOP(callback) {

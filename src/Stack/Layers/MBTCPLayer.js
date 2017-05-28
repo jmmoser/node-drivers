@@ -2,7 +2,8 @@
 
 const Layer = require('./Layer');
 
-const Packetable = Layer.Packetable;
+// const Packetable = Layer.Packetable;
+const Defragable = Layer.Defragable;
 
 const MBPacket = require('./../Packets/MBPacket');
 
@@ -12,17 +13,18 @@ class MBTCPLayer extends Layer {
     this._transactionCounter = 0;
     this._callbacks = {};
 
-    this.packetable = new Packetable(MBPacket.Length, MBPacket.Length, this._handleResponse.bind(this));
+    // this.defragger = new Defragable(MBPacket.Length, MBPacket.Length, this._handleResponse.bind(this));
+    // this.defragger = new Defragable(MBPacket.Length, MBPacket.Length);
   }
 
-  _handleResponse(buffer) {
-    let packet = MBPacket.FromBuffer(buffer);
-
-    if (this._callbacks[packet.transactionID]) {
-      this._callbacks[packet.transactionID](packet.reply.error, packet.reply);
-      delete this._callbacks[packet.transactionID];
-    }
-  }
+  // _handleResponse(buffer) {
+  //   let packet = MBPacket.FromBuffer(buffer);
+  //
+  //   if (this._callbacks[packet.transactionID]) {
+  //     this._callbacks[packet.transactionID](packet.reply.error, packet.reply);
+  //     delete this._callbacks[packet.transactionID];
+  //   }
+  // }
 
   readDiscreteInputs(unitID, address, count, callback) {
     const fn = MBPacket.Functions.ReadDiscreteInputs;
@@ -130,8 +132,26 @@ class MBTCPLayer extends Layer {
     this.send(packet.toBuffer(), null, false);
   }
 
+  // handleData(data, info) {
+  //   // this.defragger.handleData(data);
+  //   data = this.defragger.defrag(data);
+  //   if (data) {
+  //     let packet = MBPacket.FromBuffer(buffer);
+  //
+  //     if (this._callbacks[packet.transactionID]) {
+  //       this._callbacks[packet.transactionID](packet.reply.error, packet.reply);
+  //       delete this._callbacks[packet.transactionID];
+  //     }
+  //   }
+  // }
+
   handleData(data, info) {
-    this.packetable.handleData(data);
+    let packet = MBPacket.FromBuffer(data);
+
+    if (this._callbacks[packet.transactionID]) {
+      this._callbacks[packet.transactionID](packet.reply.error, packet.reply);
+      delete this._callbacks[packet.transactionID];
+    }
   }
 }
 

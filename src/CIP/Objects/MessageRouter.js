@@ -62,6 +62,41 @@ class MessageRouter extends CIPObject {
     return buffer.slice(0, offset);
   }
 
+  constructor(service, path) {
+    this._service = service;
+    this._path = path;
+  }
+
+  request(service, path, data) {
+    let offset = 0;
+    // let buffer = Buffer.alloc(256);
+    let buffer = Buffer.alloc(2 + path.length + data.length);
+    buffer.writeUInt8(service, offset); offset += 1;
+    buffer.writeUInt8(path.length / 2, offset); offset += 1;
+    path.copy(buffer, offset); offset += path.length;
+    data.copy(buffer, offset); offset + data.length;
+
+    return buffer;
+  }
+
+  fromBuffer(buffer) {
+    let offset = 0;
+    let response = {};
+    response.buffer = Buffer.from(buffer);
+    response.service = buffer.readUInt8(offset); offset += 1;
+    offset += 1; // reserved
+    response.status = buffer.readUInt8(offset); offset += 1;
+
+    let sizeOfAdditionStatus = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
+    if (sizeOfAdditionStatus > 0) {
+      response.additionalStatus = buffer.slice(offset, offset + 2 * sizeOfAdditionStatus);
+      offset += 2 * sizeOfAdditionStatus;
+    }
+
+    response.data = buffer.slice(offset);
+    return response;
+  }
+
 
   static Request(service, path, data) {
     let offset = 0;
@@ -79,18 +114,18 @@ class MessageRouter extends CIPObject {
   static Reply(buffer) {
     let offset = 0;
     let response = {};
-    response.Buffer = Buffer.from(buffer);
-    response.Service = buffer.readUInt8(offset); offset += 1;
+    response.buffer = Buffer.from(buffer);
+    response.service = buffer.readUInt8(offset); offset += 1;
     offset += 1; // reserved
-    response.Status = buffer.readUInt8(offset); offset += 1;
+    response.status = buffer.readUInt8(offset); offset += 1;
 
     let sizeOfAdditionStatus = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
     if (sizeOfAdditionStatus > 0) {
-      response.AdditionalStatus = buffer.slice(offset, offset + 2 * sizeOfAdditionStatus);
+      response.additionalStatus = buffer.slice(offset, offset + 2 * sizeOfAdditionStatus);
       offset += 2 * sizeOfAdditionStatus;
     }
 
-    response.Data = buffer.slice(offset);
+    response.data = buffer.slice(offset);
     return response;
   }
 
