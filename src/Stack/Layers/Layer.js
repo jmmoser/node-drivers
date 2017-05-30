@@ -4,23 +4,7 @@ const Queueable = require('./../../Classes/Queueable');
 const Defragable = require('./../../Classes/Defragable');
 // const Packetable = require('./../../Classes/Packetable');
 
-// class Layer extends Queueable {
-
-  // constructor(lowerLayer) {
-  //   super();
-  //
-  //   this.lowerLayer = lowerLayer;
-  //   if (lowerLayer) lowerLayer.upperLayer = this;
-  // }
-
 class Layer {
-  // constructor(lowerLayer) {
-  //   this._queue = new Queueable();
-  //
-  //   this.lowerLayer = lowerLayer;
-  //   if (lowerLayer) lowerLayer.upperLayer = this;
-  // }
-
   constructor(lowerLayer, layerAdder) {
     this._queue = new Queueable();
 
@@ -35,10 +19,6 @@ class Layer {
       }
     }
   }
-
-  // setLayerAdder(layerAdder) {
-  //   this._layerAdder = layerAdder;
-  // }
 
   setDefragger(isCompleteFunc, lengthCallbackFunc) {
     this._defragger = new Defragable(isCompleteFunc, lengthCallbackFunc);
@@ -67,7 +47,6 @@ class Layer {
   //   // IMPLEMENT IN SUBCLASS
   // }
 
-
   // sendNextMessage() {
   //   // IMPLEMENT IN SUBCLASS
   // }
@@ -87,10 +66,8 @@ class Layer {
     }
   }
 
-  // forwardToUpperLayer(data, info) {
   forward(data, info) {
     if (this.upperLayer) {
-      // this.upperLayer.handleData(data, info);
       this.upperLayer._handleData(data, info);
     }
   }
