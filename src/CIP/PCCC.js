@@ -9,8 +9,9 @@ const MessageRouter = require('./Objects/MessageRouter');
 
 class PCCC extends Layer {
   constructor(cipLayer, options) {
-    super(); // no lower layer (uses CIPLayer as lower layer)
-    
+    // super(); // no lower layer (uses CIPLayer as lower layer)
+    super(cipLayer);
+
     cipLayer.addObject(this);
 
     this._mergeOptions(options);

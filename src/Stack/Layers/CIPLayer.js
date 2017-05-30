@@ -8,7 +8,11 @@ const Layer = require('./Layer');
 // connection IDs, sequence numbers, etc.
 class CIPLayer extends Layer {
   constructor(lowerLayer) {
-    super(lowerLayer);
+    super(lowerLayer, function(cipObject) {
+      if (this._disconnecting === 1) return;
+      this._objects.push(cipObject);
+      cipObject._layer = this;
+    });
 
     this._objects = [];
     this._setupCallbacks();

@@ -1,8 +1,8 @@
 'use strict';
 
 const Queueable = require('./../../Classes/Queueable');
-const Packetable = require('./../../Classes/Packetable');
 const Defragable = require('./../../Classes/Defragable');
+// const Packetable = require('./../../Classes/Packetable');
 
 // class Layer extends Queueable {
 
@@ -14,31 +14,30 @@ const Defragable = require('./../../Classes/Defragable');
   // }
 
 class Layer {
-  constructor(lowerLayer, sendNextMessage, handleData, disconnect) {
-    this._queue = new Queueable();
-
-    this.lowerLayer = lowerLayer;
-    if (lowerLayer) lowerLayer.upperLayer = this;
-  }
-
-  // constructor(lowerLayer, sendNextMessage, handleData, disconnect) {
+  // constructor(lowerLayer) {
   //   this._queue = new Queueable();
   //
   //   this.lowerLayer = lowerLayer;
   //   if (lowerLayer) lowerLayer.upperLayer = this;
-  //
-  //
-  //   this.sendNextMessage = sendNextMessage || function() {
-  //
-  //   };
-  //
-  //   this.handleData = handleData || function(data) {
-  //
-  //   };
-  //
-  //   this.disconnect = disconnect || function(callback) {
-  //     if (callback) callback();
-  //   };
+  // }
+
+  constructor(lowerLayer, layerAdder) {
+    this._queue = new Queueable();
+
+    this.lowerLayer = lowerLayer;
+    this._layerAdder = layerAdder;
+
+    if (lowerLayer) {
+      if (lowerLayer._layerAdder) {
+        lowerLayer._layerAdder.call(lowerLayer, this);
+      } else {
+        lowerLayer.upperLayer = this;
+      }
+    }
+  }
+
+  // setLayerAdder(layerAdder) {
+  //   this._layerAdder = layerAdder;
   // }
 
   setDefragger(isCompleteFunc, lengthCallbackFunc) {
@@ -118,6 +117,6 @@ class Layer {
 }
 
 Layer.Queueable = Queueable;
-Layer.Packetable = Packetable;
+// Layer.Packetable = Packetable;
 
 module.exports = Layer;
