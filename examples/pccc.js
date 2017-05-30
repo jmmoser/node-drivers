@@ -9,10 +9,10 @@ const PCCCLayer = Drivers.Layers.PCCCLayer;
 let tcpLayer = new TCPLayer({ host: '0.0.0.0', port: 44818 });
 let eipLayer = new EIPLayer(tcpLayer);
 let cipLayer = new CIPLayer(eipLayer);
-let pcccObject = new PCCC(cipLayer);
-let pcccLayer = new PCCCLayer(pcccObject);
+let cipPCCC = new PCCC(cipLayer);
+let plc5 = new PCCCLayer(cipPCCC);
 
-pcccLayer.typedRead('N10:47', function(err, value) {
+plc5.typedRead('N10:47', function(err, value) {
   console.log(value);
 
   tcpLayer.close(function() {
