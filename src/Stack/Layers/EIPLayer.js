@@ -1,45 +1,8 @@
 'use strict';
 
 const Layer = require('./Layer');
-
-// const Packetable = Layer.Packetable;
-// const Defragable = Layer.Defragable;
-
 const EIPPacket = require('./../Packets/EIPPacket');
 const EIPCommands = EIPPacket.Commands;
-
-
-
-// function RegisterSessionRequest(senderContext) {
-//   let packet = new EIPPacket();
-//   packet.Command = EIPCommands.RegisterSession;
-//   packet.SenderContext = senderContext;
-//   packet.setData(Buffer.from([0x01, 0x00, 0x00, 0x00])); // Protocol Version
-//   return packet.toBuffer();
-// }
-//
-//
-// function ListIndentityRequest() {
-//   let packet = new EIPPacket();
-//   packet.Command = EIPCommands.ListIdentity;
-//   return packet.toBuffer();
-// }
-//
-//
-// function ListServicesRequest(senderContext) {
-//   let packet = new EIPPacket();
-//   packet.Command = EIPCommands.ListServices;
-//   packet.SenderContext = senderContext;
-//   return packet.toBuffer();
-// }
-//
-// function ListInterfacesRequest() {
-//   let packet = new EIPPacket();
-//   packet.Command = EIPCommands.ListInterfaces;
-//   return packet.toBuffer();
-// }
-
-
 
 function SendData_Packet(interfaceHandle, timeout, data) {
   let buffer = Buffer.alloc(data.length + 6);
@@ -111,9 +74,6 @@ class EIPLayer extends Layer {
 
     this.connectionState = 0;
 
-    // this.defragger = new Defragable(EIPPacket.IsComplete, EIPPacket.Length, this._handleResponse.bind(this));
-    // this.defragger = new Defragable(EIPPacket.IsComplete, EIPPacket.Length);
-
     this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
 
     this._setupContext();
@@ -184,31 +144,6 @@ class EIPLayer extends Layer {
     }
   }
 
-
-  // handleData(data, info) {
-  //   // this.defragger.handleData(data);
-  //   data = this.defragger.defrag(data);
-  //   if (data) {
-  //     let callback = null;
-  //     let command = EIPPacket.Command(buffer);
-  //     let packet = EIPPacket.fromBuffer(buffer);
-  //
-  //     if (this._userCallbacks[command]) {
-  //       callback = this._userCallbacks[command];
-  //     } else if (this._callbacks[command]) {
-  //       callback = this._callbacks[command];
-  //     }
-  //
-  //     if (callback) {
-  //       callback.apply(this, [packet]);
-  //       return;
-  //     }
-  //
-  //     console.log('EIP Error: Unandled packet:');
-  //     console.log(packet);
-  //   }
-  // }
-
   handleData(data, info) {
     let callback = null;
     let command = EIPPacket.Command(data);
@@ -228,7 +163,6 @@ class EIPLayer extends Layer {
     console.log('EIP Error: Unhandled packet:');
     console.log(packet);
   }
-
 
 
   _setupCallbacks() {
@@ -287,27 +221,6 @@ class EIPLayer extends Layer {
   }
 
 
-  // _handleResponse(buffer) {
-  //   let callback = null;
-  //   let command = EIPPacket.Command(buffer);
-  //   let packet = EIPPacket.fromBuffer(buffer);
-  //
-  //   if (this._userCallbacks[command]) {
-  //     callback = this._userCallbacks[command];
-  //   } else if (this._callbacks[command]) {
-  //     callback = this._callbacks[command];
-  //   }
-  //
-  //   if (callback) {
-  //     callback.apply(this, [packet]);
-  //     return;
-  //   }
-  //
-  //   console.log('EIP Error: Unandled packet:');
-  //   console.log(packet);
-  // }
-
-
   NOP(callback) {
     // no response so callback will never be called
     this._sendUserRequest(EIPCommands.NOP, EIPPacket.NOPRequest(), callback);
@@ -334,15 +247,15 @@ class EIPLayer extends Layer {
   }
 }
 
-function printBuffer(buffer) {
-  console.log('');
-  console.log('********');
-  let i = 0;
-  while (i < buffer.length) {
-    console.log(buffer.slice(i, i + 8));
-    i += 8;
-  }
-  console.log('********');
-}
+// function printBuffer(buffer) {
+//   console.log('');
+//   console.log('********');
+//   let i = 0;
+//   while (i < buffer.length) {
+//     console.log(buffer.slice(i, i + 8));
+//     i += 8;
+//   }
+//   console.log('********');
+// }
 
 module.exports = EIPLayer;
