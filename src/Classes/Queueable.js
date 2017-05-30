@@ -1,6 +1,6 @@
 'use strict';
 
-class Queueable {
+class Queue {
   constructor() {
     this._queue = [];
     this._priorityQueue = [];
@@ -22,4 +22,4 @@ class Queueable {
   }
 }
 
-module.exports = Queueable;
+module.exports = Queue;

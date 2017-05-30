@@ -1,12 +1,12 @@
 'use strict';
 
-const Queueable = require('./../../Classes/Queueable');
+const Queue = require('./../../Classes/Queueable');
 const Defragger = require('./../../Classes/Defragger');
 // const Packetable = require('./../../Classes/Packetable');
 
 class Layer {
   constructor(lowerLayer, layerAdder) {
-    this._queue = new Queueable();
+    this._queue = new Queue();
 
     this.lowerLayer = lowerLayer;
     this._layerAdder = layerAdder;
@@ -93,7 +93,7 @@ class Layer {
   }
 }
 
-Layer.Queueable = Queueable;
+Layer.Queueable = Queue;
 // Layer.Packetable = Packetable;
 
 module.exports = Layer;
