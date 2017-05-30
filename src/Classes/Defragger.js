@@ -1,6 +1,6 @@
 'use strict';
 
-class Defragable {
+class Defragger {
   constructor(completeHandler, lengthHandler, responseHandler) {
     this._dataLength = 0;
     this._data = Buffer.alloc(0);
@@ -52,4 +52,4 @@ class Defragable {
   }
 }
 
-module.exports = Defragable;
+module.exports = Defragger;

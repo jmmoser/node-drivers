@@ -1,7 +1,7 @@
 'use strict';
 
 const Queueable = require('./../../Classes/Queueable');
-const Defragable = require('./../../Classes/Defragable');
+const Defragger = require('./../../Classes/Defragger');
 // const Packetable = require('./../../Classes/Packetable');
 
 class Layer {
@@ -21,7 +21,7 @@ class Layer {
   }
 
   setDefragger(isCompleteFunc, lengthCallbackFunc) {
-    this._defragger = new Defragable(isCompleteFunc, lengthCallbackFunc);
+    this._defragger = new Defragger(isCompleteFunc, lengthCallbackFunc);
     return this;
   }
 
