@@ -1,5 +1,26 @@
 'use strict';
 
+/*
+  Communication Profile Families
+
+  CPF 1: Foundation Fieldbus (H1, H2, HSE)
+  CPF 2: CIP (ControlNet, EtherNet/IP, DeviceNet)
+  CPF 3: Profibus (DP, PA, Profinet)
+  CPF 4: P-Net (P-NET RS-485, P-NET RS-232, P-NET on IP)
+  CPF 5: WorldFIP
+  CPF 6: Interbus
+  CPF 7: Swiftnet (widthdrawn)
+  CPF 8: CC-Link
+  CPF 9: HART
+  CPF 10: Vnet/IP
+  CPF 11: TCnet
+  CPF 12: EtherCat
+  CPF 13: Ethernet Powerlink
+  CPF 14: EPA
+  CPF 15: Modbus-RTPS (Modbus-RTPS, Modbus TCP)
+  CPF 16: SERCOS
+*/
+
 const EIPCommands = {
   NOP: 0x0000,
   ListServices: 0x0004,

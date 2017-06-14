@@ -50,8 +50,10 @@ class ConnectionManager {
     buffer.writeUInt8(ConnectionManager.Code, offset); offset += 1; // class ID
     buffer.writeUInt8(0x24, offset); offset += 1; // logical segment, instance ID, 8-bit address
     buffer.writeUInt8(0x01, offset); offset += 1; // instance ID
-    buffer.writeUInt8(0x01, offset); offset += 1; // Priority
-    buffer.writeUInt8(0x0E, offset); offset += 1; // Time-out, ticks
+
+    buffer.writeUInt8(0x01, offset); offset += 1; // Connection timing Priority (CIP vol 1 Table 3-5.11)
+    buffer.writeUInt8(0x0E, offset); offset += 1; // Timeout, ticks
+
     buffer.writeUInt16LE(connection.ConnectionSerialNumber || 0x1234, offset); offset += 2;
     buffer.writeUInt16LE(connection.VendorID || 0x1337, offset); offset += 2;
     buffer.writeUInt32LE(connection.OriginatorSerialNumber || 42, offset); offset += 4;
