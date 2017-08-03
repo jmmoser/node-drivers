@@ -14,7 +14,7 @@ class Connection {
 
     layer.addObject(this);
 
-    this.mergeOptionsWithDefaults(options);
+    // this.mergeOptionsWithDefaults(options);
 
     this._connectionStatus = 0;
 
@@ -26,15 +26,15 @@ class Connection {
 
   mergeOptionsWithDefaults(options) {
     if (!options) options = {};
-    // this.VendorID = options.VendorID || 0x1337;
-    // this.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
-    // this.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x03;
-    // this.OToTRPI = options.OtoTRPI || 0x00201234;
-    // this.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
-    // this.TtoORPI = options.TtoORPI || 0x00204001;
-    // this.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
-    // this.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-    // this.ProcessorSlot = options.ProcessorSlot || 0;
+    this.VendorID = options.VendorID || 0x1337;
+    this.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
+    this.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x03;
+    this.OToTRPI = options.OtoTRPI || 0x00201234;
+    this.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
+    this.TtoORPI = options.TtoORPI || 0x00204001;
+    this.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
+    this.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+    this.ProcessorSlot = options.ProcessorSlot || 0;
   }
 
   connect(callback) {
@@ -58,9 +58,14 @@ class Connection {
         //   self.handleData.apply(self, arguments);
         // });
 
-        console.log(reply);
         // console.log(self._OtoTPacketRate);
         // console.log(self._TtoOPacketRate);
+
+        let rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
+
+        rpi = 4 * rpi * Math.pow(2, this.ConnectionTimeoutMultiplier);
+
+        console.log(rpi);
 
         self._layer.setConnectionResponseCallback(self._TtoOConnectionID, self.handleData.bind(self));
 
