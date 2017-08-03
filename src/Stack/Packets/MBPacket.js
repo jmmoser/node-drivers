@@ -81,12 +81,10 @@ class MBPacket {
       let functionCode = packet.data.readUInt8(0);
 
       if (functionCode > 0x80) {
-        console.log('error');
         packet.reply.error = packet.data.readUInt8(1);
         if (MBErrorDescriptions[packet.reply.error]) {
           packet.reply.errorDescription = MBErrorDescriptions[packet.reply.error];
         }
-        console.log(packet);
       } else {
         packet.reply.functionCode = functionCode;
         if (ReplyFunctions[functionCode]) {
