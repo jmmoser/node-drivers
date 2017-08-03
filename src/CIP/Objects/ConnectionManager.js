@@ -114,7 +114,7 @@ class ConnectionManager {
     buffer.writeUInt32LE(connection.TtoORPI || 0x00204001, offset); offset += 4; // Target to Originator requested packet interval (rate), in microseconds
     buffer.writeUInt16LE(connection.TtoONetworkConnectionParameters || 0x43F4, offset); offset += 2; // Target to Originator network connection parameters
 
-    buffer.writeUInt8(connection.TransportClassTrigger, offset); offset += 1; // Transport type/trigger
+    buffer.writeUInt8(connection.TransportClassTrigger || 0xA3, offset); offset += 1; // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
 
     buffer.writeUInt8(0x03, offset); offset += 1; // Connection path size
     buffer.writeUInt8(0x01, offset); offset += 1; // Port identifier

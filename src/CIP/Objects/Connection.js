@@ -26,15 +26,15 @@ class Connection {
 
   mergeOptionsWithDefaults(options) {
     if (!options) options = {};
-    this.VendorID = options.VendorID || 0x1337;
-    this.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
-    this.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x03;
-    this.OToTRPI = options.OtoTRPI || 0x00201234;
-    this.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
-    this.TtoORPI = options.TtoORPI || 0x00204001;
-    this.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
-    this.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-    this.ProcessorSlot = options.ProcessorSlot || 0;
+    // this.VendorID = options.VendorID || 0x1337;
+    // this.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
+    // this.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x03;
+    // this.OToTRPI = options.OtoTRPI || 0x00201234;
+    // this.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
+    // this.TtoORPI = options.TtoORPI || 0x00204001;
+    // this.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
+    // this.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+    // this.ProcessorSlot = options.ProcessorSlot || 0;
   }
 
   connect(callback) {
@@ -54,9 +54,15 @@ class Connection {
         self._TtoOPacketRate = reply.TtoOActualPacketRate;
         self._connectionSerialNumber = reply.ConnectionSerialNumber;
 
-        self._layer.setConnectionResponseCallback(self._TtoOConnectionID, function() {
-          self.handleData.apply(self, arguments);
-        });
+        // self._layer.setConnectionResponseCallback(self._TtoOConnectionID, function() {
+        //   self.handleData.apply(self, arguments);
+        // });
+
+        console.log(reply);
+        // console.log(self._OtoTPacketRate);
+        // console.log(self._TtoOPacketRate);
+
+        self._layer.setConnectionResponseCallback(self._TtoOConnectionID, self.handleData.bind(self));
 
         self.sendNextMessage();
       } else {
@@ -107,6 +113,8 @@ class Connection {
         message.copy(buffer, 2);
 
         this._layer.sendConnected(this._OtoTConnectionID, buffer);
+
+        this._lastMessage = Buffer.from(buffer);
 
         this.sendNextMessage();
       }
