@@ -60,7 +60,7 @@ class Connection {
 
         let rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
 
-        rpi = 4 * rpi * Math.pow(2, self.ConnectionTimeoutMultiplier);
+        rpi = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
 
         console.log(rpi);
 
