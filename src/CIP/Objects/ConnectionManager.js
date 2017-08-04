@@ -54,14 +54,14 @@ class ConnectionManager {
     buffer.writeUInt8(0x01, offset); offset += 1; // Connection timing Priority (CIP vol 1 Table 3-5.11)
     buffer.writeUInt8(0x0E, offset); offset += 1; // Timeout, ticks
 
-    buffer.writeUInt16LE(connection.ConnectionSerialNumber || 0x1234, offset); offset += 2;
-    buffer.writeUInt16LE(connection.VendorID || 0x1337, offset); offset += 2;
-    buffer.writeUInt32LE(connection.OriginatorSerialNumber || 42, offset); offset += 4;
+    buffer.writeUInt16LE(connection.ConnectionSerialNumber, offset); offset += 2;
+    buffer.writeUInt16LE(connection.VendorID, offset); offset += 2;
+    buffer.writeUInt32LE(connection.OriginatorSerialNumber, offset); offset += 4;
 
     buffer.writeUInt8(3, offset); offset += 1; // connection path, Padded EPATH
     offset += 1; // reserved
     buffer.writeUInt8(0x01, offset); offset += 1; // port segment
-    buffer.writeUInt8(connection.ProcessorSlot || 0, offset); offset += 1;
+    buffer.writeUInt8(connection.ProcessorSlot, offset); offset += 1;
     buffer.writeUInt8(0x20, offset); offset += 1; // logical segment, class ID, 8-bit address
     buffer.writeUInt8(0x02, offset); offset += 1; // class ID (MessageRouter)
     buffer.writeUInt8(0x24, offset); offset += 1; // logical segment, instance ID, 8-bit address
@@ -144,7 +144,7 @@ class ConnectionManager {
     buffer.writeUInt8(ConnectionManager.Code, offset); offset += 1; // class ID
     buffer.writeUInt8(0x24, offset); offset += 1; // logical segment, instance ID, 8-bit logical address
     buffer.writeUInt8(0x01, offset); offset += 1; // instance ID,
-    buffer.writeUInt8(0x0A, offset); offset += 1; // Priority
+    buffer.writeUInt8(0x0A, offset); offset += 1; // Connection timing Priority (CIP vol 1 Table 3-5.11)
     buffer.writeUInt8(0x0E, offset); offset += 1; // Time-out, ticks
     buffer.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); offset += 4; // Originator to Target Network Connection ID
     buffer.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); offset += 4; // Target to Originator Network Connection ID
@@ -218,7 +218,84 @@ const Services = {
   ForwardOpen: 0x54, // Opens a connection
   GetConnectionData: 0x56, // For diagnostics of a connection
   SearchConnectionData: 0x57, // For diagnostics of a connection
-  GetConnectionOwner: 0x5A // Determine the owner of a redundant connection
+  GetConnectionOwner: 0x5A, // Determine the owner of a redundant connection
+  LargeForwardOpen: 0x5B // Opens a connection, maximum data size is 65535 bytes
 };
 
 ConnectionManager.Services = Services;
+
+// CIP Vol 1 Table 3-5.29
+ConnectionManager.StatusDescriptions = {
+  0x01: {
+    0x0100: 'Connection in use or duplicate forward open', // see 3-5.5.2
+    // 0x0101: 'Reserved',
+    // 0x0102: 'Reserved',
+    0x0103: 'Transport class and trigger combination not supported',
+    // 0x0104: 'Reserved',
+    // 0x0105: 'Reserved',
+    0x0106: 'Ownership conflict',
+    0x0107: 'Target connection not found',
+    0x0108: 'Invalid network connection parameter',
+    0x0109: 'Invalid connection size',
+    // 0x010A: 'Reserved',
+    // 0x010F: 'Reserved',
+    0x0110: 'Target for connection not configured',
+    0x0111: 'RPI not supported',
+    // 0x0112: 'Reserved'
+    0x0113: 'Out of connections',
+    0x0114: 'Vendor ID or product code mismatch',
+    0x0115: 'Product type mismatch',
+    0x0116: 'Revision mismatch',
+    0x0117: 'Invalid produced or consumed application path',
+    0x0118: 'Invalid or inconsistent configuration application path',
+    0x0119: 'Non-listen only connection not opened',
+    0x011A: 'Target object out of connections',
+    0x011B: 'RPI is smaller than the production inhibit time',
+    0x011C: 'Reserved',
+    0x0202: 'Reserved',
+    0x0203: 'Connection timed out',
+    0x0204: 'Unconnected request timed out',
+    0x0205: 'Parameter error in unconnected request service',
+    0x0206: 'Message too large for unconnected_send service',
+    0x0207: 'Unconnected acknowledge without reply',
+    // 0x0208: 'Reserved',
+    // 0x0300: 'Reserved',
+    0x0301: 'No buffer memory available',
+    0x0302: 'Network bandwidth not available for data',
+    0x0303: 'No consumed connection ID filter available',
+    0x0304: 'Not configured to send scheduled priority data',
+    0x0305: 'Schedule signature mismatch',
+    0x0306: 'Schedule signature validation not possible',
+    // 0x0307: 'Reserved',
+    // 0x0310: 'Reserved',
+    0x0311: 'Port not available',
+    0x0312: 'Link address not valid',
+    // 0x0313: 'Reserved',
+    // 0x0314: 'Reserved',
+    0x0315: 'Invalid segment in connection path',
+    0x0316: 'Error in forward close service connection path',
+    0x0317: 'Scheduling not specified',
+    0x0318: 'Link address to self invalid',
+    0x0319: 'Secondary resources unavailable',
+    0x031A: 'Rack connection already established',
+    0x031B: 'Module connection already established',
+    0x031C: 'Miscellaneous',
+    0x031D: 'Redundant connection mismatch',
+    0x031E: 'No more user configurable link consumer resources available in the producing module',
+    0x031F: 'No user configurable link consumer resources available in the producing module',
+    0x0320: 'Vendor specific',
+    0x07FF: 'Vendor specific',
+    0x0800: 'Network link in path to module is offline',
+    // 0x0801: 'Reserved',
+    // 0x080F: 'Reserved',
+    0x0810: 'No target application data available',
+    0x0811: 'No originator application data available',
+    0x0812: 'Node address has changed since the network was scheduled',
+    0x0813: 'Not configured for off-subnet multicast',
+    // 0x0814: 'Reserved',
+    // 0xFCFF: 'Reserved'
+  },
+  0x09: 'Error in data segment',
+  0x0C: 'Object state error',
+  0x10: 'Device state error'
+}
