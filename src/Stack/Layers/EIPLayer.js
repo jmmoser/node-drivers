@@ -72,7 +72,7 @@ class EIPLayer extends Layer {
     this._dataLength = 0;
     this._data = Buffer.alloc(0);
 
-    this.connectionState = 0;
+    this._connectionState = 0;
 
     this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
 
@@ -95,18 +95,18 @@ class EIPLayer extends Layer {
   }
 
   connect(callback) {
-    if (this._connectionStatus === 2) {
+    if (this._connectionState === 2) {
       if (callback) callback();
       return;
     }
     this._connectCallback = callback;
-    if (this._connectionStatus > 0) return;
-    this._connectionStatus = 1;
+    if (this._connectionState > 0) return;
+    this._connectionState = 1;
     this.send(EIPPacket.RegisterSessionRequest(this._context), null, true);
   }
 
   disconnect(callback) {
-    if (this._connectionStatus === 0) {
+    if (this._connectionState === 0) {
       if (callback) callback();
       return;
     }
@@ -117,7 +117,7 @@ class EIPLayer extends Layer {
   }
 
   sendNextMessage() {
-    if (this._connectionStatus === 2) {
+    if (this._connectionState === 2) {
       let request = this.getNextRequest();
 
       if (request) {
@@ -174,17 +174,17 @@ class EIPLayer extends Layer {
 
     this._callbacks[EIPCommands.RegisterSession] = function(packet) {
       if (packet.Status === 0) {
-        this._connectionStatus = 2;
+        this._connectionState = 2;
         this._sessionHandle = packet.SessionHandle;
         if (this._connectCallback) this._connectCallback();
         this.sendNextMessage();
       } else {
-        this._connectionStatus = 0;
+        this._connectionState = 0;
       }
     };
 
     this._callbacks[EIPCommands.UnregisterSession] = function(packet) {
-      this._connectionStatus = 0;
+      this._connectionState = 0;
       this._sessionHandle = null;
 
       this.connect();
