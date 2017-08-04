@@ -211,7 +211,7 @@ class ConnectionManager {
   static GetConnectionDataRequest(connectionNumber) {
     let data = Buffer.alloc(2);
 
-    data.writeUInt16LE(connectionNumber, offset);
+    data.writeUInt16LE(connectionNumber, 0);
 
     return ConnectionManager._Request(
       Services.GetConnectionData,
