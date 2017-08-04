@@ -30,22 +30,25 @@ class CIPLayer extends Layer {
     if (callback) callback();
   }
 
+  _connectedObjects() {
+    let objs = [];
+    let length = this._objects.length;
+    for (let i = 0; i < length; i++) {
+      if (this._objects[i].connectionState() === 1) {
+        objs.push(this._objects[i]);
+      }
+    }
+    return objs;
+  }
+
   disconnect(callback) {
     let self = this;
 
     if (self._disconnecting === 1) return;
 
+    let connectedObjects = self._connectedObjects();
 
-    let noDisconnectNeeded = true;
-
-    for (let i = 0; i < self._objects.length; i++) {
-      if (self._objects[i].connectionState() === 1) {
-        noDisconnectNeeded = false;
-        break;
-      }
-    }
-
-    if (noDisconnectNeeded === true) {
+    if (connectedObjects.length === 0) {
       if (callback) callback();
       return;
     }
@@ -71,8 +74,8 @@ class CIPLayer extends Layer {
       if (callback) callback();
     }, 10000);
 
-    for (let i = 0; i < objectCount; i++) {
-      self._objects[i].disconnect(objectDisconnectCallback);
+    for (let i = 0; i < connectedObjects.length; i++) {
+      connectedObjects[i].disconnect(objectDisconnectCallback);
     }
   }
 
