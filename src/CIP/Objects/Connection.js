@@ -14,9 +14,9 @@ class Connection {
 
     layer.addObject(this);
 
-    // this.mergeOptionsWithDefaults(options);
+    this.mergeOptionsWithDefaults(options);
 
-    this._connectionStatus = 0;
+    this._connectionState = 0;
 
     this._sequenceCount = 0;
     this._callbacks = {};
@@ -24,12 +24,16 @@ class Connection {
     this.connect();
   }
 
+  connectionState() {
+    return this._connectionState;
+  }
+
   mergeOptionsWithDefaults(options) {
     if (!options) options = {};
     this.VendorID = options.VendorID || 0x1337;
     this.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
     this.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x03;
-    this.OToTRPI = options.OtoTRPI || 0x00201234;
+    this.OtoTRPI = options.OtoTRPI || 0x00201234;
     this.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
     this.TtoORPI = options.TtoORPI || 0x00204001;
     this.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
@@ -38,15 +42,15 @@ class Connection {
   }
 
   connect(callback) {
-    if (this._connectionStatus > 0) return;
+    if (this._connectionState > 0) return;
     let self = this;
-    self._connectionStatus = 1;
+    self._connectionState = 1;
 
     self._layer.sendUnconnected(ConnectionManager.ForwardOpen(self), function(data) {
       let message = MessageRouter.Reply(data);
 
       if (message.status === 0 && message.service === (ConnectionManager.Services.ForwardOpen | (1 << 7))) {
-        self._connectionStatus = 2;
+        self._connectionState = 2;
         let reply = ConnectionManager.ForwardOpenReply(message.data);
         self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
         self._TtoOConnectionID = reply.TtoONetworkConnectionID;
@@ -54,16 +58,9 @@ class Connection {
         self._TtoOPacketRate = reply.TtoOActualPacketRate;
         self._connectionSerialNumber = reply.ConnectionSerialNumber;
 
-        // self._layer.setConnectionResponseCallback(self._TtoOConnectionID, function() {
-        //   self.handleData.apply(self, arguments);
-        // });
-
-        // console.log(self._OtoTPacketRate);
-        // console.log(self._TtoOPacketRate);
-
         let rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
 
-        rpi = 4 * rpi * Math.pow(2, this.ConnectionTimeoutMultiplier);
+        rpi = 4 * rpi * Math.pow(2, self.ConnectionTimeoutMultiplier);
 
         console.log(rpi);
 
@@ -81,14 +78,14 @@ class Connection {
   }
 
   disconnect(callback) {
-    if (this._connectionStatus < 2) return;
+    if (this._connectionState < 2) return;
     let self = this;
-    self._connectionStatus = -1;
+    self._connectionState = -1;
 
     self._layer.sendUnconnected(ConnectionManager.ForwardClose(self), function(data) {
       let message = MessageRouter.Reply(data);
       if (message.status === 0 && message.service === (ConnectionManager.Services.ForwardClose | (1 << 7))) {
-        self._connectionStatus = 0;
+        self._connectionState = 0;
         self._layer.setConnectionResponseCallback(self._TtoOConnectionID, null);
         if (callback) callback();
       }
@@ -101,7 +98,7 @@ class Connection {
   }
 
   sendNextMessage() {
-    if (this._connectionStatus === 2) {
+    if (this._connectionState === 2) {
       let request = this._queue.getNext();
 
       if (request) {
