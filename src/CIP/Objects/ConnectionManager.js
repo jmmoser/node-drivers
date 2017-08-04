@@ -85,6 +85,51 @@ class ConnectionManager {
 
   // EIP-CIP-V1 Table 3-5.9, pg. 3-63
   // static ForwardOpen(cipObject, options) {
+
+  // static ForwardOpen(connection) {
+  //   incrementNetworkConnectionCounters();
+  //
+  //   connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
+  //
+  //   // 0x54
+  //   let offset = 0;
+  //   let buffer = Buffer.alloc(256);
+  //   buffer.writeUInt8(Services.ForwardOpen, offset); offset += 1;
+  //   buffer.writeUInt8(2, offset); offset += 1; // path size
+  //   buffer.writeUInt8(0x20, offset); offset += 1; // logical segment, class ID, 8-bit logical address
+  //   buffer.writeUInt8(ConnectionManager.Code, offset); offset += 1; // class ID
+  //   buffer.writeUInt8(0x24, offset); offset += 1; // logical segment, instance ID, 8-bit logical address
+  //   buffer.writeUInt8(0x01, offset); offset += 1; // instance ID,
+  //
+  //   buffer.writeUInt8(0x0A, offset); offset += 1; // Connection timing Priority (CIP vol 1 Table 3-5.11)
+  //   buffer.writeUInt8(0x0E, offset); offset += 1; // Timeout, ticks
+  //
+  //   buffer.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); offset += 4; // Originator to Target Network Connection ID
+  //   buffer.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); offset += 4; // Target to Originator Network Connection ID
+  //   buffer.writeUInt16LE(ConnectionSerialNumberCounter, offset); offset += 2; // Connection Serial Number
+  //   buffer.writeUInt16LE(connection.VendorID || 0x1337, offset); offset += 2;
+  //   buffer.writeUInt32LE(connection.OriginatorSerialNumber || 42, offset); offset += 4;
+  //   buffer.writeUInt8(connection.ConnectionTimeoutMultiplier || 0x03, offset); offset += 1; // connection timeout multiplier
+  //   offset += 3; // reserved
+  //
+  //   buffer.writeUInt32LE(connection.OtoTRPI || 0x00201234, offset); offset += 4; // Originator to Target requested packet interval (rate), in microseconds
+  //   buffer.writeUInt16LE(connection.OtoTNetworkConnectionParameters || 0x43F4, offset); offset += 2; // Originator to Target netword connection parameters
+  //   buffer.writeUInt32LE(connection.TtoORPI || 0x00204001, offset); offset += 4; // Target to Originator requested packet interval (rate), in microseconds
+  //   buffer.writeUInt16LE(connection.TtoONetworkConnectionParameters || 0x43F4, offset); offset += 2; // Target to Originator network connection parameters
+  //
+  //   buffer.writeUInt8(connection.TransportClassTrigger, offset); offset += 1; // Transport type/trigger
+  //
+  //   buffer.writeUInt8(0x03, offset); offset += 1; // Connection path size
+  //   buffer.writeUInt8(0x01, offset); offset += 1; // Port identifier
+  //   buffer.writeUInt8(connection.ProcessorSlot || 0, offset); offset += 1;
+  //   buffer.writeUInt8(0x20, offset); offset += 1; // logical segment, class ID, 8-bit logical address
+  //   buffer.writeUInt8(0x02, offset); offset += 1; // class ID (MessageRouter)
+  //   buffer.writeUInt8(0x24, offset); offset += 1; // logical segment, instance ID, 8-bit logical address
+  //   buffer.writeUInt8(0x01, offset); offset += 1; // instance ID
+  //
+  //   return buffer.slice(0, offset);
+  // }
+
   static ForwardOpen(connection) {
     incrementNetworkConnectionCounters();
 

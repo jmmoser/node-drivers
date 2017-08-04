@@ -35,6 +35,22 @@ class CIPLayer extends Layer {
 
     if (self._disconnecting === 1) return;
 
+
+    let noDisconnectNeeded = true;
+
+    for (let i = 0; i < self._objects.length; i++) {
+      if (self._objects[i].connectionState() === 1) {
+        noDisconnectNeeded = false;
+        break;
+      }
+    }
+
+    if (noDisconnectNeeded === true) {
+      if (callback) callback();
+      return;
+    }
+
+
     self._diconnecting = 1;
     self._disconnectCount = 0;
 

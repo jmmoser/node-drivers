@@ -38,12 +38,12 @@ class TCPLayer extends Layer {
     });
 
     self.socket.on('close', function() {
-      console.log('TCP closed');
+      // console.log('TCP closed');
       self._connectionState = 0;
     });
 
     self.socket.on('end', function() {
-      console.log('TCP end');
+      // console.log('TCP end');
     });
   }
 
