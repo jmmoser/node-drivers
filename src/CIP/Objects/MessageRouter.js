@@ -254,7 +254,7 @@ function DataSegment(buffer, offset, segments) {
 }
 
 
-// EIP-CIP-V1-1.0 Appendix B-1. General status codes
+// CIP-V1-1.0 Appendix B-1. General status codes
 const CIPGeneralStatusCodeNames = {
   0x01: 'Connection failure',
   0x02: 'Resource unavailable',
@@ -298,6 +298,7 @@ const CIPGeneralStatusCodeNames = {
   0x2A: 'Group 2 only server general failure'
 };
 
+// CIP-V1-1.0 Appendix B-1. General status codes
 const CIPGeneralStatusCodeDescriptions = {
   0x01: 'A connection related service failed along the connection path.',
   0x02: 'Resources needed for the object to perform the requested service were unavailable.',
