@@ -190,44 +190,84 @@ class ConnectionManager {
 
   static ForwardOpenReply(buffer) {
     let offset = 0;
-    let response = {};
+    let res = {};
 
-    response.OtoTNetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
-    response.TtoONetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
-    response.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
-    response.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
-    response.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-    response.OtoTActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
-    response.TtoOActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
+    res.OtoTNetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
+    res.TtoONetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
+    res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
+    res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
+    res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
+    res.OtoTActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
+    res.TtoOActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
     let appReplySize = 2 * buffer.readUInt8(offset); offset += 1;
     offset += 1; // reserved
     if (appReplySize > 0) {
-      response.Data = buffer.slice(offset, offset + appReplySize); offset += appReplySize;
+      res.Data = buffer.slice(offset, offset + appReplySize); offset += appReplySize;
     }
-    return response;
+    return res;
   }
 
-  GetConnectionData() {
-    let offset = 0;
-    let data = Buffer.alloc(64);
+  // CIP Vol1 3-5.5.5
+  static GetConnectionDataRequest(connectionNumber) {
+    let data = Buffer.alloc(2);
+
+    data.writeUInt16LE(connectionNumber, offset);
 
     return ConnectionManager._Request(
       Services.GetConnectionData,
-      data.slice(0, offset)
+      data
     );
   }
 
-  SearchConnectionData() {
+  // CIP Vol1 3-5.5.5
+  static GetConnectionDataResponse(buffer) {
     let offset = 0;
-    let data = Buffer.alloc(64);
+    let res = {};
+
+    res.ConnectionNumber = buffer.readUInt16LE(offset); offset += 2;
+    res.ConnectionState = buffer.readUInt16LE(offset); offset += 2;
+    res.OriginatorPort = buffer.readUInt16LE(offset); offset += 2;
+    res.TargetPort = buffer.readUInt16LE(offset); offset += 2;
+    res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
+    res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
+    res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
+    res.OriginatorOtoTCID = buffer.readUInt32LE(offset); offset += 4;
+    res.TargetOtoTCID = buffer.readUInt32LE(offset); offset += 4;
+    res.ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offset); offset += 1;
+    offset += 3; // Reserved
+    res.OriginatorRPIOtoT = buffer.readUInt32LE(offset); offset += 4;
+    res.OriginatorAPIOtoT = buffer.readUInt32LE(offset); offset += 4;
+    res.OriginatorTtoOCID = buffer.readUInt32LE(offset); offset += 4;
+    res.TargetTtoOCID = buffer.readUInt32LE(offset); offset += 4;
+    res.ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offset); offset += 1;
+    offset += 3; // Reserved
+    res.OriginatorRPITtoO = buffer.readUInt32LE(offset); offset += 4;
+    res.OriginatorAPITtoO = buffer.readUInt32LE(offset); offset += 4;
+
+    return res;
+  }
+
+  // CIP Vol1 3-5.5.6
+  static SearchConnectionDataRequest(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
+    let offset = 0;
+    let data = Buffer.alloc(8);
+
+    data.writeUInt16LE(connectionSerialNumber, offset); offset += 2;
+    data.writeUInt16LE(originatorVendorID, offset); offset += 2;
+    data.writeUInt32LE(originatorSerialNumber, offset); offset += 4;
 
     return ConnectionManager._Request(
       Services.SearchConnectionData,
-      data.slice(0, offset)
+      data
     );
   }
 
-  GetConnectionOwner() {
+  // CIP Vol1 3-5.5.6
+  static SearchConnectionDataResponse(buffer) {
+    return GetConnectionDataResponse(buffer);
+  }
+
+  static GetConnectionOwner() {
     let offset = 0;
     let data = Buffer.alloc(64);
 
