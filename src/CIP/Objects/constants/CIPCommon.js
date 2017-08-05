@@ -1,7 +1,7 @@
 'use strict';
 
 // CIP Vol1 Appendix A
-const CommonServices = {
+const Services = {
   GetAttributesAll: 0x01,
   SetAttributesAll: 0x02,
   GetAttributeList: 0x03,
@@ -38,5 +38,6 @@ const ReservedClassAttributes = {
 };
 
 module.exports = {
-  CommonServices
+  Services,
+  ReservedClassAttributes
 };
