@@ -143,6 +143,9 @@ class Connection {
 
 module.exports = Connection;
 
+Connection.Code = 0x05;
+
+// CIP Vol1 Table 3-4.2
 // const ClassServices = [
 //   0x08, // Create
 //   0x09, // Delete
@@ -161,3 +164,21 @@ module.exports = Connection;
 //   0x05: 'Deferred Delete',
 //   0x06: 'Closing'
 // };
+
+// CIP Vol1 Table 3-4.5
+const ConnectionBindServiceStatusCodeDescriptions = {
+  0x02: {
+    0x01: 'One or both of the connection instances is Non-existent',
+    0x02: 'The connection class and/or instance is out of resources to bind instances'
+  },
+  0x0C: {
+    0x01: 'Both of the connection instances are existent, but at least one is not in the established state'
+  },
+  0x20: {
+    0x01: 'Both connection instances are the same value'
+  },
+  0xD0: {
+    0x01: 'One or both of the connection instances is not a dynamically created I/O connection',
+    0x02: 'One or both of the connection instances were created internally and the device is not allowing a binding to it'
+  }
+};
