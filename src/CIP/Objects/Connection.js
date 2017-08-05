@@ -153,17 +153,20 @@ Connection.Code = 0x05;
 //   0x11, // Find_Next_Object_Instance
 //   0x0E // Get_Attribute_Single
 // ];
-//
-// // EIP-CIP V1 3-4.3.1, pg. 3-10
-// const StateDescriptions = {
-//   0x00: 'Non-existent',
-//   0x01: 'Configuring',
-//   0x02: 'Waiting for Connection ID',
-//   0x03: 'Established',
-//   0x04: 'Timed Out',
-//   0x05: 'Deferred Delete',
-//   0x06: 'Closing'
-// };
+
+// CIP Vol1 Table 3-4.2
+const ClassServices = {
+  Create: 0x08,
+  Delete: 0x09,
+  Reset: 0x05,
+  FindNextObjectInstance: 0x11,
+  GetAttributeSingle: 0x0E,
+  
+  ConnectionBind: 0x4B,
+  ProducingApplicationLookup: 0x4C,
+  SafetyClose: 0x4E,
+  SafetyOpen: 0x54
+};
 
 // CIP Vol1 Table 3-4.9
 const InstanceAttributes = {
