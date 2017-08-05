@@ -165,6 +165,104 @@ Connection.Code = 0x05;
 //   0x06: 'Closing'
 // };
 
+// CIP Vol1 Table 3-4.9
+const InstanceAttributes = {
+  1: {
+    name: 'State',
+    type: 'USINT'
+  },
+  2: {
+    name: 'Instance_type',
+    type: 'USINT'
+  },
+  3: {
+    name: 'TransportClass_trigger',
+    type: 'BYTE'
+  },
+  4: {
+    name: 'DeviceNet_produced_conection_id',
+    type: 'UINT'
+  },
+  5: {
+    name: 'DeviceNet_consumed_connection_id',
+    type: 'UINT'
+  },
+  6: {
+    name: 'DeviceNet_initial_comm_characteristics',
+    type: 'BYTE'
+  },
+  7: {
+    name: 'Produced_connection_size',
+    type: 'UINT'
+  },
+  8: {
+    name: 'Consumed_connection_size',
+    type: 'UINT'
+  },
+  9: {
+    name: 'Expected_packet_rate',
+    type: 'UINT'
+  },
+  10: {
+    name: 'CIP_produced_connection_id',
+    type: 'UDINT'
+  },
+  11: {
+    name: 'CIP_consumed_connection_id',
+    type: 'UDINT'
+  },
+  12: {
+    name: 'Watchdog_timeout_action',
+    type: 'USINT'
+  },
+  13: {
+    name: 'Produced_connection_path_length',
+    type: 'UINT'
+  },
+  14: {
+    name: 'Produced_connection_path',
+    type: 'EPATH'
+  },
+  15: {
+    name: 'Consumed_connection_path_length',
+    type: 'UINT'
+  },
+  16: {
+    name: 'Consumed_connection_path',
+    type: 'EPATH'
+  },
+  17: {
+    name: 'Production_inhibit_time',
+    type: 'UINT'
+  },
+  18: {
+    name: 'Connection_timeout_multiplier',
+    type: 'USINT'
+  },
+  19: {
+    name: 'Connection_binding_list',
+    type: 'UINT[]'
+  }
+}
+
+// CIP Vol1 Table 3-4.10
+const StateAttributes = {
+  0: 'Non-existent',
+  1: 'Configuring',
+  2: 'Waiting for connection ID',
+  3: 'Established',
+  4: 'Timed out',
+  5: 'Deferred delete',
+  6: 'Closing'
+};
+
+// CIP Vol1 Table 3-4.11
+const InstanceTypeAttributes = {
+  0: 'Explicit messaging',
+  1: 'I/O',
+  2: 'CIP bridged'
+};
+
 // CIP Vol1 Table 3-4.5
 const ConnectionBindServiceStatusCodeDescriptions = {
   0x02: {
