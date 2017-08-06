@@ -119,6 +119,10 @@ class MessageRouter extends CIPObject {
     offset += 1; // reserved
     response.status = buffer.readUInt8(offset); offset += 1;
 
+    if (response.status !== 0) {
+      response.statusDescription = CIPGeneralStatusCodeNames[response.status];
+    } 
+
     let sizeOfAdditionStatus = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
     if (sizeOfAdditionStatus > 0) {
       response.additionalStatus = buffer.slice(offset, offset + 2 * sizeOfAdditionStatus);
