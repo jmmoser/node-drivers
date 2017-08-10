@@ -30,9 +30,9 @@ class Connection {
 
   mergeOptionsWithDefaults(options) {
     if (!options) options = {};
-    this.VendorID = options.VendorID || 0x1337;
+    this.VendorID = options.VendorID || 0x1339;
     this.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
-    this.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x03;
+    this.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x01;
     this.OtoTRPI = options.OtoTRPI || 0x00201234;
     this.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
     this.TtoORPI = options.TtoORPI || 0x00204001;
@@ -49,7 +49,7 @@ class Connection {
     self._layer.sendUnconnected(ConnectionManager.ForwardOpen(self), function(data) {
       let message = MessageRouter.Reply(data);
 
-      if (message.status === 0 && message.service === (ConnectionManager.Services.ForwardOpen | (1 << 7))) {
+      if (message.statusCode === 0 && message.service === (ConnectionManager.Services.ForwardOpen | (1 << 7))) {
         self._connectionState = 2;
         let reply = ConnectionManager.ForwardOpenReply(message.data);
         self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
@@ -59,10 +59,9 @@ class Connection {
         self._connectionSerialNumber = reply.ConnectionSerialNumber;
 
         let rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
-
         rpi = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
-
-        console.log(rpi);
+        self._rpi = rpi;
+        // console.log(rpi);
 
         self._layer.setConnectionResponseCallback(self._TtoOConnectionID, self.handleData.bind(self));
 
@@ -73,7 +72,7 @@ class Connection {
         console.log(message);
       }
 
-      if (callback) callback();
+      if (callback) callback(message);
     });
   }
 
@@ -84,10 +83,12 @@ class Connection {
 
     self._layer.sendUnconnected(ConnectionManager.ForwardClose(self), function(data) {
       let message = MessageRouter.Reply(data);
-      if (message.status === 0 && message.service === (ConnectionManager.Services.ForwardClose | (1 << 7))) {
+
+      if (message.statusCode === 0 && message.service === (ConnectionManager.Services.ForwardClose | (1 << 7))) {
+        let reply = ConnectionManager.ForwardCloseReply(message.data);
         self._connectionState = 0;
         self._layer.setConnectionResponseCallback(self._TtoOConnectionID, null);
-        if (callback) callback();
+        if (callback) callback(reply);
       }
     });
   }
@@ -161,7 +162,7 @@ const ClassServices = {
   Reset: 0x05,
   FindNextObjectInstance: 0x11,
   GetAttributeSingle: 0x0E,
-  
+
   ConnectionBind: 0x4B,
   ProducingApplicationLookup: 0x4C,
   SafetyClose: 0x4E,

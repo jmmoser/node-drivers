@@ -34,7 +34,7 @@ class CIPLayer extends Layer {
     let objs = [];
     let length = this._objects.length;
     for (let i = 0; i < length; i++) {
-      if (this._objects[i].connectionState() === 1) {
+      if (this._objects[i].connectionState() === 2) {
         objs.push(this._objects[i]);
       }
     }
@@ -52,7 +52,6 @@ class CIPLayer extends Layer {
       if (callback) callback();
       return;
     }
-
 
     self._diconnecting = 1;
     self._disconnectCount = 0;
