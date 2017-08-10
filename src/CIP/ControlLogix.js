@@ -8,7 +8,11 @@ const Connection = require('./Objects/Connection');
 // class ControlLogix extends Connection {
 class ControlLogix {
   constructor(cipLayer, options) {
-    this.connection = new Connection(cipLayer, options);
+    this._connection = new Connection(cipLayer, options);
+  }
+
+  connection() {
+    return this._connection;
   }
 
   ReadTag(address, callback) {
@@ -19,7 +23,7 @@ class ControlLogix {
 
     let request = MessageRouter.Request(Services.ReadTag, path, data);
 
-    this.connection.send(request, function(message) {
+    this._connection.send(request, function(message) {
       let reply = MessageRouter.Reply(message);
       let dataType = reply.data.readUInt16LE(0);
       let dataConverter = DataConverters[dataType];
@@ -44,7 +48,7 @@ class ControlLogix {
 
     let request = MessageRouter.Request(Services.WriteTag, path, data);
 
-    this.connection.send(request, function(message) {
+    this._connection.send(request, function(message) {
       let reply = MessageRouter.Reply(message);
       callback(null, reply);
     });
