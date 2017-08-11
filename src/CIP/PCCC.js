@@ -1,20 +1,19 @@
 'use strict';
 
-const Layer = require('./../Stack/Layers/Layer');
+// const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
 // option properties
 // - vendor (UINT): Vendor number of requestor
 // - serialNumber (UDINT): CIP Serial number of requestor
 
-class PCCC extends Layer {
+class PCCC {
   constructor(cipLayer, options) {
-    // super(); // no lower layer (uses CIPLayer as lower layer)
-    super(cipLayer);
+    this._connection = new Connection(cipLayer, options);
+  }
 
-    cipLayer.addObject(this);
-
-    this._mergeOptions(options);
+  connection() {
+    return this._connection;
   }
 
   _mergeOptions(options) {
@@ -55,7 +54,7 @@ class PCCC extends Layer {
 
       let self = this;
 
-      this._layer.sendUnconnected(message, function(data) {
+      this._connection.sendUnconnected(message, function(data) {
         let offset = data.readUInt8(4);
         self.forward(data.slice(offset + 4));
       });
