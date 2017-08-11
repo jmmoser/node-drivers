@@ -32,18 +32,7 @@ const SEGMENT_TYPE = {
 //   kSEGMENT_TYPE.RESERVED: RESERVED
 // }
 
-const SEGMENT_TYPE_DESCRIPTION = {
-  0x00: 'Port',
-  0x20: 'Logical',
-  0x40: 'Network',
-  0x60: 'Symbolic',
-  0x80: 'Data',
-  0xA0: 'Data type constructed',
-  0xC0: 'Data type elementary',
-  0xE0: 'Reserved'
-};
-
-const SEGMENT_TYPE_DESCRIPTION = {
+const SEGMENT_TYPE_DESCRIPTIONS = {
   SEGMENT_TYPE.PORT: 'Port',
   SEGMENT_TYPE.LOGICAL: 'Logical',
   SEGMENT_TYPE.NETWORK: 'Network',
@@ -53,6 +42,9 @@ const SEGMENT_TYPE_DESCRIPTION = {
   SEGMENT_TYPE.DATA_TYPE_ELEMENTARY: 'Data type elementary',
   SEGMENT_TYPE.RESERVED: 'Reserved'
 };
+
+
+
 
 const LOGICAL_SEGMENT_TYPE = {
   CLASS_ID: 0x00,
@@ -64,11 +56,26 @@ const LOGICAL_SEGMENT_TYPE = {
   SERVICE_ID: 0x18,
   EXTENDED_LOGICAL: 0x1C
 };
+const LOGICAL_SEGMENT_TYPE_DESCRIPTIONS = {
+  LOGICAL_SEGMENT_TYPE.CLASS_ID: 'Class Id',
+  LOGICAL_SEGMENT_TYPE.INSTANCE_ID: 'Instance Id',
+  LOGICAL_SEGMENT_TYPE.MEMBER_ID: 'Member Id',
+  LOGICAL_SEGMENT_TYPE.CONNECTION_POINT: 'Connection point',
+  LOGICAL_SEGMENT_TYPE.ATTRIBUTE_ID: 'Attribute Id',
+  LOGICAL_SEGMENT_TYPE.SPECIAL: 'Special',
+  LOGICAL_SEGMENT_TYPE.SERVICE_ID: 'Service Id',
+  LOGICAL_SEGMENT_TYPE.EXTENDED_LOGICAL: 'Extended logical'
+}
 
 const LOGICAL_SEGMENT_FORMAT = {
   EIGHT_BIT: 0x00,
   SIXTEEN_BIT: 0x01,
   THIRTY_TWO_BIT: 0x02
+};
+const LOGICAL_SEGMENT_FORMAT_DESCRIPTIONS = {
+  LOGICAL_SEGMENT_FORMAT.EIGHT_BIT: 'Eight bit',
+  LOGICAL_SEGMENT_FORMAT.SIXTEEN_BIT: 'Sixteen bit',
+  LOGICAL_SEGMENT_FORMAT.THIRTY_TWO_BIT: 'Thirty two bit'
 };
 
 const LOGICAL_SEGMENT_EXTENDED_TYPE = {
@@ -80,14 +87,42 @@ const LOGICAL_SEGMENT_EXTENDED_TYPE = {
   STRUCTURE_MEMBER_NUMBER: 0x05,
   STRUCTURE_MEMBER_HANDLE: 0x06
 };
+const LOGICAL_SEGMENT_EXTENDED_TYPE_DESCRIPTIONS = {
+  LOGICAL_SEGMENT_EXTENDED_TYPE.RESERVED: 'Reserved',
+  LOGICAL_SEGMENT_EXTENDED_TYPE.ARRAY_INDEX: 'Array index',
+  LOGICAL_SEGMENT_EXTENDED_TYPE.INDIRECT_ARRAY_INDEX: 'Indirect array index',
+  LOGICAL_SEGMENT_EXTENDED_TYPE.BIT_INDEX: 'Bit index',
+  LOGICAL_SEGMENT_EXTENDED_TYPE.INDIRECT_BIT_INDEX: 'Indirect bit index',
+  LOGICAL_SEGMENT_EXTENDED_TYPE.STRUCTURE_MEMBER_NUMBER: 'Structure member number',
+  LOGICAL_SEGMENT_EXTENDED_TYPE.STRUCTURE_MEMBER_HANDLE: 'Structure member handle'
+};
 
-const NETWORK_SEGMENT = {
+
+const LOGICAL_SEGMENT_SPECIAL_TYPE_FORMAT = {
+  ELECTRONIC_KEY: 0x00
+};
+const LOGICAL_SEGMENT_SPECIAL_TYPE_FORMAT_DESCRIPTIONS = {
+  LOGICAL_SEGMENT_SPECIAL_TYPE_FORMAT.ELECTRONIC_KEY: 'Electronic key'
+}
+
+
+
+
+const NETWORK_SEGMENT_SUBTYPE = {
   SCHEDULE: 0x01,
   FIXED_TAG: 0x02,
   PRODUCTION_INHIBIT_TIME_IN_MILLISECONDS: 0x03,
   SAFETY: 0x04,
   PRODUCTION_INHIBIT_TIME_IN_MICROSECONDS: 0x10,
   EXTENDED_NETWORK: 0x1F
+};
+const NETWORK_SEGMENT_SUBTYPE_DESCRIPTIONS = {
+  NETWORK_SEGMENT_SUBTYPE.SCHEDULE: 'Schedule',
+  NETWORK_SEGMENT_SUBTYPE.FIXED_TAG: 'Fixed tag',
+  NETWORK_SEGMENT_SUBTYPE.PRODUCTION_INHIBIT_TIME_IN_MILLISECONDS: 'Production inhibit time in milliseconds',
+  NETWORK_SEGMENT_SUBTYPE.SAFETY: 'Safety',
+  NETWORK_SEGMENT_SUBTYPE.PRODUCTION_INHIBIT_TIME_IN_MICROSECONDS: 'Production inhibit time in microseconds',
+  NETWORK_SEGMENT_SUBTYPE.EXTENDED_NETWORK: 'Extended network'
 };
 
 
@@ -105,7 +140,7 @@ const SYMBOLIC_SEGMENT_EXTENDED_FORMAT_NUMERIC = {
   UDINT: 0x08
 };
 
-const SYMBOLIC_SEGMENT_EXTENDED_FORMAT_DESCRIPTION = {
+const SYMBOLIC_SEGMENT_EXTENDED_FORMAT_DESCRIPTIONS = {
   SYMBOLIC_SEGMENT_EXTENDED_FORMAT.DOUBLE_BYTE_CHARS: 'Double-byte characters',
   SYMBOLIC_SEGMENT_EXTENDED_FORMAT.TRIPLE_BYTE_CHARS: 'Triple-byte characters'
   SYMBOLIC_SEGMENT_EXTENDED_FORMAT.NUMERIC: 'Numeric'
@@ -133,7 +168,6 @@ const DATA_SEGMENT_SUBTYPE = {
   SIMPLE_DATA: 0x00,
   ANSI_EXTENDED_SYMBOL: 0x11
 };
-
 const DATA_SEGMENT_SUBTYPE_DESCRIPTIONS = {
   DATA_SEGMENT_SUBTYPE.SIMPLE_DATA: 'Simple data',
   DATA_SEGMENT_SUBTYPE.ANSI_EXTENDED_SYMBOL: 'ANSI extended symbol'
@@ -237,7 +271,7 @@ function setSegmentType(path, offset, type) {
 }
 
 function getSegmentTypeDescription(segmentType) {
-  return __getDescription(SEGMENT_TYPE_DESCRIPTION, segmentType);
+  return __getDescription(SEGMENT_TYPE_DESCRIPTIONS, segmentType);
 }
 
 
@@ -285,20 +319,36 @@ function getLogicalSegmentLogicalType(path, offset) {
   const LOGICAL_TYPE_MASK = 0x1C;
   return path[offset] & LOGICAL_TYPE_MASK;
 }
+function getLogicalSegmentLogicalTypeDescription(type) {
+  return __getDescription(LOGICAL_SEGMENT_TYPE_DESCRIPTIONS, type);
+}
+
 
 function getLogicalSegmentLogicalFormat(path, offset) {
   const LOGICAL_FORMAT_MASK = 0x03;
   return path[offset] & LOGICAL_FORMAT_MASK;
 }
+function getLogicalSegmentLogicalFormatDescription(format) {
+  return __getDescription(LOGICAL_SEGMENT_FORMAT_DESCRIPTIONS, format);
+}
+
 
 function getLogicalSegmentExtendedLogicalType(path, offset) {
   return path[offset + 1];
 }
+function getLogicalSegmentExtendedLogicalTypeDescription(type) {
+  return __getDescription(LOGICAL_SEGMENT_EXTENDED_TYPE_DESCRIPTIONS, type);
+}
+
 
 function getLogicalSegmentSpecialTypeLogicalType(path, offset) {
   const LOGICAL_FORMAT_MASK = 0x03;
   return path[offset] & LOGICAL_FORMAT_MASK;
 }
+function getLogicalSegmentSpecialTypeLogicalTypeDescription(type) {
+  return __getDescription(LOGICAL_SEGMENT_SPECIAL_TYPE_FORMAT_DESCRIPTIONS, type);
+}
+
 
 function getLogicalSegmentElectronicKeyFormat(path, offset) {
   return path[offset + 1];
@@ -319,9 +369,14 @@ function getLogicalSegmentElectronicKeyFormat4(path, offset) {
 
 
 
-function getNextorkSegmentSubtype(path, offset) {
+
+
+function getNetworkSegmentSubtype(path, offset) {
   const NETWORK_SUBTYPE_MASK = 0x1F;
   return path[offset] & NETWORK_SUBTYPE_MASK;
+}
+function getNetworkSegmentSubtypeDescription(subtype) {
+  return __getDescription(NETWORK_SEGMENT_SUBTYPE_DESCRIPTIONS, subtype);
 }
 
 function getNetworkSegmentProductionInhibitTimeInMilliseconds(path, offset) {
@@ -343,25 +398,35 @@ function getSymbolicSegmentFormat(path, offset) {
   }
   return kSYMBOLIC_SEGMENT_FORMAT.ASCII;
 }
-
-function getSymbolicSegmentFormatDescription(path, offset) {
-  return kSYMBOLIC_SEGMENT_FORMAT_DESCRIPTIONS[getSymbolicSegmentFormat(path, offset)];
+function getSymbolicSegmentFormatDescription(format) {
+  return __getDescription(kSYMBOLIC_SEGMENT_FORMAT_DESCRIPTIONS, format);
+  // return kSYMBOLIC_SEGMENT_FORMAT_DESCRIPTIONS[format];
 }
+
 
 function getSymbolicSegmentASCIIFormatLength(path, offset) {
   const ASCII_FORMAT_LENGTH_MASK = 0x1F;
   return path[offset] & ASCII_FORMAT_LENGTH_MASK;
 }
 
+
 function getSymbolicSegmentNumericType(path, offset) {
   const EXTENDED_FORMAT_NUMERIC_TYPE_MASK = 0x1F;
   return path.readUInt8(offset + 1) & EXTENDED_FORMAT_NUMERIC_TYPE_MASK;
 }
+function getSymbolicSegmentNumericTypeDescription(type) {
+  return __getDescription(SYMBOLIC_SEGMENT_EXTENDED_FORMAT_NUMERIC_DESCRIPTIONS, type);
+}
+
 
 function getSymbolicSegmentExtendedFormat(path, offset) {
   const SYMBOLIC_SEGMENT_EXTENDED_FORMAT_MASK = 0xE0;
   return path.readUInt8(offset + 1) & SYMBOLIC_SEGMENT_EXTENDED_FORMAT_MASK;
 }
+function getSymbolicSegmentExtendedFormatDescription(format) {
+  return __getDescription(SYMBOLIC_SEGMENT_EXTENDED_FORMAT_DESCRIPTIONS, format);
+}
+
 
 
 
@@ -369,11 +434,11 @@ function getSymbolicSegmentExtendedFormat(path, offset) {
 function getDataSegmentSubType(path, offset) {
   return path.readUInt8(offset) & 0x1F;
 }
+function getDataSegmentSubTypeDescription(subtype) {
+  return __getDescription(DATA_SEGMENT_SUBTYPE_DESCRIPTIONS, subtype);
+}
+
 
 function getDataSegmentSimpleDataWordLength(path, offset) {
   return path.readUInt8(offset + 1);
-}
-
-function getDataSegmentSubTypeDescription(subtype) {
-  return __getDescription(DATA_SEGMENT_SUBTYPE_DESCRIPTIONS, subtype);
 }
