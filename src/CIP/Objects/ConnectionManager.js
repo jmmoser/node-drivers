@@ -2,8 +2,6 @@
 
 // EIP-CIP-V1 3.5, page 3-53
 
-// const CIPObject = require('./CIPObject');
-
 const MessageRouter = require('./MessageRouter');
 
 let ConnectionSerialNumberCounter = 0x0001;
@@ -16,7 +14,6 @@ function incrementNetworkConnectionCounters() {
   TtoONetworkConnectionIDCounter++;
 }
 
-// class ConnectionManager extends CIPObject {
 class ConnectionManager {
   // constructor(options) {
   //

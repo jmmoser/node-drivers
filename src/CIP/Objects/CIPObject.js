@@ -1,5 +1,24 @@
 'use strict';
 
+// class CIPInstance {
+//   class() {
+//     return this._class;
+//   }
+//
+//   attributes() {
+//     return this._attributes;
+//   }
+// }
+//
+// class CIPClass {
+//   classId() {
+//     return this._classId;
+//   }
+// }
+
+
+
+
 // const Queueable = require('./../../Classes/Queueable');
 
 // CIPObjects exist in the context of the CIPLayer
