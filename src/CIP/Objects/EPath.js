@@ -11,6 +11,17 @@ const SEGMENT_TYPE = {
   RESERVED: 0xE0
 };
 
+const SEGMENT_TYPE_DESCRIPTIONS = {
+  0x00: 'Port',
+  0x20: 'Logical',
+  0x40: 'Network',
+  0x60: 'Symbolic',
+  0x80: 'Data',
+  0xA0: 'Data type constructed',
+  0xC0: 'Data type elementary',
+  0xE0: 'Reserved'
+};
+
 // const kSEGMENT_TYPE = {
 //   PORT: 1,
 //   LOGICAL: 2,
@@ -32,16 +43,6 @@ const SEGMENT_TYPE = {
 //   kSEGMENT_TYPE.RESERVED: RESERVED
 // }
 
-const SEGMENT_TYPE_DESCRIPTIONS = {
-  SEGMENT_TYPE.PORT: 'Port',
-  SEGMENT_TYPE.LOGICAL: 'Logical',
-  SEGMENT_TYPE.NETWORK: 'Network',
-  SEGMENT_TYPE.SYMBOLIC: 'Symbolic',
-  SEGMENT_TYPE.DATA: 'Data',
-  SEGMENT_TYPE.DATA_TYPE_CONSTRUCTED: 'Data type constructed',
-  SEGMENT_TYPE.DATA_TYPE_ELEMENTARY: 'Data type elementary',
-  SEGMENT_TYPE.RESERVED: 'Reserved'
-};
 
 
 
@@ -57,14 +58,14 @@ const LOGICAL_SEGMENT_TYPE = {
   EXTENDED_LOGICAL: 0x1C
 };
 const LOGICAL_SEGMENT_TYPE_DESCRIPTIONS = {
-  LOGICAL_SEGMENT_TYPE.CLASS_ID: 'Class Id',
-  LOGICAL_SEGMENT_TYPE.INSTANCE_ID: 'Instance Id',
-  LOGICAL_SEGMENT_TYPE.MEMBER_ID: 'Member Id',
-  LOGICAL_SEGMENT_TYPE.CONNECTION_POINT: 'Connection point',
-  LOGICAL_SEGMENT_TYPE.ATTRIBUTE_ID: 'Attribute Id',
-  LOGICAL_SEGMENT_TYPE.SPECIAL: 'Special',
-  LOGICAL_SEGMENT_TYPE.SERVICE_ID: 'Service Id',
-  LOGICAL_SEGMENT_TYPE.EXTENDED_LOGICAL: 'Extended logical'
+  0x00: 'Class Id',
+  0x04: 'Instance Id',
+  0x08: 'Member Id',
+  0x0C: 'Connection point',
+  0x10: 'Attribute Id',
+  0x14: 'Special',
+  0x18: 'Service Id',
+  0x1C: 'Extended logical'
 }
 
 const LOGICAL_SEGMENT_FORMAT = {
@@ -73,9 +74,9 @@ const LOGICAL_SEGMENT_FORMAT = {
   THIRTY_TWO_BIT: 0x02
 };
 const LOGICAL_SEGMENT_FORMAT_DESCRIPTIONS = {
-  LOGICAL_SEGMENT_FORMAT.EIGHT_BIT: 'Eight bit',
-  LOGICAL_SEGMENT_FORMAT.SIXTEEN_BIT: 'Sixteen bit',
-  LOGICAL_SEGMENT_FORMAT.THIRTY_TWO_BIT: 'Thirty two bit'
+  0x00: 'Eight bit',
+  0x01: 'Sixteen bit',
+  0x02: 'Thirty two bit'
 };
 
 const LOGICAL_SEGMENT_EXTENDED_TYPE = {
@@ -88,13 +89,13 @@ const LOGICAL_SEGMENT_EXTENDED_TYPE = {
   STRUCTURE_MEMBER_HANDLE: 0x06
 };
 const LOGICAL_SEGMENT_EXTENDED_TYPE_DESCRIPTIONS = {
-  LOGICAL_SEGMENT_EXTENDED_TYPE.RESERVED: 'Reserved',
-  LOGICAL_SEGMENT_EXTENDED_TYPE.ARRAY_INDEX: 'Array index',
-  LOGICAL_SEGMENT_EXTENDED_TYPE.INDIRECT_ARRAY_INDEX: 'Indirect array index',
-  LOGICAL_SEGMENT_EXTENDED_TYPE.BIT_INDEX: 'Bit index',
-  LOGICAL_SEGMENT_EXTENDED_TYPE.INDIRECT_BIT_INDEX: 'Indirect bit index',
-  LOGICAL_SEGMENT_EXTENDED_TYPE.STRUCTURE_MEMBER_NUMBER: 'Structure member number',
-  LOGICAL_SEGMENT_EXTENDED_TYPE.STRUCTURE_MEMBER_HANDLE: 'Structure member handle'
+  0x00: 'Reserved',
+  0x01: 'Array index',
+  0x02: 'Indirect array index',
+  0x03: 'Bit index',
+  0x04: 'Indirect bit index',
+  0x05: 'Structure member number',
+  0x06: 'Structure member handle'
 };
 
 
@@ -102,7 +103,7 @@ const LOGICAL_SEGMENT_SPECIAL_TYPE_FORMAT = {
   ELECTRONIC_KEY: 0x00
 };
 const LOGICAL_SEGMENT_SPECIAL_TYPE_FORMAT_DESCRIPTIONS = {
-  LOGICAL_SEGMENT_SPECIAL_TYPE_FORMAT.ELECTRONIC_KEY: 'Electronic key'
+  0x00: 'Electronic key'
 }
 
 
@@ -117,12 +118,12 @@ const NETWORK_SEGMENT_SUBTYPE = {
   EXTENDED_NETWORK: 0x1F
 };
 const NETWORK_SEGMENT_SUBTYPE_DESCRIPTIONS = {
-  NETWORK_SEGMENT_SUBTYPE.SCHEDULE: 'Schedule',
-  NETWORK_SEGMENT_SUBTYPE.FIXED_TAG: 'Fixed tag',
-  NETWORK_SEGMENT_SUBTYPE.PRODUCTION_INHIBIT_TIME_IN_MILLISECONDS: 'Production inhibit time in milliseconds',
-  NETWORK_SEGMENT_SUBTYPE.SAFETY: 'Safety',
-  NETWORK_SEGMENT_SUBTYPE.PRODUCTION_INHIBIT_TIME_IN_MICROSECONDS: 'Production inhibit time in microseconds',
-  NETWORK_SEGMENT_SUBTYPE.EXTENDED_NETWORK: 'Extended network'
+  0x01: 'Schedule',
+  0x02: 'Fixed tag',
+  0x03: 'Production inhibit time in milliseconds',
+  0x04: 'Safety',
+  0x10: 'Production inhibit time in microseconds',
+  0x1F: 'Extended network'
 };
 
 
@@ -133,23 +134,21 @@ const SYMBOLIC_SEGMENT_EXTENDED_FORMAT = {
   TRIPLE_BYTE_CHARS: 0x40,
   NUMERIC: 0xC0
 };
+const SYMBOLIC_SEGMENT_EXTENDED_FORMAT_DESCRIPTIONS = {
+  0x20: 'Double-byte characters',
+  0x40: 'Triple-byte characters',
+  0xC0: 'Numeric'
+};
 
 const SYMBOLIC_SEGMENT_EXTENDED_FORMAT_NUMERIC = {
   USINT: 0x06,
   UINT: 0x07,
   UDINT: 0x08
 };
-
-const SYMBOLIC_SEGMENT_EXTENDED_FORMAT_DESCRIPTIONS = {
-  SYMBOLIC_SEGMENT_EXTENDED_FORMAT.DOUBLE_BYTE_CHARS: 'Double-byte characters',
-  SYMBOLIC_SEGMENT_EXTENDED_FORMAT.TRIPLE_BYTE_CHARS: 'Triple-byte characters'
-  SYMBOLIC_SEGMENT_EXTENDED_FORMAT.NUMERIC: 'Numeric'
-};
-
 const SYMBOLIC_SEGMENT_EXTENDED_FORMAT_NUMERIC_DESCRIPTIONS = {
-  SYMBOLIC_SEGMENT_EXTENDED_FORMAT_NUMERIC.USINT: 'USINT',
-  SYMBOLIC_SEGMENT_EXTENDED_FORMAT_NUMERIC.UINT: 'UINT',
-  SYMBOLIC_SEGMENT_EXTENDED_FORMAT_NUMERIC: 'UDINT'
+  0x06: 'USINT',
+  0x07: 'UINT',
+  0x08: 'UDINT'
 };
 
 const kSYMBOLIC_SEGMENT_FORMAT = {
@@ -157,8 +156,8 @@ const kSYMBOLIC_SEGMENT_FORMAT = {
   EXTENDED_STRING: 2
 };
 const kSYMBOLIC_SEGMENT_FORMAT_DESCRIPTIONS = {
-  SYMBOLIC_SEGMENT_FORMAT.ASCII: 'ASCII',
-  SYMBOLIC_SEGMENT_FORMAT.EXTENDED_STRING: 'Extended string'
+  1: 'ASCII',
+  2: 'Extended string'
 };
 
 
@@ -169,15 +168,9 @@ const DATA_SEGMENT_SUBTYPE = {
   ANSI_EXTENDED_SYMBOL: 0x11
 };
 const DATA_SEGMENT_SUBTYPE_DESCRIPTIONS = {
-  DATA_SEGMENT_SUBTYPE.SIMPLE_DATA: 'Simple data',
-  DATA_SEGMENT_SUBTYPE.ANSI_EXTENDED_SYMBOL: 'ANSI extended symbol'
+  0x00: 'Simple data',
+  0x11: 'ANSI extended symbol'
 };
-
-
-
-// const __SYMBOLIC_SEGMENT_FORMAT = {
-//   EXTENDED_STRING: 0x00
-// };
 
 
 
@@ -263,7 +256,7 @@ function __getDescription(descriptions, code, unknown) {
 
 function getSegmentType(path, offset) {
   const SEGMENT_TYPE_MASK = 0xE0;
-  return path[offset] & SEGMENT_TYPE_MASK;
+  return path.readUInt8(offset) & SEGMENT_TYPE_MASK;
 }
 
 function setSegmentType(path, offset, type) {
@@ -275,6 +268,7 @@ function getSegmentTypeDescription(segmentType) {
 }
 
 
+
 function getPortSegmentExtendedLinkAddressSizeBit(path, offset) {
   const EXTENDED_LINK_ADDRESS_SIZE_MASK = 0x10;
   return EXTENDED_LINK_ADDRESS_SIZE_MASK === (path[offset] & EXTENDED_LINK_ADDRESS_SIZE_MASK);
@@ -284,17 +278,18 @@ function getPortSegmentPortIdentifier(path, offset) {
   const PORT_IDENTIFIER_MASK = 0x0F;
   // __ASSERT(getPathPortSegmentPortIdentifier(path, offset) === SEGMENT_TYPE.PORT, 'Segment type is not Port');
   // __ASSER(path[offset] & PORT_IDENTIFIER_MASK === 0, 'Port cannot be 0');
-  return path[offset] & PORT_IDENTIFIER_MASK;
+  return path.readUInt8(offset) & PORT_IDENTIFIER_MASK;
 }
 
 function setPortSegmentPortIdentifier(path, offset, identifier) {
-  path[offset] |= identifier;
+  path.writeUInt8(path.readUInt8(offset) | identifier, offset);
+  // path[offset] |= identifier;
 }
 
 
 
 function getPortSegmentLinkAddressSize(path, offset) {
-  return path[offset + 1];
+  return path.readUInt8(offset + 1);
 }
 
 function getPortSegmentExtendedPortNumber(path, offset) {
@@ -317,7 +312,7 @@ function setPortSegmentExtendedPortIdentifier(path, offset, identifier) {
 
 function getLogicalSegmentLogicalType(path, offset) {
   const LOGICAL_TYPE_MASK = 0x1C;
-  return path[offset] & LOGICAL_TYPE_MASK;
+  return path.readUInt8(offset) & LOGICAL_TYPE_MASK;
 }
 function getLogicalSegmentLogicalTypeDescription(type) {
   return __getDescription(LOGICAL_SEGMENT_TYPE_DESCRIPTIONS, type);
@@ -326,7 +321,7 @@ function getLogicalSegmentLogicalTypeDescription(type) {
 
 function getLogicalSegmentLogicalFormat(path, offset) {
   const LOGICAL_FORMAT_MASK = 0x03;
-  return path[offset] & LOGICAL_FORMAT_MASK;
+  return path.readUInt8(offset) & LOGICAL_FORMAT_MASK;
 }
 function getLogicalSegmentLogicalFormatDescription(format) {
   return __getDescription(LOGICAL_SEGMENT_FORMAT_DESCRIPTIONS, format);
@@ -334,7 +329,7 @@ function getLogicalSegmentLogicalFormatDescription(format) {
 
 
 function getLogicalSegmentExtendedLogicalType(path, offset) {
-  return path[offset + 1];
+  return path.readUInt8(offset);
 }
 function getLogicalSegmentExtendedLogicalTypeDescription(type) {
   return __getDescription(LOGICAL_SEGMENT_EXTENDED_TYPE_DESCRIPTIONS, type);
@@ -343,7 +338,7 @@ function getLogicalSegmentExtendedLogicalTypeDescription(type) {
 
 function getLogicalSegmentSpecialTypeLogicalType(path, offset) {
   const LOGICAL_FORMAT_MASK = 0x03;
-  return path[offset] & LOGICAL_FORMAT_MASK;
+  return path.readUInt8(offset) & LOGICAL_FORMAT_MASK;
 }
 function getLogicalSegmentSpecialTypeLogicalTypeDescription(type) {
   return __getDescription(LOGICAL_SEGMENT_SPECIAL_TYPE_FORMAT_DESCRIPTIONS, type);
@@ -351,7 +346,7 @@ function getLogicalSegmentSpecialTypeLogicalTypeDescription(type) {
 
 
 function getLogicalSegmentElectronicKeyFormat(path, offset) {
-  return path[offset + 1];
+  return path.readUInt8(offset + 1);
 }
 
 function getLogicalSegmentElectronicKeyFormat4(path, offset) {
@@ -392,7 +387,6 @@ function getNetworkSegmentProductionInhibitTimeInMicroseconds(path, offset) {
 
 function getSymbolicSegmentFormat(path, offset) {
   const SYMBOLIC_FORMAT_MASK = 0x1F;
-  // if (path[offset] & SYMBOLIC_FORMAT_MASK === __SYMBOLIC_SEGMENT_FORMAT.EXTENDED_STRING) {
   if (path[offset] & SYMBOLIC_FORMAT_MASK === 0x00) {
     return kSYMBOLIC_SEGMENT_FORMAT.EXTENDED_STRING;
   }
@@ -400,13 +394,12 @@ function getSymbolicSegmentFormat(path, offset) {
 }
 function getSymbolicSegmentFormatDescription(format) {
   return __getDescription(kSYMBOLIC_SEGMENT_FORMAT_DESCRIPTIONS, format);
-  // return kSYMBOLIC_SEGMENT_FORMAT_DESCRIPTIONS[format];
 }
 
 
 function getSymbolicSegmentASCIIFormatLength(path, offset) {
   const ASCII_FORMAT_LENGTH_MASK = 0x1F;
-  return path[offset] & ASCII_FORMAT_LENGTH_MASK;
+  return path.readUInt8(offset) & ASCII_FORMAT_LENGTH_MASK;
 }
 
 
@@ -442,3 +435,149 @@ function getDataSegmentSubTypeDescription(subtype) {
 function getDataSegmentSimpleDataWordLength(path, offset) {
   return path.readUInt8(offset + 1);
 }
+
+// const SEGMENT_TYPE = {
+//   PORT: 0x00,
+//   LOGICAL: 0x20,
+//   NETWORK: 0x40,
+//   SYMBOLIC: 0x60,
+//   DATA: 0x80,
+//   DATA_TYPE_CONSTRUCTED: 0xA0,
+//   DATA_TYPE_ELEMENTARY: 0xC0,
+//   RESERVED: 0xE0
+// };
+
+function parsePath(path, offset) {
+  if (!offset) offset = 0;
+  let shift;
+  let segments = [];
+  let length = path.length;
+
+  while (offset < length) {
+    let segment = {};
+    let segmentType = getSegmentType(path, offset);
+
+    switch (segmentType) {
+      case SEGMENT_TYPE.PORT:
+        shift = readPortSegment(path, offset, segment);
+        break;
+      case SEGMENT_TYPE.LOGICAL:
+        break;
+      case SEGMENT_TYPE.NETWORK:
+        break;
+      case SEGMENT_TYPE.SYMBOLIC:
+        break;
+      case SEGMENT_TYPE.DATA:
+        break;
+      case SEGMENT_TYPE.DATA_TYPE_CONSTRUCTED:
+        break;
+      case SEGMENT_TYPE.DATA_TYPE_ELEMENTARY:
+        break;
+      default:
+        return segments;
+    }
+    segments.push(segment);
+    offset += shift;
+  }
+  return segments;
+}
+
+
+function readPortSegment(path, offset, segment) {
+  let originalOffset = offset;
+  let linkAddressSize = 1;
+
+  let extendedPortIdentifierOffset = 0;
+  let linkAddressOffset = 1;
+
+  segment.segmentType = getSegmentType(path, offset);
+
+  if (getPortSegmentExtendedLinkAddressSizeBit(path, offset)) {
+    linkAddressSize = path.readUInt8(offset + 1);
+    linkAddressOffset += 1;
+    extendedPortIdentifierOffset += 1;
+  }
+
+  segment.port = getPortSegmentPortIdentifier(path, offset);
+  if (segment.port === 15) {
+    segment.port = path.readUInt16LE(extendedPortIdentifierOffset);
+    linkAddressOffset += 1;
+  }
+
+  segment.linkAddress = Buffer.from(path.slice(linkAddressOffset, linkAddressOffset + linkAddressSize)); // path.readUInt8(offset); offset += 1;
+
+  segment.buffer = Buffer.from(path.slice(originalOffset, linkAddressOffset + linkAddressSize));
+
+  let length = linkAddressOffset + linkAddressSize - originalOffset;
+
+  if (length % 2 !== 0) {
+    return length + 1;
+  }
+
+  return length;
+}
+
+function describeSegments(segments) {
+  let description = '';
+  for (let i = 0; i < segments.length; i++) {
+    let segment = segments[i];
+    switch (segment.segmentType) {
+      case SEGMENT_TYPE.PORT:
+        description += describePortSegment(segment);
+        break;
+      case SEGMENT_TYPE.LOGICAL:
+        break;
+      case SEGMENT_TYPE.NETWORK:
+        break;
+      case SEGMENT_TYPE.SYMBOLIC:
+        break;
+      case SEGMENT_TYPE.DATA:
+        break;
+      case SEGMENT_TYPE.DATA_TYPE_CONSTRUCTED:
+        break;
+      case SEGMENT_TYPE.DATA_TYPE_ELEMENTARY:
+        break;
+      default:
+        //
+    }
+  }
+  return description;
+}
+
+const validASCIICharacterSet = /[a-zA-Z0-9\.\@]/;
+
+function describePortSegment(segment) {
+  let description = 'Segment Type = Port Segment, ';
+  description += 'Port Number = ' + segment.port + ', ';
+  description += 'Link Address = ';
+
+  let linkAddress = segment.linkAddress;
+  let linkAddressLength = linkAddress.length;
+
+  let validASCII = true;
+
+  for (let i = 0; i < linkAddressLength; i++) {
+    if (!validASCIICharacterSet.exec(String.fromCharCode(linkAddress[i]))) {
+      validASCII = false;
+      break;
+    }
+  }
+
+  if (validASCII) {
+    for (let i = 0; i < linkAddressLength; i++) {
+      description += String.fromCharCode(linkAddress[i]);
+    }
+  } else {
+    for (let i = 0; i < linkAddressLength - 1; i++) {
+      description += linkAddress[i] + ', ';
+    }
+    description += linkAddress[linkAddressLength - 1];
+  }
+
+  return description;
+}
+
+module.exports = {
+  parsePath,
+  describeSegments
+};
