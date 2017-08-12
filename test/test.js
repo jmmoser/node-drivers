@@ -37,6 +37,14 @@
 
 const EPath = require('./../src/CIP/Objects/EPath');
 
+// console.log(EPath.parsePath(Buffer.from([0x02, 0x06])));
+// console.log(EPath.parsePath(Buffer.from([0x0F, 0x12, 0x00, 0x01])));
+// console.log(EPath.parsePath(Buffer.from([
+//   0x15, 0x0F, 0x31, 0x33, 0x30, 0x2E, 0x31, 0x35,
+//   0x31, 0x2E, 0x31, 0x33, 0x37, 0x2E, 0x31, 0x30,
+//   0x35, 0x00
+// ])));
+
 console.log(EPath.describeSegments(EPath.parsePath(Buffer.from([0x02, 0x06]))));
 console.log(EPath.describeSegments(EPath.parsePath(Buffer.from([0x0F, 0x12, 0x00, 0x01]))));
 console.log(EPath.describeSegments(EPath.parsePath(Buffer.from([

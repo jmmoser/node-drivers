@@ -271,7 +271,7 @@ function getSegmentTypeDescription(segmentType) {
 
 function getPortSegmentExtendedLinkAddressSizeBit(path, offset) {
   const EXTENDED_LINK_ADDRESS_SIZE_MASK = 0x10;
-  return EXTENDED_LINK_ADDRESS_SIZE_MASK === (path[offset] & EXTENDED_LINK_ADDRESS_SIZE_MASK);
+  return EXTENDED_LINK_ADDRESS_SIZE_MASK === (path.readUInt8(offset) & EXTENDED_LINK_ADDRESS_SIZE_MASK);
 }
 
 function getPortSegmentPortIdentifier(path, offset) {
@@ -436,16 +436,8 @@ function getDataSegmentSimpleDataWordLength(path, offset) {
   return path.readUInt8(offset + 1);
 }
 
-// const SEGMENT_TYPE = {
-//   PORT: 0x00,
-//   LOGICAL: 0x20,
-//   NETWORK: 0x40,
-//   SYMBOLIC: 0x60,
-//   DATA: 0x80,
-//   DATA_TYPE_CONSTRUCTED: 0xA0,
-//   DATA_TYPE_ELEMENTARY: 0xC0,
-//   RESERVED: 0xE0
-// };
+
+
 
 function parsePath(path, offset) {
   if (!offset) offset = 0;
@@ -462,16 +454,22 @@ function parsePath(path, offset) {
         shift = readPortSegment(path, offset, segment);
         break;
       case SEGMENT_TYPE.LOGICAL:
+        shift = readLogicalSegment(path, offset, segment);
         break;
       case SEGMENT_TYPE.NETWORK:
+        shift = readNetworkSegment(path, offset, segment);
         break;
       case SEGMENT_TYPE.SYMBOLIC:
+        shift = readSymbolicSegment(path, offset, segment);
         break;
       case SEGMENT_TYPE.DATA:
+        shift = readDataSegment(path, offset, segment);
         break;
       case SEGMENT_TYPE.DATA_TYPE_CONSTRUCTED:
+        shift = readDataTypeConstructedSegment(path, offset, segment);
         break;
       case SEGMENT_TYPE.DATA_TYPE_ELEMENTARY:
+        shift = readDataTypeElementarySegment(path, offset, segment);
         break;
       default:
         return segments;
@@ -482,39 +480,63 @@ function parsePath(path, offset) {
   return segments;
 }
 
-
 function readPortSegment(path, offset, segment) {
-  let originalOffset = offset;
-  let linkAddressSize = 1;
+  let length;
+  segment.segmentType = SEGMENT_TYPE.PORT;
+  let extendedLinkAddress = getPortSegmentExtendedLinkAddressSizeBit(path, offset);
+  let port = getPortSegmentPortIdentifier(path, offset);
 
-  let extendedPortIdentifierOffset = 0;
-  let linkAddressOffset = 1;
-
-  segment.segmentType = getSegmentType(path, offset);
-
-  if (getPortSegmentExtendedLinkAddressSizeBit(path, offset)) {
-    linkAddressSize = path.readUInt8(offset + 1);
-    linkAddressOffset += 1;
-    extendedPortIdentifierOffset += 1;
+  if (extendedLinkAddress === false && port < 15) {
+    segment.port = port;
+    segment.linkAddress = Buffer.from(path.slice(offset + 1, offset + 2));
+    length = 2;
+  } else if (extendedLinkAddress === true && port < 15) {
+    segment.port = port;
+    let linkAddressSize = path.readUInt8(offset + 1);
+    segment.linkAddress = Buffer.from(path.slice(offset + 2, offset + 2 + linkAddressSize));
+    length = 2 + linkAddressSize;
+  } else if (extendedLinkAddress === false && port === 15) {
+    segment.port = path.readUInt16LE(offset + 1);
+    segment.linkAddress = Buffer.from(path.slice(offset + 3, offset + 4));
+    length = 4;
+  } else if (extendedLinkAddress === true && port === 15) {
+    let linkAddressSize = path.readUInt8(offset + 1);
+    segment.port = path.readUInt16LE(offset + 2);
+    segment.linkAddress = Buffer.from(path.slice(offset + 4, offset + 4 + linkAddressSize));
+    length = 4 + linkAddressSize;
   }
 
-  segment.port = getPortSegmentPortIdentifier(path, offset);
-  if (segment.port === 15) {
-    segment.port = path.readUInt16LE(extendedPortIdentifierOffset);
-    linkAddressOffset += 1;
-  }
+  return length % 2 === 0 ? length : length + 1;
+}
 
-  segment.linkAddress = Buffer.from(path.slice(linkAddressOffset, linkAddressOffset + linkAddressSize)); // path.readUInt8(offset); offset += 1;
+function readLogicalSegment(path, offset, segment) {
+  let length;
+  segment.segmentType = SEGMENT_TYPE.LOGICAL;
+}
 
-  segment.buffer = Buffer.from(path.slice(originalOffset, linkAddressOffset + linkAddressSize));
+function readNetworkSegment(path, offset, segment) {
+  let length;
+  segment.segmentType = SEGMENT_TYPE.NETWORK;
+}
 
-  let length = linkAddressOffset + linkAddressSize - originalOffset;
+function readSymbolicSegment(path, offset, segment) {
+  let length;
+  segment.segmentType = SEGMENT_TYPE.SYMBOLIC;
+}
 
-  if (length % 2 !== 0) {
-    return length + 1;
-  }
+function readDataSegment(path, offset, segment) {
+  let length;
+  segment.segmentType = SEGMENT_TYPE.DATA;
+}
 
-  return length;
+function readDataTypeConstructedSegment(path, offset, segment) {
+  let length;
+  segment.segmentType = SEGMENT_TYPE.DATA_TYPE_CONSTRUCTED;
+}
+
+function readDataTypeElementarySegment(path, offset, segment) {
+  let length;
+  segment.segmentType = SEGMENT_TYPE.DATA_TYPE_ELEMENTARY;
 }
 
 function describeSegments(segments) {
