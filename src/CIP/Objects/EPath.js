@@ -287,21 +287,20 @@ function setPortSegmentPortIdentifier(path, offset, identifier) {
 }
 
 
-
 function getPortSegmentLinkAddressSize(path, offset) {
   return path.readUInt8(offset + 1);
 }
 
 function getPortSegmentExtendedPortNumber(path, offset) {
   // __ASSERT(getPathPortSegmentPortIdentifier(path, offset) === SEGMENT_TYPE.PORT, 'Segment type is not Port');
-  let position = getPathPortSegmentExtendedLinkAddressSizeBit(path, offset) === true ? 2 : 1;
+  let position = getPortSegmentExtendedLinkAddressSizeBit(path, offset) === true ? 2 : 1;
   // return path[offset + position] + (path[offset + possition + 1] << 8);
   return path.readUInt16LE(offset + position);
 }
 
 function setPortSegmentExtendedPortIdentifier(path, offset, identifier) {
   setPathPortSegmentPortIdentifier(path, offset, identifier);
-  let position = getPathPortSegmentExtendedLinkAddressSizeBit(path, offset) === true ? 2 : 1;
+  let position = getPortSegmentExtendedLinkAddressSizeBit(path, offset) === true ? 2 : 1;
   // path[offset + position] = identifier & 0x00FF;
   // path[offset + position + 1] = identifier & 0xFF00 >> 8;
   path.writeUInt16LE(offset + position, identifier);
@@ -480,9 +479,11 @@ function parsePath(path, offset) {
   return segments;
 }
 
+
 function readPortSegment(path, offset, segment) {
   let length;
   segment.segmentType = SEGMENT_TYPE.PORT;
+  let linkAddressSize = 1;
   let extendedLinkAddress = getPortSegmentExtendedLinkAddressSizeBit(path, offset);
   let port = getPortSegmentPortIdentifier(path, offset);
 
@@ -492,22 +493,51 @@ function readPortSegment(path, offset, segment) {
     length = 2;
   } else if (extendedLinkAddress === true && port < 15) {
     segment.port = port;
-    let linkAddressSize = path.readUInt8(offset + 1);
+    let linkAddressSize = getPortSegmentLinkAddressSize(path, offset);
     segment.linkAddress = Buffer.from(path.slice(offset + 2, offset + 2 + linkAddressSize));
     length = 2 + linkAddressSize;
   } else if (extendedLinkAddress === false && port === 15) {
-    segment.port = path.readUInt16LE(offset + 1);
+    segment.port = getPortSegmentExtendedPortNumber(path, offset);
     segment.linkAddress = Buffer.from(path.slice(offset + 3, offset + 4));
     length = 4;
   } else if (extendedLinkAddress === true && port === 15) {
-    let linkAddressSize = path.readUInt8(offset + 1);
-    segment.port = path.readUInt16LE(offset + 2);
+    let linkAddressSize = getPortSegmentLinkAddressSize(path, offset);
+    segment.port = getPortSegmentExtendedPortNumber(path, offset);
     segment.linkAddress = Buffer.from(path.slice(offset + 4, offset + 4 + linkAddressSize));
     length = 4 + linkAddressSize;
   }
 
   return length % 2 === 0 ? length : length + 1;
 }
+
+// function readPortSegment(path, offset, segment) {
+//   let length;
+//   segment.segmentType = SEGMENT_TYPE.PORT;
+//   let extendedLinkAddress = getPortSegmentExtendedLinkAddressSizeBit(path, offset);
+//   let port = getPortSegmentPortIdentifier(path, offset);
+//
+//   if (extendedLinkAddress === false && port < 15) {
+//     segment.port = port;
+//     segment.linkAddress = Buffer.from(path.slice(offset + 1, offset + 2));
+//     length = 2;
+//   } else if (extendedLinkAddress === true && port < 15) {
+//     segment.port = port;
+//     let linkAddressSize = path.readUInt8(offset + 1);
+//     segment.linkAddress = Buffer.from(path.slice(offset + 2, offset + 2 + linkAddressSize));
+//     length = 2 + linkAddressSize;
+//   } else if (extendedLinkAddress === false && port === 15) {
+//     segment.port = path.readUInt16LE(offset + 1);
+//     segment.linkAddress = Buffer.from(path.slice(offset + 3, offset + 4));
+//     length = 4;
+//   } else if (extendedLinkAddress === true && port === 15) {
+//     let linkAddressSize = path.readUInt8(offset + 1);
+//     segment.port = path.readUInt16LE(offset + 2);
+//     segment.linkAddress = Buffer.from(path.slice(offset + 4, offset + 4 + linkAddressSize));
+//     length = 4 + linkAddressSize;
+//   }
+//
+//   return length % 2 === 0 ? length : length + 1;
+// }
 
 function readLogicalSegment(path, offset, segment) {
   let length;
