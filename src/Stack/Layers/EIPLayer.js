@@ -173,6 +173,7 @@ class EIPLayer extends Layer {
     this._unconnectedContexts = {};
 
     this._callbacks[EIPCommands.RegisterSession] = function(packet) {
+      // console.log('RegisterSession');
       if (packet.Status === 0) {
         this._connectionState = 2;
         this._sessionHandle = packet.SessionHandle;
@@ -184,6 +185,7 @@ class EIPLayer extends Layer {
     };
 
     this._callbacks[EIPCommands.UnregisterSession] = function(packet) {
+      // console.log('UnregisterSession');
       this._connectionState = 0;
       this._sessionHandle = null;
 
@@ -191,6 +193,7 @@ class EIPLayer extends Layer {
     };
 
     this._callbacks[EIPCommands.SendRRData] = function(packet) {
+      // console.log('SendRRData');
       let info = { connected: false };
       let senderContext = packet.SenderContext.toString('hex');
       if (this._unconnectedContexts[senderContext]) {
@@ -202,11 +205,12 @@ class EIPLayer extends Layer {
         console.log(senderContext);
         console.log(this._unconnectedContexts);
       }
-
+      
       self.forward(packet.Items[1].data, info);
     };
 
     this._callbacks[EIPCommands.SendUnitData] = function(packet) {
+      // console.log('SendUnitData');
       if (packet.Status === 0) {
         let info = {
           connected: true,

@@ -1,18 +1,28 @@
 'use strict';
 
-
 const Layer = require('./Layer');
 
 // handles interfacing with lower layer (EIPLayer)
 // using connected and unconnected sends,
 // connection IDs, sequence numbers, etc.
 class CIPLayer extends Layer {
+  // constructor(lowerLayer) {
+  //   super(lowerLayer, function(cipObject) {
+  //     console.log('Layer adder called');
+  //
+  //     if (this._disconnecting === 1) return;
+  //     this._objects.push(cipObject);
+  //     // cipObject._layer = this;
+  //   });
+  //
+  //   this._objects = [];
+  //   this._setupCallbacks();
+  //
+  //   this._context = 0; // pseudo-context for unconnected messages
+  // }
+
   constructor(lowerLayer) {
-    super(lowerLayer, function(cipObject) {
-      if (this._disconnecting === 1) return;
-      this._objects.push(cipObject);
-      cipObject._layer = this;
-    });
+    super(lowerLayer, true);
 
     this._objects = [];
     this._setupCallbacks();
@@ -34,8 +44,9 @@ class CIPLayer extends Layer {
     let objs = [];
     let length = this._objects.length;
     for (let i = 0; i < length; i++) {
-      if (this._objects[i].connectionState() === 2) {
-        objs.push(this._objects[i]);
+      let obj = this._objects[i];
+      if (isFunction(obj.connectionState) && obj.connectionState() === 2) {
+        objs.push(obj);
       }
     }
     return objs;
@@ -89,12 +100,18 @@ class CIPLayer extends Layer {
   }
 
 
-  addObject(cipObject) {
-    if (this._disconnecting === 1) return;
+  // addObject(cipObject) {
+  //   if (this._disconnecting === 1) return;
+  //
+  //   this._objects.push(cipObject);
+  //   cipObject._layer = this;
+  //   return cipObject;
+  // }
 
-    this._objects.push(cipObject);
-    cipObject._layer = this;
-    return cipObject;
+  registerConnection(connection) {
+    if (this._disconnecting === 1) return;
+    this._objects.push(connection);
+    return connection;
   }
 
   setConnectionResponseCallback(TtoOConnectionID, callback) {
@@ -106,7 +123,7 @@ class CIPLayer extends Layer {
   }
 
   sendUnconnected(message, callback) {
-    if (this._disconnecting === 1) return;
+    // if (this._disconnecting === 1) return;
 
     this._incrementContext();
     if (callback) this._callbacks[this._context] = callback; // some messages won't require a callback
@@ -114,10 +131,10 @@ class CIPLayer extends Layer {
   }
 
   sendConnected(OtoTConnectionID, message) {
-    if (this._disconnecting === 1) return;
+    // if (this._disconnecting === 1) return;
 
     // No callback because connected messages do not cause a response
-    // A response may occure and will be mapped to connection by serial number
+    // A response may occure and will be mapped to connection by connectionID
     // The connection can use the sequnce count to determine the request for the response
 
     this.send(message, { connected: true, connectionID: OtoTConnectionID }, false);
@@ -128,7 +145,12 @@ class CIPLayer extends Layer {
 
     // This needs to be changed, unconnected sends may not even need cip layer
     // Maybe they still need cip layer, not sure...
-    throw new Error('layer above EIPLayer called send');
+
+    // 9/18/2017
+    // I think this layer just acts as a helper above the EIPLayer.
+    // Provides connected and unconnected sends to EIPLayer, don't
+    // have to worry about info parameter.
+    throw new Error('Layer above CIPLayer called send');
   }
 
   handleData(message, info) {
@@ -162,3 +184,7 @@ class CIPLayer extends Layer {
 }
 
 module.exports = CIPLayer;
+
+function isFunction(obj) {
+  return !!(obj && obj.constructor && obj.call && obj.apply);
+}

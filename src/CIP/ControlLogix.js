@@ -1,14 +1,13 @@
 'use strict';
 
+const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
-// const CIPObject = require('./Objects/CIPObject');
-
 const Connection = require('./Objects/Connection');
 
-// class ControlLogix extends Connection {
-class ControlLogix {
-  constructor(cipLayer, options) {
-    this._connection = new Connection(cipLayer, options);
+class ControlLogix extends Layer {
+  constructor(connectionLayer, options) {
+    super(connectionLayer);
+    // this._connection = new Connection(cipLayer, options);
   }
 
   connection() {
@@ -19,11 +18,11 @@ class ControlLogix {
     if (!address || !callback) return;
 
     let path = MessageRouter.ANSIExtSymbolSegment(address);
-    let data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
+    const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
 
     let request = MessageRouter.Request(Services.ReadTag, path, data);
 
-    this._connection.send(request, function(message) {
+    this.send(request, function(message) {
       let reply = MessageRouter.Reply(message);
       let dataType = reply.data.readUInt16LE(0);
       let dataConverter = DataConverters[dataType];
@@ -48,12 +47,76 @@ class ControlLogix {
 
     let request = MessageRouter.Request(Services.WriteTag, path, data);
 
-    this._connection.send(request, function(message) {
+    this.send(request, function(message) {
       let reply = MessageRouter.Reply(message);
       callback(null, reply);
     });
   }
+
+  // handleData(data, info) {
+  //   let sequenceCount = data.readUInt16LE(0);
+  //   let message = data.slice(2);
+  //
+  //   if (this._callbacks[sequenceCount]) {
+  //     let callback = this._callbacks[sequenceCount];
+  //     delete this._callbacks[sequenceCount];
+  //     callback(message);
+  //   }
+  // }
+
 }
+
+// const MessageRouter = require('./Objects/MessageRouter');
+// const Connection = require('./Objects/Connection');
+//
+// class ControlLogix {
+//   constructor(cipLayer, options) {
+//     this._connection = new Connection(cipLayer, options);
+//   }
+//
+//   connection() {
+//     return this._connection;
+//   }
+//
+//   ReadTag(address, callback) {
+//     if (!address || !callback) return;
+//
+//     let path = MessageRouter.ANSIExtSymbolSegment(address);
+//     const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
+//
+//     let request = MessageRouter.Request(Services.ReadTag, path, data);
+//
+//     this._connection.send(request, function(message) {
+//       let reply = MessageRouter.Reply(message);
+//       let dataType = reply.data.readUInt16LE(0);
+//       let dataConverter = DataConverters[dataType];
+//       if (dataConverter) {
+//         callback(null, dataConverter(reply.data, 2));
+//       } else {
+//         callback('ControlLogix Error: No converter for data type: ' + dataType);
+//       }
+//     });
+//   }
+//
+//   WriteTag(address, value, callback) {
+//     if (!address || !callback) return;
+//
+//     let path = MessageRouter.ANSIExtSymbolSegment(address);
+//     // let data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
+//     // let data = Buffer.from([0xC4, 0x00, 0x01, 0x00])
+//     let data = Buffer.alloc(8);
+//     data.writeUInt16LE(DataTypes.Float, 0);
+//     data.writeUInt16LE(1, 2);
+//     data.writeFloatLE(value, 4);
+//
+//     let request = MessageRouter.Request(Services.WriteTag, path, data);
+//
+//     this._connection.send(request, function(message) {
+//       let reply = MessageRouter.Reply(message);
+//       callback(null, reply);
+//     });
+//   }
+// }
 
 module.exports = ControlLogix;
 

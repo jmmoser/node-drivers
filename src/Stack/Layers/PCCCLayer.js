@@ -11,47 +11,43 @@ class PCCCLayer extends Layer {
 
     this._callbacks = {};
     this._transaction = 0;
-
-    // this.layer = new Layer(
-    //   lowerLayer,
-    //   null,
-    //   this.handleData.bind(this)
-    // );
   }
 
   wordRangeRead(address, callback) {
-    if (callback) {
-      let transaction = this._incrementTransaction();
-      this._callbacks[transaction] = function(err, reply) {
-        if (err) {
-          callback(err);
-        } else {
-          callback(null, reply.Data);
-        }
-      };
-      let message = PCCCPacket.WordRangeReadRequest(transaction, address);
-      this.send(message, false);
-    }
+    if (callback == null) return;
+
+    let transaction = this._incrementTransaction();
+    this._callbacks[transaction] = function(err, reply) {
+      if (err) {
+        callback(err);
+      } else {
+        callback(null, reply.Data);
+      }
+    };
+
+    let message = PCCCPacket.WordRangeReadRequest(transaction, address);
+    this.send(message, false);
   }
 
   typedRead(address, callback) {
-    if (callback) {
-      let transaction = this._incrementTransaction();
-      this._callbacks[transaction] = function(err, reply) {
-        if (err) {
-          callback(err);
+    if (callback == null) return;
+
+    let transaction = this._incrementTransaction();
+    this._callbacks[transaction] = function(err, reply) {
+      if (err) {
+        callback(err);
+      } else {
+        let value = PCCCPacket.ParseTypedReadData(reply.data);
+        if (Array.isArray(value) && value.length > 0) {
+          callback(null, value[0]);
         } else {
-          let value = PCCCPacket.ParseTypedReadData(reply.data);
-          if (Array.isArray(value) && value.length > 0) {
-            callback(null, value[0]);
-          } else {
-            callback(null, null);
-          }
+          callback(null, null);
         }
-      };
-      let message = PCCCPacket.TypedReadRequest(transaction, address, 1);
-      this.send(message, false);
-    }
+      }
+    };
+
+    let message = PCCCPacket.TypedReadRequest(transaction, address, 1);
+    this.send(message, false);
   }
 
   // typedRead(address, callback) {
@@ -73,41 +69,42 @@ class PCCCLayer extends Layer {
   // }
 
   typedWrite(address, value, callback) {
-    if (callback) {
-      let transaction = this._incrementTransaction();
-      this._callbacks[transaction] = function(err, reply) {
-        if (err) callback(err, null);
-        else callback(reply.additionalStatus, reply);
-      };
+    if (callback == null) return;
 
-      let message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
-      this.send(message, false);
-    }
+    let transaction = this._incrementTransaction();
+    this._callbacks[transaction] = function(err, reply) {
+      if (err) {
+        callback(err, null);
+      } else {
+        callback(reply.additionalStatus, reply);
+      }
+    };
+
+    let message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
+    this.send(message, false);
   }
 
   diagnosticStatus(callback) {
-    if (callback) {
-      let transaction = this._incrementTransaction();
-      this._callbacks[transaction] = function(error, packet) {
-        if (error) {
-          callback(error);
-        } else {
-          callback(null, packet.Data);
-        }
-      };
+    if (callback == null) return;
 
-      let message = PCCCPacket.DiagnosticStatusRequest(transaction);
-      this.send(message, false);
-    }
+    let transaction = this._incrementTransaction();
+    this._callbacks[transaction] = function(error, packet) {
+      if (error) {
+        callback(error);
+      } else {
+        callback(null, packet.Data);
+      }
+    };
+
+    let message = PCCCPacket.DiagnosticStatusRequest(transaction);
+    this.send(message, false);
   }
-
-
 
   handleData(data) {
     let packet = PCCCPacket.fromBufferReply(data);
 
     if (this._callbacks[packet.transaction]) {
-      this._callbacks[packet.transaction]
+      // this._callbacks[packet.transaction]
       let callback = this._callbacks[packet.transaction];
       delete this._callbacks[packet.transaction];
       callback(getError(packet), packet);

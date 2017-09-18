@@ -1,19 +1,19 @@
 'use strict';
 
-// const Layer = require('./../Stack/Layers/Layer');
+const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
 // option properties
 // - vendor (UINT): Vendor number of requestor
 // - serialNumber (UDINT): CIP Serial number of requestor
 
-class PCCC {
+// Not directly used
+// Unconnected sends to CIP Layer
+class PCCC extends Layer {
   constructor(cipLayer, options) {
-    this._connection = new Connection(cipLayer, options);
-  }
-
-  connection() {
-    return this._connection;
+    super(cipLayer);
+    this._layer = cipLayer;
+    this._mergeOptions(options);
   }
 
   _mergeOptions(options) {
@@ -26,40 +26,51 @@ class PCCC {
 
   sendNextMessage() {
     let request = this.getNextRequest();
-    if (request) {
+    if (request != null) {
       // CIP/MessageRouter specific
-      const service = 0x4B; // Execute PCCC service code
-      const pathSize = 2;
-      const path = Buffer.from([
-        0x20,
-        0x67, // PCCC object
-        0x24,
-        0x01
-      ]);
+      // const service = 0x4B; // Execute PCCC service code
+      // const pathSize = 2;
 
       // 'Execute PCCC service' specific
       // length - USINT
       // Vendor - UINT
       // Serial Number - UDINT
       // Other - ARRAY of USINT
-      let data = Buffer.alloc(7);
-      data.writeUInt8(7, 0);
+      const HEADER_LENGTH = 7
+      let data = Buffer.alloc(HEADER_LENGTH);
+      data.writeUInt8(HEADER_LENGTH, 0);
       data.writeUInt16LE(this.options.vendorID, 1);
       data.writeUInt32LE(this.options.serialNumber, 3);
 
       let pcccMessage = request.message;
-      data = Buffer.concat([data, pcccMessage], 7 + pcccMessage.length);
+      let totalLength = HEADER_LENGTH + pcccMessage.length;
 
-      let message = MessageRouter.Request(service, path, data);
+      data = Buffer.concat([data, pcccMessage], totalLength);
 
       let self = this;
 
-      this._connection.sendUnconnected(message, function(data) {
-        let offset = data.readUInt8(4);
-        self.forward(data.slice(offset + 4));
+      this._send(PCCC.SERVICES.ExecutePCCC, data, function(res) {
+        let offset = res.readUInt8(4);
+        self.forward(res.slice(offset + 4));
       });
     }
   }
+
+  _send(code, data, cb) {
+    let message = MessageRouter.Request(code, PCCC.Path, data);
+    this._layer.sendUnconnected(message, cb);
+  }
 }
+
+PCCC.SERVICES = {
+  ExecutePCCC: 0x4B
+};
+
+PCCC.Path = Buffer.from([
+  0x20,
+  0x67, // PCCC object
+  0x24,
+  0x01
+]);
 
 module.exports = PCCC;

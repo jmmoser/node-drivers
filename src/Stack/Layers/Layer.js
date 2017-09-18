@@ -2,19 +2,32 @@
 
 const Queue = require('./../../Classes/Queueable');
 const Defragger = require('./../../Classes/Defragger');
-// const Packetable = require('./../../Classes/Packetable');
 
 class Layer {
-  constructor(lowerLayer, layerAdder) {
+  // Layer Adder is used for layers that can have more than one upper layer (CIP)
+  // constructor(lowerLayer, layerAdder) {
+  //   this._queue = new Queue();
+  //
+  //   this.lowerLayer = lowerLayer;
+  //   this._layerAdder = layerAdder;
+  //
+  //   if (lowerLayer) {
+  //     if (lowerLayer._layerAdder) {
+  //       lowerLayer._layerAdder.call(lowerLayer, this);
+  //     } else {
+  //       lowerLayer.upperLayer = this;
+  //     }
+  //   }
+  // }
+  constructor(lowerLayer, handlesForwarding) {
     this._queue = new Queue();
 
     this.lowerLayer = lowerLayer;
-    this._layerAdder = layerAdder;
+
+    this.handlesForwarding = handlesForwarding === true ? true : false;
 
     if (lowerLayer) {
-      if (lowerLayer._layerAdder) {
-        lowerLayer._layerAdder.call(lowerLayer, this);
-      } else {
+      if (lowerLayer.handlesForwarding !== true) {
         lowerLayer.upperLayer = this;
       }
     }
@@ -94,6 +107,5 @@ class Layer {
 }
 
 Layer.Queueable = Queue;
-// Layer.Packetable = Packetable;
 
 module.exports = Layer;
