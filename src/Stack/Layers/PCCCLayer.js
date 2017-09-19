@@ -109,7 +109,6 @@ class PCCCLayer extends Layer {
     let packet = PCCCPacket.fromBufferReply(data);
 
     if (this._callbacks[packet.transaction]) {
-      // this._callbacks[packet.transaction]
       let callback = this._callbacks[packet.transaction];
       delete this._callbacks[packet.transaction];
       callback(getError(packet), packet);

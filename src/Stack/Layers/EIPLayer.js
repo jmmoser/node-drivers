@@ -218,18 +218,19 @@ class EIPLayer extends Layer {
 
     this._callbacks[EIPCommands.SendRRData] = function(packet) {
       // console.log('SendRRData');
-      let context = null;
+      let context = null; // context can be null if only one upper layer
       let info = { connected: false };
       let senderContext = packet.SenderContext.toString('hex');
       if (this._unconnectedContexts[senderContext]) {
         context = this._unconnectedContexts[senderContext];
         delete this._unconnectedContexts[senderContext];
-      } else {
-        console.log('EIPLayer Error: no Sender Context available:');
-        console.log(packet);
-        console.log(senderContext);
-        console.log(this._unconnectedContexts);
       }
+      // else {
+      //   console.log('EIPLayer Error: no Sender Context available:');
+      //   console.log(packet);
+      //   console.log(senderContext);
+      //   console.log(this._unconnectedContexts);
+      // }
 
       self.forward(packet.Items[1].data, info, context);
     };

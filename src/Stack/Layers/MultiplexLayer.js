@@ -60,20 +60,6 @@ class MultiplexLayer extends Layer {
     let request = this.getNextRequest();
 
     if (request) {
-      // let message = request.message;
-      // let layer = request.layer;
-      //
-      // if (request.info.expectsResponse === true) {
-      //   let context = this._incrementContext();
-      //   this._callbacks.set(context, layer);
-      // }
-      //
-      // this.send(message, info, false);
-
-      // this.send(request.message, request.info, false, this.contextCallback(function(data, info, context)) {
-      //   this.forwardTo(request.layer, data, info, context);
-      // });
-
       this.send(request.message, request.info, false, this.layerContext(request.layer));
 
       this.sendNextMessage();
