@@ -2,7 +2,7 @@
 
 const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
-const Connection = require('./Objects/Connection');
+// const Connection = require('./Objects/Connection');
 
 class ControlLogix extends Layer {
   constructor(connectionLayer, options) {
@@ -10,9 +10,9 @@ class ControlLogix extends Layer {
     // this._connection = new Connection(cipLayer, options);
   }
 
-  connection() {
-    return this._connection;
-  }
+  // connection() {
+  //   return this._connection;
+  // }
 
   ReadTag(address, callback) {
     if (!address || !callback) return;
@@ -22,7 +22,18 @@ class ControlLogix extends Layer {
 
     let request = MessageRouter.Request(Services.ReadTag, path, data);
 
-    this.send(request, function(message) {
+    // this.send(request, function(message) {
+    //   let reply = MessageRouter.Reply(message);
+    //   let dataType = reply.data.readUInt16LE(0);
+    //   let dataConverter = DataConverters[dataType];
+    //   if (dataConverter) {
+    //     callback(null, dataConverter(reply.data, 2));
+    //   } else {
+    //     callback('ControlLogix Error: No converter for data type: ' + dataType);
+    //   }
+    // });
+
+    this.send(request, null, false, this.contextCallback(function(message) {
       let reply = MessageRouter.Reply(message);
       let dataType = reply.data.readUInt16LE(0);
       let dataConverter = DataConverters[dataType];
@@ -31,7 +42,7 @@ class ControlLogix extends Layer {
       } else {
         callback('ControlLogix Error: No converter for data type: ' + dataType);
       }
-    });
+    }))
   }
 
   WriteTag(address, value, callback) {
@@ -64,6 +75,17 @@ class ControlLogix extends Layer {
   //   }
   // }
 
+  handleData(data, info, context) {
+    if (context != null) {
+      let callback = this.getCallbackForContext(context);
+      if (callback != null) {
+        callback(data, info);
+      }
+    } else {
+      console.log(MessageRouter.Reply(data));
+      throw new Error('ControlLogix Error: Unhandled message');
+    }
+  }
 }
 
 // const MessageRouter = require('./Objects/MessageRouter');
@@ -160,4 +182,14 @@ const DataConverters = {
   0x00D3: function(buffer, offset) {
     return buffer.readUInt32LE(offset);
   }
+};
+
+// CIP Logix5000 1756-PM020 Page 19, Read Tag Service Error Codes
+const READ_TAG_ERRORS = {
+  0x04: 'A syntax error was detected decoding the Request Path',
+  0x05: 'Request Path destination unknown: Probably instance number is not present',
+  0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
+  0x13: 'Insufficient Request Data: Data too short for expected parameters',
+  0x26: 'The Request Path Size received was shorter or longer than expected',
+  0xFF: 'General Error: Access beyond end of the object'
 };

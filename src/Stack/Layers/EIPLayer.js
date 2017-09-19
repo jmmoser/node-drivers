@@ -126,25 +126,31 @@ class EIPLayer extends Layer {
 
         let fullMessage = null;
 
-        if (info.connected === true) {
+        // if (info.connected === true) {
+        if (info.connectionID != null) {
           fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
+          if (request.context != null && info.responseID != null) {
+            this._connectedContexts[info.responseID] = request.context;
+          }
         } else {
           this._incrementContext();
           fullMessage = SendRRDataRequest(this._sessionHandle, this._context, message);
 
-          if (info.context) this._unconnectedContexts[this._context.toString('hex')] = info.context;
+          // if (info.context) this._unconnectedContexts[this._context.toString('hex')] = info.context;
+
+          if (request.context != null) {
+            this._unconnectedContexts[this._context.toString('hex')] = request.context;
+          }
         }
 
         this.send(fullMessage, null, false);
 
         this.sendNextMessage();
-      } else {
-        // console.log('EIPLayer: no messages');
       }
     }
   }
 
-  handleData(data, info) {
+  handleData(data, info, context) {
     let callback = null;
     let command = EIPPacket.Command(data);
     let packet = EIPPacket.fromBuffer(data);
@@ -171,6 +177,7 @@ class EIPLayer extends Layer {
     this._callbacks = {};
     this._userCallbacks = {};
     this._unconnectedContexts = {};
+    this._connectedContexts = {};
 
     this._callbacks[EIPCommands.RegisterSession] = function(packet) {
       // console.log('RegisterSession');
@@ -192,12 +199,30 @@ class EIPLayer extends Layer {
       this.connect();
     };
 
+    // this._callbacks[EIPCommands.SendRRData] = function(packet) {
+    //   // console.log('SendRRData');
+    //   let info = { connected: false };
+    //   let senderContext = packet.SenderContext.toString('hex');
+    //   if (this._unconnectedContexts[senderContext]) {
+    //     info.context = this._unconnectedContexts[senderContext];
+    //     delete this._unconnectedContexts[senderContext];
+    //   } else {
+    //     console.log('EIPLayer Error: no Sender Context available:');
+    //     console.log(packet);
+    //     console.log(senderContext);
+    //     console.log(this._unconnectedContexts);
+    //   }
+    //
+    //   self.forward(packet.Items[1].data, info);
+    // };
+
     this._callbacks[EIPCommands.SendRRData] = function(packet) {
       // console.log('SendRRData');
+      let context = null;
       let info = { connected: false };
       let senderContext = packet.SenderContext.toString('hex');
       if (this._unconnectedContexts[senderContext]) {
-        info.context = this._unconnectedContexts[senderContext];
+        context = this._unconnectedContexts[senderContext];
         delete this._unconnectedContexts[senderContext];
       } else {
         console.log('EIPLayer Error: no Sender Context available:');
@@ -205,8 +230,8 @@ class EIPLayer extends Layer {
         console.log(senderContext);
         console.log(this._unconnectedContexts);
       }
-      
-      self.forward(packet.Items[1].data, info);
+
+      self.forward(packet.Items[1].data, info, context);
     };
 
     this._callbacks[EIPCommands.SendUnitData] = function(packet) {
@@ -216,7 +241,14 @@ class EIPLayer extends Layer {
           connected: true,
           connectionID: packet.Items[0].address
         };
-        self.forward(packet.Items[1].data, info);
+        let context = null;
+        context = this._connectedContexts[info.connectionID];
+        // console.log(packet);
+        // console.log(this._connectedContexts);
+        // console.log(info.connectionID);
+        // console.log(context);
+
+        self.forward(packet.Items[1].data, info, context);
       } else {
         console.log('EIPLayer Error: Packet Status:');
         console.log(packet);

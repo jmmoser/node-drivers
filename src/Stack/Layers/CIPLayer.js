@@ -2,6 +2,10 @@
 
 const Layer = require('./Layer');
 
+// 9/19/2017 I am nearly 100% sure this layer is needed!  Multiple upperlayers
+// must all use the same same context incrementor
+
+// Multiplexes connected and unconnected messages
 // handles interfacing with lower layer (EIPLayer)
 // using connected and unconnected sends,
 // connection IDs, sequence numbers, etc.
@@ -94,6 +98,7 @@ class CIPLayer extends Layer {
     this._connectedCallbacks = {};
   }
 
+  // is this function used???
   _incrementSequenceCount(cipObject) {
     cipObject._sequenceCount = (cipObject._sequenceCount + 1) % 0x10000;
     return cipObject._sequenceCount;
@@ -122,23 +127,27 @@ class CIPLayer extends Layer {
     }
   }
 
-  sendUnconnected(message, callback) {
-    // if (this._disconnecting === 1) return;
-
-    this._incrementContext();
-    if (callback) this._callbacks[this._context] = callback; // some messages won't require a callback
-    this.send(message, { connected: false, context: this._context }, false);
-  }
-
-  sendConnected(OtoTConnectionID, message) {
-    // if (this._disconnecting === 1) return;
-
-    // No callback because connected messages do not cause a response
-    // A response may occure and will be mapped to connection by connectionID
-    // The connection can use the sequnce count to determine the request for the response
-
-    this.send(message, { connected: true, connectionID: OtoTConnectionID }, false);
-  }
+  // sendUnconnected(message, callback) {
+  //   // if (this._disconnecting === 1) return;
+  //
+  //   // Context is used by EIPLayer for unconnected sends
+  //   // calback -> context -> senderContext ... senderContext -> context -> callback
+  //   let context = this._incrementContext();
+  //   if (callback != null) this._callbacks[context] = callback; // some messages won't require a callback
+  //   // this.send(message, { connected: false, context: context }, false);
+  //   this.send(message, { context: context }, false);
+  // }
+  //
+  // sendConnected(OtoTConnectionID, message) {
+  //   // if (this._disconnecting === 1) return;
+  //
+  //   // No callback because connected messages do not cause a response
+  //   // A response may occure and will be mapped to connection by connectionID
+  //   // The connection can use the sequnce count to determine the request for the response
+  //
+  //   // this.send(message, { connected: true, connectionID: OtoTConnectionID }, false);
+  //   this.send(message, { context: this._context }, false);
+  // }
 
   sendNextMessage() {
     // No implementation needed
@@ -150,19 +159,28 @@ class CIPLayer extends Layer {
     // I think this layer just acts as a helper above the EIPLayer.
     // Provides connected and unconnected sends to EIPLayer, don't
     // have to worry about info parameter.
-    throw new Error('Layer above CIPLayer called send');
+    // throw new Error('Layer above CIPLayer called send');
+
+    let request = this.getNextRequest();
+
+    if (request) {
+      this.send(request.message, request.info, false, this.contextCallback(function(data, info, context) {
+        this.forwardTo(request.layer, data, info, context);
+      }));
+      this.sendNextMessage();
+    }
   }
 
-  handleData(message, info) {
+  handleData(message, info, context) {
     if (this._disconnecting === 1) return;
 
     let callback = null;
 
     if (info.connected === false) {
-      if (info.context) {
-        if (this._callbacks[info.context]) {
-          callback = this._callbacks[info.context];
-          delete this._callbacks[info.context];
+      if (context != null) {
+        if (this._callbacks[context]) {
+          callback = this._callbacks[context];
+          delete this._callbacks[context];
         }
       }
     } else if (info.connected === true) {
@@ -181,6 +199,35 @@ class CIPLayer extends Layer {
       console.log(message);
     }
   }
+
+  // handleData(message, info, context) {
+  //   if (this._disconnecting === 1) return;
+  //
+  //   let callback = null;
+  //
+  //   if (info.connected === false) {
+  //     if (info.context) {
+  //       if (this._callbacks[info.context]) {
+  //         callback = this._callbacks[info.context];
+  //         delete this._callbacks[info.context];
+  //       }
+  //     }
+  //   } else if (info.connected === true) {
+  //     let connectionID = info.connectionID;
+  //     if (this._connectedCallbacks[connectionID]) {
+  //       callback = this._connectedCallbacks[connectionID];
+  //     }
+  //   }
+  //
+  //   if (callback) {
+  //     callback(message, info);
+  //   } else {
+  //     console.log('');
+  //     console.log('CIPLayer Error: Unhandled message:');
+  //     console.log(info);
+  //     console.log(message);
+  //   }
+  // }
 }
 
 module.exports = CIPLayer;

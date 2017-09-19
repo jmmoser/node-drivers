@@ -1,7 +1,6 @@
 'use strict';
 
 const Layer = require('./../../Stack/Layers/Layer');
-// const Queueable = require('./../../Classes/Queueable');
 
 const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
@@ -10,15 +9,18 @@ class Connection extends Layer {
   constructor(cipLayer, options) {
     super(cipLayer);
 
-    cipLayer.registerConnection(this);
-    this._layer = cipLayer;
+    // cipLayer.registerConnection(this);
+    // this._layer = cipLayer;
 
     this.mergeOptionsWithDefaults(options);
 
     this._connectionState = 0;
+    this._disconnectState = 0;
 
     this._sequenceCount = 0;
     this._callbacks = {};
+
+    this._sequenceToContext = new Map();
 
     this.connect();
   }
@@ -46,60 +48,54 @@ class Connection extends Layer {
     let self = this;
     self._connectionState = 1;
 
-    self._layer.sendUnconnected(ConnectionManager.ForwardOpen(self), function(data) {
-      let message = MessageRouter.Reply(data);
+    this._connectCallback = callback;
 
-      if (message.statusCode === 0 && message.service === (ConnectionManager.Services.ForwardOpen | (1 << 7))) {
-        self._connectionState = 2;
-        let reply = ConnectionManager.ForwardOpenReply(message.data);
-        self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
-        self._TtoOConnectionID = reply.TtoONetworkConnectionID;
-        self._OtoTPacketRate = reply.OtoTActualPacketRate;
-        self._TtoOPacketRate = reply.TtoOActualPacketRate;
-        self._connectionSerialNumber = reply.ConnectionSerialNumber;
+    self.send(ConnectionManager.ForwardOpen(self), null, false);
 
-        let rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
-        rpi = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
-        self._rpi = rpi;
-        // console.log(rpi);
-
-        self._layer.setConnectionResponseCallback(self._TtoOConnectionID, self.handleData.bind(self));
-
-        self.sendNextMessage();
-      } else {
-        console.log('');
-        console.log('CIP Connection Error: Status is not successful or service is not correct:');
-        console.log(message);
-      }
-
-      if (callback) callback(message);
-    });
+    // self.send(ConnectionManager.ForwardOpen(self), null, false, function(data) {
+    //   let message = MessageRouter.Reply(data);
+    //
+    //   if (message.statusCode === 0 && message.service === (ConnectionManager.Services.ForwardOpen | (1 << 7))) {
+    //     self._connectionState = 2;
+    //     let reply = ConnectionManager.ForwardOpenReply(message.data);
+    //     self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
+    //     self._TtoOConnectionID = reply.TtoONetworkConnectionID;
+    //     self._OtoTPacketRate = reply.OtoTActualPacketRate;
+    //     self._TtoOPacketRate = reply.TtoOActualPacketRate;
+    //     self._connectionSerialNumber = reply.ConnectionSerialNumber;
+    //
+    //     let rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
+    //     rpi = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
+    //     self._rpi = rpi;
+    //
+    //     // self._layer.setConnectionResponseCallback(self._TtoOConnectionID, self.handleData.bind(self));
+    //
+    //     self.sendNextMessage();
+    //   } else {
+    //     console.log('');
+    //     console.log('CIP Connection Error: Status is not successful or service is not correct:');
+    //     console.log(message);
+    //   }
+    //
+    //   if (callback) callback(message);
+    // });
   }
 
   disconnect(callback) {
-    if (this._connectionState < 2) return;
-    let self = this;
-    self._connectionState = -1;
-
-    self._layer.sendUnconnected(ConnectionManager.ForwardClose(self), function(data) {
-      let message = MessageRouter.Reply(data);
-
-      if (message.statusCode === 0 && message.service === (ConnectionManager.Services.ForwardClose | (1 << 7))) {
-        let reply = ConnectionManager.ForwardCloseReply(message.data);
-        self._connectionState = 0;
-        self._layer.setConnectionResponseCallback(self._TtoOConnectionID, null);
-        if (callback) callback(reply);
+    if (this._disconnecting === 1) return;
+    if (this._connectionState === 0) {
+      if (callback != null) {
+        callback();
       }
-    });
+      return;
+    }
+
+    this._disconnectState = 1;
+    this._disconnectCallback = callback;
+    this.send(ConnectionManager.ForwardClose(this), null, false);
   }
 
-  // send(message, callback) {
-  //   this._queue.addToQueue({ message: message, callback: callback}, false);
-  //   this.sendNextMessage();
-  // }
-
   sendNextMessage() {
-
     if (this._connectionState === 2) {
       let request = this.getNextRequest();
 
@@ -107,17 +103,19 @@ class Connection extends Layer {
         let sequenceCount = this._incrementSequenceCount();
 
         let message = request.message;
-        let callback = request.info;
 
-        if (callback) this._callbacks[sequenceCount] = callback;
+        if (request.context != null) {
+          this._sequenceToContext.set(sequenceCount, request.context);
+        } else {
+          throw new Error('CIP Connection Error: Connected messages must include a context');
+        }
+
 
         let buffer = Buffer.alloc(message.length + 2);
         buffer.writeUInt16LE(sequenceCount, 0);
         message.copy(buffer, 2);
 
-        // this._layer.sendConnected(this._OtoTConnectionID, buffer);
-
-        this.send(message, { connected: true, connectionID: this._OtoTConnectionID }, false);
+        this.send(buffer, this.sendInfo, false, this.layerContext(request.layer));
 
         this._lastMessage = Buffer.from(buffer);
 
@@ -126,16 +124,74 @@ class Connection extends Layer {
     }
   }
 
-  handleData(data, info) {
-    // console.log('asdf')
-    // this will always be connected data
-    let sequenceCount = data.readUInt16LE(0);
-    let message = data.slice(2);
+  handleData(data, info, context) {
+    const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen | (1 << 7);
+    const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose | (1 << 7);
 
-    if (this._callbacks[sequenceCount]) {
-      let callback = this._callbacks[sequenceCount];
-      delete this._callbacks[sequenceCount];
-      callback(message);
+    let message = MessageRouter.Reply(data);
+
+    switch (message.service) {
+      case FORWARD_OPEN_SERVICE:
+        this.handleForwardOpen(message, info, context);
+        break;
+      case FORWARD_CLOSE_SERVICE:
+        this.handleForwardClose(message, info, context);
+        break;
+      default:
+        this.handleConnectedMessage(data, info, context);
+    }
+  }
+
+  handleForwardOpen(message, info, context) {
+    if (message.statusCode === 0) {
+      this._connectionState = 2;
+      let reply = ConnectionManager.ForwardOpenReply(message.data);
+      this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
+      this._TtoOConnectionID = reply.TtoONetworkConnectionID;
+      this._OtoTPacketRate = reply.OtoTActualPacketRate;
+      this._TtoOPacketRate = reply.TtoOActualPacketRate;
+      this._connectionSerialNumber = reply.ConnectionSerialNumber;
+
+      let rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
+      rpi = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
+      this._rpi = rpi;
+
+      this.sendInfo = {
+        connectionID: this._OtoTConnectionID,
+        responseID: this._TtoOConnectionID
+      };
+
+      this.sendNextMessage();
+    } else {
+      console.log('');
+      console.log('CIP Connection Error: Status is not successful or service is not correct:');
+      console.log(message);
+    }
+
+    if (this._connectCallback) this._connectCallback(message);
+    this._connectCallback = null;
+  }
+
+  handleForwardClose(message, info, context) {
+    if (message.statusCode === 0) {
+      let reply = ConnectionManager.ForwardCloseReply(message.data);
+      this._connectionState = 0;
+      this._disconnectState = 0;
+      if (this._disconnectCallback) this._disconnectCallback(reply);
+      this._disconnectCallback = null;
+    }
+  }
+
+  handleConnectedMessage(data, info, context) {
+    let sequenceCount = data.readUInt16LE(0);
+    data = data.slice(2);
+
+    if (this._sequenceToContext.has(sequenceCount)) {
+      context = this._sequenceToContext.get(sequenceCount);
+      this._sequenceToContext.delete(sequenceCount);
+      this.forward(data, info, context);
+    } else {
+      throw new Error('CIP Connection Error: No context for sequence count');
     }
   }
 
@@ -145,17 +201,17 @@ class Connection extends Layer {
   }
 }
 
-// const Queueable = require('./../../Classes/Queueable');
+// const Layer = require('./../../Stack/Layers/Layer');
 //
 // const ConnectionManager = require('./ConnectionManager');
 // const MessageRouter = require('./MessageRouter');
 //
-// class Connection {
-//   constructor(layer, options) {
-//     this._queue = new Queueable();
+// class Connection extends Layer {
+//   constructor(cipLayer, options) {
+//     super(cipLayer);
 //
-//     layer.registerConnection(this);
-//     this._layer = layer;
+//     cipLayer.registerConnection(this);
+//     this._layer = cipLayer;
 //
 //     this.mergeOptionsWithDefaults(options);
 //
@@ -186,6 +242,7 @@ class Connection extends Layer {
 //
 //   connect(callback) {
 //     if (this._connectionState > 0) return;
+//
 //     let self = this;
 //     self._connectionState = 1;
 //
@@ -236,21 +293,21 @@ class Connection extends Layer {
 //     });
 //   }
 //
-//   send(message, callback) {
-//     this._queue.addToQueue({ message: message, callback: callback}, false);
-//     this.sendNextMessage();
-//   }
+//   // send(message, callback) {
+//   //   this._queue.addToQueue({ message: message, callback: callback}, false);
+//   //   this.sendNextMessage();
+//   // }
 //
 //   sendNextMessage() {
+//
 //     if (this._connectionState === 2) {
-//       let request = this._queue.getNext();
+//       let request = this.getNextRequest();
 //
 //       if (request) {
-//
 //         let sequenceCount = this._incrementSequenceCount();
 //
 //         let message = request.message;
-//         let callback = request.callback;
+//         let callback = request.info;
 //
 //         if (callback) this._callbacks[sequenceCount] = callback;
 //
@@ -258,7 +315,9 @@ class Connection extends Layer {
 //         buffer.writeUInt16LE(sequenceCount, 0);
 //         message.copy(buffer, 2);
 //
-//         this._layer.sendConnected(this._OtoTConnectionID, buffer);
+//         // this._layer.sendConnected(this._OtoTConnectionID, buffer);
+//
+//         this.send(message, { connected: true, connectionID: this._OtoTConnectionID }, false);
 //
 //         this._lastMessage = Buffer.from(buffer);
 //
@@ -268,6 +327,7 @@ class Connection extends Layer {
 //   }
 //
 //   handleData(data, info) {
+//     // console.log('asdf')
 //     // this will always be connected data
 //     let sequenceCount = data.readUInt16LE(0);
 //     let message = data.slice(2);
@@ -284,6 +344,7 @@ class Connection extends Layer {
 //     return this._sequenceCount;
 //   }
 // }
+
 
 module.exports = Connection;
 
