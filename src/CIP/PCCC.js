@@ -3,10 +3,6 @@
 const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
-// option properties
-// - vendor (UINT): Vendor number of requestor
-// - serialNumber (UDINT): CIP Serial number of requestor
-
 // Not directly used
 // Unconnected sends to CIP Layer
 class PCCC extends Layer {
@@ -27,15 +23,6 @@ class PCCC extends Layer {
   sendNextMessage() {
     let request = this.getNextRequest();
     if (request != null) {
-      // CIP/MessageRouter specific
-      // const service = 0x4B; // Execute PCCC service code
-      // const pathSize = 2;
-
-      // 'Execute PCCC service' specific
-      // length - USINT
-      // Vendor - UINT
-      // Serial Number - UDINT
-      // Other - ARRAY of USINT
       const HEADER_LENGTH = 7
       let data = Buffer.alloc(HEADER_LENGTH);
       data.writeUInt8(HEADER_LENGTH, 0);

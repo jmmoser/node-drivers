@@ -180,12 +180,6 @@ function TypedReadParserInfo(data) {
 // Programmable Controller Communication Command
 class PCCCPacket {
   constructor() {
-    // // Header
-    // this.service = 0x4B;
-    // this.setPath(Buffer.from([0x20, 0x67, 0x24, 0x01]));
-    // this.setRequestor(Buffer.from([0x07, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03]));
-
-    // Message
     this.command = 0;
     this.status = 0;
     this.transaction = 0;
@@ -305,30 +299,14 @@ class PCCCPacket {
   }
 
   toBuffer() {
-    // if (this.buffer) {
-    //   // This is just for reply messages
-    //   // Not sure why this would be needed
-    //   return this.buffer;
-    // }
-    //
-    // let buffer = Buffer.alloc(256); // 256 bytes should be big enough for any case
-    // let offset = 0;
-    //
-    // buffer.writeUInt8(this.service, offset); offset += 1;
-    // buffer.writeUInt8(this.path.length / 2, offset); offset += 1;
-    // this.path.copy(buffer, offset); offset += this.path.length;
-    // this.requestor.copy(buffer, offset); offset += this.requestor.length;
-
     let offset = 0;
     let buffer = Buffer.alloc(4 + this.data.length);
     buffer.writeUInt8(this.command, offset); offset += 1;
     buffer.writeUInt8(this.status, offset); offset += 1;
     buffer.writeUInt16LE(this.transaction, offset); offset += 2;
     this.data.copy(buffer, offset); offset += this.data.length;
-    // return buffer.slice(0, offset);
     return buffer;
   }
-
 
 
   static WordRangeReadRequest(transaction, address) {

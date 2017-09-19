@@ -115,7 +115,9 @@ class Connection extends Layer {
         buffer.writeUInt16LE(sequenceCount, 0);
         message.copy(buffer, 2);
 
-        this._layer.sendConnected(this._OtoTConnectionID, buffer);
+        // this._layer.sendConnected(this._OtoTConnectionID, buffer);
+
+        this.send(message, { connected: true, connectionID: this._OtoTConnectionID }, false);
 
         this._lastMessage = Buffer.from(buffer);
 

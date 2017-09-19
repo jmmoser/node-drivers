@@ -11,11 +11,11 @@ class CIPLayer extends Layer {
   //     console.log('Layer adder called');
   //
   //     if (this._disconnecting === 1) return;
-  //     this._objects.push(cipObject);
+  //     this._layers.push(cipObject);
   //     // cipObject._layer = this;
   //   });
   //
-  //   this._objects = [];
+  //   this._layers = [];
   //   this._setupCallbacks();
   //
   //   this._context = 0; // pseudo-context for unconnected messages
@@ -24,7 +24,7 @@ class CIPLayer extends Layer {
   constructor(lowerLayer) {
     super(lowerLayer, true);
 
-    this._objects = [];
+    this._layers = [];
     this._setupCallbacks();
 
     this._context = 0; // pseudo-context for unconnected messages
@@ -42,9 +42,9 @@ class CIPLayer extends Layer {
 
   _connectedObjects() {
     let objs = [];
-    let length = this._objects.length;
+    let length = this._layers.length;
     for (let i = 0; i < length; i++) {
-      let obj = this._objects[i];
+      let obj = this._layers[i];
       if (isFunction(obj.connectionState) && obj.connectionState() === 2) {
         objs.push(obj);
       }
@@ -67,7 +67,7 @@ class CIPLayer extends Layer {
     self._diconnecting = 1;
     self._disconnectCount = 0;
 
-    let objectCount = self._objects.length;
+    let objectCount = self._layers.length;
 
     let objectDisconnectCallback = function() {
       self._disconnectCount++;
@@ -79,7 +79,7 @@ class CIPLayer extends Layer {
     };
 
     self._disconnectTimer = setTimeout(function() {
-      self._objects = [];
+      self._layers = [];
       self._disconnecting = 0;
       if (callback) callback();
     }, 10000);
@@ -103,14 +103,14 @@ class CIPLayer extends Layer {
   // addObject(cipObject) {
   //   if (this._disconnecting === 1) return;
   //
-  //   this._objects.push(cipObject);
+  //   this._layers.push(cipObject);
   //   cipObject._layer = this;
   //   return cipObject;
   // }
 
   registerConnection(connection) {
     if (this._disconnecting === 1) return;
-    this._objects.push(connection);
+    this._layers.push(connection);
     return connection;
   }
 

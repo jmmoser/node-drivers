@@ -5,6 +5,11 @@
 const Layer = require('./Layer');
 const PCCCPacket = require('./../Packets/PCCCPacket');
 
+/*
+  - Uses transactions
+  - Uses callbacks
+*/
+
 class PCCCLayer extends Layer {
   constructor(lowerLayer) {
     super(lowerLayer);
