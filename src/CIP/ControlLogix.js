@@ -18,6 +18,15 @@ class ControlLogix extends Layer {
 
     this.send(request, null, false, this.contextCallback(function(message) {
       let reply = MessageRouter.Reply(message);
+
+      if (reply.statusCode !== 0) {
+        if (READ_TAG_ERRORS[reply.statusCode] != null) {
+          reply.statusDescription = READ_TAG_ERRORS[reply.statusCode];
+        }
+        callback('ControlLogix Error: Error reading tag: ' + reply.statusDescription);
+        return;
+      }
+
       let dataType = reply.data.readUInt16LE(0);
       let dataConverter = DataConverters[dataType];
       if (dataConverter) {
@@ -25,7 +34,7 @@ class ControlLogix extends Layer {
       } else {
         callback('ControlLogix Error: No converter for data type: ' + dataType);
       }
-    }))
+    }));
   }
 
   WriteTag(address, value, callback) {
