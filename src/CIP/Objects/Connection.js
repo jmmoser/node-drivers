@@ -22,10 +22,6 @@ class Connection extends Layer {
     this.connect();
   }
 
-  connectionState() {
-    return this._connectionState;
-  }
-
   mergeOptionsWithDefaults(options) {
     if (!options) options = {};
     this.VendorID = options.VendorID || 0x1339;
