@@ -36,17 +36,21 @@ class Connection extends Layer {
   }
 
   connect(callback) {
-    if (this._connectionState > 0) return;
-
-    let self = this;
-    self._connectionState = 1;
-
     this._connectCallback = callback;
+    if (this._connectionState === 1) return;
+    if (this._connectionState === 2 && callback != null) {
+      if (callback != null) {
+        callback();
+      }
+      return;
+    }
 
-    self.send(ConnectionManager.ForwardOpen(self), null, false);
+    this._connectionState = 1;
+    this.send(ConnectionManager.ForwardOpen(this), null, false);
   }
 
   disconnect(callback) {
+    this._disconnectCallback = callback;
     if (this._disconnecting === 1) return;
     if (this._connectionState === 0) {
       if (callback != null) {
@@ -56,7 +60,6 @@ class Connection extends Layer {
     }
 
     this._disconnectState = 1;
-    this._disconnectCallback = callback;
     this.send(ConnectionManager.ForwardClose(this), null, false);
   }
 
