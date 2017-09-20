@@ -60,10 +60,10 @@ class ControlLogix extends Layer {
 
     let request = MessageRouter.Request(Services.WriteTag, path, data);
 
-    this.send(request, function(message) {
+    this.send(request, null, false, this.contextCallback(function(message) {
       let reply = MessageRouter.Reply(message);
       if (callback != null) callback(null, reply);
-    });
+    }));
   }
 
   ReadModifyWriteTag(address, sizeOfMasks ORmasks, ANDmasks, callback) {
