@@ -152,7 +152,8 @@ class Connection extends Layer {
     let sequenceCount = data.readUInt16LE(0);
 
     if (this._sequenceToContext.has(sequenceCount) === false) {
-      throw new Error('CIP Connection Error: No context for sequence count');
+      // This happens when the last message is resent to prevent disconnect
+      return;
     }
 
     context = this._sequenceToContext.get(sequenceCount);
