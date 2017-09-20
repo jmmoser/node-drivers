@@ -1,6 +1,6 @@
 'use strict';
 
-const CODES = require(__dirname + '/constants/ElementaryDataTypes');
+const CODES = require('./constants/ElementaryDataTypes');
 
 function readString(type, buffer, offset) {
   offset = offset || 0;
