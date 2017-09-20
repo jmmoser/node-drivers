@@ -68,16 +68,14 @@ class Connection extends Layer {
       let request = this.getNextRequest();
 
       if (request) {
-        let sequenceCount = this._incrementSequenceCount();
-
-        let message = request.message;
-
-        if (request.context != null) {
-          this._sequenceToContext.set(sequenceCount, request.context);
-        } else {
+        if (request.context == null) {
           throw new Error('CIP Connection Error: Connected messages must include a context');
         }
 
+        let sequenceCount = this._incrementSequenceCount();
+        this._sequenceToContext.set(sequenceCount, request.context);
+
+        let message = request.message;
 
         let buffer = Buffer.alloc(message.length + 2);
         buffer.writeUInt16LE(sequenceCount, 0);
