@@ -55,24 +55,6 @@ class PCCCLayer extends Layer {
     this.send(message, false);
   }
 
-  // typedRead(address, callback) {
-  //   if (callback) {
-  //     let transaction = this.incrementTransaction();
-  //
-  //     let message = PCCCPacket.TypedReadRequest(transaction, address, 1);
-  //
-  //     this._layer.sendUnconnected(message, function(data) {
-  //       let reply = PCCCPacket.fromBufferReply(data);
-  //       let value = PCCCPacket.ParseTypedReadData(reply.data);
-  //       if (Array.isArray(value) && value.length > 0) {
-  //         callback(null, value[0]);
-  //       } else {
-  //         callback(null, null);
-  //       }
-  //     });
-  //   }
-  // }
-
   typedWrite(address, value, callback) {
     if (callback == null) return;
 
