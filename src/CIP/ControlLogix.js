@@ -9,7 +9,13 @@ class ControlLogix extends Layer {
   }
 
   ReadTag(address, callback) {
-    if (!address || !callback) return;
+    const BASE_ERROR = 'ControlLogix Error: Read Tag: ';
+    if (callback == null) return;
+
+    if (address == null || address.length === 0) {
+      callback(BASE_ERROR + 'Address must be specified');
+      return;
+    }
 
     let path = MessageRouter.ANSIExtSymbolSegment(address);
     const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
@@ -23,7 +29,7 @@ class ControlLogix extends Layer {
         if (READ_TAG_ERRORS[reply.statusCode] != null) {
           reply.statusDescription = READ_TAG_ERRORS[reply.statusCode];
         }
-        callback('ControlLogix Error: Error reading tag: ' + reply.statusDescription);
+        callback(BASE_ERROR + reply.statusDescription);
         return;
       }
 
@@ -32,13 +38,19 @@ class ControlLogix extends Layer {
       if (dataConverter) {
         callback(null, dataConverter(reply.data, 2));
       } else {
-        callback('ControlLogix Error: No converter for data type: ' + dataType);
+        callback(BASE_ERROR + 'No converter for data type: ' + dataType);
       }
     }));
   }
 
   WriteTag(address, value, callback) {
-    if (!address || !callback) return;
+    const BASE_ERROR = 'ControlLogix Error: Write Tag: ';
+    if (address == null || address.length === 0) {
+      if (callback != null) {
+        callback(BASE_ERROR + 'Address must be specified');
+      }
+      return;
+    }
 
     let path = MessageRouter.ANSIExtSymbolSegment(address);
     let data = Buffer.alloc(8);
@@ -50,8 +62,20 @@ class ControlLogix extends Layer {
 
     this.send(request, function(message) {
       let reply = MessageRouter.Reply(message);
-      callback(null, reply);
+      if (callback != null) callback(null, reply);
     });
+  }
+
+  ReadModifyWriteTag(address, sizeOfMasks ORmasks, ANDmasks, callback) {
+    const BASE_ERROR = 'ControlLogix Error: Read Modify Write Tag: ';
+    if (address == null || address.length === 0) {
+      if (callback != null) {
+        callback(BASE_ERROR + 'Address must be specified');
+      }
+      return;
+    }
+
+
   }
 
   handleData(data, info, context) {
