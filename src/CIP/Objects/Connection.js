@@ -6,8 +6,8 @@ const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
 
 class Connection extends Layer {
-  constructor(cipLayer, options) {
-    super(cipLayer);
+  constructor(lowerLayer, options) {
+    super(lowerLayer);
 
     this.mergeOptionsWithDefaults(options);
 
@@ -15,7 +15,6 @@ class Connection extends Layer {
     this._disconnectState = 0;
 
     this._sequenceCount = 0;
-    this._callbacks = {};
 
     this._sequenceToContext = new Map();
 
@@ -122,6 +121,7 @@ class Connection extends Layer {
       rpi = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
       this._rpi = rpi;
 
+      // EIP specific information
       this.sendInfo = {
         connectionID: this._OtoTConnectionID,
         responseID: this._TtoOConnectionID
