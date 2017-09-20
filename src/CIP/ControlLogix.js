@@ -82,15 +82,28 @@ class ControlLogix extends Layer {
       return;
     }
 
+    let sizeOfMasks = ORmasks.length;
+
     const ACCEPTABLE_SIZE_OF_MASKS = new Set([1,2,4,8,12]);
 
-    if (ACCEPTABLE_SIZE_OF_MASKS.has(ORmasks.length) === false) {
+    if (ACCEPTABLE_SIZE_OF_MASKS.has(sizeOfMasks) === false) {
       if (callback != null) {
-        let errStr = '';
-        errStr += 'Size of masks is not valid. ';
-        errStr += 'Valid lengths are 1, 2, 4, 8, or 12';
-        callback(BASE_ERROR + errStr);
+        let err = '';
+        err += 'Size of masks is not valid. ';
+        err += 'Valid lengths are 1, 2, 4, 8, or 12';
+        callback(BASE_ERROR + err);
       }
+    }
+    
+    for (let i = 0; i < sizeOfMasks; i++) {
+      if (ORmasks[i] < 0 || ORmasks > 0xFF
+        || ANDmasks[i] < 0 || ANDmasks > 0xFF) {
+          let err = '';
+          err += 'Values in masks must be greater than or equal to zero ';
+          err += 'and less than or equal to 255';
+          callback(BASE_ERROR + err);
+          return;
+        }
     }
 
     let code = Services.ReadModifyWriteTag
