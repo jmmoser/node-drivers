@@ -150,15 +150,14 @@ class Connection extends Layer {
 
   handleConnectedMessage(data, info, context) {
     let sequenceCount = data.readUInt16LE(0);
-    data = data.slice(2);
 
-    if (this._sequenceToContext.has(sequenceCount)) {
-      context = this._sequenceToContext.get(sequenceCount);
-      this._sequenceToContext.delete(sequenceCount);
-      this.forward(data, info, context);
-    } else {
+    if (this._sequenceToContext.has(sequenceCount) === false) {
       throw new Error('CIP Connection Error: No context for sequence count');
     }
+
+    context = this._sequenceToContext.get(sequenceCount);
+    this._sequenceToContext.delete(sequenceCount);
+    this.forward(data.slice(2), info, context);
   }
 
   _incrementSequenceCount() {
