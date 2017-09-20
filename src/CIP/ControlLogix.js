@@ -4,10 +4,6 @@ const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
 class ControlLogix extends Layer {
-  constructor(connectionLayer, options) {
-    super(connectionLayer);
-  }
-
   ReadTag(address, callback) {
     const BASE_ERROR = 'ControlLogix Error: Read Tag: ';
     if (callback == null) return;
@@ -66,7 +62,7 @@ class ControlLogix extends Layer {
     }));
   }
 
-  ReadModifyWriteTag(address, sizeOfMasks ORmasks, ANDmasks, callback) {
+  ReadModifyWriteTag(address, ORmasks, ANDmasks, callback) {
     const BASE_ERROR = 'ControlLogix Error: Read Modify Write Tag: ';
     if (address == null || address.length === 0) {
       if (callback != null) {
@@ -75,7 +71,45 @@ class ControlLogix extends Layer {
       return;
     }
 
+    if (Array.isArray(ORmasks) === false && Buffer.isBuffer(ORmasks) === false
+      || Array.isArray(ANDmasks) === false && Buffer.isBuffer(ANDmasks) === false) {
+        callback(BASE_ERROR + 'OR masks and AND masks must be either an array or a buffer');
+        return;
+      }
 
+    if (ORmasks.length !== ANDmasks.length) {
+      callback(BASE_ERROR + 'Length of OR masks must be equal to length of AND masks');
+      return;
+    }
+
+    const ACCEPTABLE_SIZE_OF_MASKS = new Set([1,2,4,8,12]);
+
+    if (ACCEPTABLE_SIZE_OF_MASKS.has(ORmasks.length) === false) {
+      if (callback != null) {
+        let errStr = '';
+        errStr += 'Size of masks is not valid. ';
+        errStr += 'Valid lengths are 1, 2, 4, 8, or 12';
+        callback(BASE_ERROR + errStr);
+      }
+    }
+
+    let code = Services.ReadModifyWriteTag
+    let path = MessageRouter.ANSIExtSymbolSegment(address);
+    let data = Buffer.alloc(2 + 2 * sizeOfMasks);
+
+    data.writeUInt16LE(sizeOfMasks, 0);
+
+    for (let i = 0; i < sizeOfMasks; i++) {
+      data.writeUInt8(ORmasks[i], 2 + i);
+      data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
+    }
+
+    let request = MessageRouter(code, path, data);
+
+    this.send(request, null, false, this.contextCallback(function(message) {
+      let reply = MessageRouter.Reply(message);
+      if (callback != null) callback(null, reply);
+    }));
   }
 
   handleData(data, info, context) {
