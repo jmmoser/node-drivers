@@ -14,7 +14,6 @@ class PCCCLayer extends Layer {
   constructor(lowerLayer) {
     super(lowerLayer);
 
-    this._callbacks = {};
     this._transaction = 0;
   }
 
@@ -22,25 +21,30 @@ class PCCCLayer extends Layer {
     if (callback == null) return;
 
     let transaction = this._incrementTransaction();
-    this._callbacks[transaction] = function(err, reply) {
-      if (err) {
-        callback(err);
+    let message = PCCCPacket.WordRangeReadRequest(transaction, address);
+
+    this.send(message, null, false, this.contextCallback(function(data) {
+      let reply = PCCCPacket.fromBufferReply(data);
+      let error = getError(reply);
+      if (error != null) {
+        callback(error);
       } else {
         callback(null, reply.Data);
       }
-    };
-
-    let message = PCCCPacket.WordRangeReadRequest(transaction, address);
-    this.send(message, null, false);
+    }, transaction));
   }
 
   typedRead(address, callback) {
     if (callback == null) return;
 
     let transaction = this._incrementTransaction();
-    this._callbacks[transaction] = function(err, reply) {
-      if (err) {
-        callback(err);
+    let message = PCCCPacket.TypedReadRequest(transaction, address, 1);
+
+    this.send(message, null, false, this.contextCallback(function(data) {
+      let reply = PCCCPacket.fromBufferReply(data);
+      let error = getError(reply);
+      if (error != null) {
+        callback(error);
       } else {
         let value = PCCCPacket.ParseTypedReadData(reply.data);
         if (Array.isArray(value) && value.length > 0) {
@@ -49,10 +53,7 @@ class PCCCLayer extends Layer {
           callback(null, null);
         }
       }
-    };
-
-    let message = PCCCPacket.TypedReadRequest(transaction, address, 1);
-    this.send(message, null, false);
+    }, transaction));
   }
 
   typedWrite(address, value, callback) {
@@ -132,17 +133,22 @@ class PCCCLayer extends Layer {
   }
 
 
-  handleData(data) {
+  handleData(data, info, context) {
     let packet = PCCCPacket.fromBufferReply(data);
 
-    if (this._callbacks[packet.transaction]) {
-      let callback = this._callbacks[packet.transaction];
-      delete this._callbacks[packet.transaction];
-      callback(getError(packet), packet);
-    } else {
-      console.log('PCCC Error: Unhandled packet:');
-      console.log(packet);
-      console.log(this._callbacks);
+    // if (this._callbacks[packet.transaction]) {
+    //   let callback = this._callbacks[packet.transaction];
+    //   delete this._callbacks[packet.transaction];
+    //   callback(getError(packet), packet);
+    // } else {
+    //   console.log('PCCC Error: Unhandled packet:');
+    //   console.log(packet);
+    //   console.log(this._callbacks);
+    // }
+
+    let callback = this.getCallbackForContext(packet.transaction);
+    if (callback != null) {
+      callback(data, info);
     }
   }
 
