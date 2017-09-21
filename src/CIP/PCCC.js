@@ -3,12 +3,9 @@
 const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
-// Not directly used
-// Unconnected sends to CIP Layer
 class PCCC extends Layer {
   constructor(lowerLayer, options) {
     super(lowerLayer);
-    // this._layer = cipLayer;
     this._mergeOptions(options);
   }
 
@@ -34,13 +31,6 @@ class PCCC extends Layer {
 
       data = Buffer.concat([data, pcccMessage], totalLength);
 
-      let self = this;
-
-      // this._send(PCCC.SERVICES.ExecutePCCC, data, function(res) {
-      //   let offset = res.readUInt8(4);
-      //   self.forward(res.slice(offset + 4));
-      // });
-
       let message = MessageRouter.Request(
         PCCC.SERVICES.ExecutePCCC,
         PCCC.Path,
@@ -55,11 +45,6 @@ class PCCC extends Layer {
     let offset = data.readUInt8(4);
     this.forward(data.slice(offset + 4));
   }
-
-  // _send(code, data, cb) {
-  //   let message = MessageRouter.Request(code, PCCC.Path, data);
-  //   this._layer.sendUnconnected(message, cb);
-  // }
 }
 
 PCCC.SERVICES = {
