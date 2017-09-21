@@ -187,33 +187,32 @@ class PCCCPacket {
     this.extendedStatus = 0;
   }
 
-  setPath(pathBuffer) {
-    if (Buffer.isBuffer(pathBuffer)) {
-      if (pathBuffer.length % 2 === 0) {
-        this.path = pathBuffer;
-      } else {
-        console.log('PCCC Error: Set Path: Path size is not even');
-      }
-    } else {
-      console.log('PCCC Error: Set Path: Value is not a buffer');
-    }
-  }
+  // This is not used anywhere
+  // setPath(pathBuffer) {
+  //   if (Buffer.isBuffer(pathBuffer)) {
+  //     if (pathBuffer.length % 2 === 0) {
+  //       this.path = pathBuffer;
+  //     } else {
+  //       console.log('PCCC Error: Set Path: Path size is not even');
+  //     }
+  //   } else {
+  //     console.log('PCCC Error: Set Path: Value is not a buffer');
+  //   }
+  // }
 
-  setRequestor(requestorBuffer) {
-    if (Buffer.isBuffer(requestorBuffer)) {
-      let length = requestorBuffer.readUInt8(0);
-      if (length === requestorBuffer.length) {
-        this.requestor = requestorBuffer;
-      } else {
-        console.log('PCCC Error: Set Requestor: Specified requestor length is not equal to total length of requestor buffer');
-      }
-    } else {
-      console.log('PCCC Error: Set Requestor: Value is not a buffer');
-    }
-  }
-
-  // TCP.EIP.CIP[MessageRouter].PCCC
-
+  // This is not used anywhere
+  // setRequestor(requestorBuffer) {
+  //   if (Buffer.isBuffer(requestorBuffer)) {
+  //     let length = requestorBuffer.readUInt8(0);
+  //     if (length === requestorBuffer.length) {
+  //       this.requestor = requestorBuffer;
+  //     } else {
+  //       console.log('PCCC Error: Set Requestor: Specified requestor length is not equal to total length of requestor buffer');
+  //     }
+  //   } else {
+  //     console.log('PCCC Error: Set Requestor: Value is not a buffer');
+  //   }
+  // }
 
   // this entire class method may not be needed
   // good for unit testing factory methods
@@ -244,35 +243,6 @@ class PCCCPacket {
 
   static fromBufferReply(buffer) {
     let packet = new PCCCPacket();
-    // packet.buffer = Buffer.from(buffer); // May not be needed
-    //
-    // let offset = 0;
-    // packet.service = buffer.readUInt8(offset); offset += 1;
-    // offset += 1; // Reserved
-    // packet.status = buffer.readUInt8(offset); offset += 1;
-    // let additionalStatusSize = 2 * buffer.readUInt8(offset); offset += 1;
-    // if (additionalStatusSize > 0) {
-    //   packet.additionalStatus = buffer.slice(offset, offset + additionalStatusSize); offset += additionalStatusSize;
-    // }
-    //
-    // if (packet.status !== 0) {
-    //   return packet;
-    // }
-    // // SHOULD HANDLE: ONLY PRESENT IN REPLY TO UNCONNECTED SEND WITH ROUTE ERROR
-    // // packet.RemainingPathSize = buffer.readUInt8(offset); offset += 1;
-    //
-    // // let requestorIDLength = buffer.readUInt8(offset); offset += 1;
-    // // packet.VendorID = buffer.slice(offset, offset + 2); offset += 2;
-    // // packet.SerialNumber = buffer.slice(offset, offset + 4); offset += 4;
-    // // if (requestorIDLength > 7) {
-    // //   packet.Other = buffer.slice(offset, offset + requestorIDLength - 7); offset += requestorIDLength - 7;
-    // // }
-    //
-    // let requestorIDLength = buffer.readUInt8(offset);
-    // packet.requestor = buffer.slice(offset, offset + requestorIDLength); offset += requestorIDLength;
-
-
-    // Start here
 
     let offset = 0;
 
