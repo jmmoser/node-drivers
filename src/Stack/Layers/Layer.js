@@ -30,10 +30,6 @@ class Layer {
     return this;
   }
 
-  setFormatter(formatter) {
-    this._formatter = formatter;
-  }
-
   _handleData(data, info, context) {
     if (this._defragger != null) {
       data = this._defragger.defrag(data);
