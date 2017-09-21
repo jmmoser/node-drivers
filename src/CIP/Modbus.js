@@ -2,19 +2,11 @@
 
 const MessageRouter = require('./Objects/MessageRouter');
 
-const Connection = require('./Objects/Connection');
-
 const modbusPath = Buffer.from([0x20, 0x67, 0x24, 0x01]);
 
-class Modbus {
-  constructor(cipLayer, options) {
-    this._connection = new Connection(cipLayer, options);
-  }
+const Layer = require('./../Stack/Layers/Layer');
 
-  connection() {
-    return this._connection;
-  }
-
+class Modbus extends Layer {
   ReadDiscreteInputs(address, count) {
     let buffer = Buffer.alloc(4);
     buffer.writeUInt16LE(address, 0); // offset in table to begin reading
