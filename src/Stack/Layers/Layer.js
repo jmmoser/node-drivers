@@ -1,6 +1,6 @@
 'use strict';
 
-const Queue = require('./../../Classes/Queueable');
+const Queue = require('./../../Classes/Queue');
 const Defragger = require('./../../Classes/Defragger');
 
 class Layer {
@@ -181,7 +181,5 @@ class Layer {
     return layer;
   }
 }
-
-Layer.Queueable = Queue;
 
 module.exports = Layer;
