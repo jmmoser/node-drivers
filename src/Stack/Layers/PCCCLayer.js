@@ -10,6 +10,8 @@ const PCCCPacket = require('./../Packets/PCCCPacket');
   - Similar to EIPLayer, can directly use or use upper layers
 */
 
+function
+
 class PCCCLayer extends Layer {
   constructor(lowerLayer) {
     super(lowerLayer);
@@ -60,32 +62,34 @@ class PCCCLayer extends Layer {
     if (callback == null) return;
 
     let transaction = this._incrementTransaction();
-    this._callbacks[transaction] = function(err, reply) {
-      if (err) {
-        callback(err, null);
-      } else {
-        callback(reply.additionalStatus, reply);
-      }
-    };
-
     let message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
-    this.send(message, null, false);
+
+    this.send(message, null, false, this.contextCallback(function(data) {
+      let reply = PCCCPacket.fromBufferReply(data);
+      let error = getError(reply);
+      if (error != null) {
+        callback(error);
+      } else {
+        callback(null, null);
+      }
+    }, transaction));
   }
 
   diagnosticStatus(callback) {
     if (callback == null) return;
 
     let transaction = this._incrementTransaction();
-    this._callbacks[transaction] = function(error, packet) {
+    let message = PCCCPacket.DiagnosticStatusRequest(transaction);
+
+    this.send(message, null, false, this.contextCallback(function(data) {
+      let reply = PCCCPacket.fromBufferReply(data);
+      let error = getError(reply);
       if (error) {
         callback(error);
       } else {
         callback(null, packet.Data);
       }
-    };
-
-    let message = PCCCPacket.DiagnosticStatusRequest(transaction);
-    this.send(message, null, false);
+    }, transaction));
   }
 
   // this is needed for sending CIP requests over PCCC
@@ -117,7 +121,12 @@ class PCCCLayer extends Layer {
         message = this._packet(0x0A, 0, transaction, data);
       }
 
-      this.send(message, null, false);
+      this.send(
+        message,
+        null,
+        false,
+        this.layerContext(request.layer, transaction)
+      );
 
       this.sendNextMessage();
     }
@@ -149,7 +158,16 @@ class PCCCLayer extends Layer {
     let callback = this.getCallbackForContext(packet.transaction);
     if (callback != null) {
       callback(data, info);
+      return;
     }
+
+    let layer = this.layerForContext(packet.transaction);
+    if (layer != null) {
+      this.forwardTo(layer, data, info, context);
+      return;
+    }
+
+    throw new Error('PCCCLayer Error: No callback or layer for context (transaction)');
   }
 
   _incrementTransaction() {

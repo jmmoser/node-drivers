@@ -153,10 +153,20 @@ class Layer {
     return callback;
   }
 
-  layerContext(layer) {
-    let context = null;
+  // layerContext(layer) {
+  //   let context = null;
+  //   if (layer != null) {
+  //     context = this.__incrementContext();
+  //     this.__contextToLayer.set(context, layer);
+  //   }
+  //   return context;
+  // }
+
+  layerContext(layer, context) {
     if (layer != null) {
-      context = this.__incrementContext();
+      if (context == null) {
+        context = this.__incrementContext();
+      }
       this.__contextToLayer.set(context, layer);
     }
     return context;
