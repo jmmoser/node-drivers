@@ -59,39 +59,21 @@ class MultiplexLayer extends Layer {
   sendNextMessage() {
     let request = this.getNextRequest();
 
-    if (request) {
+    if (request != null) {
       this.send(request.message, request.info, false, this.layerContext(request.layer));
-
       this.sendNextMessage();
     }
   }
 
   handleData(data, info, context) {
-    // let context = info.context;
-    // if (context != null) {
-    //   if (this._callbacks.has(context) === true) {
-    //     let layer = this._callbacks.get(context);
-    //     this._callbacks.delete(context);
-    //     this.fowardTo(layer, data, info);
-    //   } else {
-    //     throw new Error('MultiplexLayer Error: callbacks does not contain context');
-    //   }
-    // } else {
-    //   throw new Error('MultiplexLayer Error: info does not contain context');
-    // }
-
     if (context != null) {
-      // let callback = this.getCallbackForContext(context);
       let layer = this.layerForContext(context);
-
       if (layer != null) {
         this.forwardTo(layer, data, info);
       } else {
         throw new Error('MultiplexLayer Error: No layer for context: ' + context);
       }
     } else {
-      // console.log(data);
-      // console.log(info);
       throw new Error('MultiplexLayer Error: No context');
     }
   }
