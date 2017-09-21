@@ -19,17 +19,10 @@ class Layer {
       lowerLayer.layerAdded(this);
     }
 
-    // this.__contexts = new Map();
     this.__context = 0;
     this.__callbacks = new Map();
 
-    this.__maps = {};
-
     this.__contextToLayer = new Map();
-  }
-
-  initializeMap(name) {
-    this.__maps[name] = new Map();
   }
 
   setDefragger(isCompleteFunc, lengthCallbackFunc) {
