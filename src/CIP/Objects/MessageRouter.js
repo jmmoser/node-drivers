@@ -1,8 +1,42 @@
 'use strict';
 
-const CIPObject = require('./CIPObject');
+class MessageRouter {
+  static Request(service, path, data) {
+    let offset = 0;
+    // let buffer = Buffer.alloc(256);
+    let buffer = Buffer.alloc(2 + path.length + data.length);
+    buffer.writeUInt8(service, offset); offset += 1;
+    buffer.writeUInt8(path.length / 2, offset); offset += 1;
+    path.copy(buffer, offset); offset += path.length;
+    data.copy(buffer, offset); offset + data.length;
 
-class MessageRouter extends CIPObject {
+    return buffer;
+  }
+
+
+  static Reply(buffer) {
+    let offset = 0;
+    let res = {};
+    res.buffer = Buffer.from(buffer);
+    res.service = buffer.readUInt8(offset); offset += 1;
+    offset += 1; // reserved
+    res.statusCode = buffer.readUInt8(offset); offset += 1;
+
+    if (res.statusCode !== 0) {
+      res.statusDescription = CIPGeneralStatusCodeNames[res.statusCode];
+    } else {
+      res.statusDescription = '';
+    }
+
+    let additionalStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
+    if (additionalStatusSize > 0) {
+      res.additionalStatus = buffer.slice(offset, offset + 2 * additionalStatusSize);
+      offset += 2 * additionalStatusSize;
+    }
+
+    res.data = buffer.slice(offset);
+    return res;
+  }
 
   // tagname
   // tagname.member
@@ -60,79 +94,6 @@ class MessageRouter extends CIPObject {
     }
 
     return buffer.slice(0, offset);
-  }
-
-  constructor(service, path) {
-    this._service = service;
-    this._path = path;
-  }
-
-  request(service, path, data) {
-    let offset = 0;
-    // let buffer = Buffer.alloc(256);
-    let buffer = Buffer.alloc(2 + path.length + data.length);
-    buffer.writeUInt8(service, offset); offset += 1;
-    buffer.writeUInt8(path.length / 2, offset); offset += 1;
-    path.copy(buffer, offset); offset += path.length;
-    data.copy(buffer, offset); offset + data.length;
-
-    return buffer;
-  }
-
-  fromBuffer(buffer) {
-    let offset = 0;
-    let response = {};
-    response.buffer = Buffer.from(buffer);
-    response.service = buffer.readUInt8(offset); offset += 1;
-    offset += 1; // reserved
-    response.status = buffer.readUInt8(offset); offset += 1;
-
-    let sizeOfAdditionStatus = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
-    if (sizeOfAdditionStatus > 0) {
-      response.additionalStatus = buffer.slice(offset, offset + 2 * sizeOfAdditionStatus);
-      offset += 2 * sizeOfAdditionStatus;
-    }
-
-    response.data = buffer.slice(offset);
-    return response;
-  }
-
-
-  static Request(service, path, data) {
-    let offset = 0;
-    // let buffer = Buffer.alloc(256);
-    let buffer = Buffer.alloc(2 + path.length + data.length);
-    buffer.writeUInt8(service, offset); offset += 1;
-    buffer.writeUInt8(path.length / 2, offset); offset += 1;
-    path.copy(buffer, offset); offset += path.length;
-    data.copy(buffer, offset); offset + data.length;
-
-    return buffer;
-  }
-
-
-  static Reply(buffer) {
-    let offset = 0;
-    let res = {};
-    res.buffer = Buffer.from(buffer);
-    res.service = buffer.readUInt8(offset); offset += 1;
-    offset += 1; // reserved
-    res.statusCode = buffer.readUInt8(offset); offset += 1;
-
-    if (res.statusCode !== 0) {
-      res.statusDescription = CIPGeneralStatusCodeNames[res.statusCode];
-    } else {
-      res.statusDescription = '';
-    }
-
-    let additionalStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
-    if (additionalStatusSize > 0) {
-      res.additionalStatus = buffer.slice(offset, offset + 2 * additionalStatusSize);
-      offset += 2 * additionalStatusSize;
-    }
-
-    res.data = buffer.slice(offset);
-    return res;
   }
 
 
