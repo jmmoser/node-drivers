@@ -3,7 +3,7 @@
 class MessageRouter {
   static Request(service, path, data) {
     let offset = 0;
-    // let buffer = Buffer.alloc(256);
+
     let buffer = Buffer.alloc(2 + path.length + data.length);
     buffer.writeUInt8(service, offset); offset += 1;
     buffer.writeUInt8(path.length / 2, offset); offset += 1;

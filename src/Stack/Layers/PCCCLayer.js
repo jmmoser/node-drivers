@@ -87,6 +87,51 @@ class PCCCLayer extends Layer {
     this.send(message, false);
   }
 
+  // this is needed for sending CIP requests over PCCC
+  sendNextMessage() {
+    let request = this.getNextRequest();
+    if (request != null) {
+      // requests can either be
+      // - unconnected (0x0B)
+      // - connected (0x0A)
+
+      // Fragmentation protocol is currently not supported
+
+      let message = null;
+      let transaction = this._incrementTransaction();
+
+      if (request.info != null && request.info.connected === true) {
+        let data = Buffer.alloc(6 + request.message.length);
+        data.writeUInt8(0, 0); // FNC
+        data.writeUInt8(0, 1); // Extra
+        data.writeUInt16LE(request.info.connectionID, 2);
+        data.writeUInt16LE(request.info.transportHeader, 4);
+        request.message.copy(data, 6);
+        message = this._packet(0x0A, 0, transaction, data);
+      } else {
+        let data = Buffer.alloc(2 + request.message.length);
+        data.writeUInt8(0, 0); // FNC
+        data.writeUInt8(0, 1); // Extra
+        request.message.copy(data, 2);
+        message = this._packet(0x0A, 0, transaction, data);
+      }
+
+      this.send(message, null, false);
+
+      this.sendNextMessage();
+    }
+  }
+
+  _packet(command, status, transaction, data) {
+    let buffer = Buffer.alloc(4 + data.length);
+    buffer.writeUInt8(command, 0);
+    buffer.writeUInt8(status, 1);
+    buffer.writeUInt16LE(transaction, 2);
+    data.copy(buffer, 4);
+    return buffer;
+  }
+
+
   handleData(data) {
     let packet = PCCCPacket.fromBufferReply(data);
 
