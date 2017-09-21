@@ -6,8 +6,8 @@ const Layer = require('./Layer');
 const PCCCPacket = require('./../Packets/PCCCPacket');
 
 /*
-  - Uses transactions
-  - Uses callbacks
+  - Uses transactions to map responses to requests
+  - Similar to EIPLayer, can directly use or use upper layers
 */
 
 class PCCCLayer extends Layer {
@@ -31,7 +31,7 @@ class PCCCLayer extends Layer {
     };
 
     let message = PCCCPacket.WordRangeReadRequest(transaction, address);
-    this.send(message, false);
+    this.send(message, null, false);
   }
 
   typedRead(address, callback) {
@@ -52,7 +52,7 @@ class PCCCLayer extends Layer {
     };
 
     let message = PCCCPacket.TypedReadRequest(transaction, address, 1);
-    this.send(message, false);
+    this.send(message, null, false);
   }
 
   typedWrite(address, value, callback) {
@@ -68,7 +68,7 @@ class PCCCLayer extends Layer {
     };
 
     let message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
-    this.send(message, false);
+    this.send(message, null, false);
   }
 
   diagnosticStatus(callback) {
@@ -84,7 +84,7 @@ class PCCCLayer extends Layer {
     };
 
     let message = PCCCPacket.DiagnosticStatusRequest(transaction);
-    this.send(message, false);
+    this.send(message, null, false);
   }
 
   // this is needed for sending CIP requests over PCCC
