@@ -4,7 +4,7 @@ const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
 class ControlLogix extends Layer {
-  ReadTag(address, callback) {
+  readTag(address, callback) {
     const BASE_ERROR = 'ControlLogix Error: Read Tag: ';
     if (callback == null) return;
 
@@ -39,7 +39,7 @@ class ControlLogix extends Layer {
     }));
   }
 
-  WriteTag(address, value, callback) {
+  writeTag(address, value, callback) {
     const BASE_ERROR = 'ControlLogix Error: Write Tag: ';
     if (address == null || address.length === 0) {
       if (callback != null) {
@@ -62,7 +62,7 @@ class ControlLogix extends Layer {
     }));
   }
 
-  ReadModifyWriteTag(address, ORmasks, ANDmasks, callback) {
+  readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
     const BASE_ERROR = 'ControlLogix Error: Read Modify Write Tag: ';
     if (address == null || address.length === 0) {
       if (callback != null) {
@@ -94,7 +94,7 @@ class ControlLogix extends Layer {
         callback(BASE_ERROR + err);
       }
     }
-    
+
     for (let i = 0; i < sizeOfMasks; i++) {
       if (ORmasks[i] < 0 || ORmasks > 0xFF
         || ANDmasks[i] < 0 || ANDmasks > 0xFF) {
