@@ -10,8 +10,6 @@ const PCCCPacket = require('./../Packets/PCCCPacket');
   - Similar to EIPLayer, can directly use or use upper layers
 */
 
-function
-
 class PCCCLayer extends Layer {
   constructor(lowerLayer) {
     super(lowerLayer);
@@ -94,6 +92,9 @@ class PCCCLayer extends Layer {
 
   // this is needed for sending CIP requests over PCCC
   sendNextMessage() {
+    // console.log('send next message');
+    // return;
+
     let request = this.getNextRequest();
     if (request != null) {
       // requests can either be
