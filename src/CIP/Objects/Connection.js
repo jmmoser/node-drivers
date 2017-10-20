@@ -62,6 +62,27 @@ class Connection extends Layer {
     this.send(ConnectionManager.ForwardClose(this), null, false);
   }
 
+  __startResend(lastMessage) {
+    if (lastMessage == null) return;
+
+    let milliseconds = Math.floor(this._connectionTimeout * 3 / 4) * 1000;
+
+    this.__stopResend();
+
+    let that = this;
+
+    this.__resendInterval = setInterval(function() {
+      that.send(lastMessage, that.sendInfo, false, null);
+    }, milliseconds);
+  }
+
+  __stopResend() {
+    if (this.__resendInterval != null) {
+      clearInterval(this.__resendInterval);
+      this.__resendInterval = null;
+    }
+  }
+
   sendNextMessage() {
     if (this._connectionState === 2) {
       let request = this.getNextRequest();
@@ -82,7 +103,8 @@ class Connection extends Layer {
 
         this.send(buffer, this.sendInfo, false, this.layerContext(request.layer));
 
-        this._lastMessage = Buffer.from(buffer);
+        // this._lastMessage = Buffer.from(buffer);
+        this.__startResend(Buffer.from(buffer));
 
         this.sendNextMessage();
       }
@@ -118,8 +140,9 @@ class Connection extends Layer {
       this._connectionSerialNumber = reply.ConnectionSerialNumber;
 
       let rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
-      rpi = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
-      this._rpi = rpi;
+      this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
+
+      // console.log(rpi);
 
       // EIP specific information
       this.sendInfo = {
@@ -139,6 +162,7 @@ class Connection extends Layer {
   }
 
   handleForwardClose(message, info, context) {
+    this.__stopResend();
     if (message.status.code === 0) {
       let reply = ConnectionManager.ForwardCloseReply(message.data);
       this._connectionState = 0;
@@ -153,6 +177,7 @@ class Connection extends Layer {
 
     if (this._sequenceToContext.has(sequenceCount) === false) {
       // This happens when the last message is resent to prevent disconnect
+      console.log('duplicate message');
       return;
     }
 
