@@ -108,7 +108,7 @@ class Connection extends Layer {
   }
 
   handleForwardOpen(message, info, context) {
-    if (message.statusCode === 0) {
+    if (message.status.code === 0) {
       this._connectionState = 2;
       let reply = ConnectionManager.ForwardOpenReply(message.data);
       this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
@@ -139,7 +139,7 @@ class Connection extends Layer {
   }
 
   handleForwardClose(message, info, context) {
-    if (message.statusCode === 0) {
+    if (message.status.code === 0) {
       let reply = ConnectionManager.ForwardCloseReply(message.data);
       this._connectionState = 0;
       this._disconnectState = 0;

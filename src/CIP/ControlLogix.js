@@ -21,11 +21,11 @@ class ControlLogix extends Layer {
     this.send(request, null, false, this.contextCallback(function(message) {
       let reply = MessageRouter.Reply(message);
 
-      if (reply.statusCode !== 0) {
-        if (READ_TAG_ERRORS[reply.statusCode] != null) {
-          reply.statusDescription = READ_TAG_ERRORS[reply.statusCode];
+      if (reply.status.code !== 0) {
+        if (READ_TAG_ERRORS[reply.status.code] != null) {
+          reply.status.description = READ_TAG_ERRORS[reply.status.code];
         }
-        callback(BASE_ERROR + reply.statusDescription);
+        callback(BASE_ERROR + reply.status.description);
         return;
       }
 
