@@ -25,7 +25,7 @@ class PCCCLayer extends Layer {
 
     this.send(message, null, false, this.contextCallback(function(data) {
       let reply = PCCCPacket.fromBufferReply(data);
-      let error = getError(reply);
+      let error = getError(reply.status);
       if (error != null) {
         callback(error);
       } else {
@@ -42,7 +42,7 @@ class PCCCLayer extends Layer {
 
     this.send(message, null, false, this.contextCallback(function(data) {
       let reply = PCCCPacket.fromBufferReply(data);
-      let error = getError(reply);
+      let error = getError(reply.status);
       if (error != null) {
         callback(error);
       } else {
@@ -64,7 +64,7 @@ class PCCCLayer extends Layer {
 
     this.send(message, null, false, this.contextCallback(function(data) {
       let reply = PCCCPacket.fromBufferReply(data);
-      let error = getError(reply);
+      let error = getError(reply.status);
       if (error != null) {
         callback(error);
       } else {
@@ -81,7 +81,7 @@ class PCCCLayer extends Layer {
 
     this.send(message, null, false, this.contextCallback(function(data) {
       let reply = PCCCPacket.fromBufferReply(data);
-      let error = getError(reply);
+      let error = getError(reply.status);
       if (error) {
         callback(error);
       } else {
@@ -146,16 +146,6 @@ class PCCCLayer extends Layer {
   handleData(data, info, context) {
     let packet = PCCCPacket.fromBufferReply(data);
 
-    // if (this._callbacks[packet.transaction]) {
-    //   let callback = this._callbacks[packet.transaction];
-    //   delete this._callbacks[packet.transaction];
-    //   callback(getError(packet), packet);
-    // } else {
-    //   console.log('PCCC Error: Unhandled packet:');
-    //   console.log(packet);
-    //   console.log(this._callbacks);
-    // }
-
     let callback = this.getCallbackForContext(packet.transaction);
     if (callback != null) {
       callback(data, info);
@@ -179,13 +169,13 @@ class PCCCLayer extends Layer {
 
 module.exports = PCCCLayer;
 
-function getError(packet) {
-  if (packet.status === 0) return null;
+function getError(status) {
+  if (status.code === 0) return null;
 
-  if (packet.extendedStatusDescription)
-    return packet.extendedStatusDescription;
+  if (status.extended.description != null && status.extended.description.length > 0)
+    return status.extended.description;
 
-  return packet.statusDescription;
+  return status.description;
 }
 
 /*

@@ -181,10 +181,14 @@ function TypedReadParserInfo(data) {
 class PCCCPacket {
   constructor() {
     this.command = 0;
-    this.status = 0;
     this.transaction = 0;
 
-    this.extendedStatus = 0;
+    this.status = {
+      code: 0,
+      extended: {
+        code: 0
+      }
+    };
   }
 
   // This is not used anywhere
@@ -234,7 +238,7 @@ class PCCCPacket {
     }
 
     packet.command = buffer.readUInt8(offset); offset += 1;
-    packet.status = buffer.readUInt8(offset); offset += 1;
+    packet.status.code = buffer.readUInt8(offset); offset += 1;
     packet.transaction = buffer.readUInt16LE(offset); offset += 2;
     packet.data = buffer.slice(offset);
 
@@ -247,23 +251,17 @@ class PCCCPacket {
     let offset = 0;
 
     packet.command = buffer.readUInt8(offset); offset += 1;
-    packet.status = buffer.readUInt8(offset); offset += 1;
+    packet.status.code = buffer.readUInt8(offset); offset += 1;
+    packet.status.description = STSCodeDescriptions[packet.status.code] || '';
 
     packet.transaction = buffer.readUInt16LE(offset); offset += 2;
-    if (packet.status === 0xF0) {
-      packet.extendedStatus = buffer.readUInt8(offset); offset += 1;
+
+    if (packet.status.code === 0xF0) {
+      packet.status.extended.code = buffer.readUInt8(offset); offset += 1;
+      packet.status.extended.description = EXTSTSCodeDescriptions[packet.status.extended.code] || '';
     }
 
     packet.data = buffer.slice(offset);
-
-    if (STSCodeDescriptions[packet.status]) {
-      packet.statusDescription = STSCodeDescriptions[packet.status];
-    }
-
-    if (packet.extendedStatus !== 0x00 && EXTSTSCodeDescriptions[packet.extendedStatus]) {
-      // packet.extendedStatusDescription = EXTSTSCodeDescriptions[packet.extendedStatus];
-      packet.statusDescription = EXTSTSCodeDescriptions[packet.extendedStatus];
-    }
 
     return packet;
   }
@@ -272,7 +270,7 @@ class PCCCPacket {
     let offset = 0;
     let buffer = Buffer.alloc(4 + this.data.length);
     buffer.writeUInt8(this.command, offset); offset += 1;
-    buffer.writeUInt8(this.status, offset); offset += 1;
+    buffer.writeUInt8(this.status.code, offset); offset += 1;
     buffer.writeUInt16LE(this.transaction, offset); offset += 2;
     this.data.copy(buffer, offset); offset += this.data.length;
     return buffer;

@@ -20,29 +20,16 @@ class MessageRouter {
     res.buffer = Buffer.from(buffer);
     res.service = buffer.readUInt8(offset); offset += 1;
     offset += 1; // reserved
-    // res.statusCode = buffer.readUInt8(offset); offset += 1;
-    let statusCode = buffer.readUInt8(offset); offset += 1;
 
-    // if (res.statusCode !== 0) {
-    //   res.statusDescription = CIPGeneralStatusCodeNames[res.statusCode];
-    // } else {
-    //   res.statusDescription = '';
-    // }
+    let statusCode = buffer.readUInt8(offset); offset += 1;
 
     res.status = {};
     res.status.code = statusCode;
     res.status.name = CIPGeneralStatusCodeNames[statusCode] || '';
     res.status.description = CIPGeneralStatusCodeDescriptions[statusCode] || '';
 
-    // if (CIPGeneralStatusCodeNames[res.statusCode] != null) {
-    //   res.statusDescription = CIPGeneralStatusCodeNames[res.statusCode];
-    // } else {
-    //   res.statusDescription = '';
-    // }
-
     let additionalStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
     if (additionalStatusSize > 0) {
-      // res.additionalStatus = buffer.slice(offset, offset + 2 * additionalStatusSize);
       res.status.additional = {};
       res.status.additional.buffer = buffer.slice(offset, offset + 2 * additionalStatusSize);
       offset += 2 * additionalStatusSize;

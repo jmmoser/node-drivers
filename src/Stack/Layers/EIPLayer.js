@@ -181,7 +181,7 @@ class EIPLayer extends Layer {
 
     this._callbacks[EIPCommands.RegisterSession] = function(packet) {
       // console.log('RegisterSession');
-      if (packet.Status === 0) {
+      if (packet.status.code === 0) {
         this._connectionState = 2;
         this._sessionHandle = packet.SessionHandle;
         if (this._connectCallback) this._connectCallback();
@@ -237,7 +237,7 @@ class EIPLayer extends Layer {
 
     this._callbacks[EIPCommands.SendUnitData] = function(packet) {
       // console.log('SendUnitData');
-      if (packet.Status === 0) {
+      if (packet.status.code === 0) {
         let info = {
           connected: true,
           connectionID: packet.Items[0].address

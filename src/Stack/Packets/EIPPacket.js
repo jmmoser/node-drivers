@@ -53,10 +53,13 @@ class EIPPacket {
     this.Command = 0;
     this.Length = 0;
     this.SessionHandle = 0;
-    this.Status = 0;
     this.SenderContext = NullSenderContext;
     this.Options = 0;
     this.Data = Buffer.alloc(0);
+    this.status = {
+      code: 0,
+      description: ''
+    };
   }
 
   setData(data) {
@@ -73,7 +76,7 @@ class EIPPacket {
     let packet = EIPPacket.BaseFromBuffer(buffer);
     let replyParse = EIPReply[command];
 
-    if (packet.Status === 0) {
+    if (packet.status.code === 0) {
       if (replyParse) {
         replyParse(packet);
       } else {
@@ -91,13 +94,13 @@ class EIPPacket {
     packet.Command = EIPPacket.Command(buffer);
     packet.Length = EIPPacket.DataLength(buffer);
     packet.SessionHandle = buffer.readUInt32LE(4);
-    packet.Status = buffer.readUInt32LE(8);
+    packet.status.code = buffer.readUInt32LE(8);
     packet.SenderContext = Buffer.from(buffer.slice(12, 20));
     packet.Options = buffer.readUInt32LE(20);
     packet.Data = buffer.length > 24 ? Buffer.from(buffer.slice(24)) : Buffer.alloc(0);
 
-    if (EIPStatusCodeDescriptions[packet.Status]) {
-      packet.StatusDescription = EIPStatusCodeDescriptions[packet.Status];
+    if (EIPStatusCodeDescriptions[packet.status.code]) {
+      packet.status.description = EIPStatusCodeDescriptions[packet.status.code] || '';
     }
 
     return packet;
@@ -110,7 +113,7 @@ class EIPPacket {
     buffer.writeUInt16LE(this.Command, 0);
     buffer.writeUInt16LE(this.Length, 2);
     buffer.writeUInt32LE(this.SessionHandle, 4);
-    buffer.writeUInt32LE(this.Status, 8);
+    buffer.writeUInt32LE(this.status.code, 8);
     this.SenderContext.copy(buffer, 12, 0, 8);
     buffer.writeUInt32LE(this.Options, 20);
     if (this.Length > 0 && this.Data && this.Data.length > 0) {
@@ -266,7 +269,7 @@ EIPReply[EIPCommands.ListIdentity] = function(packet) {
       item.Revision = {};
       item.Revision.Major = buffer.readUInt8(offset); offset += 1;
       item.Revision.Minor = buffer.readUInt8(offset); offset += 1;
-      item.Status = buffer.readUInt16LE(offset); offset += 2; // Data type is WORD
+      item.status.code = buffer.readUInt16LE(offset); offset += 2; // Data type is WORD
       item.SerialNumber = buffer.readUInt32LE(offset); offset += 4;
 
       let currentlyRead = offset - itemDataOffset;
