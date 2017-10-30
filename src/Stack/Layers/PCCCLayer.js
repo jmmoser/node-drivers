@@ -68,7 +68,7 @@ class PCCCLayer extends Layer {
       if (error != null) {
         callback(error);
       } else {
-        callback(null, null);
+        callback(null, reply);
       }
     }, transaction));
   }
@@ -92,8 +92,6 @@ class PCCCLayer extends Layer {
 
   // this is needed for sending CIP requests over PCCC
   sendNextMessage() {
-    // console.log('send next message');
-    // return;
 
     let request = this.getNextRequest();
     if (request != null) {

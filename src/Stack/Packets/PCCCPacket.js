@@ -366,8 +366,6 @@ class PCCCPacket {
 
     packet.data = Buffer.concat([data, writeBuffer], offset + items * dataTypeSize);
 
-    console.log(packet);
-
     return packet.toBuffer();
   }
 
