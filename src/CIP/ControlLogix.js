@@ -171,7 +171,7 @@ const DataConverters = {
     return buffer.readInt16LE(offset);
   },
   0x00C4: function(buffer, offset) {
-    return buffer.readInt32(offset);
+    return buffer.readInt32LE(offset);
   },
   0x00CA: function(buffer, offset) {
     return buffer.readFloatLE(offset);
