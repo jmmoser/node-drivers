@@ -10,7 +10,7 @@ let eipLayer = new EIPLayer(tcpLayer);
 let connection = new Connection(eipLayer);
 let controlLogix = new ControlLogix(connection);
 
-controlLogix.ReadTag('R03:9:I.Ch1Data', function(err, value) {
+controlLogix.readTag('R03:9:I.Ch1Data', function(err, value) {
   console.log(value);
 
   tcpLayer.close(function() {
