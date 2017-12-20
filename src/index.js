@@ -1,6 +1,7 @@
 'use strict';
 
 exports.Layers = {
+  Layer: require('./Stack/Layers/Layer'),
   TCPLayer: require('./Stack/Layers/TCPLayer'),
   EIPLayer: require('./Stack/Layers/EIPLayer'),
   CIPLayer: require('./Stack/Layers/CIPLayer'),

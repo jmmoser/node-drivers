@@ -73,6 +73,28 @@ class PCCCLayer extends Layer {
     }, transaction));
   }
 
+  // unprotectedRead(address, size, callback) {
+  //   if (callback == null) return;
+  //
+  //   if (size === 0 || size % 2 !== 0) {
+  //     callback('size must be an even number');
+  //     return;
+  //   }
+  //
+  //   let transaction = this._incrementTransaction();
+  //   let message = PCCCPacket.UnprotectedReadRequest(transaction, address, size);
+  //
+  //   this.send(message, null, false, this.contextCallback(function(data) {
+  //     let reply = PCCCPacket.fromBufferReply(data);
+  //     let error = getError(reply.status);
+  //     if (error != null) {
+  //       callback(error);
+  //     } else {
+  //       callback(null, reply);
+  //     }
+  //   }, transaction));
+  // }
+
   diagnosticStatus(callback) {
     if (callback == null) return;
 

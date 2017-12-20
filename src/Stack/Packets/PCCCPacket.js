@@ -381,14 +381,19 @@ class PCCCPacket {
     return packet.toBuffer();
   }
 
-  // static UnprotectedRead(address, transaction) {
+  // static UnprotectedRead(transaction, address, size) {
   //   let packet = PCCCPacket();
   //   packet.command = 0x01;
   //   packet.transaction = transaction;
   //
-  //   let data = Buffer.alloc(200);
   //   let offset = 0;
-  //   data
+  //   let data = Buffer.alloc(3);
+  //   data.writeUInt16LE(address, offset); offset += 2;
+  //   data.writeUInt8(size, offset); offset += 1;
+  //
+  //   packet.data = data;
+  //
+  //   return packet.toBuffer();
   // }
 }
 
