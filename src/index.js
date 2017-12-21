@@ -13,8 +13,5 @@ module.exports = {
       ControlLogix: require('./CIP/ControlLogix'),
       PCCC: require('./CIP/PCCC')
     }
-  },
-  Helpers: {
-    Defragger: require('./Classes/Defragger')
   }
 }
