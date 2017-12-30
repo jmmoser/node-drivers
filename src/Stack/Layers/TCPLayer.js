@@ -29,7 +29,7 @@ class TCPLayer extends Layer {
     self.socket.on('error', function(err) {
       // self.connectError.apply(self, arguments);
       self._connectionState = 0;
-      console.log('TCPTransport ERROR: Connect error:');
+      console.log('TCPLayer ERROR: Connect error:');
       console.log(err);
     });
 

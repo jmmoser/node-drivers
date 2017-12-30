@@ -45,8 +45,21 @@ const MBErrorDescriptions = {
   0x0C: 'Max'
 };
 
-const NullBuffer = Buffer.alloc(0);
 
+class MBTCPADU {
+
+}
+
+function TCP_MBAPHeader(transactionID, protocolID, length, unitID) {
+  let buffer = Buffer.allocUnsafe(7);
+  buffer.writeUInt16BE(transactionID, 0);
+  buffer.writeUInt16BE(protocolID, 2);
+  buffer.writeUInt16BE(protocolID, 4);
+  buffer.writeUInt8(unitID, 6);
+  return buffer;
+}
+
+const NullBuffer = Buffer.alloc(0);
 
 class MBPacket {
   constructor() {

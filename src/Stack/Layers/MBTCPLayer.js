@@ -11,20 +11,10 @@ class MBTCPLayer extends Layer {
   constructor(layer) {
     super(layer);
     this._transactionCounter = 0;
-    this._callbacks = {};
+    this._callbacks = new Map();
 
-    // this.defragger = new Defragable(MBPacket.Length, MBPacket.Length, this._handleResponse.bind(this));
-    // this.defragger = new Defragable(MBPacket.Length, MBPacket.Length);
+    this.setDefragger(MBPacket.IsComplete, MBPacket.Length);
   }
-
-  // _handleResponse(buffer) {
-  //   let packet = MBPacket.FromBuffer(buffer);
-  //
-  //   if (this._callbacks[packet.transactionID]) {
-  //     this._callbacks[packet.transactionID](packet.reply.error, packet.reply);
-  //     delete this._callbacks[packet.transactionID];
-  //   }
-  // }
 
   readDiscreteInputs(unitID, address, count, callback) {
     const fn = MBPacket.Functions.ReadDiscreteInputs;
@@ -79,7 +69,7 @@ class MBTCPLayer extends Layer {
   }
 
   _readRequest(functionCode, startingAddress, count) {
-    let buffer = Buffer.alloc(5);
+    let buffer = Buffer.allocUnsafe(5);
     buffer.writeUInt8(functionCode, 0);
     buffer.writeUInt16BE(startingAddress, 1);
     buffer.writeUInt16BE(count, 3);
@@ -117,40 +107,22 @@ class MBTCPLayer extends Layer {
 
   _send(unitID, data, callback) {
     let transactionID = this._incrementTransactionCounter();
-    if (callback) this._callbacks[transactionID] = callback;
+    if (callback != null) this._callbacks.set(transactionID, callback);
 
     let packet = new MBPacket();
     packet.transactionID = transactionID;
     packet.unitID = unitID;
     packet.data = data;
 
-    // console.log(packet.toBuffer());
-
-    // console.log(packet);
-    // console.log(packet.toBuffer());
-
     this.send(packet.toBuffer(), null, false);
   }
-
-  // handleData(data, info) {
-  //   // this.defragger.handleData(data);
-  //   data = this.defragger.defrag(data);
-  //   if (data) {
-  //     let packet = MBPacket.FromBuffer(buffer);
-  //
-  //     if (this._callbacks[packet.transactionID]) {
-  //       this._callbacks[packet.transactionID](packet.reply.error, packet.reply);
-  //       delete this._callbacks[packet.transactionID];
-  //     }
-  //   }
-  // }
 
   handleData(data, info) {
     let packet = MBPacket.FromBuffer(data);
 
-    if (this._callbacks[packet.transactionID]) {
-      this._callbacks[packet.transactionID](packet.reply.error, packet.reply);
-      delete this._callbacks[packet.transactionID];
+    if (this._callbacks.has(packet.transactionID)) {
+      this._callbacks.get(packet.transactionID)(packet.reply.error, packet.reply);
+      this._callbacks.delete(packet.transactionID);
     }
   }
 }
