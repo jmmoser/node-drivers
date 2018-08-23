@@ -27,7 +27,6 @@ class TCPLayer extends Layer {
     self._connectionState = 1;
 
     self.socket.on('error', function(err) {
-      // self.connectError.apply(self, arguments);
       self._connectionState = 0;
       console.log('TCPLayer ERROR: Connect error:');
       console.log(err);
@@ -38,12 +37,11 @@ class TCPLayer extends Layer {
     });
 
     self.socket.on('close', function() {
-      // console.log('TCP closed');
       self._connectionState = 0;
     });
 
     self.socket.on('end', function() {
-      // console.log('TCP end');
+      //
     });
   }
 

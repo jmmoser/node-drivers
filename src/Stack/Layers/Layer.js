@@ -113,15 +113,6 @@ class Layer {
     return this.__context;
   }
 
-  // contextCallback(callback) {
-  //   let context = null;
-  //   if (callback != null) {
-  //     context = this.__incrementContext();
-  //     this.__callbacks.set(context, callback);
-  //   }
-  //   return context;
-  // }
-
   contextCallback(callback, context) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
     if (callback != null) {
@@ -141,15 +132,6 @@ class Layer {
     }
     return callback;
   }
-
-  // layerContext(layer) {
-  //   let context = null;
-  //   if (layer != null) {
-  //     context = this.__incrementContext();
-  //     this.__contextToLayer.set(context, layer);
-  //   }
-  //   return context;
-  // }
 
   layerContext(layer, context) {
     if (layer != null) {

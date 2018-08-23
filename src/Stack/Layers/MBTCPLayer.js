@@ -1,10 +1,6 @@
 'use strict';
 
 const Layer = require('./Layer');
-
-// const Packetable = Layer.Packetable;
-const Defragable = Layer.Defragable;
-
 const MBPacket = require('./../Packets/MBPacket');
 
 class MBTCPLayer extends Layer {
@@ -76,23 +72,12 @@ class MBTCPLayer extends Layer {
     return buffer;
   }
 
-  // _writeRequest(functionCode, startingAddress, values) {
-  //   let buffer = Buffer.alloc(3 + 2 * values.length);
-  //   buffer.writeUInt8(functionCode, 0);
-  //   buffer.writeUInt16BE(startingAddress, 1);
-  //   for (let i = 0; i < values.length; i++) {
-  //     buffer.writeUInt16BE(values[i], 3 + 2 * i);
-  //   }
-  //   return buffer;
-  // }
-
   _writeRequest(functionCode, startingAddress, values) {
     let buffer = Buffer.alloc(3 + 2 * values.length);
     buffer.writeUInt8(functionCode, 0);
     buffer.writeUInt16BE(startingAddress, 1);
     for (let i = 0; i < values.length; i++) {
       values[i].copy(buffer, 2 * i + 3, 0, 2);
-      // buffer.writeUInt16BE(values[i], 3 + 2 * i);
     }
     return buffer;
   }

@@ -345,13 +345,8 @@ class PCCCPacket {
 
     let info = logicalASCIIAddressInfo(address);
 
-    // data.writeUInt8(info.dataType, offset); offset += 1;
     data.writeUInt8(info.dataType << 4 | info.size, offset); offset += 1;
 
-    // data.writeUInt8(0x99, offset); offset += 1;
-    // data.writeUInt8(0x09, offset); offset += 1;
-    // data.writeUInt8(0x03, offset); offset += 1;
-    // data.writeUInt8(0x42, offset); offset += 1;
 
     let dataTypeSize = info.size; // PCCCDataTypeSize[dataTypeSize];
     let writeBuffer = new Buffer.alloc(items * dataTypeSize);
@@ -412,6 +407,7 @@ function logicalASCIIAddress(address, buffer) {
   return offset;
 }
 
+// Help from https://github.com/plcpeople/nodepccc/blob/00b4824972baec636deb0906454f841d8b832797/nodePCCC.js
 function logicalASCIIAddressInfo(address) {
   let splitString = address.split(':');
   let prefix = splitString[0].replace(/[0-9]/gi, '');
