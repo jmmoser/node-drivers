@@ -49,3 +49,8 @@ function readString(type, buffer, offset) {
 
   return str;
 }
+
+
+module.exports = {
+  readString
+};
