@@ -1,7 +1,7 @@
 'use strict';
 
 const Layer = require('./Layer');
-const EIPPacket = require('./../Packets/EIPPacket');
+const EIPPacket = require('../Packets/EIPPacket');
 const EIPCommands = EIPPacket.Commands;
 
 function SendData_Packet(interfaceHandle, timeout, data) {

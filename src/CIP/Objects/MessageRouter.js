@@ -4,7 +4,7 @@ class MessageRouter {
   static Request(service, path, data) {
     let offset = 0;
 
-    let buffer = Buffer.alloc(2 + path.length + data.length);
+    const buffer = Buffer.alloc(2 + path.length + data.length);
     buffer.writeUInt8(service, offset); offset += 1;
     buffer.writeUInt8(path.length / 2, offset); offset += 1;
     path.copy(buffer, offset); offset += path.length;
@@ -16,19 +16,19 @@ class MessageRouter {
 
   static Reply(buffer) {
     let offset = 0;
-    let res = {};
+    const res = {};
     res.buffer = Buffer.from(buffer);
     res.service = buffer.readUInt8(offset); offset += 1;
     offset += 1; // reserved
 
-    let statusCode = buffer.readUInt8(offset); offset += 1;
+    const statusCode = buffer.readUInt8(offset); offset += 1;
 
     res.status = {};
     res.status.code = statusCode;
     res.status.name = CIPGeneralStatusCodeNames[statusCode] || '';
     res.status.description = CIPGeneralStatusCodeDescriptions[statusCode] || '';
 
-    let additionalStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
+    const additionalStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
     if (additionalStatusSize > 0) {
       res.status.additional = {};
       res.status.additional.buffer = buffer.slice(offset, offset + 2 * additionalStatusSize);
@@ -45,16 +45,16 @@ class MessageRouter {
   // tagname[element].member
   // tagname[idx1,idx2]
 
-  // EIP-CIP V1 Appendix C-1.4.5.2, pg.
+  // CIP Vol 1 Appendix C-1.4.5.2
   static ANSIExtSymbolSegment(address) {
     let offset = 0;
-    let buffer = Buffer.alloc(256);
+    const buffer = Buffer.alloc(256);
 
-    let items = address.split('.');
+    const items = address.split('.');
 
     for (let i = 0; i < items.length; i++) {
-      let item = items[i];
-      let items2 = item.split('[');
+      const item = items[i];
+      const items2 = item.split('[');
 
       let tagname = items2[0];
       let tagnameLength = tagname.length;
@@ -74,7 +74,7 @@ class MessageRouter {
         elements = elements.split(',');
 
         for (let j = 0; j < elements.length; j++) {
-          let element = parseInt(elements[j], 16);
+          const element = parseInt(elements[j], 16);
 
           if (!isNaN(element)) {
             if (element <= 0xFF) {

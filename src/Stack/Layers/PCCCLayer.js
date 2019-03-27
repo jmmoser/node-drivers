@@ -3,7 +3,7 @@
 // REF: CIP and PCCC v1.pdf
 
 const Layer = require('./Layer');
-const PCCCPacket = require('./../Packets/PCCCPacket');
+const PCCCPacket = require('../Packets/PCCCPacket');
 
 /*
   - Uses transactions to map responses to requests

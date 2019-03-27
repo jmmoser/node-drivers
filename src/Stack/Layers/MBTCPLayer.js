@@ -1,7 +1,7 @@
 'use strict';
 
 const Layer = require('./Layer');
-const MBPacket = require('./../Packets/MBPacket');
+const MBPacket = require('../Packets/MBPacket');
 
 class MBTCPLayer extends Layer {
   constructor(layer) {

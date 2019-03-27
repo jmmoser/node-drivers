@@ -115,22 +115,22 @@ const ExtendedDeviceStatusDescription = {
 };
 
 function ExtendedDeviceStatusDescription(status) {
-  let eds = (status << 8) >> 12;
-  let desc = ExtendedDeviceStatusDescription(eds);
+  const eds = (status << 8) >> 12;
+  const desc = ExtendedDeviceStatusDescription(eds);
   return desc ? desc : 'Vendor/product specific or unknown';
 }
 
 
-// CIP Vol7 Table 5-2.1, Attribute 18
-function ModbusIdentityInfoParser(res, buffer, offset) {
-  /*
-    Struct of:
-    VendorName [SHORT_STRING]
-    ProductCode [SHORT_STRING]
-    MajorMinorRevsion [SHORT_STRING]
-    VendorUrl [SHORT_STRING]
-    ProductName [SHORT_STRING]
-    ModelName [SHORT_STRING]
-    UserAppName [SHORT_STRING]
-  */
-}
+// // CIP Vol7 Table 5-2.1, Attribute 18
+// function ModbusIdentityInfoParser(res, buffer, offset) {
+//   /*
+//     Struct of:
+//     VendorName [SHORT_STRING]
+//     ProductCode [SHORT_STRING]
+//     MajorMinorRevsion [SHORT_STRING]
+//     VendorUrl [SHORT_STRING]
+//     ProductName [SHORT_STRING]
+//     ModelName [SHORT_STRING]
+//     UserAppName [SHORT_STRING]
+//   */
+// }

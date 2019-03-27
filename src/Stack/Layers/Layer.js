@@ -1,7 +1,7 @@
 'use strict';
 
-const Queue = require('./../../Classes/Queue');
-const Defragger = require('./../../Classes/Defragger');
+const Queue = require('../../Classes/Queue');
+const Defragger = require('../../Classes/Defragger');
 
 class Layer {
   constructor(lowerLayer, handlesForwarding) {
@@ -66,7 +66,7 @@ class Layer {
   // }
 
   close(callback) {
-    let self = this;
+    const self = this;
     if (self.upperLayer != null) {
       self.upperLayer.close(function() {
         self.disconnect(callback);
@@ -87,7 +87,7 @@ class Layer {
   }
 
   send(message, info, priority, context) {
-    let transport = this.lowerLayer != null ? this.lowerLayer : this;
+    const transport = this.lowerLayer != null ? this.lowerLayer : this;
 
     transport.addMessageToQueue(this, message, info, priority, context);
     transport.sendNextMessage();
@@ -98,7 +98,7 @@ class Layer {
   }
 
   addMessageToQueue(requestingLayer, message, info, priority, context) {
-    let obj = {
+    const obj = {
       layer: requestingLayer,
       message: message,
       info: info || {},

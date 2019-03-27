@@ -18,37 +18,37 @@ class ConnectionConfiguration extends CIPObject {
   }
 }
 
-ConnectionConfiguration.InstanceServices = {
-  0x01,
-  0x02,
-  0x09,
-  0x0E,
-  0x10,
-  0x15,
+// ConnectionConfiguration.InstanceServices = {
+//   0x01,
+//   0x02,
+//   0x09,
+//   0x0E,
+//   0x10,
+//   0x15,
 
-  0x4C, // Open
-  0x4D, // Close
-  0x4E  // Stop
-};
+//   0x4C, // Open
+//   0x4D, // Close
+//   0x4E  // Stop
+// };
 
-ConnectionConfiguration.ClassServices = {
-  0x01,
-  0x02,
-  0x08,
-  0x09,
-  0x0E,
-  0x10,
-  0x15,
+// ConnectionConfiguration.ClassServices = {
+//   0x01,
+//   0x02,
+//   0x08,
+//   0x09,
+//   0x0E,
+//   0x10,
+//   0x15,
 
-  0x4B, // Kick timer
-  0x4C, // Open
-  0x4D, // Close
-  0x4E, // Stop
-  0x4F, // Change Start
-  0x50, // Get Status
-  0x51, // Change Complete
-  0x52  // Audit Changes
-}
+//   0x4B, // Kick timer
+//   0x4C, // Open
+//   0x4D, // Close
+//   0x4E, // Stop
+//   0x4F, // Change Start
+//   0x50, // Get Status
+//   0x51, // Change Complete
+//   0x52  // Audit Changes
+// }
 
 ConnectionConfiguration.Attributes = [
   // AttributeID, NeedInImplementation, AccessRule, Name, DataType, Description

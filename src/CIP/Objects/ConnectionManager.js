@@ -2,6 +2,7 @@
 
 // EIP-CIP-V1 3.5, page 3-53
 
+const CIP = require('./CIP');
 const MessageRouter = require('./MessageRouter');
 
 let ConnectionSerialNumberCounter = 0x0001;
@@ -30,6 +31,7 @@ class ConnectionManager {
   // }
 
   CommonServices() {
+    // Connection Manager Object Instance Common Services
     return [0x01, 0x0E, 0x10];
   }
 
@@ -85,7 +87,7 @@ class ConnectionManager {
     connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
 
     let offset = 0;
-    let data = Buffer.alloc(64);
+    const data = Buffer.alloc(64);
 
     data.writeUInt8(0x0A, offset); offset += 1; // Connection timing Priority (CIP vol 1 Table 3-5.11)
     data.writeUInt8(0x0E, offset); offset += 1; // Time-out, ticks
@@ -95,6 +97,7 @@ class ConnectionManager {
     data.writeUInt16LE(connection.VendorID, offset); offset += 2;
     data.writeUInt32LE(connection.OriginatorSerialNumber, offset); offset += 4;
     data.writeUInt8(connection.ConnectionTimeoutMultiplier, offset); offset += 1; // connection timeout multiplier
+    
     offset += 3; // reserved
 
     data.writeUInt32LE(connection.OtoTRPI, offset); offset += 4; // Originator to Target requested packet interval (rate), in microseconds
@@ -120,7 +123,7 @@ class ConnectionManager {
 
   static ForwardOpenReply(buffer) {
     let offset = 0;
-    let res = {};
+    const res = {};
 
     res.OtoTNetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
     res.TtoONetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
@@ -129,7 +132,7 @@ class ConnectionManager {
     res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
     res.OtoTActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
     res.TtoOActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
-    let appReplySize = 2 * buffer.readUInt8(offset); offset += 1;
+    const appReplySize = 2 * buffer.readUInt8(offset); offset += 1;
     offset += 1; // reserved
     if (appReplySize > 0) {
       res.Data = buffer.slice(offset, offset + appReplySize); offset += appReplySize;
@@ -139,7 +142,7 @@ class ConnectionManager {
 
   // CIP Vol1 3-5.5.5
   static GetConnectionDataRequest(connectionNumber) {
-    let data = Buffer.alloc(2);
+    const data = Buffer.alloc(2);
 
     data.writeUInt16LE(connectionNumber, 0);
 
@@ -152,7 +155,7 @@ class ConnectionManager {
   // CIP Vol1 3-5.5.5
   static GetConnectionDataResponse(buffer) {
     let offset = 0;
-    let res = {};
+    const res = {};
 
     res.ConnectionNumber = buffer.readUInt16LE(offset); offset += 2;
     res.ConnectionState = buffer.readUInt16LE(offset); offset += 2;
@@ -180,7 +183,7 @@ class ConnectionManager {
   // CIP Vol1 3-5.5.6
   static SearchConnectionDataRequest(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
     let offset = 0;
-    let data = Buffer.alloc(8);
+    const data = Buffer.alloc(8);
 
     data.writeUInt16LE(connectionSerialNumber, offset); offset += 2;
     data.writeUInt16LE(originatorVendorID, offset); offset += 2;
@@ -199,7 +202,7 @@ class ConnectionManager {
 
   static GetConnectionOwner() {
     let offset = 0;
-    let data = Buffer.alloc(64);
+    const data = Buffer.alloc(64);
 
     return ConnectionManager._Request(
       Services.GetConnectionOwner,
@@ -216,7 +219,8 @@ class ConnectionManager {
   }
 }
 
-ConnectionManager.Code = 0x06;
+// ConnectionManager.Code = 0x06;
+ConnectionManager.Code = CIP.Classes.ConnectionManager;
 
 ConnectionManager.Path = Buffer.from([
   0x20, // logical segment, class ID, 8-bit logical address
@@ -228,8 +232,8 @@ ConnectionManager.Path = Buffer.from([
 module.exports = ConnectionManager;
 
 ConnectionManager.CommonServices = [
-  0x01,
-  0x0E
+  0x01, // Get_Attribute_All
+  0x0E // Get_Attribute_Single
 ];
 
 // EIP-CIP-V1 3-5.5, page 3.56
