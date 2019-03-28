@@ -54,6 +54,14 @@ const EPath = require('./../src/CIP/Objects/EPath');
 // ]))));
 
 // console.log('1')
-console.log(EPath.parsePath(Buffer.from([0x20, 0x6B, 0x25, 0x00, 0x00, 0x00])));
-console.log(EPath.describeSegments(EPath.parsePath(Buffer.from([0x20, 0x6B, 0x25, 0x00, 0x00, 0x00]))));
+console.log(EPath.parsePath(Buffer.from([
+  0x20, // Logical Segment - Class ID
+  0x02, // Message Router class
+  0x24, // Logical Segment - Instance ID 
+  0x01, // Instance ID
+  0x30, // Logical Segment - Attribute ID
+  0x01  // Attribute 1
+])));
+// console.log(EPath.parsePath(Buffer.from([0x20, 0x6B, 0x25, 0x00, 0x00, 0x00])));
+// console.log(EPath.describeSegments(EPath.parsePath(Buffer.from([0x20, 0x6B, 0x25, 0x00, 0x00, 0x00]))));
 // console.log('2')

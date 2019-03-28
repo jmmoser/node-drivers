@@ -1,6 +1,7 @@
 'use strict';
 
 const util = require('../util');
+const CIP = require('./Objects/CIP');
 const Layer = require('../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 const ElementaryDataTypes = require('./Objects/constants/ElementaryDataTypeCodes');
@@ -42,7 +43,7 @@ class Logix5000 extends Layer {
     }));
   }
 
-  
+
   writeTag(address, value, callback) {
     const BASE_ERROR = 'Logix5000 Error: Write Tag: ';
     if (!address) {
@@ -129,6 +130,52 @@ class Logix5000 extends Layer {
   }
 
 
+  supportedObjects(callback) {
+    if (callback == null) return;
+
+    const BASE_ERROR = 'Logix5000 Supported Objects Error: ';
+
+    const path = Buffer.from([
+      0x20, // Logical Segment - Class ID
+      0x02, // Message Router class
+      0x24, // Logical Segment - Instance ID 
+      0x01, // Instance ID
+      0x30, // Logical Segment - Attribute ID
+      0x01  // Attribute 1
+    ]);
+
+    const request = MessageRouter.Request(CIP.Services.GetAttributeSingle, path);
+
+    this.send(request, null, false, this.contextCallback(message => {
+      try {
+        const reply = MessageRouter.Reply(message);
+
+        if (reply.status.code === 0) {
+          const data = reply.data;
+          const res = [];
+          let offset = 0;
+
+          const objectCount = data.readUInt16LE(offset); offset += 2;
+
+          for (let i = 0; i < objectCount; i++) {
+            const classID = data.readUInt16LE(offset); offset += 2;
+            res.push({
+              id: classID,
+              name: CIP.ClassNames[classID] || 'Unknown'
+            });
+          }
+
+          callback(null, res);
+        } else {
+          callback(`${BASE_ERROR}${reply.status.description}`);
+        }
+      } catch (err) {
+        callback(`${BASE_ERROR}${err.message}`);
+      }
+    }));
+  }
+
+
   identity(callback) {
     if (callback == null) return;
 
@@ -136,12 +183,12 @@ class Logix5000 extends Layer {
 
     const path = Buffer.from([
       0x20, // Logical Segment - Class ID
-      0x01, // Identity object
+      0x01, // Identity class
       0x24, // Logical Segment - Instance ID 
       0x01  // Instance ID
     ]);
 
-    const request = MessageRouter.Request(0x01, path);
+    const request = MessageRouter.Request(CIP.Services.GetAttributesAll, path);
 
     this.send(request, null, false, this.contextCallback(message => {
       try {

@@ -41,6 +41,20 @@ const Classes = {
   SSingleStageControllerObject: 0x33,
   SGasCalibrationObject: 0x34,
   TripPointObject: 0x35,
+  File: 0x37,
+  SPartialPressure: 0x38,
+  SafetySupervisor: 0x39,
+  SafetyValidator: 0x3A,
+  SafetyDiscreteOutputPoint: 0x3B,
+  SafetyDiscreteOutputGroup: 0x3C,
+  SafetyDiscreteInputPoint: 0x3D,
+  SafetyDiscreteInputGroup: 0x3E,
+  SafetyDualChannelOutput: 0x3F,
+  SSensorCalibration: 0x40,
+  EventLog: 0x41,
+  MotionAxis: 0x42,
+  TimeSync: 0x43,
+  Modbus: 0x44,
   PCCCObject: 0x67,
   SCANportPassThroughParameter: 0x93,
   SCANportPassThroughFaultQueue: 0x97,
@@ -53,8 +67,15 @@ const Classes = {
   ConnectionConfigurationObject: 0xF3,
   PortObject: 0xF4,
   TCPIPInterfaceObject: 0xF5,
-  EtherNetLinkObject: 0xF6
+  EthernetLinkObject: 0xF6,
+  CompoNetLink: 0xF7,
+  CompoNetRepeater: 0xF8
 };
+
+const ClassNames = {};
+Object.entries(Classes).forEach(([key, value]) => {
+  ClassNames[value] = key;
+});
 
 // CIP Vol1 Appendix A
 const Services = {
@@ -95,6 +116,7 @@ const ReservedClassAttributes = {
 
 module.exports = {
   Classes,
+  ClassNames,
   Services,
   ReservedClassAttributes
 };
