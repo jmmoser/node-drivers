@@ -11,6 +11,6 @@ Examples can be found in the examples folder.
 # Drivers
 
 Current Drivers:
-- Modbus
 - PCCC (DF1)
-- CIP - ControlLogix
+- Logix5000
+- Modbus

@@ -9,7 +9,7 @@ module.exports = {
     PCCCLayer: require('./Stack/Layers/PCCCLayer'),
     CIP: {
       Connection: require('./CIP/Objects/Connection'),
-      ControlLogix: require('./CIP/ControlLogix'),
+      Logix5000: require('./CIP/Logix5000'),
       PCCC: require('./CIP/PCCC')
     }
   }

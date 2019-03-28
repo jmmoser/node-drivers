@@ -255,7 +255,7 @@ EIPReply[EIPCommands.ListIdentity] = function(packet) {
       let itemDataOffset = offset;
       item.EncapsulationProtocolVersion = buffer.readUInt16LE(offset); offset += 2;
 
-      let socketAddress = {};
+      const socketAddress = {};
       socketAddress.sin_family = buffer.readInt16BE(offset); offset += 2;
       socketAddress.sin_port = buffer.readUInt16BE(offset); offset += 2;
       socketAddress.sin_addr = buffer.readUInt32BE(offset); offset += 4;
@@ -269,15 +269,17 @@ EIPReply[EIPCommands.ListIdentity] = function(packet) {
       item.Revision = {};
       item.Revision.Major = buffer.readUInt8(offset); offset += 1;
       item.Revision.Minor = buffer.readUInt8(offset); offset += 1;
+
+      item.status = item.status || {};
       item.status.code = buffer.readUInt16LE(offset); offset += 2; // Data type is WORD
       item.SerialNumber = buffer.readUInt32LE(offset); offset += 4;
 
-      let currentlyRead = offset - itemDataOffset;
-      let productNameLength = length - currentlyRead - 1;
+      const currentlyRead = offset - itemDataOffset;
+      const productNameLength = length - currentlyRead - 1;
+      
+      const shifter = productNameLength % 2; // need to verify this!!!!!!!
+
       let productName = '';
-
-      let shifter = productNameLength % 2; // need to verify this!!!!!!!
-
       for (let j = 0; j < productNameLength - shifter; j++) {
         productName += String.fromCharCode(buffer[offset + j + shifter]);
       }
