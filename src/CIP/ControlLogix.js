@@ -127,10 +127,10 @@ class ControlLogix extends Layer {
   }
 
 
-  listTags(callback, doneCallback, startInstanceID = 0) {
+  listTags(callback, startInstanceID = 0) {
     if (callback == null) return;
 
-    // const BASE_ERROR = 'ControlLogix Error: List Tags: ';
+    const BASE_ERROR = 'ControlLogix Error: List Tags: ';
 
     const path = Buffer.from([
       0x20, // Logical Segment - Class ID
@@ -138,35 +138,40 @@ class ControlLogix extends Layer {
       0x25, // Logical Segment - Instance ID
       0x00,
       0x00,
-      0x00,
-      // 0x00,
-      // 0x00
+      0x00
     ]);
 
-    // path.writeUInt32LE(startInstanceID, 4);
     path.writeUInt16LE(startInstanceID, 4);
 
-    // console.log(path)
+    const attributes = [
+      0x01, // Attribute 1 - Symbol Name
+      0x02  // Attribute 2 - Symbol Type
+    ];
 
-    const data = Buffer.from([
-      0x02, 0x00, // Number of attributes to retrieve
-      0x01, 0x00, // Attribute 1 - Symbol Name
-      0x02, 0x00  // Attribute 2 - Symbol Type
-    ]); // number of elements to read (1)
+    const data = Buffer.alloc(2 + attributes.length * 2);
+    data.writeUInt16LE(attributes.length, 0);
+    for (let i = 0; i < attributes.length; i++) {
+      data.writeUInt16LE(attributes[i], 2 * (i + 1));
+    }
 
     const request = MessageRouter.Request(Classes.Symbol.Services.GetInstanceAttributeList, path, data);
 
     this.send(request, null, false, this.contextCallback(message => {
       const reply = MessageRouter.Reply(message);
+      // console.log(reply);
 
-      const tags = parseListTagsResponse(reply);
+      const done = reply.status.code === 0;
 
-      const shouldContinue = callback(null, tags);
+      if (!done && reply.status.code !== 6) {
+        return callback(`${BASE_ERROR}${reply.status.description}`);
+      }
 
-      if (reply.status.code !== 0 && shouldContinue === true && tags.length > 0) {
-        setImmediate(() => this.listTags(callback, doneCallback, tags[tags.length - 1].id + 1));
-      } else if (doneCallback) {
-        doneCallback();
+      const tags = parseListTagsResponse(reply, attributes);
+
+      const shouldContinue = callback(null, tags, done);
+
+      if (!done && shouldContinue === true && tags.length > 0) {
+        setImmediate(() => this.listTags(callback, tags[tags.length - 1].id + 1));
       }
     }));
   }
@@ -185,7 +190,7 @@ class ControlLogix extends Layer {
 
 module.exports = ControlLogix;
 
-function parseListTagsResponse(reply) {
+function parseListTagsResponse(reply, attributes) {
   const tags = [];
 
   const data = reply.data;
@@ -193,16 +198,27 @@ function parseListTagsResponse(reply) {
 
   let offset = 0;
   
-  while (offset < length - 7) {
-    const instanceID = data.readUInt32LE(offset); offset += 4;
-    const symbolNameLength = data.readUInt16LE(offset); offset += 2;
-    const symbolName = data.toString('ascii', offset, offset + symbolNameLength); offset += symbolNameLength;
-    const symbolType = data.readUInt16LE(offset); offset += 2;
-    tags.push({
-      id: instanceID,
-      name: symbolName,
-      type: parseSymbolType(symbolType)
-    });
+  while (offset < length) {
+    const tag = {};
+
+    tag.id = data.readUInt32LE(offset); offset += 4;
+
+    for (let i = 0; i < attributes.length; i++) {
+      switch (attributes[i]) {
+        case 0x01:
+          const symbolNameLength = data.readUInt16LE(offset); offset += 2;
+          tag.name = data.toString('ascii', offset, offset + symbolNameLength); offset += symbolNameLength;
+          break;
+        case 0x02:
+          tag.type = parseSymbolType(data.readUInt16LE(offset)); offset += 2;
+          break;
+        default:
+          throw new Error(`Unknown attribute: ${attributes[i]}`);
+          // break;
+      }
+    }
+
+    tags.push(tag);
   }
 
   return tags;
