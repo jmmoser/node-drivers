@@ -1,10 +1,7 @@
 'use strict';
 
-const CIPObject = require('./CIPObject');
-
 // Class code: 0xF3
-class ConnectionConfiguration extends CIPObject {
-
+class ConnectionConfiguration {
   CommonServices() {
     return [0x01, 0x02, 0x09, 0x0E, 0x10, 0x15];
   }

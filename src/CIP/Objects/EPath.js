@@ -521,10 +521,8 @@ function readPortSegment(path, offset, segment) {
 function readLogicalSegment(path, offset, segment) {
   segment.type = SEGMENT_TYPE.LOGICAL;
   const segmentByte = path.readUInt8(offset);
-  // const logicalType = getBits(segmentByte, 2, 5);
-  // const format = getBits(segmentByte, 0, 2);
-  const type = segmentByte & 0b00011100;
-  const format = segmentByte & 0b00000011;
+  const type = getBits(segmentByte, 2, 5) << 2;
+  const format = getBits(segmentByte, 0, 2);
 
   segment.info = {
     type,
@@ -553,6 +551,7 @@ function readLogicalSegment(path, offset, segment) {
 
   return shift;
 }
+
 
 function readNetworkSegment(path, offset, segment) {
   let length;

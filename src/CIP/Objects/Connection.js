@@ -177,7 +177,7 @@ class Connection extends Layer {
 
     if (this._sequenceToContext.has(sequenceCount) === false) {
       // This happens when the last message is resent to prevent disconnect
-      console.log('duplicate message');
+      // console.log('duplicate message');
       return;
     }
 

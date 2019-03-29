@@ -73,7 +73,7 @@ const InstanceAttributeInfo = {
   15: { name: 'Assigned_Name', type: 'STRINGI' },
   16: { name: 'Assigned_Description', type: 'STRINGI' },
   17: { name: 'Geographic_Location', type: 'STRINGI' },
-  18: { name: 'Modbus Identity Info', type: 'STRUCT', parser: ModbusIdentityInfoParser}
+  18: { name: 'Modbus Identity Info', type: 'STRUCT', parser: ModbusIdentityInfoParser }
 };
 
 // CIP Vol1 Table 5-2.2, Attribute ID 8, Semantics of Values

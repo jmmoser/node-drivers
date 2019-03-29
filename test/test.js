@@ -1,17 +1,4 @@
-// const CIPObject = require('./src/CIP/Objects/CIPObject');
-//
-// let EPATHS = [
-//   Buffer.from([0x02, 0x06]),
-//   Buffer.from([0x0F, 0x12, 0x00, 0x01]),
-//   Buffer.from([0x15, 0x0F, 0x31, 0x33, 0x30, 0x2E, 0x31, 0x35, 0x31, 0x2E, 0x31, 0x33, 0x37, 0x2E, 0x31, 0x30, 0x35, 0x00])
-// ];
-//
-// for (let i = 0; i < EPATHS.length; i++) {
-//   console.log(CIPObject.Segments(EPATHS[i]));
-// }
-//
-//
-//
+
 // const MessageRouter = require('./src/CIP/Objects/MessageRouter');
 //
 // console.log(MessageRouter.ANSIExtSymbolSegment('TotalCount').compare(Buffer.from([

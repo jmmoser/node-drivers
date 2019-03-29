@@ -1,10 +1,9 @@
 'use strict';
 
-const util = require('../util');
+const { getBit, getBits } = require('../util');
 const CIP = require('./Objects/CIP');
 const Layer = require('../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
-const ElementaryDataTypes = require('./Objects/constants/ElementaryDataTypeCodes');
 
 class Logix5000 extends Layer {
   readTag(address, callback) {
@@ -55,7 +54,8 @@ class Logix5000 extends Layer {
 
     const path = MessageRouter.ANSIExtSymbolSegment(address);
     const data = Buffer.alloc(8);
-    data.writeUInt16LE(DataTypes.Float, 0);
+    // data.writeUInt16LE(DataTypes.Float, 0);
+    data.writeUInt16LE(CIP.DataType.REAL, 0);
     data.writeUInt16LE(1, 2);
     data.writeFloatLE(value, 4);
 
@@ -306,7 +306,7 @@ function parseListTagsResponse(reply, attributes) {
           tag.name = data.toString('ascii', offset, offset + symbolNameLength); offset += symbolNameLength;
           break;
         case 0x02:
-          tag.type = parseSymbolType(data.readUInt16LE(offset)); offset += 2;
+          tag.type = parseSymbolType(data, offset); offset += 2;
           break;
         default:
           throw new Error(`Unknown attribute: ${attributes[i]}`);
@@ -321,34 +321,35 @@ function parseListTagsResponse(reply, attributes) {
 }
 
 
-function parseSymbolType(code) {
+function parseSymbolType(data, offset) {
+  const lowByte = data[offset];
+  const highByte = data[offset + 1];
+  const code = data.readUInt16LE(offset);
+
   const res = {
-    code
+    // code
   };
 
-  if (util.getBit(code, 12)) {
+  if (getBit(highByte, 4)) {
     res.system = true;
     res.type = 'system';
     return res;
   }
 
-  const atomic = util.getBit(code, 15);
+  const atomic = getBit(highByte, 7) === 0;
+
+  res.structure = !atomic;
 
   res.type = atomic ? 'atomic' : 'structure';
 
   if (atomic) {
-    const section1 = util.getBits(code, 0, 8);
-    if (section1 === ElementaryDataTypes.DataType.BOOL) {
-      res.dataType = section1;
-      res.position = util.getBits(code, 8, 11);
-    } else {
-      res.dataType = util.getBits(code, 0, 12);
+    res.dataType = lowByte;
+    if (res.dataType === CIP.DataType.BOOL) {
+      res.position = getBits(highByte, 0, 3);
     }
-    // res.hex = `0x${Buffer.from([res.dataType]).toString('hex').toUpperCase()}`;
-    res.dataTypeName = ElementaryDataTypes.DataTypeNames[section1];
-
+    res.dataTypeName = CIP.DataTypeName[res.dataType];
   } else {
-    res.template = util.getBits(code, 0, 12);
+    res.template = getBits(code, 0, 12);
   }
 
   return res;
@@ -366,44 +367,28 @@ const Services = {
   MultipleServicePacket: 0x0A // used to combine multiple requests in one message frame
 };
 
-const DataTypes = {
-  Bool: 0xC1,
-  Char: 0xC2,
-  Short: 0xC3,
-  Integer: 0xC4,
-  Float: 0xCA,
-  UnsignedInteger: 0xD3
-};
-
-// const DataTypeNames = {
-//   [DataTypes.Bool]: 'bool',
-//   [DataTypes.Char]: 'char',
-//   [DataTypes.Short]: 'short',
-//   [DataTypes.Integer]: 'integer',
-//   [DataTypes.Float]: 'float',
-//   [DataTypes.UnsignedInteger]: 'unsigned integer'
-// };
 
 const DataConverters = {
-  0x00C1: function(buffer, offset) {
-    return !!buffer.readUInt8(offset);
+  [CIP.DataType.BOOL]: function (buffer, offset, position) {
+    return getBit(buffer.readUInt8(offset), position);
   },
-  0x00C2: function(buffer, offset) {
+  [CIP.DataType.SINT]: function (buffer, offset) {
     return buffer.readInt8(offset);
   },
-  0x00C3: function(buffer, offset) {
+  [CIP.DataType.INT]: function (buffer, offset) {
     return buffer.readInt16LE(offset);
   },
-  0x00C4: function(buffer, offset) {
+  [CIP.DataType.DINT]: function (buffer, offset) {
     return buffer.readInt32LE(offset);
   },
-  0x00CA: function(buffer, offset) {
+  [CIP.DataType.REAL]: function (buffer, offset) {
     return buffer.readFloatLE(offset);
   },
-  0x00D3: function(buffer, offset) {
+  [CIP.DataType.DWORD]: function (buffer, offset) {
     return buffer.readUInt32LE(offset);
   }
 };
+
 
 // CIP Logix5000 1756-PM020 Page 19, Read Tag Service Error Codes
 const READ_TAG_ERRORS = {

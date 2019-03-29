@@ -1,6 +1,6 @@
 'use strict';
 
-const CODES = require('./constants/ElementaryDataTypes');
+const CIP = require('./CIP');
 
 function readString(type, buffer, offset) {
   offset = offset || 0;
@@ -15,27 +15,27 @@ function readString(type, buffer, offset) {
   let str = '';
 
   switch (type) {
-    case CODES.DataType.STRING:
+    case CIP.DataType.STRING:
       charLength = 1;
       length = buffer.readUInt16LE(offset); offset += 2;
       readFunc = buffer.readUInt8;
       convertFunc = String.fromCharCode;
       break;
-    case CODES.DataType.STRING2:
+    case CIP.DataType.STRING2:
       charLength = 2;
       length = buffer.readUInt16LE(offset); offset += 2;
       readFunc = buffer.readUInt16LE;
       convertFunc = String.fromCharCode;
-    case CODES.DataType.SHORT_STRING:
+    case CIP.DataType.SHORT_STRING:
       charLength = 1;
       length = buffer.readUInt8(offset); offset += 1;
       readFunc = buffer.readUInt8;
       convertFunc = String.fromCharCode;
       break;
-    case CODES.DataType.STRINGN:
+    case CIP.DataType.STRINGN:
       //
       break;
-    case CODES.DataType.STRINGI:
+    case CIP.DataType.STRINGI:
       //
       break;
     default:
