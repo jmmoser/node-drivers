@@ -306,7 +306,8 @@ function parseListTagsResponse(reply, attributes) {
           tag.name = data.toString('ascii', offset, offset + symbolNameLength); offset += symbolNameLength;
           break;
         case 0x02:
-          tag.type = parseSymbolType(data, offset); offset += 2;
+          const typeCode = data.readUInt16LE(offset); offset += 2;
+          tag.type = parseSymbolType(typeCode);
           break;
         default:
           throw new Error(`Unknown attribute: ${attributes[i]}`);
@@ -314,38 +315,28 @@ function parseListTagsResponse(reply, attributes) {
       }
     }
 
-    tags.push(tag);
+    if (tag.type.system !== true) {
+      tags.push(tag);
+    } 
   }
 
   return tags;
 }
 
 
-function parseSymbolType(data, offset) {
-  const lowByte = data[offset];
-  const highByte = data[offset + 1];
-  const code = data.readUInt16LE(offset);
+function parseSymbolType(code) {
+  const res = {};
 
-  const res = {
-    // code
-  };
+  res.system = !!getBit(code, 12);
 
-  if (getBit(highByte, 4)) {
-    res.system = true;
-    res.type = 'system';
-    return res;
-  }
-
-  const atomic = getBit(highByte, 7) === 0;
+  const atomic = getBit(code, 15) === 0;
 
   res.structure = !atomic;
 
-  res.type = atomic ? 'atomic' : 'structure';
-
   if (atomic) {
-    res.dataType = lowByte;
+    res.dataType = getBits(code, 0, 8);
     if (res.dataType === CIP.DataType.BOOL) {
-      res.position = getBits(highByte, 0, 3);
+      res.position = getBits(code, 8, 11);
     }
     res.dataTypeName = CIP.DataTypeName[res.dataType];
   } else {

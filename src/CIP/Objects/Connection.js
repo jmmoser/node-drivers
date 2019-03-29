@@ -65,11 +65,11 @@ class Connection extends Layer {
   __startResend(lastMessage) {
     if (lastMessage == null) return;
 
-    let milliseconds = Math.floor(this._connectionTimeout * 3 / 4) * 1000;
+    const milliseconds = Math.floor(this._connectionTimeout * 3 / 4) * 1000;
 
     this.__stopResend();
 
-    let that = this;
+    const that = this;
 
     this.__resendInterval = setInterval(function() {
       that.send(lastMessage, that.sendInfo, false, null);
@@ -85,25 +85,24 @@ class Connection extends Layer {
 
   sendNextMessage() {
     if (this._connectionState === 2) {
-      let request = this.getNextRequest();
+      const request = this.getNextRequest();
 
       if (request) {
         if (request.context == null) {
           throw new Error('CIP Connection Error: Connected messages must include a context');
         }
 
-        let sequenceCount = this._incrementSequenceCount();
+        const sequenceCount = this._incrementSequenceCount();
         this._sequenceToContext.set(sequenceCount, request.context);
 
-        let message = request.message;
+        const message = request.message;
 
-        let buffer = Buffer.alloc(message.length + 2);
+        const buffer = Buffer.alloc(message.length + 2);
         buffer.writeUInt16LE(sequenceCount, 0);
         message.copy(buffer, 2);
 
         this.send(buffer, this.sendInfo, false, this.layerContext(request.layer));
 
-        // this._lastMessage = Buffer.from(buffer);
         this.__startResend(Buffer.from(buffer));
 
         this.sendNextMessage();
@@ -115,7 +114,7 @@ class Connection extends Layer {
     const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen | (1 << 7);
     const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose | (1 << 7);
 
-    let message = MessageRouter.Reply(data);
+    const message = MessageRouter.Reply(data);
 
     switch (message.service) {
       case FORWARD_OPEN_SERVICE:
@@ -132,17 +131,15 @@ class Connection extends Layer {
   handleForwardOpen(message, info, context) {
     if (message.status.code === 0) {
       this._connectionState = 2;
-      let reply = ConnectionManager.ForwardOpenReply(message.data);
+      const reply = ConnectionManager.ForwardOpenReply(message.data);
       this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
       this._TtoOConnectionID = reply.TtoONetworkConnectionID;
       this._OtoTPacketRate = reply.OtoTActualPacketRate;
       this._TtoOPacketRate = reply.TtoOActualPacketRate;
       this._connectionSerialNumber = reply.ConnectionSerialNumber;
 
-      let rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
+      const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
       this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
-
-      // console.log(rpi);
 
       // EIP specific information
       this.sendInfo = {
@@ -164,7 +161,7 @@ class Connection extends Layer {
   handleForwardClose(message, info, context) {
     this.__stopResend();
     if (message.status.code === 0) {
-      let reply = ConnectionManager.ForwardCloseReply(message.data);
+      const reply = ConnectionManager.ForwardCloseReply(message.data);
       this._connectionState = 0;
       this._disconnectState = 0;
       if (this._disconnectCallback) this._disconnectCallback(reply);
@@ -173,7 +170,7 @@ class Connection extends Layer {
   }
 
   handleConnectedMessage(data, info, context) {
-    let sequenceCount = data.readUInt16LE(0);
+    const sequenceCount = data.readUInt16LE(0);
 
     if (this._sequenceToContext.has(sequenceCount) === false) {
       // This happens when the last message is resent to prevent disconnect
