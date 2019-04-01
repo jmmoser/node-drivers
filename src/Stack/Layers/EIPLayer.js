@@ -5,7 +5,7 @@ const EIPPacket = require('../Packets/EIPPacket');
 const EIPCommands = EIPPacket.Commands;
 
 function SendData_Packet(interfaceHandle, timeout, data) {
-  let buffer = Buffer.alloc(data.length + 6);
+  const buffer = Buffer.alloc(data.length + 6);
   buffer.writeUInt32LE(interfaceHandle, 0);
   buffer.writeUInt16LE(timeout, 4);
   data.copy(buffer, 6);
@@ -14,7 +14,7 @@ function SendData_Packet(interfaceHandle, timeout, data) {
 
 function CPF_UCMM_Packet(data) {
   let offset = 0;
-  let buffer = Buffer.alloc(data.length + 10);
+  const buffer = Buffer.alloc(data.length + 10);
   buffer.writeUInt16LE(2, offset); offset += 2; // One address item and one data item
 
   buffer.writeUInt16LE(EIPPacket.CPFItemIDs.NullAddress, offset); offset += 2; // AddressTypeID = 0 to indicate a UCMM message
@@ -29,7 +29,7 @@ function CPF_UCMM_Packet(data) {
 
 function CPF_Connected_Packet(connectionIdentifier, data) {
   let offset = 0;
-  let buffer = Buffer.alloc(data.length + 14);
+  const buffer = Buffer.alloc(data.length + 14);
   buffer.writeUInt16LE(2, offset); offset += 2;
 
   buffer.writeUInt16LE(EIPPacket.CPFItemIDs.ConnectionBased, offset); offset += 2;
@@ -45,22 +45,19 @@ function CPF_Connected_Packet(connectionIdentifier, data) {
 
 function SendRRDataRequest(sessionHandle, senderContext, data) {
   // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
-
-  let packet = new EIPPacket();
+  const packet = new EIPPacket();
   packet.Command = EIPCommands.SendRRData;
   packet.SessionHandle = sessionHandle;
   packet.SenderContext = senderContext;
   packet.setData(SendData_Packet(0, 0, CPF_UCMM_Packet(data)));
-
   return packet.toBuffer();
 }
 
 function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connectionIdentifier, data) {
-  let packet = new EIPPacket();
+  const packet = new EIPPacket();
   packet.Command = EIPCommands.SendUnitData;
   packet.SessionHandle = sessionHandle;
   packet.setData(SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data)));
-
   return packet.toBuffer();
 }
 
@@ -118,11 +115,11 @@ class EIPLayer extends Layer {
 
   sendNextMessage() {
     if (this._connectionState === 2) {
-      let request = this.getNextRequest();
+      const request = this.getNextRequest();
 
       if (request) {
-        let message = request.message;
-        let info = request.info;
+        const message = request.message;
+        const info = request.info;
 
         let fullMessage = null;
 
@@ -151,10 +148,10 @@ class EIPLayer extends Layer {
   }
 
   handleData(data, info, context) {
-    let callback = null;
-    let command = EIPPacket.Command(data);
-    let packet = EIPPacket.fromBuffer(data);
+    const command = EIPPacket.Command(data);
+    const packet = EIPPacket.fromBuffer(data);
 
+    let callback = null;
     if (this._userCallbacks[command]) {
       callback = this._userCallbacks[command];
     } else if (this._callbacks[command]) {
@@ -172,7 +169,7 @@ class EIPLayer extends Layer {
 
 
   _setupCallbacks() {
-    let self = this;
+    const self = this;
 
     this._callbacks = {};
     this._userCallbacks = {};
@@ -218,9 +215,10 @@ class EIPLayer extends Layer {
 
     this._callbacks[EIPCommands.SendRRData] = function(packet) {
       // console.log('SendRRData');
+      
+      const info = { connected: false };
+      const senderContext = packet.SenderContext.toString('hex');
       let context = null; // context can be null if only one upper layer
-      let info = { connected: false };
-      let senderContext = packet.SenderContext.toString('hex');
       if (this._unconnectedContexts[senderContext]) {
         context = this._unconnectedContexts[senderContext];
         delete this._unconnectedContexts[senderContext];
@@ -238,12 +236,11 @@ class EIPLayer extends Layer {
     this._callbacks[EIPCommands.SendUnitData] = function(packet) {
       // console.log('SendUnitData');
       if (packet.status.code === 0) {
-        let info = {
+        const info = {
           connected: true,
           connectionID: packet.Items[0].address
         };
-        let context = null;
-        context = this._connectedContexts[info.connectionID];
+        const context = this._connectedContexts[info.connectionID];
         // console.log(packet);
         // console.log(this._connectedContexts);
         // console.log(info.connectionID);
