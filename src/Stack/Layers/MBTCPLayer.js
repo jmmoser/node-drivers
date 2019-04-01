@@ -91,10 +91,10 @@ class MBTCPLayer extends Layer {
   }
 
   _send(unitID, data, callback) {
-    let transactionID = this._incrementTransactionCounter();
+    const transactionID = this._incrementTransactionCounter();
     if (callback != null) this._callbacks.set(transactionID, callback);
 
-    let packet = new MBPacket();
+    const packet = new MBPacket();
     packet.transactionID = transactionID;
     packet.unitID = unitID;
     packet.data = data;
@@ -103,7 +103,9 @@ class MBTCPLayer extends Layer {
   }
 
   handleData(data, info) {
-    let packet = MBPacket.FromBuffer(data);
+    const packet = MBPacket.FromBuffer(data);
+
+    console.log(packet)
 
     if (this._callbacks.has(packet.transactionID)) {
       this._callbacks.get(packet.transactionID)(packet.reply.error, packet.reply);

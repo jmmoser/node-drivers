@@ -51,7 +51,7 @@ class MBTCPADU {
 }
 
 function TCP_MBAPHeader(transactionID, protocolID, length, unitID) {
-  let buffer = Buffer.allocUnsafe(7);
+  const buffer = Buffer.allocUnsafe(7);
   buffer.writeUInt16BE(transactionID, 0);
   buffer.writeUInt16BE(protocolID, 2);
   buffer.writeUInt16BE(protocolID, 4);
@@ -70,7 +70,7 @@ class MBPacket {
   }
 
   toBuffer() {
-    let buffer = Buffer.alloc(7 + this.data.length);
+    const buffer = Buffer.alloc(7 + this.data.length);
     buffer.writeUInt16BE(this.transactionID, 0);
     buffer.writeUInt16BE(0, 2);
     buffer.writeUInt16BE(this.data.length + 1, 4);
@@ -80,24 +80,24 @@ class MBPacket {
   }
 
   static FromBuffer(buffer) {
-    let packet = new MBPacket();
+    const packet = new MBPacket();
     packet.buffer = Buffer.from(buffer);
     packet.transactionID = buffer.readUInt16BE(0);
     packet.protocolID = buffer.readUInt16BE(2);
-    let dataLength = MBPacket.DataLength(buffer);
     packet.unitID = buffer.readUInt8(6);
-    packet.data = buffer.slice(7, 6 + dataLength);
+    packet.data = buffer.slice(7, 6 + MBPacket.DataLength(buffer));
 
     packet.reply = {};
 
     if (packet.data.length > 0) {
-      let functionCode = packet.data.readUInt8(0);
+      const functionCode = packet.data.readUInt8(0);
 
       if (functionCode > 0x80) {
-        packet.reply.error = packet.data.readUInt8(1);
-        if (MBErrorDescriptions[packet.reply.error]) {
-          packet.reply.errorDescription = MBErrorDescriptions[packet.reply.error];
-        }
+        const errorCode = packet.data.readUInt8(1);
+        packet.reply.error = {
+          code: errorCode,
+          message: MBErrorDescriptions[errorCode] || 'Unknown error'
+        };
       } else {
         packet.reply.functionCode = functionCode;
         if (ReplyFunctions[functionCode]) {
@@ -132,8 +132,8 @@ MBPacket.Functions = MBFunctions;
 const ReplyFunctions = {};
 
 ReplyFunctions[MBFunctions.ReadCoils] = function(buffer, offset, length) {
-  let coils = [];
-  let count = buffer.readUInt8(offset + 1);
+  const coils = [];
+  const count = buffer.readUInt8(offset + 1);
   for (let i = 0; i < count; i++) {
     coils.push(buffer.readUInt8(offset + i + 2));
   }
@@ -143,8 +143,8 @@ ReplyFunctions[MBFunctions.ReadCoils] = function(buffer, offset, length) {
 ReplyFunctions[MBFunctions.ReadDiscreteInputs] = ReplyFunctions[MBFunctions.ReadCoils];
 
 ReplyFunctions[MBFunctions.ReadHoldingRegisters] = function(buffer, offset, length) {
-  let registers = [];
-  let count = buffer.readUInt8(offset + 1) / 2;
+  const registers = [];
+  const count = buffer.readUInt8(offset + 1) / 2;
   for (let i = 0; i < count; i++) {
     registers.push(buffer.readUInt16BE(offset + 2 * i + 2));
   }

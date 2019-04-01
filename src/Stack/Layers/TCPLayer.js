@@ -14,7 +14,7 @@ class TCPLayer extends Layer {
   }
 
   connect() {
-    let self = this;
+    const self = this;
 
     if (self._connectionState > 0) return;
 
@@ -50,7 +50,7 @@ class TCPLayer extends Layer {
   }
 
   disconnect(callback) {
-    let self = this;
+    const self = this;
 
     if (self._connectionState === 0) {
       if (callback) callback();
@@ -79,7 +79,7 @@ class TCPLayer extends Layer {
   }
 
   sendNextMessage() {
-    let self = this;
+    const self = this;
 
     if (self._connectionState === 2) {
 
@@ -93,7 +93,7 @@ class TCPLayer extends Layer {
   }
 
   connectionCleanup() {
-    let self = this;
+    const self = this;
     if (self.socket) {
       let events = ['data', 'error', 'connect', 'end', 'close'];
       for (let i = 0; i < events.length; i++) {
