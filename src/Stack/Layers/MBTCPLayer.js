@@ -14,58 +14,60 @@ class MBTCPLayer extends Layer {
 
   readDiscreteInputs(unitID, address, count, callback) {
     const fn = MBPacket.Functions.ReadDiscreteInputs;
-    let data = this._readRequest(fn, address, count);
+    const data = this._readRequest(fn, address, count);
     this._send(unitID, data, callback);
   }
 
   readCoils(unitID, address, count, callback) {
     const fn = MBPacket.Functions.ReadCoils;
-    let data = this._readRequest(fn, address, count);
+    const data = this._readRequest(fn, address, count);
     this._send(unitID, data, callback);
   }
 
   readInputRegisters(unitID, address, count, callback) {
     const fn = MBPacket.Functions.ReadInputRegisters;
-    let data = this._readRequest(fn, address, count);
+    const data = this._readRequest(fn, address, count);
     this._send(unitID, data, callback);
   }
 
   readHoldingRegisters(unitID, address, count, callback) {
     const fn = MBPacket.Functions.ReadHoldingRegisters;
-    let data = this._readRequest(fn, address, count);
+    const data = this._readRequest(fn, address, count);
     this._send(unitID, data, callback);
   }
 
   writeSingleCoil(unitID, address, value, callback) {
     const fn = MBPacket.Functions.WriteSingleCoil;
-    let data = this._writeRequest(fn, address, [value ? 0x00FF : 0x0000]);
+    const data = this._writeRequest(fn, address, [value ? 0x00FF : 0x0000]);
     this._send(unitID, data, callback);
   }
 
   writeMultipleCoils(unitID, address, values, callback) {
-    let byteCount = Math.ceil(values.length / 8);
+    // const byteCount = Math.ceil(values.length / 8);
 
     for (let i = 0; i < values.length; i++) {
       values[i] = values[i] ? 0x00FF: 0x0000;
     }
+
     const fn = MBPacket.Functions.WriteMultipleCoils;
-    let data = this._writeRequest(fn, address, values);
+    const data = this._writeRequest(fn, address, values);
     this._send(unitID, data, callback);
   }
 
   writeSingleRegister(unitID, address, value, callback) {
     const fn = MBPacket.Functions.WriteSingleRegister;
-    let data = this._writeRequest(fn, address, [value]);
+    const data = this._writeRequest(fn, address, [value]);
     this._send(unitID, data, callback);
   }
 
   writeMultipleRegisters(unitID, address, values, callback) {
     const fn = MBPacket.Functions.WriteMultipleRegisters;
 
+    if (callback) callback({ message: 'Not supported yet' });
   }
 
   _readRequest(functionCode, startingAddress, count) {
-    let buffer = Buffer.allocUnsafe(5);
+    const buffer = Buffer.allocUnsafe(5);
     buffer.writeUInt8(functionCode, 0);
     buffer.writeUInt16BE(startingAddress, 1);
     buffer.writeUInt16BE(count, 3);
@@ -73,7 +75,7 @@ class MBTCPLayer extends Layer {
   }
 
   _writeRequest(functionCode, startingAddress, values) {
-    let buffer = Buffer.alloc(3 + 2 * values.length);
+    const buffer = Buffer.alloc(3 + 2 * values.length);
     buffer.writeUInt8(functionCode, 0);
     buffer.writeUInt16BE(startingAddress, 1);
     for (let i = 0; i < values.length; i++) {
