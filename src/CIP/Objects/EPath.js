@@ -638,6 +638,45 @@ function describePortSegment(segment) {
   return description;
 }
 
+
+
+
+function LogicalClassSegment(classID) {
+  return {
+    type: SEGMENT_TYPE.LOGICAL,
+    info: {
+      type: LOGICAL_SEGMENT_TYPE.CLASS_ID,
+      value: classID
+    }
+  }
+}
+
+
+// const Segments = {
+//   Logical: {
+//     Class: function(classID) {
+//       return {
+//         type: SEGMENT_TYPE.LOGICAL,
+//         info: {
+//           type: LOGICAL_SEGMENT_TYPE.CLASS_ID,
+//           value: classID
+//         }
+//       }
+//     },
+//     Instance: function(instanceID) {
+//       return {
+//         type: SEGMENT_TYPE.LOGICAL,
+//         info: {
+//           type: LOGICAL_SEGMENT_TYPE.INSTANCE_ID,
+//           value: instanceID
+//         }
+//       }
+//     }
+//   }
+// };
+
+
+
 module.exports = {
   parsePath,
   describeSegments

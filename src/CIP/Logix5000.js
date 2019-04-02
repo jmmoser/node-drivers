@@ -271,6 +271,67 @@ class Logix5000 extends Layer {
     }));
   }
 
+
+  readTemplateInstanceAttributes(templateID, callback) {
+    if (!callback) return;
+
+    const BASE_ERROR = 'Logix5000 Error: Read Template Instance Attributes: ';
+
+    const path = Buffer.from([
+      0x20, // Logical Segment - Class ID
+      Classes.Template.Code,
+      0x25, // Logical Segment - Instance ID
+      0x00,
+      0x00,
+      0x00
+    ]);
+
+    path.writeUInt16LE(templateID, 4);
+
+    const attributes = [
+      0x01, // Attribute 1 - (UINT) CRC for the members of the structure
+      0x02, // Attribute 2 - (UINT) Number of structure members
+      0x04, // Attribute 4 - (UDINT) Number of 32-bit words
+      0x05  // Attribute 5 - (UDINT) Number of bytes of the structure data
+    ];
+
+    const data = Buffer.alloc(2 + attributes.length * 2);
+    data.writeUInt16LE(attributes.length, 0);
+    for (let i = 0; i < attributes.length; i++) {
+      data.writeUInt16LE(attributes[i], 2 * (i + 1));
+    }
+
+    const request = MessageRouter.Request(Classes.Template.Services.GetAttributeList, path, data);
+
+    this.send(request, null, false, this.contextCallback(message => {
+      const reply = MessageRouter.Reply(message);
+
+      if (reply.status.code !== 0) {
+        return callback(`${BASE_ERROR}${reply.status.description}`);
+      }
+
+      const template = parseReadTemplateInstanceAttributes(reply);
+
+      callback(null, template);
+    }));
+  }
+
+
+  // readTemplate(templateID, callback) {
+  //   if (!callback) return;
+
+  //   const BASE_ERROR = 'Logix5000 Error: Read Template: ';
+
+  //   this.readTemplateInstanceAttributes(templateID, function(err, templateAttributes) {
+  //     if (err) {
+  //       return callback(err);
+  //     }
+
+  //     const 
+  //   });
+  // }
+
+
   handleData(data, info, context) {
     if (context == null) {
       throw new Error('Logix5000 Error: Unhandled message, context should not be null');
@@ -331,6 +392,8 @@ function parseSymbolType(code) {
 
   const atomic = getBit(code, 15) === 0;
 
+  res.dimensions = getBits(code, 13, 15);
+
   res.structure = !atomic;
 
   if (atomic) {
@@ -340,10 +403,64 @@ function parseSymbolType(code) {
     }
     res.dataTypeName = CIP.DataTypeName[res.dataType];
   } else {
-    res.template = getBits(code, 0, 12);
+    const templateID = getBits(code, 0, 12);
+    res.template = {
+      id: templateID
+    };
   }
 
   return res;
+}
+
+
+
+function parseReadTemplateInstanceAttributes(reply) {
+  const data = reply.data;
+
+  let offset = 0;
+  const attributeCount = data.readUInt16LE(offset); offset += 2;
+
+  const template = {};
+
+  let i = 0;
+
+  while (i < attributeCount) {
+    i++;
+
+    let attribute = data.readUInt16LE(offset); offset += 2;
+    let status = data.readUInt16LE(offset); offset += 2;
+
+    if (status === 0) {
+      switch (attribute) {
+        case 0x01:
+          template.crc = data.readUInt16LE(offset); offset += 2;
+          break;
+        case 0x02:
+          template.memberCount = data.readUInt16LE(offset); offset += 2;
+          break;
+        case 0x04:
+          template.definitionSize = data.readUInt32LE(offset); offset += 4;
+          break;
+        case 0x05:
+          template.structureSize = data.readUInt32LE(offset); offset += 4;
+          break;
+        default:
+          throw new Error(`Unknown attribute: ${attribute}`);
+      }
+    } else {
+      if (!template.errors) {
+        template.errors = [];
+      }
+
+      template.errors.push({
+        attribute,
+        code: status,
+        description: READ_TAG_ERRORS[status]
+      });
+    }
+  }
+
+  return template;
 }
 
 
@@ -388,7 +505,10 @@ const READ_TAG_ERRORS = {
   0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
   0x13: 'Insufficient Request Data: Data too short for expected parameters',
   0x26: 'The Request Path Size received was shorter or longer than expected',
-  0xFF: 'General Error: Access beyond end of the object'
+  0xFF: 'General Error: Access beyond end of the object',
+
+  0x0A: 'Attribute list error, generally attribute not supported. The status of the unsupported attribute will be 0x14',
+  0x1C: 'Attribute List Shortage: The list of attribute numbers was too few for the number of attributes parameter'
 };
 
 
@@ -411,25 +531,29 @@ const Classes = {
   Template: {
     Code: 0x6C,
     Services: {
-      GetAttributeList: 0x03
+      GetAttributeList: 0x03,
+      Read: 0x4C
     },
-    ClassAttributes: {
-      1: {
-        description: 'Tag Type Parameter used in Read/Write Tag service',
-        type: 'UINT'
-      },
-      2: {
-        description: 'Number of structure members',
-        type: 'UINT'
-      },
-      3: {
-        description: 'Number of 32-bit words',
-        type: 'UDINT'
-      },
-      4: {
-        description: 'Number of bytes of the structure data',
-        type: 'UDINT'
-      }
-    }
+    // ClassAttributes: {
+    //   1: {
+    //     // description: 'Tag Type Parameter used in Read/Write Tag service',
+    //     description: 'CRC for the members of the structure',
+    //     type: 'UINT'
+    //   },
+    //   2: {
+    //     description: 'Number of structure members',
+    //     type: 'UINT'
+    //   },
+    //   4: {
+    //     description: 'Number of 32-bit words',
+    //     type: 'UDINT'
+    //   },
+    //   5: {
+    //     description: 'Number of bytes of the structure data',
+    //     type: 'UDINT'
+    //   }
+    // }
   }
 };
+
+
