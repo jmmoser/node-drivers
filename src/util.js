@@ -31,35 +31,8 @@ function CallbackPromise(callback, func) {
   });
 }
 
-// function CallbackPromise(callback, fn) {
-//   return Promise(function(resolve, reject) {
-//     fn(Resolver(resolve, reject, callback));
-//   });
-// }
-
-function Resolver(resolve, reject, callback) {
-  const hasCallback = typeof callback === 'function';
-  return {
-    resolve: function(res) {
-      if (hasCallback) {
-        callback(null, res);
-      }
-      resolve(res);
-    },
-    reject: function(err) {
-      if (hasCallback) {
-        callback(err);
-        resolve();
-      } else {
-        reject(err);
-      }
-    }
-  };
-}
-
 module.exports = {
   getBits,
   getBit,
-  Resolver,
   CallbackPromise
 };

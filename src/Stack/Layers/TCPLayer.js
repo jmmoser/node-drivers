@@ -14,39 +14,38 @@ class TCPLayer extends Layer {
   }
 
   connect() {
-    const self = this;
+    if (this._connectionState > 0) return;
 
-    if (self._connectionState > 0) return;
-
-    self.connectionCleanup();
-
-    self.socket = net.connect(self.options, function() {
-      self.connected.apply(self, arguments);
+    this.socket = net.connect(this.options, () => {
+      this._connectionState = 2;
+      this.sendNextMessage();
     });
 
-    self._connectionState = 1;
+    this._connectionState = 1;
 
-    self.socket.on('error', function(err) {
-      self._connectionState = 0;
+    this.socket.on('error', (err) => {
+      this._connectionState = 0;
       console.log('TCPLayer ERROR: Connect error:');
       console.log(err);
     });
 
-    self.socket.on('data', function() {
-      self.handleData.apply(self, arguments);
+    const handleData = this.handleData.bind(this);
+
+    this.socket.on('data', (data) => {
+      handleData(data);
     });
 
-    self.socket.on('close', function() {
-      self._connectionState = 0;
+    this.socket.on('close', () => {
+      this._connectionState = 0;
     });
 
-    self.socket.on('end', function() {
+    this.socket.on('end', () => {
       //
     });
   }
 
-  handleData(data, info) {
-    this.forward(data, info);
+  handleData(data) {
+    this.forward(data);
   }
 
   disconnect(callback) {
@@ -56,42 +55,11 @@ class TCPLayer extends Layer {
         this.socket.end();
         this.socket.destroy();
 
-        this.connectionCleanup();
-
         this.socket = null;
       }
 
       resolver.resolve();
     });
-  }
-
-  // disconnect(callback) {
-  //   const self = this;
-
-  //   if (self._connectionState === 0) {
-  //     if (callback) callback();
-  //     return;
-  //   }
-
-  //   if (self.socket) {
-  //     self.socket.end();
-  //     self.socket.destroy();
-
-  //     self.connectionCleanup();
-
-  //     self.socket = null;
-  //     self._connectionState = 0;
-
-  //     if (callback) callback();
-
-  //   } else if (callback) {
-  //     callback();
-  //   }
-  // }
-
-  connected() {
-    this._connectionState = 2;
-    this.sendNextMessage();
   }
 
   sendNextMessage() {
@@ -104,16 +72,6 @@ class TCPLayer extends Layer {
         self.socket.write(request.message, function() {
           self.sendNextMessage();
         });
-      }
-    }
-  }
-
-  connectionCleanup() {
-    const self = this;
-    if (self.socket) {
-      let events = ['data', 'error', 'connect', 'end', 'close'];
-      for (let i = 0; i < events.length; i++) {
-        self.socket.removeAllListeners(events[i]);
       }
     }
   }

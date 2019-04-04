@@ -1,15 +1,13 @@
 'use strict';
 
-const { getBit, getBits, Resolver } = require('../util');
+const { getBit, getBits } = require('../util');
 const CIP = require('./Objects/CIP');
 const Layer = require('../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
 class Logix5000 extends Layer {
   readTag(address, callback) {
-    return new Promise((resolve, reject) => {
-      const resolver = Resolver(resolve, reject, callback);
-
+    return Layer.CallbackPromise(callback, resolver => {
       const BASE_ERROR = 'Logix5000 Error: Read Tag: ';
 
       if (!address) {
@@ -39,7 +37,7 @@ class Logix5000 extends Layer {
             } else {
               resolver.reject(`${BASE_ERROR}No converter for data type: ${dataType}`);
             }
-          } catch(err) {
+          } catch (err) {
             resolver.reject(`${BASE_ERROR}${err.message}`);
           }
         }
@@ -135,9 +133,7 @@ class Logix5000 extends Layer {
   }
 
   supportedObjects(callback) {
-    return new Promise((resolve, reject) => {
-      const resolver = Resolver(resolve, reject, callback);
-
+    return Layer.CallbackPromise(callback, resolver => {
       const BASE_ERROR = 'Logix5000 Supported Objects Error: ';
 
       const path = Buffer.from([
@@ -183,9 +179,7 @@ class Logix5000 extends Layer {
 
 
   identity(callback) {
-    return new Promise((resolve, reject) => {
-      const resolver = Resolver(resolve, reject, callback);
-
+    return Layer.CallbackPromise(callback, resolver => {
       const BASE_ERROR = 'Logix5000 Identity Error: ';
 
       const path = Buffer.from([
@@ -280,9 +274,7 @@ class Logix5000 extends Layer {
 
 
   readTemplateInstanceAttributes(templateID, callback) {
-    return new Promise((resolve, reject) => {
-      const resolver = Resolver(resolve, reject, callback);
-
+    return Layer.CallbackPromise(callback, resolver => {
       const BASE_ERROR = 'Logix5000 Error: Read Template Instance Attributes: ';
 
       const path = Buffer.from([
@@ -320,7 +312,7 @@ class Logix5000 extends Layer {
           try {
             const template = parseReadTemplateInstanceAttributes(reply);
             resolver.resolve(template);
-          } catch(err) {
+          } catch (err) {
             resolver.reject(`${BASE_ERROR}${err.message}`);
           }
         }
