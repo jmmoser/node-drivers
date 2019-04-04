@@ -12,7 +12,6 @@ class Connection extends Layer {
     this.mergeOptionsWithDefaults(options);
 
     this._connectionState = 0;
-    this._disconnectState = 0;
 
     this._sequenceCount = 0;
 
@@ -49,17 +48,22 @@ class Connection extends Layer {
   }
 
   disconnect(callback) {
-    this._disconnectCallback = callback;
-    if (this._disconnecting === 1) return;
-    if (this._connectionState === 0) {
-      if (callback != null) {
-        callback();
+    return Layer.CallbackPromise(callback, resolver => {
+      if (this._connectionState === 0) {
+        return resolver.resolve();
       }
-      return;
-    }
 
-    this._disconnectState = 1;
-    this.send(ConnectionManager.ForwardClose(this), null, false);
+      if (this._connectionState === -1) {
+        return;
+      }
+
+      this._disconnectCallback = () => {
+        resolver.resolve();
+      };
+
+      this._connectionState = -1;
+      this.send(ConnectionManager.ForwardClose(this), null, false);
+    });
   }
 
   __startResend(lastMessage) {
@@ -129,41 +133,73 @@ class Connection extends Layer {
   }
 
   handleForwardOpen(message, info, context) {
-    if (message.status.code === 0) {
-      this._connectionState = 2;
-      const reply = ConnectionManager.ForwardOpenReply(message.data);
-      this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
-      this._TtoOConnectionID = reply.TtoONetworkConnectionID;
-      this._OtoTPacketRate = reply.OtoTActualPacketRate;
-      this._TtoOPacketRate = reply.TtoOActualPacketRate;
-      this._connectionSerialNumber = reply.ConnectionSerialNumber;
+    if (this._connectionState === 1) {
+      if (message.status.code === 0) {
+        this._connectionState = 2;
+        const reply = ConnectionManager.ForwardOpenReply(message.data);
+        this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
+        this._TtoOConnectionID = reply.TtoONetworkConnectionID;
+        this._OtoTPacketRate = reply.OtoTActualPacketRate;
+        this._TtoOPacketRate = reply.TtoOActualPacketRate;
+        this._connectionSerialNumber = reply.ConnectionSerialNumber;
 
-      const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
-      this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
+        const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
+        this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
 
-      // EIP specific information
-      this.sendInfo = {
-        connectionID: this._OtoTConnectionID,
-        responseID: this._TtoOConnectionID
-      };
+        // EIP specific information
+        this.sendInfo = {
+          connectionID: this._OtoTConnectionID,
+          responseID: this._TtoOConnectionID
+        };
 
-      this.sendNextMessage();
-    } else {
-      console.log('');
-      console.log('CIP Connection Error: Status is not successful or service is not correct:');
-      console.log(message);
+        this.sendNextMessage();
+      } else {
+        this._connectionState = 0;
+        console.log('');
+        console.log('CIP Connection Error: Status is not successful or service is not correct:');
+        console.log(message);
+      }
     }
 
     if (this._connectCallback) this._connectCallback(message);
     this._connectCallback = null;
   }
 
+  // handleForwardOpen(message, info, context) {
+  //   if (message.status.code === 0) {
+  //     this._connectionState = 2;
+  //     const reply = ConnectionManager.ForwardOpenReply(message.data);
+  //     this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
+  //     this._TtoOConnectionID = reply.TtoONetworkConnectionID;
+  //     this._OtoTPacketRate = reply.OtoTActualPacketRate;
+  //     this._TtoOPacketRate = reply.TtoOActualPacketRate;
+  //     this._connectionSerialNumber = reply.ConnectionSerialNumber;
+
+  //     const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
+  //     this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
+
+  //     // EIP specific information
+  //     this.sendInfo = {
+  //       connectionID: this._OtoTConnectionID,
+  //       responseID: this._TtoOConnectionID
+  //     };
+
+  //     this.sendNextMessage();
+  //   } else {
+  //     console.log('');
+  //     console.log('CIP Connection Error: Status is not successful or service is not correct:');
+  //     console.log(message);
+  //   }
+
+  //   if (this._connectCallback) this._connectCallback(message);
+  //   this._connectCallback = null;
+  // }
+
   handleForwardClose(message, info, context) {
     this.__stopResend();
     if (message.status.code === 0) {
       const reply = ConnectionManager.ForwardCloseReply(message.data);
       this._connectionState = 0;
-      this._disconnectState = 0;
       if (this._disconnectCallback) this._disconnectCallback(reply);
       this._disconnectCallback = null;
     }

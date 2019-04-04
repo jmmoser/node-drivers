@@ -15,8 +15,7 @@ class Queue {
   }
 
   getNext() {
-    let obj = null;
-    obj = this._priorityQueue.shift();
+    const obj = this._priorityQueue.shift();
     if (obj) return obj;
     return this._queue.shift();
   }

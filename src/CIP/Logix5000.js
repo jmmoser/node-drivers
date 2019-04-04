@@ -1,45 +1,50 @@
 'use strict';
 
-const { getBit, getBits } = require('../util');
+const { getBit, getBits, Resolver } = require('../util');
 const CIP = require('./Objects/CIP');
 const Layer = require('../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
 class Logix5000 extends Layer {
   readTag(address, callback) {
-    if (callback == null) return;
+    return new Promise((resolve, reject) => {
+      const resolver = Resolver(resolve, reject, callback);
 
-    const BASE_ERROR = 'Logix5000 Error: Read Tag: ';
+      const BASE_ERROR = 'Logix5000 Error: Read Tag: ';
 
-    if (!address) {
-      callback(`${BASE_ERROR}Address must be specified`);
-      return;
-    }
+      if (!address) {
+        return resolver.reject(`${BASE_ERROR}Address must be specified`);
+      }
 
-    const path = MessageRouter.ANSIExtSymbolSegment(address);
-    const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
+      const path = MessageRouter.ANSIExtSymbolSegment(address);
+      const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
 
-    const request = MessageRouter.Request(Services.ReadTag, path, data);
+      const request = MessageRouter.Request(Services.ReadTag, path, data);
 
-    this.send(request, null, false, this.contextCallback(function(message) {
-      const reply = MessageRouter.Reply(message);
+      this.send(request, null, false, this.contextCallback(function (message) {
+        const reply = MessageRouter.Reply(message);
 
-      if (reply.status.code !== 0) {
-        if (READ_TAG_ERRORS[reply.status.code] != null) {
-          reply.status.description = READ_TAG_ERRORS[reply.status.code];
+        if (reply.status.code !== 0) {
+          if (READ_TAG_ERRORS[reply.status.code] != null) {
+            reply.status.description = READ_TAG_ERRORS[reply.status.code];
+          }
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+        } else {
+          try {
+            const dataType = reply.data.readUInt16LE(0);
+            const dataConverter = DataConverters[dataType];
+            if (dataConverter) {
+              const value = dataConverter(reply.data, 2);
+              resolver.resolve(value);
+            } else {
+              resolver.reject(`${BASE_ERROR}No converter for data type: ${dataType}`);
+            }
+          } catch(err) {
+            resolver.reject(`${BASE_ERROR}${err.message}`);
+          }
         }
-        callback(`${BASE_ERROR}${reply.status.description}`);
-        return;
-      }
-
-      const dataType = reply.data.readUInt16LE(0);
-      const dataConverter = DataConverters[dataType];
-      if (dataConverter) {
-        callback(null, dataConverter(reply.data, 2));
-      } else {
-        callback(`${BASE_ERROR}No converter for data type: ${dataType}`);
-      }
-    }));
+      }));
+    });
   }
 
 
@@ -54,7 +59,7 @@ class Logix5000 extends Layer {
 
     const path = MessageRouter.ANSIExtSymbolSegment(address);
     const data = Buffer.alloc(8);
-    // data.writeUInt16LE(DataTypes.Float, 0);
+
     data.writeUInt16LE(CIP.DataType.REAL, 0);
     data.writeUInt16LE(1, 2);
     data.writeFloatLE(value, 4);
@@ -92,7 +97,7 @@ class Logix5000 extends Layer {
 
     const sizeOfMasks = ORmasks.length;
 
-    const ACCEPTABLE_SIZE_OF_MASKS = new Set([1,2,4,8,12]);
+    const ACCEPTABLE_SIZE_OF_MASKS = new Set([1, 2, 4, 8, 12]);
 
     if (ACCEPTABLE_SIZE_OF_MASKS.has(sizeOfMasks) === false) {
       if (callback != null) {
@@ -129,96 +134,99 @@ class Logix5000 extends Layer {
     }));
   }
 
-
   supportedObjects(callback) {
-    if (callback == null) return;
+    return new Promise((resolve, reject) => {
+      const resolver = Resolver(resolve, reject, callback);
 
-    const BASE_ERROR = 'Logix5000 Supported Objects Error: ';
+      const BASE_ERROR = 'Logix5000 Supported Objects Error: ';
 
-    const path = Buffer.from([
-      0x20, // Logical Segment - Class ID
-      0x02, // Message Router class
-      0x24, // Logical Segment - Instance ID 
-      0x01, // Instance ID
-      0x30, // Logical Segment - Attribute ID
-      0x01  // Attribute 1
-    ]);
+      const path = Buffer.from([
+        0x20, // Logical Segment - Class ID
+        0x02, // Message Router class
+        0x24, // Logical Segment - Instance ID 
+        0x01, // Instance ID
+        0x30, // Logical Segment - Attribute ID
+        0x01  // Attribute 1
+      ]);
 
-    const request = MessageRouter.Request(CIP.Services.GetAttributeSingle, path);
+      const request = MessageRouter.Request(CIP.Services.GetAttributeSingle, path);
 
-    this.send(request, null, false, this.contextCallback(message => {
-      try {
-        const reply = MessageRouter.Reply(message);
+      this.send(request, null, false, this.contextCallback(message => {
+        try {
+          const reply = MessageRouter.Reply(message);
 
-        if (reply.status.code === 0) {
-          const data = reply.data;
-          const res = [];
-          let offset = 0;
+          if (reply.status.code === 0) {
+            const data = reply.data;
+            const res = [];
+            let offset = 0;
 
-          const objectCount = data.readUInt16LE(offset); offset += 2;
+            const objectCount = data.readUInt16LE(offset); offset += 2;
 
-          for (let i = 0; i < objectCount; i++) {
-            const classID = data.readUInt16LE(offset); offset += 2;
-            res.push({
-              id: classID,
-              name: CIP.ClassNames[classID] || 'Unknown'
-            });
+            for (let i = 0; i < objectCount; i++) {
+              const classID = data.readUInt16LE(offset); offset += 2;
+              res.push({
+                id: classID,
+                name: CIP.ClassNames[classID] || 'Unknown'
+              });
+            }
+
+            resolver.resolve(res);
+          } else {
+            resolver.reject(`${BASE_ERROR}${reply.status.description}`);
           }
-
-          callback(null, res);
-        } else {
-          callback(`${BASE_ERROR}${reply.status.description}`);
+        } catch (err) {
+          resolver.reject(`${BASE_ERROR}${err.message}`);
         }
-      } catch (err) {
-        callback(`${BASE_ERROR}${err.message}`);
-      }
-    }));
+      }));
+    });
   }
 
 
   identity(callback) {
-    if (callback == null) return;
+    return new Promise((resolve, reject) => {
+      const resolver = Resolver(resolve, reject, callback);
 
-    const BASE_ERROR = 'Logix5000 Identity Error: ';
+      const BASE_ERROR = 'Logix5000 Identity Error: ';
 
-    const path = Buffer.from([
-      0x20, // Logical Segment - Class ID
-      0x01, // Identity class
-      0x24, // Logical Segment - Instance ID 
-      0x01  // Instance ID
-    ]);
+      const path = Buffer.from([
+        0x20, // Logical Segment - Class ID
+        0x01, // Identity class
+        0x24, // Logical Segment - Instance ID 
+        0x01  // Instance ID
+      ]);
 
-    const request = MessageRouter.Request(CIP.Services.GetAttributesAll, path);
+      const request = MessageRouter.Request(CIP.Services.GetAttributesAll, path);
 
-    this.send(request, null, false, this.contextCallback(message => {
-      try {
-        const reply = MessageRouter.Reply(message);
+      this.send(request, null, false, this.contextCallback(message => {
+        try {
+          const reply = MessageRouter.Reply(message);
 
-        if (reply.status.code === 0) {
-          const data = reply.data;
-          const res = {};
-          let offset = 0;
-          res.vendorID = data.readUInt16LE(offset); offset += 2;
-          res.deviceType = data.readUInt16LE(offset); offset += 2;
-          res.productCode = data.readUInt16LE(offset); offset += 2;
-          res.majorRevision = data.readUInt8(offset); offset += 1;
-          res.minorRevision = data.readUInt8(offset); offset += 1;
-          res.status = data.readUInt16LE(offset); offset += 2;
-          res.serialNumber = data.readInt32LE(offset); offset += 4;
-          const nameLength = data.readUInt8(offset); offset += 1;
-          res.productName = data.toString('ascii', offset, offset + nameLength); offset += nameLength;
-          // res.state = data.readUInt8(offset); offset += 1;
-          // res.configurationConsistency = data.readUInt8(offset); offset + 1;
-          // res.heartbeatInterval = data.readUInt8(offset); offset + 1;
+          if (reply.status.code === 0) {
+            const data = reply.data;
+            const res = {};
+            let offset = 0;
+            res.vendorID = data.readUInt16LE(offset); offset += 2;
+            res.deviceType = data.readUInt16LE(offset); offset += 2;
+            res.productCode = data.readUInt16LE(offset); offset += 2;
+            res.majorRevision = data.readUInt8(offset); offset += 1;
+            res.minorRevision = data.readUInt8(offset); offset += 1;
+            res.status = data.readUInt16LE(offset); offset += 2;
+            res.serialNumber = data.readInt32LE(offset); offset += 4;
+            const nameLength = data.readUInt8(offset); offset += 1;
+            res.productName = data.toString('ascii', offset, offset + nameLength); offset += nameLength;
+            // res.state = data.readUInt8(offset); offset += 1;
+            // res.configurationConsistency = data.readUInt8(offset); offset + 1;
+            // res.heartbeatInterval = data.readUInt8(offset); offset + 1;
 
-          callback(null, res);
-        } else {
-          callback(`${BASE_ERROR}${reply.status.description}`);
+            resolver.resolve(res);
+          } else {
+            resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+          }
+        } catch (err) {
+          resolver.reject(`${BASE_ERROR}${err.message}`);
         }
-      } catch(err) {
-        callback(`${BASE_ERROR}${err.message}`);
-      }
-    }));
+      }));
+    });
   }
 
 
@@ -253,7 +261,6 @@ class Logix5000 extends Layer {
 
     this.send(request, null, false, this.contextCallback(message => {
       const reply = MessageRouter.Reply(message);
-      // console.log(reply);
 
       const done = reply.status.code === 0;
 
@@ -273,47 +280,52 @@ class Logix5000 extends Layer {
 
 
   readTemplateInstanceAttributes(templateID, callback) {
-    if (!callback) return;
+    return new Promise((resolve, reject) => {
+      const resolver = Resolver(resolve, reject, callback);
 
-    const BASE_ERROR = 'Logix5000 Error: Read Template Instance Attributes: ';
+      const BASE_ERROR = 'Logix5000 Error: Read Template Instance Attributes: ';
 
-    const path = Buffer.from([
-      0x20, // Logical Segment - Class ID
-      Classes.Template.Code,
-      0x25, // Logical Segment - Instance ID
-      0x00,
-      0x00,
-      0x00
-    ]);
+      const path = Buffer.from([
+        0x20, // Logical Segment - Class ID
+        Classes.Template.Code,
+        0x25, // Logical Segment - Instance ID
+        0x00,
+        0x00,
+        0x00
+      ]);
 
-    path.writeUInt16LE(templateID, 4);
+      path.writeUInt16LE(templateID, 4);
 
-    const attributes = [
-      0x01, // Attribute 1 - (UINT) CRC for the members of the structure
-      0x02, // Attribute 2 - (UINT) Number of structure members
-      0x04, // Attribute 4 - (UDINT) Number of 32-bit words
-      0x05  // Attribute 5 - (UDINT) Number of bytes of the structure data
-    ];
+      const attributes = [
+        0x01, // Attribute 1 - (UINT) CRC for the members of the structure
+        0x02, // Attribute 2 - (UINT) Number of structure members
+        0x04, // Attribute 4 - (UDINT) Number of 32-bit words
+        0x05  // Attribute 5 - (UDINT) Number of bytes of the structure data
+      ];
 
-    const data = Buffer.alloc(2 + attributes.length * 2);
-    data.writeUInt16LE(attributes.length, 0);
-    for (let i = 0; i < attributes.length; i++) {
-      data.writeUInt16LE(attributes[i], 2 * (i + 1));
-    }
-
-    const request = MessageRouter.Request(Classes.Template.Services.GetAttributeList, path, data);
-
-    this.send(request, null, false, this.contextCallback(message => {
-      const reply = MessageRouter.Reply(message);
-
-      if (reply.status.code !== 0) {
-        return callback(`${BASE_ERROR}${reply.status.description}`);
+      const data = Buffer.alloc(2 + attributes.length * 2);
+      data.writeUInt16LE(attributes.length, 0);
+      for (let i = 0; i < attributes.length; i++) {
+        data.writeUInt16LE(attributes[i], 2 * (i + 1));
       }
 
-      const template = parseReadTemplateInstanceAttributes(reply);
+      const request = MessageRouter.Request(Classes.Template.Services.GetAttributeList, path, data);
 
-      callback(null, template);
-    }));
+      this.send(request, null, false, this.contextCallback(message => {
+        const reply = MessageRouter.Reply(message);
+
+        if (reply.status.code !== 0) {
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+        } else {
+          try {
+            const template = parseReadTemplateInstanceAttributes(reply);
+            resolver.resolve(template);
+          } catch(err) {
+            resolver.reject(`${BASE_ERROR}${err.message}`);
+          }
+        }
+      }));
+    });
   }
 
 

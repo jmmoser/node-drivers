@@ -22,42 +22,84 @@ class MultiplexLayer extends Layer {
   }
 
   disconnect(callback) {
-    if (this._disconnecting === 1) return;
+    return Layer.CallbackPromise(callback, async resolver => {
+      if (this._disconnecting === 1) return;
 
-    let self = this;
+      this._disconnecting = 1;
+      
+      this._disconnectTimer = setTimeout(() => {
+        this._disconnecting = 0;
+        console.log('disconnect timeout');
+        resolver.resolve();
+      }, 10000);
 
-    self._disconnecting = 1;
-    self._disconnectCount = 0;
+      // const objectCount = this._layers.size;
 
-    self._disconnectTimer = setTimeout(function() {
-      self._disconnecting = 0;
-      console.log('disconnect timeout');
-      if (callback != null) callback();
-    }, 10000);
+      // this._disconnectCount = 0;
 
-    let objectCount = self._layers.size;
+      // const layerDisconnectCallback = () => {
+      //   if (this._disconnecting === 0) return;
 
-    let layerDisconnectCallback = function() {
-      if (self._disconnecting === 0) return;
+      //   this._disconnectCount++;
+      //   if (this._disconnectCount >= objectCount) {
+      //     clearTimeout(this._disconnectTimer);
+      //     this._disconnecting = 0;
+      //     resolver.resolve();
+      //   }
+      // };
 
-      self._disconnectCount++;
-      if (self._disconnectCount >= objectCount) {
-        clearTimeout(self._disconnectTimer);
-        self._disconnecting = 0;
+      // this._layers.forEach(function (layer) {
+      //   layer.disconnect(layerDisconnectCallback);
+      // });
 
-        if (callback != null) {
-          callback();
-        }
+      await Promise.all([...this._layers].map(layer => layer.disconnect()));
+
+      if (this._disconnecting === 1) {
+        clearInterval(this._disconnectTimer);
+        this._disconnecting = 0;
+        resolver.resolve();
       }
-    };
-
-    self._layers.forEach(function(layer) {
-      layer.disconnect(layerDisconnectCallback);
     });
   }
 
+
+  // disconnect(callback) {
+  //   if (this._disconnecting === 1) return;
+
+  //   const self = this;
+
+  //   self._disconnecting = 1;
+  //   self._disconnectCount = 0;
+
+  //   self._disconnectTimer = setTimeout(function() {
+  //     self._disconnecting = 0;
+  //     console.log('disconnect timeout');
+  //     if (callback != null) callback();
+  //   }, 10000);
+
+  //   const objectCount = self._layers.size;
+
+  //   const layerDisconnectCallback = function() {
+  //     if (self._disconnecting === 0) return;
+
+  //     self._disconnectCount++;
+  //     if (self._disconnectCount >= objectCount) {
+  //       clearTimeout(self._disconnectTimer);
+  //       self._disconnecting = 0;
+
+  //       if (callback != null) {
+  //         callback();
+  //       }
+  //     }
+  //   };
+
+  //   self._layers.forEach(function(layer) {
+  //     layer.disconnect(layerDisconnectCallback);
+  //   });
+  // }
+
   sendNextMessage() {
-    let request = this.getNextRequest();
+    const request = this.getNextRequest();
 
     if (request != null) {
       this.send(request.message, request.info, false, this.layerContext(request.layer));
@@ -67,7 +109,7 @@ class MultiplexLayer extends Layer {
 
   handleData(data, info, context) {
     if (context != null) {
-      let layer = this.layerForContext(context);
+      const layer = this.layerForContext(context);
       if (layer != null) {
         this.forwardTo(layer, data, info);
       } else {

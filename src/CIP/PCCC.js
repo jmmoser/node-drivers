@@ -3,6 +3,7 @@
 const Layer = require('./../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
+
 class PCCC extends Layer {
   constructor(lowerLayer, options) {
     super(lowerLayer);
@@ -18,20 +19,19 @@ class PCCC extends Layer {
   }
 
   sendNextMessage() {
-    let request = this.getNextRequest();
+    const request = this.getNextRequest();
     if (request != null) {
-      const HEADER_LENGTH = 7
-      let data = Buffer.alloc(HEADER_LENGTH);
-      data.writeUInt8(HEADER_LENGTH, 0);
-      data.writeUInt16LE(this.options.vendorID, 1);
-      data.writeUInt32LE(this.options.serialNumber, 3);
+      const HEADER_LENGTH = 7;
+      const header = Buffer.alloc(HEADER_LENGTH);
+      header.writeUInt8(HEADER_LENGTH, 0);
+      header.writeUInt16LE(this.options.vendorID, 1);
+      header.writeUInt32LE(this.options.serialNumber, 3);
 
-      let pcccMessage = request.message;
-      let totalLength = HEADER_LENGTH + pcccMessage.length;
+      const pcccMessage = request.message;
 
-      data = Buffer.concat([data, pcccMessage], totalLength);
+      const data = Buffer.concat([header, pcccMessage], HEADER_LENGTH + pcccMessage.length);
 
-      let message = MessageRouter.Request(
+      const message = MessageRouter.Request(
         PCCC.SERVICES.ExecutePCCC,
         PCCC.Path,
         data
@@ -44,7 +44,7 @@ class PCCC extends Layer {
   }
 
   handleData(data, info, context) {
-    let offset = data.readUInt8(4);
+    const offset = data.readUInt8(4);
     this.forward(data.slice(offset + 4));
   }
 }

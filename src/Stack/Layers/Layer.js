@@ -2,6 +2,8 @@
 
 const Queue = require('../../Classes/Queue');
 const Defragger = require('../../Classes/Defragger');
+const { CallbackPromise } = require('../../util');
+
 
 class Layer {
   constructor(lowerLayer, handlesForwarding) {
@@ -41,7 +43,11 @@ class Layer {
 
   disconnect(callback) {
     // IMPLEMENT IN SUBCLASS IF NEEDED
-    if (callback != null) callback();
+    // if (callback != null) callback();
+
+    return CallbackPromise(callback, resolver => {
+      resolver.resolve();
+    });
   }
 
   layerAdded(layer) {
@@ -66,15 +72,25 @@ class Layer {
   // }
 
   close(callback) {
-    const self = this;
-    if (self.upperLayer != null) {
-      self.upperLayer.close(function() {
-        self.disconnect(callback);
-      });
-    } else {
-      self.disconnect(callback);
-    }
+    return CallbackPromise(callback, async resolver => {
+      if (this.upperLayer != null) {
+        await this.upperLayer.close();
+      }
+      await this.disconnect();
+      resolver.resolve();
+    });
   }
+
+  // close(callback) {
+  //   const self = this;
+  //   if (self.upperLayer != null) {
+  //     self.upperLayer.close(function() {
+  //       self.disconnect(callback);
+  //     });
+  //   } else {
+  //     self.disconnect(callback);
+  //   }
+  // }
 
   forward(data, info, context) {
     if (this.upperLayer != null) {
@@ -153,4 +169,8 @@ class Layer {
   }
 }
 
+Layer.CallbackPromise = CallbackPromise;
+
 module.exports = Layer;
+
+

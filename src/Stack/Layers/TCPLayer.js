@@ -50,28 +50,44 @@ class TCPLayer extends Layer {
   }
 
   disconnect(callback) {
-    const self = this;
+    return Layer.CallbackPromise(callback, resolver => {
+      if (this._connectionState !== 0) {
+        this._connectionState = 0;
+        this.socket.end();
+        this.socket.destroy();
 
-    if (self._connectionState === 0) {
-      if (callback) callback();
-      return;
-    }
+        this.connectionCleanup();
 
-    if (self.socket) {
-      self.socket.end();
-      self.socket.destroy();
+        this.socket = null;
+      }
 
-      self.connectionCleanup();
-
-      self.socket = null;
-      self._connectionState = 0;
-
-      if (callback) callback();
-
-    } else if (callback) {
-      callback();
-    }
+      resolver.resolve();
+    });
   }
+
+  // disconnect(callback) {
+  //   const self = this;
+
+  //   if (self._connectionState === 0) {
+  //     if (callback) callback();
+  //     return;
+  //   }
+
+  //   if (self.socket) {
+  //     self.socket.end();
+  //     self.socket.destroy();
+
+  //     self.connectionCleanup();
+
+  //     self.socket = null;
+  //     self._connectionState = 0;
+
+  //     if (callback) callback();
+
+  //   } else if (callback) {
+  //     callback();
+  //   }
+  // }
 
   connected() {
     this._connectionState = 2;

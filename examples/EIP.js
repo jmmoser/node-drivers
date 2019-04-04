@@ -3,13 +3,16 @@ const Drivers = require('node-drivers');
 const TCPLayer = Drivers.Layers.TCPLayer;
 const EIPLayer = Drivers.Layers.EIPLayer;
 
-let tcpLayer = new TCPLayer({ host: '0.0.0.0', port: 44818 });
-let eipLayer = new EIPLayer(tcpLayer);
+const tcpLayer = new TCPLayer({ host: '0.0.0.0', port: 44818 });
+const eipLayer = new EIPLayer(tcpLayer);
 
-eipLayer.ListInterfaces(function(res) {
-  console.log(res);
+(async () => {
+  try {
+    const interfaces = await eipLayer.ListInterfaces();
+    console.log(interfaces);
+  } catch(err) {
+    console.log(err);
+  }
 
-  tcpLayer.close(function() {
-    console.log('closed');
-  });
-});
+  await tcpLayer.close();
+})();

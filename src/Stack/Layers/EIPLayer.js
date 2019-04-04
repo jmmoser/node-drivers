@@ -4,6 +4,7 @@ const Layer = require('./Layer');
 const EIPPacket = require('../Packets/EIPPacket');
 const EIPCommands = EIPPacket.Commands;
 
+
 function SendData_Packet(interfaceHandle, timeout, data) {
   const buffer = Buffer.alloc(data.length + 6);
   buffer.writeUInt32LE(interfaceHandle, 0);
@@ -103,15 +104,26 @@ class EIPLayer extends Layer {
   }
 
   disconnect(callback) {
-    if (this._connectionState === 0) {
-      if (callback) callback();
-      return;
-    }
+    return Layer.CallbackPromise(callback, resolver => {
+      if (this._connectionState !== 0) {
+        this._connectionState = 0;
+        this.send(EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context), null, true);
+      }
 
-    this._connectStatus = 0;
-    this.send(EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context), null, true);
-    if (callback) callback();
+      resolver.resolve();
+    });
   }
+
+  // disconnect(callback) {
+  //   if (this._connectionState === 0) {
+  //     if (callback) callback();
+  //     return;
+  //   }
+
+  //   this._connectStatus = 0;
+  //   this.send(EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context), null, true);
+  //   if (callback) callback();
+  // }
 
   sendNextMessage() {
     if (this._connectionState === 2) {

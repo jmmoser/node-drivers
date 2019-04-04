@@ -16,7 +16,7 @@ class Defragger {
 
     while (true) {
       if (this._dataLength > 0 && this._completeHandler(this._data, this._dataLength)) {
-        let length = this._lengthHandler(this._data);
+        const length = this._lengthHandler(this._data);
         defraggedData = this._data.slice(0, length);
         this._dataLength -= length;
         this._data = this._data.slice(length);
