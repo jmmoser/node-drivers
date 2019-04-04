@@ -1,235 +1,34 @@
 'use strict';
 
-// const PCCCServiceCodes = {
-//   0x4B: 'Exec PCCC Service',
-//   0x4C: 'DH+ Like Service',
-//   0x4D: 'Local PCCC Service'
-// };
-
-/*
-  Source: http://iatip.blogspot.com/2008/11/ethernetip-pccc-service-codes.html
-  To force a DF1 message with destination=5 and source=2
-  0x4c                                              - DH+ Like Service
-  0x02 0x20 0x67 0x24 0x01                          - IOI to PCCC object
-  0x00 0x00 0x02 0x00 0x00 0x00 0x05 0x00           - DH+ Like Header
-  0x0F 0x00 0x5C 0x00 0xA2 0x14 0x07 0x89 0x00 0x00 - example pccc message
-
-  The originator info has been swapped with an 8 byte struct of the form
-  AA AA BB XX CC CC DD XX.
-  "XX" are control bytes of some sort, just leave 0x00
-  "AA AA" is the destination link
-  "BB" is the destination node
-  "CC CC" is the source link
-  "DD" is the source node
-*/
-
-// http://stackoverflow.com/a/10090443/3055415
-function getBits(k, m, n) {
-  return ((k >> m) & ((1 << (n - m)) - 1));
-  // return last(k >> m, n - m);
-}
-
-function getBit(k, n) {
-  return ((k) & (1 << n)) > 0 ? 1 : 0;
-}
+const { getBit, getBits } = require('../../util');
 
 
-function TypedReadReplyParserArray(data) {
-  let info = TypedReadParserInfo(data);
-  let offset = info.Length;
-  let values = [];
-
-  let readFunction = null;
-
-  switch (info.dataTypeID) {
-    case 3:
-      readFunction = function(data, offset) {
-        return String.fromCharCode(data[offset]);
-      };
-      break;
-    case 4:
-      readFunction = function(data, offset) {
-        return data.readInt16LE(offset); // return data.readUInt16LE(offset);
-      };
-      break;
-    case 8:
-      readFunction = function(data, offset) {
-        return data.readFloatLE(offset);
-      };
-      break;
-    default:
-      console.log('PCCC Error: Unknown Type: ' + info.dataTypeID);
-  }
-
-  if (readFunction) {
-    let lastOffset = data.length - info.dataSize;
-
-    while (offset <= lastOffset) {
-      values.push(readFunction(data, offset));
-      offset += info.dataSize;
-    }
-  }
-
-  return values;
-}
-
-// const PCCCDataType = {
-//   Binary: 1,
-//   BitString: 2,
-//   Byte: 3,
-//   Integer: 4,
-//   Timer: 5,
-//   Counter: 6,
-//   Control: 7,
-//   Float: 8,
-//   Array: 9,
-//   Address: 0xf,
-//   BCD: 0x10,
-//   PID: 0x15,
-//   Message: 0x16,
-//   SFCStatus: 0x1d,
-//   String: 0x1e,
-//   BlockTransfer: 0x20
-// };
-
-function TypedReadReplyParser(data) {
-  let info = TypedReadParserInfo(data);
-  let offset = info.Length;
-  let value = null;
-
-  switch (info.dataTypeID) {
-    case PCCCDataType.Binary:
-    case PCCCDataType.BitString:
-    case PCCCDataType.Byte:
-      value = buffer.readUInt8(offset);
-      break;
-    case PCCCDataType.Integer:
-      value = buffer.readInt32LE(offset); // buffer.readInt16LE(offset) ??
-      break;
-    case PCCCDataType.Float:
-      value = buffer.readFloatLE(offset);
-      break;
-    case PCCCDataType.Array:
-      value = TypedReadReplyParserArray(data.slice(offset, offset + info.dataSize));
-      break;
-    default:
-      console.log('PCCC Error: Unknown Type: ' + info.dataTypeID);
-  }
-  return value;
-}
-
-
-function TypedReadParserInfo(data) {
-  let offset = 0;
-  let flag = data.readUInt8(offset); offset += 1;
-
-  let dataTypeID = 0;
-  let dataSize = 0;
-
-  if (getBit(flag, 7)) {
-    let dataTypeBytes = getBits(flag, 4, 7);
-    switch (dataTypeBytes) {
-      case 1:
-        dataTypeID = data.readUInt8(offset);
-        break;
-      case 2:
-        dataTypeID = data.readUInt16LE(offset);
-        break;
-      case 4:
-        dataTypeID = data.readUInt32LE(offset);
-        break;
-      default:
-        //
-    }
-    offset += dataTypeBytes;
-  } else {
-    dataTypeID = getBits(flag, 4, 7);
-  }
-
-  if (getBit(flag, 3)) {
-    let dataTypeSizeBytes = getBits(flag, 0, 3);
-    switch (dataTypeSizeBytes) {
-      case 1:
-        dataSize = data.readUInt8(offset);
-        break;
-      case 2:
-        dataSize = data.readUInt16LE(offset);
-        break;
-      case 4:
-        dataSize = data.readUInt32LE(offset);
-        break;
-      default:
-        //
-    }
-    offset += dataTypeSizeBytes;
-  } else {
-    dataSize = getBits(flag, 0, 4);
-  }
-
-  return {
-    Length: offset,
-    dataTypeID: dataTypeID,
-    dataSize: dataSize
-  };
-}
-
-// function GetDataTypeID(info) {
-//   return info.dataType << 4 | info.size;
-// }
-
-// Programmable Controller Communication Command
 class PCCCPacket {
-  constructor() {
-    this.command = 0;
-    this.transaction = 0;
+  constructor(command = 0, status = 0, transaction = 0, data) {
+    this.command = command;
+    this.transaction = transaction;
+    this.data = data;
 
     this.status = {
-      code: 0,
+      code: status,
       extended: {
         code: 0
       }
     };
   }
 
-  // This is not used anywhere
-  // setPath(pathBuffer) {
-  //   if (Buffer.isBuffer(pathBuffer)) {
-  //     if (pathBuffer.length % 2 === 0) {
-  //       this.path = pathBuffer;
-  //     } else {
-  //       console.log('PCCC Error: Set Path: Path size is not even');
-  //     }
-  //   } else {
-  //     console.log('PCCC Error: Set Path: Value is not a buffer');
-  //   }
-  // }
-
-  // This is not used anywhere
-  // setRequestor(requestorBuffer) {
-  //   if (Buffer.isBuffer(requestorBuffer)) {
-  //     let length = requestorBuffer.readUInt8(0);
-  //     if (length === requestorBuffer.length) {
-  //       this.requestor = requestorBuffer;
-  //     } else {
-  //       console.log('PCCC Error: Set Requestor: Specified requestor length is not equal to total length of requestor buffer');
-  //     }
-  //   } else {
-  //     console.log('PCCC Error: Set Requestor: Value is not a buffer');
-  //   }
-  // }
-
   // this entire class method may not be needed
   // good for unit testing factory methods
   static fromBufferRequest(buffer) {
-    let packet = new PCCCPacket();
+    const packet = new PCCCPacket();
 
     let offset = 0;
     packet.service = buffer.readUInt8(offset); offset += 1;
     // packet.PathSize = 2 * buffer.readUInt8(offset); offset += 1; // PathSize is in bytes here
     // packet.Path = buffer.slice(offset, offset + packet.PathSize); offset += packet.PathSize;
-    let pathSize = 2 * buffer.readUInt8(offset); offset += 1;
+    const pathSize = 2 * buffer.readUInt8(offset); offset += 1;
     packet.path = buffer.slice(offset, offset + pathSize); offset += pathSize;
-    let requestorIDLength = buffer.readUInt8(offset); offset += 1;
+    const requestorIDLength = buffer.readUInt8(offset); offset += 1;
     packet.requestorID = buffer.slice(offset, offset + requestorIDLength); // includes length
     packet.vendorID = buffer.slice(offset, offset + 2); offset += 2;
     packet.serialNumber = buffer.slice(offset, offset + 4); offset += 4;
@@ -246,7 +45,7 @@ class PCCCPacket {
   }
 
   static fromBufferReply(buffer) {
-    let packet = new PCCCPacket();
+    const packet = new PCCCPacket();
 
     let offset = 0;
 
@@ -267,37 +66,71 @@ class PCCCPacket {
   }
 
   toBuffer() {
-    let offset = 0;
-    let buffer = Buffer.alloc(4 + this.data.length);
-    buffer.writeUInt8(this.command, offset); offset += 1;
-    buffer.writeUInt8(this.status.code, offset); offset += 1;
-    buffer.writeUInt16LE(this.transaction, offset); offset += 2;
-    this.data.copy(buffer, offset); offset += this.data.length;
-    return buffer;
+    // let offset = 0;
+    // const buffer = Buffer.alloc(4 + this.data.length);
+    // buffer.writeUInt8(this.command, offset); offset += 1;
+    // buffer.writeUInt8(this.status.code, offset); offset += 1;
+    // buffer.writeUInt16LE(this.transaction, offset); offset += 2;
+    // this.data.copy(buffer, offset); offset += this.data.length;
+    // return buffer;
+    return toBuffer(
+      this.command,
+      this.status.code,
+      this.transaction,
+      this.data
+    );
   }
+
+  // static toBuffer(command, status, transaction, data) {
+  //   const buffer = Buffer.alloc(4 + data.length);
+  //   buffer.writeUInt8(command, 0);
+  //   buffer.writeUInt8(status, 1);
+  //   buffer.writeUInt16LE(transaction, 2);
+  //   data.copy(buffer, 4);
+  //   return buffer;
+  // }
 
 
   static WordRangeReadRequest(transaction, address) {
-    let packet = new PCCCPacket();
-    packet.command = 0x0F;
-    packet.transaction = transaction;
+    const info = logicalASCIIAddressInfo(address);
+    if (!info) {
+      return null;
+    }
 
-    let data = Buffer.alloc(200);
+    const packet = new PCCCPacket(0x0F, 0, transaction);
+
+    const data = Buffer.alloc(200);
     let offset = 0;
     data.writeUInt8(0x01, offset); offset += 1; // Function
     offset += 2; // Packet Offset
     data.writeUInt16LE(1, offset); offset += 2; // Total Trans
     offset += logicalASCIIAddress(address, data.slice(offset)); // PLC system address
-    let info = logicalASCIIAddressInfo(address);
-
-    if (info) {
-      data.writeUInt8(info.size, offset); offset += 1;
-    } else {
-      return null;
-    }
+    data.writeUInt8(info.size, offset); offset += 1;
     packet.data = data.slice(0, offset);
     return packet.toBuffer();
   }
+
+  // static WordRangeReadRequest(transaction, address) {
+  //   let packet = new PCCCPacket();
+  //   packet.command = 0x0F;
+  //   packet.transaction = transaction;
+
+  //   let data = Buffer.alloc(200);
+  //   let offset = 0;
+  //   data.writeUInt8(0x01, offset); offset += 1; // Function
+  //   offset += 2; // Packet Offset
+  //   data.writeUInt16LE(1, offset); offset += 2; // Total Trans
+  //   offset += logicalASCIIAddress(address, data.slice(offset)); // PLC system address
+  //   let info = logicalASCIIAddressInfo(address);
+
+  //   if (info) {
+  //     data.writeUInt8(info.size, offset); offset += 1;
+  //   } else {
+  //     return null;
+  //   }
+  //   packet.data = data.slice(0, offset);
+  //   return packet.toBuffer();
+  // }
 
   static WordRangeReadReply(buffer) {
     // I believe there is a mistake in the DF1 manual,
@@ -307,11 +140,9 @@ class PCCCPacket {
 
 
   static TypedReadRequest(transaction, address, items) {
-    let packet = new PCCCPacket();
-    packet.command = 0x0F;
-    packet.transaction = transaction;
+    const packet = new PCCCPacket(0x0F, 0, transaction);
 
-    let data = Buffer.alloc(200);
+    const data = Buffer.alloc(200);
     let offset = 0;
     data.writeUInt8(0x68, offset); offset += 1; // function
     offset += 2; // Packet Offset
@@ -328,90 +159,97 @@ class PCCCPacket {
   }
 
   static TypedWriteRequest(transaction, address, values) {
-    let packet = new PCCCPacket();
-    packet.command = 0x0F;
-    packet.transaction = transaction;
+    const packet = new PCCCPacket(0x0F, 0, transaction);
 
-    let items = values.length;
+    const items = values.length;
 
     let offset = 0;
-    let data = Buffer.alloc(200);
+    const data = Buffer.alloc(200);
     data.writeUInt8(0x67, offset); offset += 1; // function
     offset += 2;
     data.writeUInt16LE(items, offset); offset += 2;
     offset += logicalASCIIAddress(address, data.slice(offset));
-    // data.writeUInt16LE(items, offset); offset += 2;
 
-
-    let info = logicalASCIIAddressInfo(address);
+    const info = logicalASCIIAddressInfo(address);
 
     data.writeUInt8(info.dataType << 4 | info.size, offset); offset += 1;
 
-
-    let dataTypeSize = info.size; // PCCCDataTypeSize[dataTypeSize];
-    let writeBuffer = new Buffer.alloc(items * dataTypeSize);
-    // let func = PCCCWriteFunction(buffer, dataType);
+    const dataTypeSize = info.size; // PCCCDataTypeSize[dataTypeSize];
+    const writeBufferLength = items * dataTypeSize;
+    const writeBuffer = new Buffer.alloc(writeBufferLength);
 
     for (let i = 0; i < items; i++) {
-      // func(values[i], i * dataTypeSize);
       info.writeFunction(writeBuffer, i * dataTypeSize, values[i]);
     }
 
-    data = data.slice(0, offset);
-
-    packet.data = Buffer.concat([data, writeBuffer], offset + items * dataTypeSize);
+    packet.data = Buffer.concat([data.slice(0, offset), writeBuffer], offset + writeBufferLength);
 
     return packet.toBuffer();
   }
 
 
   static DiagnosticStatusRequest(transaction) {
-    let packet = new PCCCPacket();
-    packet.command = 0x06;
-    packet.transaction = transaction;
-
-    let data = Buffer.alloc(1);
-    data[0] = 0x03;
-    packet.data = data;
-    return packet.toBuffer();
+    return toBuffer(0x06, 0, transaction, Buffer.from([0x03]));
   }
 
-  // static UnprotectedRead(transaction, address, size) {
-  //   let packet = PCCCPacket();
-  //   packet.command = 0x01;
-  //   packet.transaction = transaction;
-  //
-  //   let offset = 0;
-  //   let data = Buffer.alloc(3);
-  //   data.writeUInt16LE(address, offset); offset += 2;
-  //   data.writeUInt8(size, offset); offset += 1;
-  //
-  //   packet.data = data;
-  //
-  //   return packet.toBuffer();
+
+  static UnprotectedRead(transaction, address, size) {
+    const data = Buffer.alloc(3);
+    data.writeUInt16LE(address, 0);
+    data.writeUInt8(size, 2);
+    return toBuffer(0x01, 0, transaction, data);
+  }
+
+  static UnprotectedWrite(transaction, address, writeData) {
+    const writeDataLength = writeData.length;
+    const data = Buffer.alloc(2 + writeDataLength);
+    data.writeUInt16LE(address, 0);
+    writeData.copy(data, 2);
+    return toBuffer(0x08, 0, transaction, data);
+  }
+
+  // static Upload(transaction) {
+  //   return toBuffer(0x0F, 0, transaction, Buffer.from([0x06]));
+  // }
+
+  // static UploadCompleted(transaction) {
+  //   return toBuffer(0x0F, 0, transaction, Buffer.from([0x55]));
   // }
 }
 
 module.exports = PCCCPacket;
 
-
+function toBuffer(command, status, transaction, data = []) {
+  const buffer = Buffer.alloc(4 + data.length);
+  buffer.writeUInt8(command, 0);
+  buffer.writeUInt8(status, 1);
+  buffer.writeUInt16LE(transaction, 2);
+  if (data.length > 0) {
+    data.copy(buffer, 4);
+  }
+  return buffer;
+}
 
 function logicalASCIIAddress(address, buffer) {
-	let offset = 0;
-	buffer[offset] = 0x00; offset += 1;
-	buffer[offset] = 0x24; offset += 1;
+  let offset = 0;
+  buffer.writeUInt8(0x00, offset); offset += 1;
+  buffer.writeUInt8(0x24, offset); offset += 1;
+	// buffer[offset] = 0x00; offset += 1;
+	// buffer[offset] = 0x24; offset += 1;
 	for (let i = 0; i < address.length; i++) {
-		buffer[offset] = address.charCodeAt(i); offset += 1;
-	}
-	buffer[offset] = 0x00; offset += 1;
+    buffer.writeUInt8(address.charCodeAt(i), offset); offset += 1;
+		// buffer[offset] = address.charCodeAt(i); offset += 1;
+  }
+  buffer.writeUInt8(0x00, offset); offset += 1;
+	// buffer[offset] = 0x00; offset += 1;
   return offset;
 }
 
 // Help from https://github.com/plcpeople/nodepccc/blob/00b4824972baec636deb0906454f841d8b832797/nodePCCC.js
 function logicalASCIIAddressInfo(address) {
-  let splitString = address.split(':');
-  let prefix = splitString[0].replace(/[0-9]/gi, '');
-  let info = {};
+  const splitString = address.split(':');
+  const prefix = splitString[0].replace(/[0-9]/gi, '');
+  const info = {};
   switch (prefix) {
   	case "S":
   	case "I":
@@ -467,7 +305,7 @@ function logicalASCIIAddressInfo(address) {
   		break;
   	case "A":	// TODO - support this.
   	default:
-  		outputLog('Failed to find a match for ' + splitString2[0] + ' possibly because ' + prefix + ' type is not supported yet.');
+  		outputLog('Failed to find a match for ' + splitString[0] + ' possibly because ' + prefix + ' type is not supported yet.');
   		return undefined;
 	}
   return info;
@@ -521,6 +359,170 @@ const PCCCDataTypeSize = {
 //   }
 //   return func;
 // }
+
+
+// const PCCCServiceCodes = {
+//   0x4B: 'Exec PCCC Service',
+//   0x4C: 'DH+ Like Service',
+//   0x4D: 'Local PCCC Service'
+// };
+
+/*
+  Source: http://iatip.blogspot.com/2008/11/ethernetip-pccc-service-codes.html
+  To force a DF1 message with destination=5 and source=2
+  0x4c                                              - DH+ Like Service
+  0x02 0x20 0x67 0x24 0x01                          - IOI to PCCC object
+  0x00 0x00 0x02 0x00 0x00 0x00 0x05 0x00           - DH+ Like Header
+  0x0F 0x00 0x5C 0x00 0xA2 0x14 0x07 0x89 0x00 0x00 - example pccc message
+
+  The originator info has been swapped with an 8 byte struct of the form
+  AA AA BB XX CC CC DD XX.
+  "XX" are control bytes of some sort, just leave 0x00
+  "AA AA" is the destination link
+  "BB" is the destination node
+  "CC CC" is the source link
+  "DD" is the source node
+*/
+
+
+function TypedReadReplyParserArray(data) {
+  const info = TypedReadParserInfo(data);
+  const values = [];
+
+  let offset = info.Length;
+  let readFunction = null;
+
+  switch (info.dataTypeID) {
+    case 3:
+      readFunction = function (data, offset) {
+        return String.fromCharCode(data[offset]);
+      };
+      break;
+    case 4:
+      readFunction = function (data, offset) {
+        return data.readInt16LE(offset); // return data.readUInt16LE(offset);
+      };
+      break;
+    case 8:
+      readFunction = function (data, offset) {
+        return data.readFloatLE(offset);
+      };
+      break;
+    default:
+      console.log(`PCCC Error: Unknown Type: ${info.dataTypeID}`);
+  }
+
+  if (readFunction) {
+    const lastOffset = data.length - info.dataSize;
+
+    while (offset <= lastOffset) {
+      values.push(readFunction(data, offset));
+      offset += info.dataSize;
+    }
+  }
+
+  return values;
+}
+
+// const PCCCDataType = {
+//   Binary: 1,
+//   BitString: 2,
+//   Byte: 3,
+//   Integer: 4,
+//   Timer: 5,
+//   Counter: 6,
+//   Control: 7,
+//   Float: 8,
+//   Array: 9,
+//   Address: 0xf,
+//   BCD: 0x10,
+//   PID: 0x15,
+//   Message: 0x16,
+//   SFCStatus: 0x1d,
+//   String: 0x1e,
+//   BlockTransfer: 0x20
+// };
+
+function TypedReadReplyParser(data) {
+  const info = TypedReadParserInfo(data);
+  let offset = info.Length;
+  let value = null;
+
+  switch (info.dataTypeID) {
+    case PCCCDataType.Binary:
+    case PCCCDataType.BitString:
+    case PCCCDataType.Byte:
+      value = buffer.readUInt8(offset);
+      break;
+    case PCCCDataType.Integer:
+      value = buffer.readInt32LE(offset); // buffer.readInt16LE(offset) ??
+      break;
+    case PCCCDataType.Float:
+      value = buffer.readFloatLE(offset);
+      break;
+    case PCCCDataType.Array:
+      value = TypedReadReplyParserArray(data.slice(offset, offset + info.dataSize));
+      break;
+    default:
+      console.log('PCCC Error: Unknown Type: ' + info.dataTypeID);
+  }
+  return value;
+}
+
+
+function TypedReadParserInfo(data) {
+  let offset = 0;
+  const flag = data.readUInt8(offset); offset += 1;
+
+  let dataTypeID = 0;
+  let dataSize = 0;
+
+  if (getBit(flag, 7)) {
+    const dataTypeBytes = getBits(flag, 4, 7);
+    switch (dataTypeBytes) {
+      case 1:
+        dataTypeID = data.readUInt8(offset);
+        break;
+      case 2:
+        dataTypeID = data.readUInt16LE(offset);
+        break;
+      case 4:
+        dataTypeID = data.readUInt32LE(offset);
+        break;
+      default:
+      //
+    }
+    offset += dataTypeBytes;
+  } else {
+    dataTypeID = getBits(flag, 4, 7);
+  }
+
+  if (getBit(flag, 3)) {
+    const dataTypeSizeBytes = getBits(flag, 0, 3);
+    switch (dataTypeSizeBytes) {
+      case 1:
+        dataSize = data.readUInt8(offset);
+        break;
+      case 2:
+        dataSize = data.readUInt16LE(offset);
+        break;
+      case 4:
+        dataSize = data.readUInt32LE(offset);
+        break;
+      default:
+      //
+    }
+    offset += dataTypeSizeBytes;
+  } else {
+    dataSize = getBits(flag, 0, 4);
+  }
+
+  return {
+    Length: offset,
+    dataTypeID: dataTypeID,
+    dataSize: dataSize
+  };
+}
 
 
 const PCCCDataTypes = {

@@ -32,7 +32,7 @@ class PCCC extends Layer {
       const data = Buffer.concat([header, pcccMessage], HEADER_LENGTH + pcccMessage.length);
 
       const message = MessageRouter.Request(
-        PCCC.SERVICES.ExecutePCCC,
+        Services.ExecutePCCC,
         PCCC.Path,
         data
       );
@@ -49,7 +49,7 @@ class PCCC extends Layer {
   }
 }
 
-PCCC.SERVICES = {
+const Services = {
   ExecutePCCC: 0x4B
 };
 

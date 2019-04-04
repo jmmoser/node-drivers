@@ -16,7 +16,7 @@ class TCPLayer extends Layer {
   connect() {
     if (this._connectionState > 0) return;
 
-    this.socket = net.connect(this.options, () => {
+    this.socket = net.createConnection(this.options, () => {
       this._connectionState = 2;
       this.sendNextMessage();
     });

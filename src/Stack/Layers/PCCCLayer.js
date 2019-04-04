@@ -292,6 +292,11 @@ function getError(status) {
   return status.description;
 }
 
+const Commands = {
+  Connected: 0x0A,
+  Unconnected: 0x0B
+};
+
 /*
   PLC-2 Communication Commands
     -Uprotected Read
