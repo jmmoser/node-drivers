@@ -65,195 +65,12 @@ class EIPLayer extends Layer {
 
     this._sessionHandle = 0;
     this._connectionState = 0;
+    this._context = Buffer.alloc(8);
+    this._userRequests = [];
+
+    setupCallbacks(this);
 
     this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
-
-    this._setupContext();
-    this._setupCallbacks();
-    this._userRequests = [];
-  }
-
-  _setupContext() {
-    this._context = Buffer.alloc(8);
-  }
-
-  _incrementContext() {
-    for (let i = 0; i < 8; i++) {
-      this._context[i] = (this._context[i] + 1) % 0x100;
-      if (this._context[i] !== 0) break;
-    }
-  }
-
-  connect(callback) {
-    if (this._connectionState === 2) {
-      if (callback) callback();
-      return;
-    }
-    this._connectCallback = callback;
-    if (this._connectionState > 0) return;
-    this._connectionState = 1;
-    this.send(EIPPacket.RegisterSessionRequest(this._context), null, true);
-  }
-
-  disconnect(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      if (this._connectionState !== 0) {
-        this._connectionState = 0;
-        this.send(EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context), null, true);
-      }
-      resolver.resolve();
-    });
-  }
-
-  sendNextMessage() {
-    if (this.hasRequest()) {
-      if (this._connectionState === 0) {
-        this.connect();
-      } else if (this._connectionState === 2) {
-        const request = this.getNextRequest();
-
-        if (request) {
-          const message = request.message;
-          const info = request.info;
-
-          let fullMessage = null;
-
-          // if (info.connected === true) {
-          if (info.connectionID != null) {
-            fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
-            if (request.context != null && info.responseID != null) {
-              this._connectedContexts.set(info.responseID, request.context);
-            }
-          } else {
-            this._incrementContext();
-            fullMessage = SendRRDataRequest(this._sessionHandle, this._context, message);
-
-            // if (info.context) this._unconnectedContexts[this._context.toString('hex')] = info.context;
-
-            if (request.context != null) {
-              this._unconnectedContexts.set(this._context.toString('hex'), request.context);
-            }
-          }
-
-          this.send(fullMessage, null, false);
-
-          this.sendNextMessage();
-        }
-      }
-    }
-  }
-
-  handleData(data, info, context) {
-    const command = EIPPacket.Command(data);
-    const packet = EIPPacket.fromBuffer(data);
-
-    if (this._userCallbacks.has(command)) {
-      const callbacks = this._userCallbacks.get(command);
-      this._userCallbacks.delete(command);
-      callbacks.forEach(callback => {
-        callback.apply(this, [packet]);
-      });
-    } else if (this._callbacks.has(command)) {
-      this._callbacks.get(command)(packet);
-    } else {
-      console.log('EIP Error: Unhandled packet:');
-      console.log(packet);
-      console.log(this._callbacks);
-      console.log(data)
-    }
-  }
-
-  // handleData(data, info, context) {
-  //   const command = EIPPacket.Command(data);
-  //   const packet = EIPPacket.fromBuffer(data);
-
-  //   let callback = null;
-  //   if (this._userCallbacks[command]) {
-  //     callback = this._userCallbacks[command];
-  //   } else if (this._callbacks[command]) {
-  //     callback = this._callbacks[command];
-  //   }
-
-  //   if (callback) {
-  //     callback.apply(this, [packet]);
-  //     return;
-  //   }
-
-  //   console.log('EIP Error: Unhandled packet:');
-  //   console.log(packet);
-  //   console.log(this._callbacks);
-  //   console.log(data)
-  // }
-
-
-  _setupCallbacks() {
-    const self = this;
-
-    this._callbacks = new Map();
-    this._userCallbacks = new Map();
-    this._unconnectedContexts = new Map();
-    this._connectedContexts = new Map();
-
-    this._callbacks.set(EIPCommands.RegisterSession, packet => {
-      // console.log('RegisterSession');
-      // console.log(packet);
-      if (packet.status.code === 0) {
-        this._connectionState = 2;
-        this._sessionHandle = packet.SessionHandle;
-        if (this._connectCallback) this._connectCallback();
-        this.sendNextMessage();
-        // this._sendUserRequests();
-        sendUserRequests(this);
-      } else {
-        this._connectionState = 0;
-      }
-    });
-
-    this._callbacks.set(EIPCommands.UnregisterSession, packet => {
-      // console.log('UnregisterSession');
-      this._connectionState = 0;
-      this._sessionHandle = 0;
-    });
-
-    this._callbacks.set(EIPCommands.SendRRData, packet => {
-      // console.log('SendRRData');
-      
-      const info = { connected: false };
-      const senderContext = packet.SenderContext.toString('hex');
-      let context = null; // context can be null if only one upper layer
-      if (this._unconnectedContexts.has(senderContext)) {
-        context = this._unconnectedContexts.get(senderContext);
-        this._unconnectedContexts.delete(senderContext);
-      }
-      // else {
-      //   console.log('EIPLayer Error: no Sender Context available:');
-      //   console.log(packet);
-      //   console.log(senderContext);
-      //   console.log(this._unconnectedContexts);
-      // }
-
-      self.forward(packet.Items[1].data, info, context);
-    });
-
-    this._callbacks.set(EIPCommands.SendUnitData, packet => {
-      // console.log('SendUnitData');
-      if (packet.status.code === 0) {
-        const info = {
-          connected: true,
-          connectionID: packet.Items[0].address
-        };
-        const context = this._connectedContexts.get(info.connectionID);
-        // console.log(packet);
-        // console.log(this._connectedContexts);
-        // console.log(info.connectionID);
-        // console.log(context);
-
-        self.forward(packet.Items[1].data, info, context);
-      } else {
-        console.log('EIPLayer Error: Packet Status:');
-        console.log(packet);
-      }
-    });
   }
 
 
@@ -312,9 +129,157 @@ class EIPLayer extends Layer {
       });
     });
   }
+
+
+  connect(callback) {
+    if (this._connectionState === 2) {
+      if (callback) callback();
+      return;
+    }
+    this._connectCallback = callback;
+    if (this._connectionState > 0) return;
+    this._connectionState = 1;
+    this.send(EIPPacket.RegisterSessionRequest(this._context), null, true);
+  }
+
+  disconnect(callback) {
+    return Layer.CallbackPromise(callback, resolver => {
+      if (this._connectionState !== 0) {
+        this._connectionState = 0;
+        this.send(EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context), null, true);
+      }
+      resolver.resolve();
+    });
+  }
+
+  sendNextMessage() {
+    if (this.hasRequest()) {
+      if (this._connectionState === 0) {
+        this.connect();
+      } else if (this._connectionState === 2) {
+        const request = this.getNextRequest();
+
+        if (request) {
+          const message = request.message;
+          const info = request.info;
+
+          let fullMessage = null;
+
+          if (info.connectionID != null) {
+            fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
+            if (request.context != null && info.responseID != null) {
+              this._connectedContexts.set(info.responseID, request.context);
+            }
+          } else {
+            incrementContext(this);
+            fullMessage = SendRRDataRequest(this._sessionHandle, this._context, message);
+
+            if (request.context != null) {
+              this._unconnectedContexts.set(this._context.toString('hex'), request.context);
+            }
+          }
+
+          this.send(fullMessage, null, false);
+
+          this.sendNextMessage();
+        }
+      }
+    }
+  }
+
+  handleData(data, info, context) {
+    const command = EIPPacket.Command(data);
+    const packet = EIPPacket.fromBuffer(data);
+
+    if (this._userCallbacks.has(command)) {
+      const callbacks = this._userCallbacks.get(command);
+      this._userCallbacks.delete(command);
+      callbacks.forEach(callback => {
+        callback.apply(this, [packet]);
+      });
+    } else if (this._callbacks.has(command)) {
+      this._callbacks.get(command)(packet);
+    } else {
+      console.log('EIP Error: Unhandled packet:');
+      console.log(packet);
+      console.log(this._callbacks);
+      console.log(data)
+    }
+  }
 }
 
 module.exports = EIPLayer;
+
+
+function setupCallbacks(self) {
+  self._callbacks = new Map();
+  self._userCallbacks = new Map();
+  self._unconnectedContexts = new Map();
+  self._connectedContexts = new Map();
+
+  self._callbacks.set(EIPCommands.RegisterSession, packet => {
+    // console.log('RegisterSession');
+    // console.log(packet);
+    if (packet.status.code === 0) {
+      self._connectionState = 2;
+      self._sessionHandle = packet.SessionHandle;
+      if (self._connectCallback) self._connectCallback();
+      self.sendNextMessage();
+      sendUserRequests(self);
+    } else {
+      self._connectionState = 0;
+    }
+  });
+
+  self._callbacks.set(EIPCommands.UnregisterSession, packet => {
+    // console.log('UnregisterSession');
+    self._connectionState = 0;
+    self._sessionHandle = 0;
+  });
+
+  self._callbacks.set(EIPCommands.SendRRData, packet => {
+    // console.log('SendRRData');
+
+    const info = { connected: false };
+    const senderContext = packet.SenderContext.toString('hex');
+    let context = null; // context can be null if only one upper layer
+    if (self._unconnectedContexts.has(senderContext)) {
+      context = self._unconnectedContexts.get(senderContext);
+      self._unconnectedContexts.delete(senderContext);
+    }
+    // else {
+    //   console.log('EIPLayer Error: no Sender Context available:');
+    //   console.log(packet);
+    //   console.log(senderContext);
+    //   console.log(self._unconnectedContexts);
+    // }
+
+    self.forward(packet.Items[1].data, info, context);
+  });
+
+  self._callbacks.set(EIPCommands.SendUnitData, packet => {
+    // console.log('SendUnitData');
+    if (packet.status.code === 0) {
+      const info = {
+        connected: true,
+        connectionID: packet.Items[0].address
+      };
+      const context = self._connectedContexts.get(info.connectionID);
+      self.forward(packet.Items[1].data, info, context);
+    } else {
+      console.log('EIPLayer Error: Packet Status:');
+      console.log(packet);
+    }
+  });
+}
+
+
+function incrementContext(self) {
+  for (let i = 0; i < 8; i++) {
+    self._context[i] = (self._context[i] + 1) % 0x100;
+    if (self._context[i] !== 0) break;
+  }
+}
 
 
 function queueUserRequest(self, buffer, callback) {
