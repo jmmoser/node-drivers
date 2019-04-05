@@ -8,7 +8,7 @@ const PCCCLayer = Drivers.Layers.PCCCLayer;
 const tcpLayer = new TCPLayer({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new EIPLayer(tcpLayer);
 const cipPCCCLayer = new CIPPCCCLayer(eipLayer);
-const plc5 = new cipPCCCLayer(cipPCCC);
+const plc5 = new PCCCLayer(cipPCCCLayer);
 
 plc5.typedRead('N10:47', function(err, value) {
   if (err) {

@@ -1,6 +1,7 @@
 node_modules/
-test/
-test.js
+test*
 
-playground.js
-tags*
+playground*
+
+examples/
+documents/
