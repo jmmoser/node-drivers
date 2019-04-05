@@ -223,54 +223,59 @@ class Logix5000 extends Layer {
     });
   }
 
-
-  listTags(callback, startInstanceID = 0) {
-    if (callback == null) return;
-
-    const BASE_ERROR = 'Logix5000 Error: List Tags: ';
-
-    const path = Buffer.from([
-      0x20, // Logical Segment - Class ID
-      0x6B, // Symbols
-      0x25, // Logical Segment - Instance ID
-      0x00,
-      0x00,
-      0x00
-    ]);
-
-    path.writeUInt16LE(startInstanceID, 4);
-
-    const attributes = [
-      0x01, // Attribute 1 - Symbol Name
-      0x02  // Attribute 2 - Symbol Type
-    ];
-
-    const data = Buffer.alloc(2 + attributes.length * 2);
-    data.writeUInt16LE(attributes.length, 0);
-    for (let i = 0; i < attributes.length; i++) {
-      data.writeUInt16LE(attributes[i], 2 * (i + 1));
-    }
-
-    const request = MessageRouter.Request(Classes.Symbol.Services.GetInstanceAttributeList, path, data);
-
-    this.send(request, null, false, this.contextCallback(message => {
-      const reply = MessageRouter.Reply(message);
-
-      const done = reply.status.code === 0;
-
-      if (!done && reply.status.code !== 6) {
-        return callback(`${BASE_ERROR}${reply.status.description}`);
-      }
-
-      const tags = parseListTagsResponse(reply, attributes);
-
-      const shouldContinue = callback(null, tags, done);
-
-      if (!done && shouldContinue === true && tags.length > 0) {
-        setImmediate(() => this.listTags(callback, tags[tags.length - 1].id + 1));
-      }
-    }));
+  listTags(callback) {
+    return Layer.CallbackPromise(callback, resolver => {
+      internalListTags(this, [], 0, resolver);
+    });
   }
+
+  // listTags(callback, startInstanceID = 0) {
+  //   if (callback == null) return;
+
+  //   const BASE_ERROR = 'Logix5000 Error: List Tags: ';
+
+  //   const path = Buffer.from([
+  //     0x20, // Logical Segment - Class ID
+  //     0x6B, // Symbols
+  //     0x25, // Logical Segment - Instance ID
+  //     0x00,
+  //     0x00,
+  //     0x00
+  //   ]);
+
+  //   path.writeUInt16LE(startInstanceID, 4);
+
+  //   const attributes = [
+  //     0x01, // Attribute 1 - Symbol Name
+  //     0x02  // Attribute 2 - Symbol Type
+  //   ];
+
+  //   const data = Buffer.alloc(2 + attributes.length * 2);
+  //   data.writeUInt16LE(attributes.length, 0);
+  //   for (let i = 0; i < attributes.length; i++) {
+  //     data.writeUInt16LE(attributes[i], 2 * (i + 1));
+  //   }
+
+  //   const request = MessageRouter.Request(Classes.Symbol.Services.GetInstanceAttributeList, path, data);
+
+  //   this.send(request, null, false, this.contextCallback(message => {
+  //     const reply = MessageRouter.Reply(message);
+
+  //     const done = reply.status.code === 0;
+
+  //     if (!done && reply.status.code !== 6) {
+  //       return callback(`${BASE_ERROR}${reply.status.description}`);
+  //     }
+
+  //     const tags = parseListTagsResponse(reply, attributes);
+
+  //     const shouldContinue = callback(null, tags, done);
+
+  //     if (!done && shouldContinue === true && tags.length > 0) {
+  //       setImmediate(() => this.listTags(callback, tags[tags.length - 1].id + 1));
+  //     }
+  //   }));
+  // }
 
 
   readTemplateInstanceAttributes(templateID, callback) {
@@ -351,18 +356,68 @@ class Logix5000 extends Layer {
 module.exports = Logix5000;
 
 
-function parseListTagsResponse(reply, attributes) {
-  const tags = [];
+
+function internalListTags(driver, tags, instanceID, resolver) {
+  const BASE_ERROR = 'Logix5000 Error: List Tags: ';
+
+  const path = Buffer.from([
+    0x20, // Logical Segment - Class ID
+    0x6B, // Symbols
+    0x25, // Logical Segment - Instance ID
+    0x00,
+    0x00,
+    0x00
+  ]);
+
+  path.writeUInt16LE(instanceID, 4);
+
+  const attributes = [
+    0x01, // Attribute 1 - Symbol Name
+    0x02  // Attribute 2 - Symbol Type
+  ];
+
+  const data = Buffer.alloc(2 + attributes.length * 2);
+  data.writeUInt16LE(attributes.length, 0);
+  for (let i = 0; i < attributes.length; i++) {
+    data.writeUInt16LE(attributes[i], 2 * (i + 1));
+  }
+
+  const request = MessageRouter.Request(Classes.Symbol.Services.GetInstanceAttributeList, path, data);
+
+  driver.send(request, null, false, driver.contextCallback(message => {
+    const reply = MessageRouter.Reply(message);
+
+    const done = reply.status.code === 0;
+
+    if (!done && reply.status.code !== 6) {
+      return resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+    }
+
+    const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
+
+    if (!done) {
+      setImmediate(() => internalListTags(driver, tags, lastInstanceID, resolver));
+    } else {
+      resolver.resolve(tags);
+    }
+  }));
+}
+
+
+function parseListTagsResponse(reply, attributes, tags) {
+  // const tags = [];
 
   const data = reply.data;
   const length = data.length;
 
   let offset = 0;
+  let lastInstanceID = 0;
   
   while (offset < length) {
     const tag = {};
 
     tag.id = data.readUInt32LE(offset); offset += 4;
+    lastInstanceID = tag.id;
 
     for (let i = 0; i < attributes.length; i++) {
       switch (attributes[i]) {
@@ -385,7 +440,8 @@ function parseListTagsResponse(reply, attributes) {
     } 
   }
 
-  return tags;
+  return lastInstanceID;
+  // return tags;
 }
 
 
