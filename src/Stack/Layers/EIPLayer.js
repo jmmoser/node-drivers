@@ -14,35 +14,31 @@ function SendData_Packet(interfaceHandle, timeout, data) {
 }
 
 function CPF_UCMM_Packet(data) {
-  let offset = 0;
-  const buffer = Buffer.alloc(data.length + 10);
-  buffer.writeUInt16LE(2, offset); offset += 2; // One address item and one data item
+  const buffer = Buffer.alloc(10 + data.length);
+  buffer.writeUInt16LE(2, 0); // One address item and one data item
 
-  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.NullAddress, offset); offset += 2; // AddressTypeID = 0 to indicate a UCMM message
-  buffer.writeUInt16LE(0, offset); offset += 2; // AddressLength = 0 since UCMM messages use the NULL address item
+  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.NullAddress, 2); // AddressTypeID = 0 to indicate a UCMM message
+  buffer.writeUInt16LE(0, 4); // AddressLength = 0 since UCMM messages use the NULL address item
 
-  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.UnconnectedMessage, offset); offset += 2; // DataTypeID = 0x00B2 to encapsulate the UCMM
-  buffer.writeUInt16LE(data.length, offset); offset += 2;
-  data.copy(buffer, offset);
+  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.UnconnectedMessage, 6); // DataTypeID = 0x00B2 to encapsulate the UCMM
+  buffer.writeUInt16LE(data.length, 8);
+  data.copy(buffer, 10);
 
   return buffer;
 }
 
 function CPF_Connected_Packet(connectionIdentifier, data) {
-  let offset = 0;
-  const buffer = Buffer.alloc(data.length + 14);
-  buffer.writeUInt16LE(2, offset); offset += 2;
-
-  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.ConnectionBased, offset); offset += 2;
-  buffer.writeUInt16LE(4, offset); offset += 2;
-  buffer.writeUInt32LE(connectionIdentifier, offset); offset += 4;
-
-  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.ConnectedMessage, offset); offset += 2;
-  buffer.writeUInt16LE(data.length, offset); offset += 2;
-  data.copy(buffer, offset);
-
+  const buffer = Buffer.alloc(14 + data.length);
+  buffer.writeUInt16LE(2, 0);
+  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.ConnectionBased, 2);
+  buffer.writeUInt16LE(4, 4);
+  buffer.writeUInt32LE(connectionIdentifier, 6);
+  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.ConnectedMessage, 10);
+  buffer.writeUInt16LE(data.length, 12);
+  data.copy(buffer, 14);
   return buffer;
 }
+
 
 function SendRRDataRequest(sessionHandle, senderContext, data) {
   // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
@@ -50,7 +46,7 @@ function SendRRDataRequest(sessionHandle, senderContext, data) {
   packet.Command = EIPCommands.SendRRData;
   packet.SessionHandle = sessionHandle;
   packet.SenderContext = senderContext;
-  packet.setData(SendData_Packet(0, 0, CPF_UCMM_Packet(data)));
+  packet.Data = SendData_Packet(0, 0, CPF_UCMM_Packet(data));
   return packet.toBuffer();
 }
 
@@ -58,7 +54,7 @@ function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connection
   const packet = new EIPPacket();
   packet.Command = EIPCommands.SendUnitData;
   packet.SessionHandle = sessionHandle;
-  packet.setData(SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data)));
+  packet.Data = SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data));
   return packet.toBuffer();
 }
 
@@ -67,20 +63,13 @@ class EIPLayer extends Layer {
   constructor(lowerLayer) {
     super(lowerLayer);
 
-    this._dataLength = 0;
-    this._data = Buffer.alloc(0);
     this._sessionHandle = 0;
-
     this._connectionState = 0;
 
     this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
 
     this._setupContext();
-
     this._setupCallbacks();
-
-    // this.connect();
-
     this._userRequests = [];
   }
 
@@ -201,7 +190,6 @@ class EIPLayer extends Layer {
     const self = this;
 
     this._callbacks = {};
-    // this._userCallbacks = {};
     this._userCallbacks = new Map();
     this._unconnectedContexts = {};
     this._connectedContexts = {};
@@ -224,8 +212,6 @@ class EIPLayer extends Layer {
       // console.log('UnregisterSession');
       this._connectionState = 0;
       this._sessionHandle = 0;
-
-      // this.connect();
     };
 
     this._callbacks[EIPCommands.SendRRData] = function(packet) {
@@ -378,7 +364,7 @@ class EIPLayer extends Layer {
     if (this._connectionState === 0 || this._connectionState === 2) {
       let buffer;
       while ((buffer = this._userRequests.shift())) {
-        // const command = EIPPacket.Command(buffer);
+        /* overwrite sessionHandle, CIP Vol 2 says it is ignored for some commands but I don't believe it is ignored if a session is established */
         buffer.writeUInt32LE(this._sessionHandle, 4);
         this.send(buffer, null, false);
       }
