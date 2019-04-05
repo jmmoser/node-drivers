@@ -25,7 +25,7 @@ class TCPLayer extends Layer {
 
     this.socket.on('error', (err) => {
       this._connectionState = 0;
-      console.log('TCPLayer ERROR: Connect error:');
+      console.log('TCPLayer Error:');
       console.log(err);
     });
 
@@ -36,11 +36,12 @@ class TCPLayer extends Layer {
     });
 
     this.socket.on('close', () => {
+      // console.log('TCPLayer closed')
       this._connectionState = 0;
     });
 
     this.socket.on('end', () => {
-      //
+      // console.log('TCPLayer ended')
     });
   }
 
@@ -50,27 +51,31 @@ class TCPLayer extends Layer {
 
   disconnect(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      if (this._connectionState !== 0) {
-        this._connectionState = 0;
-        this.socket.end();
-        this.socket.destroy();
-
-        this.socket = null;
+      if (this._connectionState > 0) {
+        this._connectionState = -1;
+        // this.socket.end(resolver.resolve);
+        this.socket.end(() => {
+          this.socket.destroy();
+          resolver.resolve();
+        });
+        // this.socket.destroy();
+        // this.socket = null;
+      } else if (this._connectionState === 0) {
+        resolver.resolve();
       }
-
-      resolver.resolve();
     });
   }
 
   sendNextMessage() {
-    const self = this;
-
-    if (self._connectionState === 2) {
-
-      let request = self.getNextRequest();
+    if (this._connectionState === 2) {
+      const request = this.getNextRequest();
       if (request) {
-        self.socket.write(request.message, function() {
-          self.sendNextMessage();
+        this.socket.write(request.message, (err) => {
+          if (err) {
+            console.log('TCPLayer WRITE ERROR:')
+            console.log(err);
+          }
+          this.sendNextMessage();
         });
       }
     }

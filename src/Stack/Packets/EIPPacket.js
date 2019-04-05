@@ -1,5 +1,7 @@
 'use strict';
 
+const { getBit } = require('../../util');
+
 /*
   Communication Profile Families
 
@@ -21,7 +23,7 @@
   CPF 16: SERCOS
 */
 
-const EIPCommands = {
+const Commands = {
   NOP: 0x0000,
   ListServices: 0x0004,
   ListIdentity: 0x0063,
@@ -72,9 +74,9 @@ class EIPPacket {
   }
 
   static fromBuffer(buffer) {
-    let command = EIPPacket.Command(buffer);
-    let packet = EIPPacket.BaseFromBuffer(buffer);
-    let replyParse = EIPReply[command];
+    const command = EIPPacket.Command(buffer);
+    const packet = EIPPacket.BaseFromBuffer(buffer);
+    const replyParse = EIPReply[command];
 
     if (packet.status.code === 0) {
       if (replyParse) {
@@ -90,7 +92,7 @@ class EIPPacket {
   }
 
   static BaseFromBuffer(buffer) {
-    let packet = new EIPPacket();
+    const packet = new EIPPacket();
     packet.Command = EIPPacket.Command(buffer);
     packet.Length = EIPPacket.DataLength(buffer);
     packet.SessionHandle = buffer.readUInt32LE(4);
@@ -109,7 +111,7 @@ class EIPPacket {
 
 
   toBuffer(opts) {
-    let buffer = Buffer.alloc(24 + this.Length);
+    const buffer = Buffer.alloc(24 + this.Length);
     buffer.writeUInt16LE(this.Command, 0);
     buffer.writeUInt16LE(this.Length, 2);
     buffer.writeUInt32LE(this.SessionHandle, 4);
@@ -117,7 +119,7 @@ class EIPPacket {
     this.SenderContext.copy(buffer, 12, 0, 8);
     buffer.writeUInt32LE(this.Options, 20);
     if (this.Length > 0 && this.Data && this.Data.length > 0) {
-      let length = this.Data.length < this.Length ? this.Data.length : this.Length;
+      const length = this.Data.length < this.Length ? this.Data.length : this.Length;
       this.Data.copy(buffer, 24, 0, length);
     }
     return buffer;
@@ -148,73 +150,105 @@ class EIPPacket {
 
 
   static UnregisterSessionRequest(sessionHandle, senderContext) {
-    let packet = new EIPPacket();
-    packet.Command = EIPCommands.RegisterSession;
-    packet.SessionHandle = sessionHandle;
-    packet.SenderContext = senderContext;
-    return packet.toBuffer();
+    return toBuffer(Commands.UnregisterSession, sessionHandle, 0, senderContext, 0, []);
+    // const packet = new EIPPacket();
+    // packet.Command = Commands.RegisterSession;
+    // packet.SessionHandle = sessionHandle;
+    // packet.SenderContext = senderContext;
+    // return packet.toBuffer();
   }
 
   static RegisterSessionRequest(senderContext) {
-    let packet = new EIPPacket();
-    packet.Command = EIPCommands.RegisterSession;
-    packet.SenderContext = senderContext;
-    packet.setData(Buffer.from([0x01, 0x00, 0x00, 0x00])); // Protocol Version
-    return packet.toBuffer();
+    return toBuffer(
+      Commands.RegisterSession,
+      0,
+      0,
+      senderContext,
+      0,
+      Buffer.from([0x01, 0x00, 0x00, 0x00]) // Protocol Version
+    );
+    // const packet = new EIPPacket();
+    // packet.Command = Commands.RegisterSession;
+    // packet.SenderContext = senderContext;
+    // packet.setData(Buffer.from([0x01, 0x00, 0x00, 0x00])); // Protocol Version
+    // return packet.toBuffer();
   }
 
 
-  static ListIndentityRequest() {
-    let packet = new EIPPacket();
-    packet.Command = EIPCommands.ListIdentity;
-    return packet.toBuffer();
+  static ListIdentityRequest() {
+    return toBuffer(Commands.ListIdentity, 0, 0, NullSenderContext, 0, []);
+    // const packet = new EIPPacket();
+    // packet.Command = Commands.ListIdentity;
+    // return packet.toBuffer();
   }
 
 
   static ListServicesRequest(senderContext) {
-    let packet = new EIPPacket();
-    packet.Command = EIPCommands.ListServices;
-    packet.SenderContext = senderContext;
-    return packet.toBuffer();
+    return toBuffer(Commands.ListServices, 0, 0, senderContext, 0, []);
+    // const packet = new EIPPacket();
+    // packet.Command = Commands.ListServices;
+    // packet.SenderContext = senderContext;
+    // return packet.toBuffer();
   }
 
   static ListInterfacesRequest() {
-    let packet = new EIPPacket();
-    packet.Command = EIPCommands.ListInterfaces;
-    return packet.toBuffer();
+    return toBuffer(Commands.ListInterfaces, 0, 0, NullSenderContext, 0, []);
+    // const packet = new EIPPacket();
+    // packet.Command = Commands.ListInterfaces;
+    // return packet.toBuffer();
   }
 
   static NOPRequest() {
-    let packet = new EIPPacket();
-    packet.Command = EIPCommands.NOP;
-    return packet.toBuffer();
+    return toBuffer(Commands.NOP, 0, 0, NullSenderContext, 0, []);
+
+    // const packet = new EIPPacket();
+    // packet.Command = Commands.NOP;
+    // return packet.toBuffer();
   }
 }
 
-EIPPacket.Commands = EIPCommands;
+EIPPacket.Commands = Commands;
 EIPPacket.CPFItemIDs = CPFItemIDs;
 
 module.exports = EIPPacket;
 
 
+function toBuffer(command, handle, status, context, options, data = []) {
+  const length = data.length;
+  const buffer = Buffer.alloc(24 + length);
+  buffer.writeUInt16LE(command, 0);
+  buffer.writeUInt16LE(data.length, 2);
+  buffer.writeUInt32LE(handle, 4);
+  buffer.writeUInt32LE(status, 8);
+  context.copy(buffer, 12, 0, 8);
+  buffer.writeUInt32LE(options, 20);
+  if (length > 0) {
+    data.copy(buffer, 24, 0, length);
+    // const dataLength = data.length < length ? data.length : length;
+    // data.copy(buffer, 24, 0, dataLength);
+  }
+  return buffer;
+}
+
+
 const EIPReply = {};
 
-EIPReply[EIPCommands.ListServices] = function(packet) {
+EIPReply[Commands.ListServices] = function(packet) {
   let offset = 0;
-  let data = packet.Data;
-  let itemCount = data.readUInt16LE(offset); offset += 2;
+  const data = packet.Data;
+  const itemCount = data.readUInt16LE(offset); offset += 2;
   packet.Items = [];
   for (let i = 0; i < itemCount; i++) {
-    let item = {};
+    const item = {};
     item.Type = data.readUInt16LE(offset); offset += 2;
     item.Length = data.readUInt16LE(offset); offset += 2;
     item.Version = data.readUInt16LE(offset); offset += 2;
     // item.Flags = data.readUInt16LE(offset); offset += 2;
     item.Flags = {};
-    let flags = data.readUInt16LE(offset); offset += 2;
+    const flags = data.readUInt16LE(offset); offset += 2;
     item.Flags.Value = flags;
-    item.Flags.Supports_CIP_Packet_Encapsulation_Via_TCP = !!((1 << 5) & flags);
-    item.Flags.Supports_CIP_Class_0_or_1_UDP_Based_Connectsion = !!((1 << 8) & flags);
+    item.Flags.SupportsCIPPacketEncapsulationViaTCP = !!getBit(flags, 5);
+    item.Flags.SupportsCIPClass0or1UDPBasedConnections = !!getBit(flags, 8);
 
     let serviceName = '';
     for (let j = 0; j < 16; j++) {
@@ -232,12 +266,12 @@ EIPReply[EIPCommands.ListServices] = function(packet) {
 
 function ReadCPFPacket(packet, cb) {
   let offset = 0;
-  let buffer = packet.Data;
+  const buffer = packet.Data;
   packet.Items = [];
-  let itemCount = buffer.readUInt16LE(offset); offset += 2;
+  const itemCount = buffer.readUInt16LE(offset); offset += 2;
 
   for (let i = 0; i < itemCount; i++) {
-    let item = {};
+    const item = {};
     item.Type = buffer.readUInt16LE(offset); offset += 2;
     let length = buffer.readUInt16LE(offset); offset += 2;
     // cb(item, length, buffer.slice(offset, offset + length));
@@ -247,12 +281,12 @@ function ReadCPFPacket(packet, cb) {
   }
 }
 
-EIPReply[EIPCommands.ListIdentity] = function(packet) {
+EIPReply[Commands.ListIdentity] = function(packet) {
   ReadCPFPacket(packet, function(item, length, offset, buffer) {
     if (item.Type === CPFItemIDs.ListIdentity) {
        // Number of bytes in item which follow (length varies depending on Product Name string)
 
-      let itemDataOffset = offset;
+      const itemDataOffset = offset;
       item.EncapsulationProtocolVersion = buffer.readUInt16LE(offset); offset += 2;
 
       const socketAddress = {};
@@ -292,16 +326,16 @@ EIPReply[EIPCommands.ListIdentity] = function(packet) {
   });
 };
 
-EIPReply[EIPCommands.RegisterSession] = function(packet) {
+EIPReply[Commands.RegisterSession] = function(packet) {
   let offset = 0;
-  let data = packet.Data;
+  const data = packet.Data;
   packet.Protocol = data.readUInt16LE(offset); offset += 2;
   packet.Flags = data.readUInt16LE(offset); offset += 2;
   return packet;
 };
 
 
-EIPReply[EIPCommands.ListInterfaces] = function(packet) {
+EIPReply[Commands.ListInterfaces] = function(packet) {
   ReadCPFPacket(packet, function(item, length, offset, buffer) {
     item.Data = buffer.slice(offset, offset + length);
     // this needs more work
@@ -315,8 +349,8 @@ EIPReply[EIPCommands.ListInterfaces] = function(packet) {
 // EIP-CIP-V1 2-7.3.1, page 2-21
 // When used to encapsulate CIP, the format of the "data" field is
 // that of a Message Router request or Message Router reply.
-EIPReply[EIPCommands.SendRRData] = function(packet) {
-  let data = packet.Data;
+EIPReply[Commands.SendRRData] = function(packet) {
+  const data = packet.Data;
   packet.InterfaceHandle = data.readUInt32LE(0); // shall be 0 for CIP
   packet.Timeout = data.readUInt16LE(4); // not used for reply
   packet.Data = packet.Data.slice(6);
@@ -328,8 +362,8 @@ EIPReply[EIPCommands.SendRRData] = function(packet) {
   });
 };
 
-EIPReply[EIPCommands.SendUnitData] = function(packet) {
-  let data = packet.Data;
+EIPReply[Commands.SendUnitData] = function(packet) {
+  const data = packet.Data;
   packet.InterfaceHandle = data.readUInt32LE(0); // shall be 0 for CIP
   packet.Timeout = data.readUInt16LE(4); // not used for reply
   packet.Data = packet.Data.slice(6);
@@ -343,17 +377,17 @@ EIPReply[EIPCommands.SendUnitData] = function(packet) {
   });
 };
 
-const CPFItemIDDescriptions = {
-  0x0000: 'Null (used for UCMM messages).  Indicates that encapsulation routing is NOT needed.  Target is either local (ethernet) or routing info is in a data Item.',
-  0x000C: 'ListIdentity response',
-  0x00A1: 'Connection-based (used for connected messages)',
-  0x00B1: 'Connected Transport packet',
-  0x00B2: 'Unconnected message',
-  0x0100: 'ListServices response',
-  0x8000: 'Sockaddr Info, originator-to-target',
-  0x8001: 'Sockaddr Info, target-to-originator',
-  0x8002: 'Sequenced Address item'
-};
+// const CPFItemIDDescriptions = {
+//   0x0000: 'Null (used for UCMM messages).  Indicates that encapsulation routing is NOT needed.  Target is either local (ethernet) or routing info is in a data Item.',
+//   0x000C: 'ListIdentity response',
+//   0x00A1: 'Connection-based (used for connected messages)',
+//   0x00B1: 'Connected Transport packet',
+//   0x00B2: 'Unconnected message',
+//   0x0100: 'ListServices response',
+//   0x8000: 'Sockaddr Info, originator-to-target',
+//   0x8001: 'Sockaddr Info, target-to-originator',
+//   0x8002: 'Sequenced Address item'
+// };
 
 const EIPStatusCodeDescriptions = {
   0x0000: 'Success',

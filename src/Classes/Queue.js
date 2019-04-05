@@ -14,6 +14,10 @@ class Queue {
     }
   }
 
+  hasNext() {
+    return this._priorityQueue.length > 0 || this._queue.length > 0;
+  }
+
   getNext() {
     const obj = this._priorityQueue.shift();
     if (obj) return obj;

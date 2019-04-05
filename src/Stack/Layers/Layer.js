@@ -109,6 +109,10 @@ class Layer {
     transport.sendNextMessage();
   }
 
+  hasRequest() {
+    return this._queue.hasNext();
+  }
+
   getNextRequest() {
     return this._queue.getNext();
   }
