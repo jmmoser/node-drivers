@@ -24,8 +24,6 @@ class PCCCPacket {
 
     let offset = 0;
     packet.service = buffer.readUInt8(offset); offset += 1;
-    // packet.PathSize = 2 * buffer.readUInt8(offset); offset += 1; // PathSize is in bytes here
-    // packet.Path = buffer.slice(offset, offset + packet.PathSize); offset += packet.PathSize;
     const pathSize = 2 * buffer.readUInt8(offset); offset += 1;
     packet.path = buffer.slice(offset, offset + pathSize); offset += pathSize;
     const requestorIDLength = buffer.readUInt8(offset); offset += 1;
@@ -66,13 +64,6 @@ class PCCCPacket {
   }
 
   toBuffer() {
-    // let offset = 0;
-    // const buffer = Buffer.alloc(4 + this.data.length);
-    // buffer.writeUInt8(this.command, offset); offset += 1;
-    // buffer.writeUInt8(this.status.code, offset); offset += 1;
-    // buffer.writeUInt16LE(this.transaction, offset); offset += 2;
-    // this.data.copy(buffer, offset); offset += this.data.length;
-    // return buffer;
     return toBuffer(
       this.command,
       this.status.code,
@@ -84,15 +75,6 @@ class PCCCPacket {
   static toBuffer(command, status, transaction, data) {
     return toBuffer(command, status, transaction, data);
   }
-
-  // static toBuffer(command, status, transaction, data) {
-  //   const buffer = Buffer.alloc(4 + data.length);
-  //   buffer.writeUInt8(command, 0);
-  //   buffer.writeUInt8(status, 1);
-  //   buffer.writeUInt16LE(transaction, 2);
-  //   data.copy(buffer, 4);
-  //   return buffer;
-  // }
 
 
   static WordRangeReadRequest(transaction, address) {
@@ -113,28 +95,6 @@ class PCCCPacket {
     packet.data = data.slice(0, offset);
     return packet.toBuffer();
   }
-
-  // static WordRangeReadRequest(transaction, address) {
-  //   let packet = new PCCCPacket();
-  //   packet.command = 0x0F;
-  //   packet.transaction = transaction;
-
-  //   let data = Buffer.alloc(200);
-  //   let offset = 0;
-  //   data.writeUInt8(0x01, offset); offset += 1; // Function
-  //   offset += 2; // Packet Offset
-  //   data.writeUInt16LE(1, offset); offset += 2; // Total Trans
-  //   offset += logicalASCIIAddress(address, data.slice(offset)); // PLC system address
-  //   let info = logicalASCIIAddressInfo(address);
-
-  //   if (info) {
-  //     data.writeUInt8(info.size, offset); offset += 1;
-  //   } else {
-  //     return null;
-  //   }
-  //   packet.data = data.slice(0, offset);
-  //   return packet.toBuffer();
-  // }
 
   static WordRangeReadReply(buffer) {
     // I believe there is a mistake in the DF1 manual,
@@ -161,6 +121,7 @@ class PCCCPacket {
   static ParseTypedReadData(data) {
     return TypedReadReplyParser(data);
   }
+  
 
   static TypedWriteRequest(transaction, address, values) {
     const packet = new PCCCPacket(0x0F, 0, transaction);
