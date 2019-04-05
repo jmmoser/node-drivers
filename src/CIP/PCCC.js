@@ -7,10 +7,6 @@ const MessageRouter = require('./Objects/MessageRouter');
 class PCCC extends Layer {
   constructor(lowerLayer, options) {
     super(lowerLayer);
-    this._mergeOptions(options);
-  }
-
-  _mergeOptions(options) {
     options = options || {};
     this.options = {
       vendorID: options.vendorID || 0x0001,

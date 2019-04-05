@@ -202,7 +202,8 @@ class EIPLayer extends Layer {
         this._sessionHandle = packet.SessionHandle;
         if (this._connectCallback) this._connectCallback();
         this.sendNextMessage();
-        this._sendUserRequests();
+        // this._sendUserRequests();
+        sendUserRequests(this);
       } else {
         this._connectionState = 0;
       }
@@ -256,14 +257,17 @@ class EIPLayer extends Layer {
   }
 
 
-  NOP() {
-    // no response so callback will never be called
-    this._sendUserRequest(EIPPacket.NOPRequest());
+  nop(callback) {
+    // no response, used to test underlying transport layer
+    return Layer.CallbackPromise(callback, resolver => {
+      queueUserRequest(this, EIPPacket.NOPRequest());
+      resolver.resolve();
+    });
   }
 
-  ListServices(callback) {
+  listServices(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      this._sendUserRequest(EIPPacket.ListServicesRequest(this._context), function(reply) {
+      queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), function(reply) {
         if (reply.status.code !== 0) {
           resolver.reject(reply.status.description, reply);
         } else {
@@ -277,9 +281,9 @@ class EIPLayer extends Layer {
     });
   }
 
-  ListIdentity(callback) {
+  listIdentity(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      this._sendUserRequest(EIPPacket.ListIdentityRequest(), function(reply) {
+      queueUserRequest(this, EIPPacket.ListIdentityRequest(), function(reply) {
         if (reply.status.code !== 0) {
           resolver.reject(reply.status.description, reply);
         } else {
@@ -293,9 +297,9 @@ class EIPLayer extends Layer {
     });
   }
 
-  ListInterfaces(callback) {
+  listInterfaces(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      this._sendUserRequest(EIPPacket.ListInterfacesRequest(), function (reply) {
+      queueUserRequest(this, EIPPacket.ListInterfacesRequest(), function (reply) {
         if (reply.status.code !== 0) {
           resolver.reject(reply.status.description, reply);
         } else {
@@ -308,91 +312,34 @@ class EIPLayer extends Layer {
       });
     });
   }
-
-  // NOP(callback) {
-  //   // no response so callback will never be called
-  //   this._sendUserRequest(EIPPacket.NOPRequest(), callback);
-  // }
-
-  // ListServices(callback) {
-  //   this._sendUserRequest(EIPPacket.ListServicesRequest(this._context), callback);
-  // }
-
-  // ListIdentity(callback) {
-  //   this._sendUserRequest(EIPCommands.ListIdentity, EIPPacket.ListIdentityRequest(), callback);
-  // }
-
-  // ListInterfaces(callback) {
-  //   this._sendUserRequest(EIPPacket.ListInterfacesRequest(), callback);
-  // }
-
-  _sendUserRequest(buffer, callback) {
-    const command = EIPPacket.Command(buffer);
-
-    if (callback) {
-      /* no callback for NOP */
-      if (!this._userCallbacks.has(command)) {
-        this._userCallbacks.set(command, []);
-      }
-      this._userCallbacks.get(command).push(callback);
-    }
-
-    this._userRequests.push(buffer);
-    this._sendUserRequests();
-
-    // if (this._connectionState === 1) {
-    //   this._userRequests.push({
-    //     buffer,
-    //     callback
-    //   });
-    //   return;
-    // }
-
-
-    // this._incrementContext();
-    // // this._userCallbacks[EIPPacket.Command(buffer)] = callback;
-
-    // if (!callback) return;
-
-    // console.log(this._sessionHandle);
-    // buffer.writeUInt32LE(this._sessionHandle, 4);
-
-    // this.send(buffer, null, false);
-  }
-
-  _sendUserRequests() {
-    if (this._connectionState === 0 || this._connectionState === 2) {
-      let buffer;
-      while ((buffer = this._userRequests.shift())) {
-        /* overwrite sessionHandle, CIP Vol 2 says it is ignored for some commands but I don't believe it is ignored if a session is established */
-        buffer.writeUInt32LE(this._sessionHandle, 4);
-        this.send(buffer, null, false);
-      }
-    }
-  }
-
-  // _sendUserRequest(buffer, callback) {
-  //   this._incrementContext();
-  //   // this._userCallbacks[command] = callback;
-  //   this._userCallbacks[EIPPacket.Command(buffer)] = callback;
-  //   if (!callback) return;
-
-  //   console.log(this._sessionHandle);
-  //   buffer.writeUInt32LE(this._sessionHandle, 4);
-
-  //   this.send(buffer, null, false);
-  // }
 }
 
-// function printBuffer(buffer) {
-//   console.log('');
-//   console.log('********');
-//   let i = 0;
-//   while (i < buffer.length) {
-//     console.log(buffer.slice(i, i + 8));
-//     i += 8;
-//   }
-//   console.log('********');
-// }
-
 module.exports = EIPLayer;
+
+
+function queueUserRequest(self, buffer, callback) {
+  const command = EIPPacket.Command(buffer);
+
+  if (callback) {
+    /* no callback for NOP */
+    if (!self._userCallbacks.has(command)) {
+      self._userCallbacks.set(command, []);
+    }
+    self._userCallbacks.get(command).push(callback);
+  }
+
+  self._userRequests.push(buffer);
+  sendUserRequests(self);
+}
+
+
+function sendUserRequests(self) {
+  if (self._connectionState === 0 || self._connectionState === 2) {
+    let buffer;
+    while ((buffer = self._userRequests.shift())) {
+      /* overwrite sessionHandle, CIP Vol 2 says it is ignored for some commands but I don't believe it is ignored if a session is established */
+      buffer.writeUInt32LE(self._sessionHandle, 4);
+      self.send(buffer, null, false);
+    }
+  }
+}
