@@ -265,12 +265,12 @@ class EIPLayer extends Layer {
     return Layer.CallbackPromise(callback, resolver => {
       this._sendUserRequest(EIPPacket.ListServicesRequest(this._context), function(reply) {
         if (reply.status.code !== 0) {
-          resolver.reject({ message: reply.status.description, info: reply });
+          resolver.reject(reply.status.description, reply);
         } else {
           if (Array.isArray(reply.Items)) {
             resolver.resolve(reply.Items);
           } else {
-            resolver.reject({ message: 'Unexpected result', info: reply });
+            resolver.reject('Unexpected result', reply);
           }
         }
       });
@@ -281,12 +281,12 @@ class EIPLayer extends Layer {
     return Layer.CallbackPromise(callback, resolver => {
       this._sendUserRequest(EIPPacket.ListIdentityRequest(), function(reply) {
         if (reply.status.code !== 0) {
-          resolver.reject({ message: reply.status.description, info: reply });
+          resolver.reject(reply.status.description, reply);
         } else {
           if (Array.isArray(reply.Items) && reply.Items.length === 1) {
             resolver.resolve(reply.Items[0]);
           } else {
-            resolver.reject({ message: 'Unexpected result', info: reply });
+            resolver.reject('Unexpected result', reply);
           }
         }
       });
@@ -297,12 +297,12 @@ class EIPLayer extends Layer {
     return Layer.CallbackPromise(callback, resolver => {
       this._sendUserRequest(EIPPacket.ListInterfacesRequest(), function (reply) {
         if (reply.status.code !== 0) {
-          resolver.reject({ message: reply.status.description, info: reply });
+          resolver.reject(reply.status.description, reply);
         } else {
           if (Array.isArray(reply.Items)) {
             resolver.resolve(reply.Items);
           } else {
-            resolver.reject({ message: 'Unexpected result', info: reply });
+            resolver.reject('Unexpected result', reply);
           }
         }
       });

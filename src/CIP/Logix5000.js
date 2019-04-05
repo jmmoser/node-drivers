@@ -69,7 +69,7 @@ class Logix5000 extends Layer {
         if (reply.status.code === 0) {
           resolver.resolve();
         } else {
-          resolver.reject({ message: reply.status.description, info: reply });
+          resolver.reject(reply.status.description, reply);
         }
       }));
     });
@@ -137,7 +137,7 @@ class Logix5000 extends Layer {
         if (reply.status.code === 0) {
           resolver.resolve();
         } else {
-          resolver.reject({ message: reply.status.description, info: reply });
+          resolver.reject(reply.status.description, reply);
         }
       }));
     });

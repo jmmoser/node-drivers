@@ -81,6 +81,10 @@ class PCCCPacket {
     );
   }
 
+  static toBuffer(command, status, transaction, data) {
+    return toBuffer(command, status, transaction, data);
+  }
+
   // static toBuffer(command, status, transaction, data) {
   //   const buffer = Buffer.alloc(4 + data.length);
   //   buffer.writeUInt8(command, 0);
