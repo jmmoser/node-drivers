@@ -1,79 +1,148 @@
 'use strict';
 
 const MessageRouter = require('./Objects/MessageRouter');
-
-const modbusPath = Buffer.from([0x20, 0x67, 0x24, 0x01]);
-
 const Layer = require('./../Stack/Layers/Layer');
 
+const MODBUS_EPATH = Buffer.from([0x20, 0x44, 0x24, 0x01]);
+
+
 class Modbus extends Layer {
-  ReadDiscreteInputs(address, count) {
-    let buffer = Buffer.alloc(4);
-    buffer.writeUInt16LE(address, 0); // offset in table to begin reading
-    buffer.writeUInt16LE(count, 2); // number of inputs to read
-    let request = MessageRouter.Request(Services.ReadDiscreteInputs, modbusPath, buffer);
+  readDiscreteInputs(address, count, callback) {
     // response - input values, array of octet, each input is packed as a bit within a byte
+    return Layer.CallbackPromise(callback, resolver => {
+      const buffer = Buffer.alloc(4);
+      buffer.writeUInt16LE(address, 0); // offset in table to begin reading
+      buffer.writeUInt16LE(count, 2); // number of inputs to read
+
+      __send(this, Services.ReadDiscreteInputs, buffer, reply => {
+        if (reply.status.code !== 0) {
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+        } else {
+          resolver.resolve(reply.data);
+        }
+      });
+    });
   }
 
-  ReadCoils(address, count) {
-    let buffer = Buffer.alloc(4);
-    buffer.writeUInt16LE(address, 0);
-    buffer.writeUInt16LE(address, 2);
-    let request = MessageRouter.Request(Services.ReadCoils, modbusPath, buffer);
+  readCoils(address, count, callback) {
     // response - coil status, array of octet, each coil is packed as a bit within a byte
+    return Layer.CallbackPromise(callback, resolver => {
+      const buffer = Buffer.alloc(4);
+      buffer.writeUInt16LE(address, 0);
+      buffer.writeUInt16LE(count, 2);
+
+      __send(this, Services.ReadCoils, buffer, reply => {
+        if (reply.status.code !== 0) {
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+        } else {
+          resolver.resolve(reply.data);
+        }
+      });
+    });
   }
 
-  ReadInputRegisters(address, count) {
-    let buffer = Buffer.alloc(4);
-    buffer.writeUInt16LE(address, 0);
-    buffer.writeUInt16LE(count, 2);
-    let request = MessageRouter.Request(Services.ReadInputRegisters, modbusPath, buffer);
-    // response - input register values, array of 16-bit word, input registers read
+  readInputRegisters(address, count, callback) {
+    // response - input register values, array of 16-bit words, input registers read
+    return Layer.CallbackPromise(callback, resolver => {
+      const buffer = Buffer.alloc(4);
+      buffer.writeUInt16LE(address, 0);
+      buffer.writeUInt16LE(count, 2);
+
+      __send(this, Services.ReadInputRegisters, buffer, reply => {
+        if (reply.status.code !== 0) {
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+        } else {
+          resolver.resolve(reply.data);
+        }
+      });
+    });
   }
 
-  ReadHoldingRegisters(address, count) {
-    let buffer = Buffer.alloc(4);
-    buffer.writeUInt16LE(address, 0);
-    buffer.writeUInt16LE(count, 2);
-    let request = MessageRouter.Request(Services.ReadHoldingRegisters, modbusPath, buffer);
-    // response - holding register values, array of 16-bit word, holding register values read
+  readHoldingRegisters(address, count, callback) {
+    return Layer.CallbackPromise(callback, resolver => {
+      const buffer = Buffer.alloc(4);
+      buffer.writeUInt16LE(address, 0);
+      buffer.writeUInt16LE(count, 2);
+
+      __send(this, Services.ReadHoldingRegisters, buffer, reply => {
+        if (reply.status.code !== 0) {
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+        } else {
+          resolver.resolve(reply.data);
+        }
+      });
+    });
   }
 
-  WriteCoils(address, values) {
-    let buffer = Buffer.alloc(4 + values.length);
-    buffer.writeUInt16LE(address, 0);
-    buffer.writeUInt16LE(count, 2);
-    for (let i = 0; i < values.length; i++) {
-      buffer.writeUInt8(values[i], 4 + i);
-    }
-    let request = MessageRouter.Request(Services.WriteCoils, modbusPath, buffer);
+  writeCoils(address, values, callback) {
     // response - Starting Address, UINT, offset in table where writing began
     // response - Quantity of Outputs, UINT, number of outputs forced
+    return Layer.CallbackPromise(callback, resolver => {
+      const buffer = Buffer.alloc(4 + values.length);
+      buffer.writeUInt16LE(address, 0);
+      buffer.writeUInt16LE(count, 2);
+      for (let i = 0; i < values.length; i++) {
+        buffer.writeUInt8(values[i], 4 + i);
+      }
+
+      __send(this, Services.WriteCoils, buffer, reply => {
+        if (reply.status.code !== 0) {
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+        } else {
+          resolver.resolve(reply.data);
+        }
+      });
+    });
   }
 
-  WriteHoldingRegisters(address, values) {
-    let buffer = Buffer.alloc(4 + 2 * values.length);
-    buffer.writeUInt16LE(address, 0);
-    buffer.writeUInt16LE(values.length, 2);
-    for (let i = 0; i < values.length; i++) {
-      buffer.writeUInt16LE(values[i]);
-    }
-    let request = MessageRouter.Request(Services.WriteHoldingRegisters, modbusPath, buffer);
+  writeHoldingRegisters(address, values, callback) {
     // response - Starting Address, UINT, offset in table where writing began
     // response - Quantity of Outputs, UINT, number of outputs forced
+    return Layer.CallbackPromise(callback, resolver => {
+      const buffer = Buffer.alloc(4 + 2 * values.length);
+      buffer.writeUInt16LE(address, 0);
+      buffer.writeUInt16LE(values.length, 2);
+      for (let i = 0; i < values.length; i++) {
+        buffer.writeUInt16LE(values[i]);
+      }
+
+      __send(this, Services.WriteHoldingRegisters, buffer, reply => {
+        if (reply.status.code !== 0) {
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+        } else {
+          resolver.resolve(reply.data);
+        }
+      });
+    });
   }
 
-  Passthrough(functionCode, data) {
-    let buffer = Buffer.concat(Buffer.from([functionCode], data));
-    let request = MessageRouter.Request(Services.Passthrough, modbusPath, buffer);
+  passthrough(functionCode, data, callback) {
     // response - function code or exception code, USINT, function code of the modbus response
     // response - data response, array of octet, parameter data for the modbus function response, this may include sub-function codes
+    return Layer.CallbackPromise(callback, resolver => {
+      const buffer = Buffer.concat([Buffer.from([functionCode]), data]);
+
+      __send(this, Services.Passthrough, buffer, reply => {
+        if (reply.status.code !== 0) {
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+        } else {
+          resolver.resolve(reply.data);
+        }
+      });
+    });
   }
 }
 
 module.exports = Modbus;
 
 Modbus.Code = 0x44;
+
+function __send(driver, service, data, callback) {
+  const request = MessageRouter.Request(service, MODBUS_EPATH, data);
+  driver.send(request, null, false, this.contextCallback(function(message) {
+    callback(MessageRouter.Reply(message));
+  }));
+}
 
 const Services = {
   ReadDiscreteInputs: 0x4B,

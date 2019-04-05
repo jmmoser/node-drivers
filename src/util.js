@@ -25,8 +25,9 @@ function CallbackPromise(callback, func, timeout) {
           resolve(res);
         }
       },
-      reject: function (err) {
+      reject: function (message, info) {
         if (active) {
+          const err = { message, info };
           active = false;
           clearInterval(timeoutHandle);
           if (hasCallback) {
@@ -41,8 +42,7 @@ function CallbackPromise(callback, func, timeout) {
 
     if (typeof timeout === 'number' && timeout >= 0) {
       timeoutHandle = setTimeout(function() {
-        console.log('TIMED OUT!!!')
-        resolver.reject({ message: 'Timeout' });
+        resolver.reject('Timeout');
       }, parseInt(number, 10));
     }
 

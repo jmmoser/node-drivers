@@ -47,89 +47,100 @@ class Logix5000 extends Layer {
 
 
   writeTag(address, value, callback) {
-    const BASE_ERROR = 'Logix5000 Error: Write Tag: ';
-    if (!address) {
-      if (callback != null) {
-        callback(`${BASE_ERROR}Address must be specified`);
+    return Layer.CallbackPromise(callback, resolver => {
+      const BASE_ERROR = 'Logix5000 Error: Write Tag: ';
+      if (!address) {
+        resolver.reject(`${BASE_ERROR}Address must be specified`)
+        return;
       }
-      return;
-    }
 
-    const path = MessageRouter.ANSIExtSymbolSegment(address);
-    const data = Buffer.alloc(8);
+      const path = MessageRouter.ANSIExtSymbolSegment(address);
+      const data = Buffer.alloc(8);
 
-    data.writeUInt16LE(CIP.DataType.REAL, 0);
-    data.writeUInt16LE(1, 2);
-    data.writeFloatLE(value, 4);
+      data.writeUInt16LE(CIP.DataType.REAL, 0);
+      data.writeUInt16LE(1, 2);
+      data.writeFloatLE(value, 4);
 
-    const request = MessageRouter.Request(Services.WriteTag, path, data);
+      const request = MessageRouter.Request(Services.WriteTag, path, data);
 
-    this.send(request, null, false, this.contextCallback(function(message) {
-      const reply = MessageRouter.Reply(message);
-      if (callback != null) callback(null, reply);
-    }));
+      this.send(request, null, false, this.contextCallback(function (message) {
+        const reply = MessageRouter.Reply(message);
+        // if (callback != null) callback(null, reply);
+        if (reply.status.code === 0) {
+          resolver.resolve();
+        } else {
+          resolver.reject({ message: reply.status.description, info: reply });
+        }
+      }));
+    });
   }
 
 
   readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
-    const BASE_ERROR = 'Logix5000 Error: Read Modify Write Tag: ';
-    if (!address) {
-      if (callback != null) {
-        callback(`${BASE_ERROR}Address must be specified`);
+    return Layer.CallbackPromise(callback, resolver => {
+      const BASE_ERROR = 'Logix5000 Error: Read Modify Write Tag: ';
+      if (!address) {
+        return resolver.reject(
+          `${BASE_ERROR}Address must be specified`
+        );
       }
-      return;
-    }
 
-    if (
-      Array.isArray(ORmasks) === false && Buffer.isBuffer(ORmasks) === false
-      || Array.isArray(ANDmasks) === false && Buffer.isBuffer(ANDmasks) === false
-    ) {
-      callback(`${BASE_ERROR}OR masks and AND masks must be either an array or a buffer`);
-      return;
-    }
-
-    if (ORmasks.length !== ANDmasks.length) {
-      callback(`${BASE_ERROR}Length of OR masks must be equal to length of AND masks`);
-      return;
-    }
-
-    const sizeOfMasks = ORmasks.length;
-
-    const ACCEPTABLE_SIZE_OF_MASKS = new Set([1, 2, 4, 8, 12]);
-
-    if (ACCEPTABLE_SIZE_OF_MASKS.has(sizeOfMasks) === false) {
-      if (callback != null) {
-        callback(`${BASE_ERROR}Size of masks is not valid. Valid lengths are 1, 2, 4, 8, and 12`);
-      }
-    }
-
-    for (let i = 0; i < sizeOfMasks; i++) {
       if (
-        ORmasks[i] < 0 || ORmasks > 0xFF
-        || ANDmasks[i] < 0 || ANDmasks > 0xFF
+        !Array.isArray(ORmasks) && !Buffer.isBuffer(ORmasks)
+        || !Array.isArray(ANDmasks) && !Buffer.isBuffer(ANDmasks)
       ) {
-        callback(`${BASE_ERROR}Values in masks must be greater than or equal to zero and less than or equal to 255`);
-        return;
+        return resolver.reject(
+          `${BASE_ERROR}OR masks and AND masks must be either an array or a buffer`
+        );
       }
-    }
 
-    const code = Services.ReadModifyWriteTag
-    const path = MessageRouter.ANSIExtSymbolSegment(address);
-    const data = Buffer.alloc(2 + 2 * sizeOfMasks);
+      if (ORmasks.length !== ANDmasks.length) {
+        return resolver.reject(
+          `${BASE_ERROR}Length of OR masks must be equal to length of AND masks`
+        );
+      }
 
-    data.writeUInt16LE(sizeOfMasks, 0);
+      const sizeOfMasks = ORmasks.length;
 
-    for (let i = 0; i < sizeOfMasks; i++) {
-      data.writeUInt8(ORmasks[i], 2 + i);
-      data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
-    }
+      if ((new Set([1, 2, 4, 8, 12])).has(sizeOfMasks) === false) {
+        return resolver.reject(
+          `${BASE_ERROR}Size of masks is not valid. Valid lengths are 1, 2, 4, 8, and 12`
+        );
+      }
 
-    const request = MessageRouter(code, path, data);
+      for (let i = 0; i < sizeOfMasks; i++) {
+        if (
+          ORmasks[i] < 0 || ORmasks > 0xFF
+          || ANDmasks[i] < 0 || ANDmasks > 0xFF
+        ) {
+          return resolver.reject(
+            `${BASE_ERROR}Values in masks must be greater than or equal to zero and less than or equal to 255`
+          );
+        }
+      }
 
-    this.send(request, null, false, this.contextCallback(function(message) {
-      const reply = MessageRouter.Reply(message);
-      if (callback != null) callback(null, reply);
-    }));
+      const code = Services.ReadModifyWriteTag
+      const path = MessageRouter.ANSIExtSymbolSegment(address);
+      const data = Buffer.alloc(2 + 2 * sizeOfMasks);
+
+      data.writeUInt16LE(sizeOfMasks, 0);
+
+      for (let i = 0; i < sizeOfMasks; i++) {
+        data.writeUInt8(ORmasks[i], 2 + i);
+        data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
+      }
+
+      const request = MessageRouter(code, path, data);
+
+      this.send(request, null, false, this.contextCallback(function (message) {
+        const reply = MessageRouter.Reply(message);
+        if (reply.status.code === 0) {
+          resolver.resolve();
+        } else {
+          resolver.reject({ message: reply.status.description, info: reply });
+        }
+      }));
+    });
   }
 
   supportedObjects(callback) {
@@ -198,20 +209,15 @@ class Logix5000 extends Layer {
           if (reply.status.code === 0) {
             const data = reply.data;
             const res = {};
-            let offset = 0;
-            res.vendorID = data.readUInt16LE(offset); offset += 2;
-            res.deviceType = data.readUInt16LE(offset); offset += 2;
-            res.productCode = data.readUInt16LE(offset); offset += 2;
-            res.majorRevision = data.readUInt8(offset); offset += 1;
-            res.minorRevision = data.readUInt8(offset); offset += 1;
-            res.status = data.readUInt16LE(offset); offset += 2;
-            res.serialNumber = data.readInt32LE(offset); offset += 4;
-            const nameLength = data.readUInt8(offset); offset += 1;
-            res.productName = data.toString('ascii', offset, offset + nameLength); offset += nameLength;
-            // res.state = data.readUInt8(offset); offset += 1;
-            // res.configurationConsistency = data.readUInt8(offset); offset + 1;
-            // res.heartbeatInterval = data.readUInt8(offset); offset + 1;
-
+            res.vendorID = data.readUInt16LE(0);
+            res.deviceType = data.readUInt16LE(2);
+            res.productCode = data.readUInt16LE(4);
+            res.majorRevision = data.readUInt8(6);
+            res.minorRevision = data.readUInt8(7);
+            res.status = data.readUInt16LE(8);
+            res.serialNumber = data.readInt32LE(10);
+            const nameLength = data.readUInt8(14);
+            res.productName = data.toString('ascii', 15, 15 + nameLength);
             resolver.resolve(res);
           } else {
             resolver.reject(`${BASE_ERROR}${reply.status.description}`);
