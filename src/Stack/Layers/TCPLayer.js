@@ -16,14 +16,18 @@ class TCPLayer extends Layer {
   connect() {
     if (this._connectionState > 0) return;
 
-    this.socket = net.createConnection(this.options, () => {
+    const socket = net.createConnection(this.options, () => {
       this._connectionState = 2;
       this.sendNextMessage();
     });
 
+    this.socket = socket;
+
+    socket.setNoDelay(true); // Disable Nagle algorithm
+
     this._connectionState = 1;
 
-    this.socket.on('error', (err) => {
+    socket.on('error', (err) => {
       this._connectionState = 0;
       console.log('TCPLayer Error:');
       console.log(err);
@@ -31,18 +35,25 @@ class TCPLayer extends Layer {
 
     const handleData = this.handleData.bind(this);
 
-    this.socket.on('data', (data) => {
+    socket.on('data', (data) => {
       handleData(data);
     });
 
-    this.socket.on('close', () => {
+    socket.on('close', () => {
       // console.log('TCPLayer closed')
+      if (this._connectionState === 2) {
+        socket.destroy();
+      }
       this._connectionState = 0;
     });
 
-    this.socket.on('end', () => {
-      // console.log('TCPLayer ended')
+    socket.on('timeout', () => {
+      socket.end();
     });
+
+    // socket.on('end', () => {
+    //   // console.log('TCPLayer ended')
+    // });
   }
 
   handleData(data) {
