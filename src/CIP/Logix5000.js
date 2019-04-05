@@ -65,7 +65,6 @@ class Logix5000 extends Layer {
 
       this.send(request, null, false, this.contextCallback(function (message) {
         const reply = MessageRouter.Reply(message);
-        // if (callback != null) callback(null, reply);
         if (reply.status.code === 0) {
           resolver.resolve();
         } else {
