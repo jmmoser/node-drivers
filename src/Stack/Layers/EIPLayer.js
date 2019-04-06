@@ -98,16 +98,44 @@ class EIPLayer extends Layer {
     });
   }
 
-  listIdentity(callback) {
+  listIdentity(broadcastTimeout, callback) {
+    if (arguments.length === 1 && typeof arguments[0] === 'function') {
+      callback = arguments[0];
+      broadcastTimeout = -1;
+    }
+
+    const shouldBroadcast = typeof broadcastTimeout === 'number' && broadcastTimeout > 0;
+    const identities = [];
+
     return Layer.CallbackPromise(callback, resolver => {
+      let timeoutHandler;
+
+      function finalizer(error) {
+        clearTimeout(timeoutHandler);
+        if (error) {
+          resolver.reject(error.message, error.info);
+        } else {
+          resolver.resolve(identities);
+        }
+      }
+
+      if (shouldBroadcast) {
+        timeoutHandler = setTimeout(finalizer, broadcastTimeout)
+      }
+
       queueUserRequest(this, EIPPacket.ListIdentityRequest(), function(reply) {
         if (reply.status.code !== 0) {
-          resolver.reject(reply.status.description, reply);
+          finalizer(reply.status.description, reply);
         } else {
           if (Array.isArray(reply.Items) && reply.Items.length === 1) {
-            resolver.resolve(reply.Items[0]);
+            identities.push(reply.Items[0]);
+            if (shouldBroadcast) {
+              return true;
+            } else {
+              finalizer();
+            }
           } else {
-            resolver.reject('Unexpected result', reply);
+            finalizer('Unexpected result', reply);
           }
         }
       });
@@ -193,10 +221,16 @@ class EIPLayer extends Layer {
 
     if (this._userCallbacks.has(command)) {
       const callbacks = this._userCallbacks.get(command);
-      this._userCallbacks.delete(command);
-      callbacks.forEach(callback => {
-        callback.apply(this, [packet]);
-      });
+      // this._userCallbacks.delete(command);
+      // callbacks.forEach(callback => {
+      //   callback.apply(this, [packet]);
+      // });
+
+      this._userCallbacks.set(command, callbacks.filter(callback => {
+        const result = callback.apply(this, [packet]);
+        return result === true;
+      }));
+
     } else if (this._callbacks.has(command)) {
       this._callbacks.get(command)(packet);
     } else {

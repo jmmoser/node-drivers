@@ -8,7 +8,7 @@ const eipLayer = new EIPLayer(tcpLayer);
 
 (async () => {
   try {
-    const interfaces = await eipLayer.ListInterfaces();
+    const interfaces = await eipLayer.listInterfaces();
     console.log(interfaces);
   } catch (err) {
     console.log(err);
