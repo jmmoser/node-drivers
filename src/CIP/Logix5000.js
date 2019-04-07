@@ -27,7 +27,7 @@ class Logix5000 extends Layer {
           if (READ_TAG_ERRORS[reply.status.code] != null) {
             reply.status.description = READ_TAG_ERRORS[reply.status.code];
           }
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
         } else {
           try {
             const dataType = reply.data.readUInt16LE(0);
@@ -36,10 +36,10 @@ class Logix5000 extends Layer {
               const value = dataConverter(reply.data, 2);
               resolver.resolve(value);
             } else {
-              resolver.reject(`${BASE_ERROR}No converter for data type: ${dataType}`);
+              resolver.reject(`${BASE_ERROR}No converter for data type: ${dataType}`, reply);
             }
           } catch (err) {
-            resolver.reject(`${BASE_ERROR}${err.message}`);
+            resolver.reject(`${BASE_ERROR}${err.message}`, reply);
           }
         }
       }));
@@ -179,10 +179,10 @@ class Logix5000 extends Layer {
 
             resolver.resolve(res);
           } else {
-            resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+            resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
           }
         } catch (err) {
-          resolver.reject(`${BASE_ERROR}${err.message}`);
+          resolver.reject(`${BASE_ERROR}${err.message}`, reply);
         }
       }));
     });
@@ -205,29 +205,15 @@ class Logix5000 extends Layer {
       this.send(request, null, false, this.contextCallback(message => {
         try {
           const reply = MessageRouter.Reply(message);
-
           if (reply.status.code === 0) {
-            // const data = reply.data;
-            // const res = {};
-            // res.vendorID = data.readUInt16LE(0);
-            // res.deviceType = data.readUInt16LE(2);
-            // res.productCode = data.readUInt16LE(4);
-            // res.majorRevision = data.readUInt8(6);
-            // res.minorRevision = data.readUInt8(7);
-            // res.status = data.readUInt16LE(8);
-            // res.serialNumber = data.readInt32LE(10);
-            // const nameLength = data.readUInt8(14);
-            // res.productName = data.toString('ascii', 15, 15 + nameLength);
-            // resolver.resolve(res);
-
             Identity.ParseInstanceAttributesAll(reply.data, 0, value => {
               resolver.resolve(value);
             });
           } else {
-            resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+            resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
           }
         } catch (err) {
-          resolver.reject(`${BASE_ERROR}${err.message}`);
+          resolver.reject(`${BASE_ERROR}${err.message}`, reply);
         }
       }));
     });
@@ -322,13 +308,13 @@ class Logix5000 extends Layer {
         const reply = MessageRouter.Reply(message);
 
         if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
         } else {
           try {
             const template = parseReadTemplateInstanceAttributes(reply);
             resolver.resolve(template);
           } catch (err) {
-            resolver.reject(`${BASE_ERROR}${err.message}`);
+            resolver.reject(`${BASE_ERROR}${err.message}`, reply);
           }
         }
       }));
@@ -400,7 +386,7 @@ function internalListTags(driver, tags, instanceID, resolver) {
     const done = reply.status.code === 0;
 
     if (!done && reply.status.code !== 6) {
-      return resolver.reject(`${BASE_ERROR}${reply.status.description}`);
+      return resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
     }
 
     const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
@@ -415,8 +401,6 @@ function internalListTags(driver, tags, instanceID, resolver) {
 
 
 function parseListTagsResponse(reply, attributes, tags) {
-  // const tags = [];
-
   const data = reply.data;
   const length = data.length;
 
@@ -457,13 +441,9 @@ function parseListTagsResponse(reply, attributes, tags) {
 
 function parseSymbolType(code) {
   const res = {};
-
-  res.system = !!getBit(code, 12);
-
   const atomic = getBit(code, 15) === 0;
-
+  res.system = !!getBit(code, 12);
   res.dimensions = getBits(code, 13, 15);
-
   res.structure = !atomic;
 
   if (atomic) {
@@ -483,22 +463,16 @@ function parseSymbolType(code) {
 }
 
 
-
 function parseReadTemplateInstanceAttributes(reply) {
   const data = reply.data;
 
   let offset = 0;
   const attributeCount = data.readUInt16LE(offset); offset += 2;
-
   const template = {};
 
-  let i = 0;
-
-  while (i < attributeCount) {
-    i++;
-
-    let attribute = data.readUInt16LE(offset); offset += 2;
-    let status = data.readUInt16LE(offset); offset += 2;
+  for (let i = 0; i < attributeCount; i++) {
+    const attribute = data.readUInt16LE(offset); offset += 2;
+    const status = data.readUInt16LE(offset); offset += 2;
 
     if (status === 0) {
       switch (attribute) {

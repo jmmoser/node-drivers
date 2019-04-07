@@ -25,7 +25,7 @@ const { getBit } = require('../../util');
   CPF 16: SERCOS
 */
 
-const Commands = {
+const Command = {
   NOP: 0x0000,
   ListServices: 0x0004,
   ListIdentity: 0x0063,
@@ -38,38 +38,78 @@ const Commands = {
   Cancel: 0x0073 // needs to be added to EIPReply parsers
 };
 
-const CPFItemIDs = {
+const CPFItemID = {
   NullAddress: 0x0000, // address
   ListIdentity: 0x000C, // response
-  ConnectionBased: 0x00A1, // address
+  ConnectedAddress: 0x00A1, // address
   ConnectedMessage: 0x00B1, // data
   UnconnectedMessage: 0x00B2, // data
   ListServices: 0x0100, // response
   SockaddrInfoOtoT: 0x8000, // data
   SockaddrInfoTtoO: 0x8001, // data
-  SequencedAddress: 0x8002 // unknown?
+  SequencedAddress: 0x8002 // address (with sequence)
+};
+
+const CPFItem = {
+  Address: {
+    Null: 0x00,
+    Connected: 0xA1,
+    Sequenced: 0x8002
+  },
+  Data: {
+    Connected: 0xB1,
+    Unconnected: 0xB2,
+    SocketAddressOtoT: 0x8000,
+    SocketAddressTtoO: 0x8001
+  }
 };
 
 const NullSenderContext = Buffer.alloc(8);
 
 class EIPPacket {
   constructor() {
-    this.Command = 0;
+    this.command = 0;
     this.dataLength = 0;
-    this.SessionHandle = 0;
-    this.SenderContext = NullSenderContext;
-    this.Options = 0;
-    this.Data = Buffer.alloc(0);
+    this.sessionHandle = 0;
+    this.senderContext = NullSenderContext;
+    this.options = 0;
+    this.data = Buffer.alloc(0);
     this.status = {
       code: 0,
       description: ''
     };
   }
 
+  toBuffer(opts) {
+    const dataLength = this.data ? this.data.length : 0;
+    const buffer = Buffer.alloc(24 + dataLength);
+    buffer.writeUInt16LE(this.command, 0);
+    buffer.writeUInt16LE(dataLength, 2);
+    buffer.writeUInt32LE(this.sessionHandle, 4);
+    buffer.writeUInt32LE(this.status.code, 8);
+    this.senderContext.copy(buffer, 12, 0, 8);
+    buffer.writeUInt32LE(this.options, 20);
+    if (dataLength > 0) {
+      this.data.copy(buffer, 24);
+    }
+    return buffer;
+  }
+
   static fromBuffer(buffer) {
-    const command = EIPPacket.Command(buffer);
-    const packet = EIPPacket.BaseFromBuffer(buffer);
-    const replyParse = EIPReply[command];
+    const packet = new EIPPacket();
+    packet.command = buffer.readUInt16LE(0);
+    packet.dataLength = EIPPacket.DataLength(buffer);
+    packet.sessionHandle = buffer.readUInt32LE(4);
+    packet.status.code = buffer.readUInt32LE(8);
+    packet.senderContext = Buffer.from(buffer.slice(12, 20));
+    packet.options = buffer.readUInt32LE(20);
+    packet.data = buffer.length > 24 ? Buffer.from(buffer.slice(24)) : Buffer.alloc(0);
+
+    if (EIPStatusCodeDescriptions[packet.status.code]) {
+      packet.status.description = EIPStatusCodeDescriptions[packet.status.code] || '';
+    }
+
+    const replyParse = EIPReply[packet.command];
 
     if (packet.status.code === 0) {
       if (replyParse) {
@@ -77,55 +117,16 @@ class EIPPacket {
       } else {
         console.log('');
         console.log('EIPPacket Error: Unrecognized command:');
-        console.log(Buffer.from([command]));
+        console.log(Buffer.from([packet.command]));
       }
     }
 
     return packet;
   }
 
-  static BaseFromBuffer(buffer) {
-    const packet = new EIPPacket();
-    packet.Command = EIPPacket.Command(buffer);
-    packet.dataLength = EIPPacket.DataLength(buffer);
-    // packet.Length = EIPPacket.DataLength(buffer);
-    packet.SessionHandle = buffer.readUInt32LE(4);
-    packet.status.code = buffer.readUInt32LE(8);
-    packet.SenderContext = Buffer.from(buffer.slice(12, 20));
-    packet.Options = buffer.readUInt32LE(20);
-    packet.Data = buffer.length > 24 ? Buffer.from(buffer.slice(24)) : Buffer.alloc(0);
-
-    if (EIPStatusCodeDescriptions[packet.status.code]) {
-      packet.status.description = EIPStatusCodeDescriptions[packet.status.code] || '';
-    }
-
-    return packet;
+  static toBuffer(command, handle, status, context, options, data = []) {
+    return toBuffer(command, handle, status, context, options, data);
   }
-
-
-
-  toBuffer(opts) {
-    const dataLength = this.Data ? this.Data.length : 0;
-    const buffer = Buffer.alloc(24 + dataLength);
-    buffer.writeUInt16LE(this.Command, 0);
-    buffer.writeUInt16LE(dataLength, 2);
-    buffer.writeUInt32LE(this.SessionHandle, 4);
-    buffer.writeUInt32LE(this.status.code, 8);
-    this.SenderContext.copy(buffer, 12, 0, 8);
-    buffer.writeUInt32LE(this.Options, 20);
-    if (dataLength > 0) {
-      this.Data.copy(buffer, 24);
-    }
-    // if (this.Length > 0 && this.Data && this.Data.length > 0) {
-    //   const length = this.Data.length < this.Length ? this.Data.length : this.Length;
-    //   this.Data.copy(buffer, 24, 0, length);
-    // }
-    return buffer;
-  }
-
-  // static toBuffer(command, handle, status, context, options, data = []) {
-  //   return toBuffer(command, handle, status, context, options, data = []);
-  // }
 
 
   static IsComplete(buffer, length) {
@@ -146,23 +147,18 @@ class EIPPacket {
     return buffer.readUInt16LE(2);
   }
 
-  static Command(buffer) {
-    return buffer.readUInt16LE(0);
+  static CommandFromBuffer(buffer, offset = 0) {
+    return buffer.readUInt16LE(offset);
   }
 
 
   static UnregisterSessionRequest(sessionHandle, senderContext) {
-    return toBuffer(Commands.UnregisterSession, sessionHandle, 0, senderContext, 0, []);
-    // const packet = new EIPPacket();
-    // packet.Command = Commands.RegisterSession;
-    // packet.SessionHandle = sessionHandle;
-    // packet.SenderContext = senderContext;
-    // return packet.toBuffer();
+    return toBuffer(Command.UnregisterSession, sessionHandle, 0, senderContext, 0, []);
   }
 
   static RegisterSessionRequest(senderContext) {
     return toBuffer(
-      Commands.RegisterSession,
+      Command.RegisterSession,
       0,
       0,
       senderContext,
@@ -171,41 +167,25 @@ class EIPPacket {
     );
   }
 
-
   static ListIdentityRequest() {
-    return toBuffer(Commands.ListIdentity, 0, 0, NullSenderContext, 0, []);
-    // const packet = new EIPPacket();
-    // packet.Command = Commands.ListIdentity;
-    // return packet.toBuffer();
+    return toBuffer(Command.ListIdentity, 0, 0, NullSenderContext, 0, []);
   }
 
-
   static ListServicesRequest(senderContext) {
-    return toBuffer(Commands.ListServices, 0, 0, senderContext, 0, []);
-    // const packet = new EIPPacket();
-    // packet.Command = Commands.ListServices;
-    // packet.SenderContext = senderContext;
-    // return packet.toBuffer();
+    return toBuffer(Command.ListServices, 0, 0, senderContext, 0, []);
   }
 
   static ListInterfacesRequest() {
-    return toBuffer(Commands.ListInterfaces, 0, 0, NullSenderContext, 0, []);
-    // const packet = new EIPPacket();
-    // packet.Command = Commands.ListInterfaces;
-    // return packet.toBuffer();
+    return toBuffer(Command.ListInterfaces, 0, 0, NullSenderContext, 0, []);
   }
 
   static NOPRequest() {
-    return toBuffer(Commands.NOP, 0, 0, NullSenderContext, 0, []);
-
-    // const packet = new EIPPacket();
-    // packet.Command = Commands.NOP;
-    // return packet.toBuffer();
+    return toBuffer(Command.NOP, 0, 0, NullSenderContext, 0, []);
   }
 }
 
-EIPPacket.Commands = Commands;
-EIPPacket.CPFItemIDs = CPFItemIDs;
+EIPPacket.Command = Command;
+EIPPacket.CPFItemID = CPFItemID;
 
 module.exports = EIPPacket;
 
@@ -217,7 +197,7 @@ function toBuffer(command, handle, status, context, options, data = []) {
   buffer.writeUInt16LE(data.length, 2);
   buffer.writeUInt32LE(handle, 4);
   buffer.writeUInt32LE(status, 8);
-  context.copy(buffer, 12, 0, 8);
+  (context || NullSenderContext).copy(buffer, 12, 0, 8);
   buffer.writeUInt32LE(options, 20);
   if (length > 0) {
     data.copy(buffer, 24);
@@ -228,23 +208,21 @@ function toBuffer(command, handle, status, context, options, data = []) {
 
 const EIPReply = {};
 
-EIPReply[Commands.ListServices] = function(packet) {
+EIPReply[Command.ListServices] = function(packet) {
   let offset = 0;
-  const data = packet.Data;
+  const data = packet.data;
   const itemCount = data.readUInt16LE(offset); offset += 2;
-  packet.Items = [];
+  packet.items = [];
   for (let i = 0; i < itemCount; i++) {
     const item = {};
     item.type = data.readUInt16LE(offset); offset += 2;
     item.length = data.readUInt16LE(offset); offset += 2;
-    // item.Length = data.readUInt16LE(offset); offset += 2;
-    item.Version = data.readUInt16LE(offset); offset += 2;
-    // item.Flags = data.readUInt16LE(offset); offset += 2;
-    item.Flags = {};
+    item.version = data.readUInt16LE(offset); offset += 2;
+    item.flags = {};
     const flags = data.readUInt16LE(offset); offset += 2;
-    item.Flags.Value = flags;
-    item.Flags.SupportsCIPPacketEncapsulationViaTCP = !!getBit(flags, 5);
-    item.Flags.SupportsCIPClass0or1UDPBasedConnections = !!getBit(flags, 8);
+    item.flags.code = flags;
+    item.flags.supportsCIPPacketEncapsulationViaTCP = !!getBit(flags, 5);
+    item.flags.supportsCIPClass0or1UDPBasedConnections = !!getBit(flags, 8);
 
     let serviceName = '';
     for (let j = 0; j < 16; j++) {
@@ -255,31 +233,31 @@ EIPReply[Commands.ListServices] = function(packet) {
       }
     }
     offset += 16;
-    item.ServiceName = serviceName;
-    packet.Items.push(item);
+    item.name = serviceName;
+    
+    packet.items.push(item);
   }
 };
 
 function ReadCPFPacket(packet, cb) {
   let offset = 0;
-  const buffer = packet.Data;
-  packet.Items = [];
+  const buffer = packet.data;
+  packet.items = [];
   const itemCount = buffer.readUInt16LE(offset); offset += 2;
 
   for (let i = 0; i < itemCount; i++) {
     const item = {};
     item.type = buffer.readUInt16LE(offset); offset += 2;
     let length = buffer.readUInt16LE(offset); offset += 2;
-    // cb(item, length, buffer.slice(offset, offset + length));
     cb(item, length, offset, buffer);
     offset += length;
-    packet.Items.push(item);
+    packet.items.push(item);
   }
 }
 
-EIPReply[Commands.ListIdentity] = function(packet) {
+EIPReply[Command.ListIdentity] = function(packet) {
   ReadCPFPacket(packet, function(item, length, offset, buffer) {
-    if (item.type === CPFItemIDs.ListIdentity) {
+    if (item.type === CPFItemID.ListIdentity) {
       item.encapsulationProtocolVersion = buffer.readUInt16LE(offset); offset += 2;
 
       const socket = {};
@@ -304,18 +282,18 @@ EIPReply[Commands.ListIdentity] = function(packet) {
   });
 };
 
-EIPReply[Commands.RegisterSession] = function(packet) {
+EIPReply[Command.RegisterSession] = function(packet) {
   let offset = 0;
-  const data = packet.Data;
-  packet.Protocol = data.readUInt16LE(offset); offset += 2;
-  packet.Flags = data.readUInt16LE(offset); offset += 2;
+  const data = packet.data;
+  packet.protocol = data.readUInt16LE(offset); offset += 2;
+  packet.flags = data.readUInt16LE(offset); offset += 2;
   return packet;
 };
 
 
-EIPReply[Commands.ListInterfaces] = function(packet) {
+EIPReply[Command.ListInterfaces] = function(packet) {
   ReadCPFPacket(packet, function(item, length, offset, buffer) {
-    item.Data = buffer.slice(offset, offset + length);
+    item.data = buffer.slice(offset, offset + length);
     // this needs more work
     if (length >= 4) {
       item.interfaceHandle = buffer.readUInt32LE(offset); offset += 4;
@@ -327,31 +305,31 @@ EIPReply[Commands.ListInterfaces] = function(packet) {
 // EIP-CIP-V1 2-7.3.1, page 2-21
 // When used to encapsulate CIP, the format of the "data" field is
 // that of a Message Router request or Message Router reply.
-EIPReply[Commands.SendRRData] = function(packet) {
-  const data = packet.Data;
+EIPReply[Command.SendRRData] = function(packet) {
+  const data = packet.data;
   packet.interfaceHandle = data.readUInt32LE(0); // shall be 0 for CIP
   packet.timeout = data.readUInt16LE(4); // not used for reply
-  packet.Data = packet.Data.slice(6);
+  packet.data = packet.data.slice(6);
 
   ReadCPFPacket(packet, function(item, length, offset, buffer) {
-    if (item.type === CPFItemIDs.UnconnectedMessage) {
+    if (item.type === CPFItemID.UnconnectedMessage) {
       item.data = buffer.slice(offset, offset + length);
     }
   });
 };
 
-EIPReply[Commands.SendUnitData] = function(packet) {
-  const data = packet.Data;
+EIPReply[Command.SendUnitData] = function(packet) {
+  const data = packet.data;
   packet.interfaceHandle = data.readUInt32LE(0); // shall be 0 for CIP
   packet.timeout = data.readUInt16LE(4); // not used for reply
-  packet.Data = packet.Data.slice(6);
+  packet.data = packet.data.slice(6);
 
   ReadCPFPacket(packet, function(item, length, offset, buffer) {
     switch (item.type) {
-      case CPFItemIDs.ConnectionBased:
+      case CPFItemID.ConnectedAddress:
         item.address = buffer.readUInt32LE(offset);
         break;
-      case CPFItemIDs.ConnectedMessage:
+      case CPFItemID.ConnectedMessage:
         item.data = buffer.slice(offset, offset + length);
         break;
       default:

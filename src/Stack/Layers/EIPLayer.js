@@ -2,7 +2,7 @@
 
 const Layer = require('./Layer');
 const EIPPacket = require('../Packets/EIPPacket');
-const EIPCommands = EIPPacket.Commands;
+const EIPCommand = EIPPacket.Command;
 
 
 function SendData_Packet(interfaceHandle, timeout, data) {
@@ -16,9 +16,9 @@ function SendData_Packet(interfaceHandle, timeout, data) {
 function CPF_UCMM_Packet(data) {
   const buffer = Buffer.alloc(10 + data.length);
   buffer.writeUInt16LE(2, 0); // One address item and one data item
-  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.NullAddress, 2); // AddressTypeID = 0 to indicate a UCMM message
+  buffer.writeUInt16LE(EIPPacket.CPFItemID.NullAddress, 2); // AddressTypeID = 0 to indicate a UCMM message
   buffer.writeUInt16LE(0, 4); // AddressLength = 0 since UCMM messages use the NULL address item
-  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.UnconnectedMessage, 6); // DataTypeID = 0x00B2 to encapsulate the UCMM
+  buffer.writeUInt16LE(EIPPacket.CPFItemID.UnconnectedMessage, 6); // DataTypeID = 0x00B2 to encapsulate the UCMM
   buffer.writeUInt16LE(data.length, 8);
   data.copy(buffer, 10);
   return buffer;
@@ -27,10 +27,10 @@ function CPF_UCMM_Packet(data) {
 function CPF_Connected_Packet(connectionIdentifier, data) {
   const buffer = Buffer.alloc(14 + data.length);
   buffer.writeUInt16LE(2, 0);
-  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.ConnectionBased, 2);
+  buffer.writeUInt16LE(EIPPacket.CPFItemID.ConnectedAddress, 2);
   buffer.writeUInt16LE(4, 4);
   buffer.writeUInt32LE(connectionIdentifier, 6);
-  buffer.writeUInt16LE(EIPPacket.CPFItemIDs.ConnectedMessage, 10);
+  buffer.writeUInt16LE(EIPPacket.CPFItemID.ConnectedMessage, 10);
   buffer.writeUInt16LE(data.length, 12);
   data.copy(buffer, 14);
   return buffer;
@@ -39,20 +39,27 @@ function CPF_Connected_Packet(connectionIdentifier, data) {
 
 function SendRRDataRequest(sessionHandle, senderContext, data) {
   // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
-  const packet = new EIPPacket();
-  packet.Command = EIPCommands.SendRRData;
-  packet.SessionHandle = sessionHandle;
-  packet.SenderContext = senderContext;
-  packet.Data = SendData_Packet(0, 0, CPF_UCMM_Packet(data));
-  return packet.toBuffer();
+  // const packet = new EIPPacket();
+  // packet.command = EIPCommand.SendRRData;
+  // packet.sessionHandle = sessionHandle;
+  // packet.senderContext = senderContext;
+  // packet.data = SendData_Packet(0, 0, CPF_UCMM_Packet(data));
+  // return packet.toBuffer();
+
+  return EIPPacket.toBuffer(
+    EIPCommand.SendRRData, sessionHandle, 0, senderContext, 0, SendData_Packet(0, 0, CPF_UCMM_Packet(data))
+  );
 }
 
 function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connectionIdentifier, data) {
-  const packet = new EIPPacket();
-  packet.Command = EIPCommands.SendUnitData;
-  packet.SessionHandle = sessionHandle;
-  packet.Data = SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data));
-  return packet.toBuffer();
+  // const packet = new EIPPacket();
+  // packet.command = EIPCommand.SendUnitData;
+  // packet.sessionHandle = sessionHandle;
+  // packet.data = SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data));
+  // return packet.toBuffer();
+  return EIPPacket.toBuffer(
+    EIPCommand.SendUnitData, sessionHandle, 0, null, 0, SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data))
+  );
 }
 
 
@@ -85,8 +92,8 @@ class EIPLayer extends Layer {
         if (reply.status.code !== 0) {
           resolver.reject(reply.status.description, reply);
         } else {
-          if (Array.isArray(reply.Items)) {
-            resolver.resolve(reply.Items);
+          if (Array.isArray(reply.items)) {
+            resolver.resolve(reply.items);
           } else {
             resolver.reject('Unexpected result', reply);
           }
@@ -172,8 +179,8 @@ class EIPLayer extends Layer {
         if (reply.status.code !== 0) {
           finalizer(reply.status.description, reply);
         } else {
-          if (Array.isArray(reply.Items) && reply.Items.length === 1) {
-            identities.push(reply.Items[0]);
+          if (Array.isArray(reply.items) && reply.items.length === 1) {
+            identities.push(reply.items[0]);
             return true;
           } else {
             finalizer('Unexpected result', reply);
@@ -238,8 +245,8 @@ class EIPLayer extends Layer {
   //       if (reply.status.code !== 0) {
   //         finalizer(reply.status.description, reply);
   //       } else {
-  //         if (Array.isArray(reply.Items) && reply.Items.length === 1) {
-  //           identities.push(reply.Items[0]);
+  //         if (Array.isArray(reply.items) && reply.items.length === 1) {
+  //           identities.push(reply.items[0]);
   //           if (shouldBroadcast) {
   //             return true;
   //           } else {
@@ -259,13 +266,20 @@ class EIPLayer extends Layer {
         if (reply.status.code !== 0) {
           resolver.reject(reply.status.description, reply);
         } else {
-          if (Array.isArray(reply.Items)) {
-            resolver.resolve(reply.Items);
+          if (Array.isArray(reply.items)) {
+            resolver.resolve(reply.items);
           } else {
             resolver.reject('Unexpected result', reply);
           }
         }
       });
+    });
+  }
+
+  indicateStatus(callback) {
+    return Layer.CallbackPromise(callback, resolver => {
+      console.log(reply);
+      queueUserRequest(this, EIPPacket.Ind)
     });
   }
 
@@ -327,8 +341,8 @@ class EIPLayer extends Layer {
   }
 
   handleData(data, info, context) {
-    const command = EIPPacket.Command(data);
     const packet = EIPPacket.fromBuffer(data);
+    const command = packet.command;
 
     if (this._userCallbacks.has(command)) {
       const callbacks = this._userCallbacks.get(command);
@@ -362,12 +376,12 @@ function setupCallbacks(self) {
   self._unconnectedContexts = new Map();
   self._connectedContexts = new Map();
 
-  self._callbacks.set(EIPCommands.RegisterSession, packet => {
+  self._callbacks.set(EIPCommand.RegisterSession, packet => {
     // console.log('RegisterSession');
     // console.log(packet);
     if (packet.status.code === 0) {
       self._connectionState = 2;
-      self._sessionHandle = packet.SessionHandle;
+      self._sessionHandle = packet.sessionHandle;
       if (self._connectCallback) self._connectCallback();
       self.sendNextMessage();
       sendUserRequests(self);
@@ -376,17 +390,17 @@ function setupCallbacks(self) {
     }
   });
 
-  self._callbacks.set(EIPCommands.UnregisterSession, packet => {
+  self._callbacks.set(EIPCommand.UnregisterSession, packet => {
     // console.log('UnregisterSession');
     self._connectionState = 0;
     self._sessionHandle = 0;
   });
 
-  self._callbacks.set(EIPCommands.SendRRData, packet => {
+  self._callbacks.set(EIPCommand.SendRRData, packet => {
     // console.log('SendRRData');
 
     const info = { connected: false };
-    const senderContext = packet.SenderContext.toString('hex');
+    const senderContext = packet.senderContext.toString('hex');
     let context = null; // context can be null if only one upper layer
     if (self._unconnectedContexts.has(senderContext)) {
       context = self._unconnectedContexts.get(senderContext);
@@ -399,18 +413,18 @@ function setupCallbacks(self) {
     //   console.log(self._unconnectedContexts);
     // }
 
-    self.forward(packet.Items[1].data, info, context);
+    self.forward(packet.items[1].data, info, context);
   });
 
-  self._callbacks.set(EIPCommands.SendUnitData, packet => {
+  self._callbacks.set(EIPCommand.SendUnitData, packet => {
     // console.log('SendUnitData');
     if (packet.status.code === 0) {
       const info = {
         connected: true,
-        connectionID: packet.Items[0].address
+        connectionID: packet.items[0].address
       };
       const context = self._connectedContexts.get(info.connectionID);
-      self.forward(packet.Items[1].data, info, context);
+      self.forward(packet.items[1].data, info, context);
     } else {
       console.log('EIPLayer Error: Packet Status:');
       console.log(packet);
@@ -428,7 +442,7 @@ function incrementContext(self) {
 
 
 function queueUserRequest(self, message, info, callback) {
-  const command = EIPPacket.Command(message);
+  const command = EIPPacket.CommandFromBuffer(message);
 
   if (callback) {
     /* no callback for NOP */
