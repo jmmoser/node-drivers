@@ -1,36 +1,23 @@
 'use strict';
 
 const Layer = require('./../../Stack/Layers/Layer');
-
 const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
+
+const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen | (1 << 7);
+const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose | (1 << 7);
 
 class Connection extends Layer {
   constructor(lowerLayer, options) {
     super(lowerLayer);
 
-    this.mergeOptionsWithDefaults(options);
+    mergeOptionsWithDefaults(this, options);
 
     this._connectionState = 0;
-
     this._sequenceCount = 0;
-
     this._sequenceToContext = new Map();
 
     this.connect();
-  }
-
-  mergeOptionsWithDefaults(options) {
-    if (!options) options = {};
-    this.VendorID = options.VendorID || 0x1339;
-    this.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
-    this.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x01;
-    this.OtoTRPI = options.OtoTRPI || 0x00201234;
-    this.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
-    this.TtoORPI = options.TtoORPI || 0x00204001;
-    this.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
-    this.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-    this.ProcessorSlot = options.ProcessorSlot || 0;
   }
 
   connect(callback) {
@@ -66,27 +53,6 @@ class Connection extends Layer {
     });
   }
 
-  __startResend(lastMessage) {
-    if (lastMessage == null) return;
-
-    const milliseconds = Math.floor(this._connectionTimeout * 3 / 4) * 1000;
-
-    this.__stopResend();
-
-    const that = this;
-
-    this.__resendInterval = setInterval(function() {
-      that.send(lastMessage, that.sendInfo, false, null);
-    }, milliseconds);
-  }
-
-  __stopResend() {
-    if (this.__resendInterval != null) {
-      clearInterval(this.__resendInterval);
-      this.__resendInterval = null;
-    }
-  }
-
   sendNextMessage() {
     if (this._connectionState === 2) {
       const request = this.getNextRequest();
@@ -96,7 +62,7 @@ class Connection extends Layer {
           throw new Error('CIP Connection Error: Connected messages must include a context');
         }
 
-        const sequenceCount = this._incrementSequenceCount();
+        const sequenceCount = incrementSequenceCount(this);
         this._sequenceToContext.set(sequenceCount, request.context);
 
         const message = request.message;
@@ -107,127 +73,124 @@ class Connection extends Layer {
 
         this.send(buffer, this.sendInfo, false, this.layerContext(request.layer));
 
-        this.__startResend(Buffer.from(buffer));
+        startResend(this, Buffer.from(buffer));
 
-        this.sendNextMessage();
+        setImmediate(() => this.sendNextMessage());
       }
     }
   }
 
   handleData(data, info, context) {
-    const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen | (1 << 7);
-    const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose | (1 << 7);
-
     const message = MessageRouter.Reply(data);
 
     switch (message.service) {
       case FORWARD_OPEN_SERVICE:
-        this.handleForwardOpen(message, info, context);
+        handleForwardOpen(this, message, info, context);
         break;
       case FORWARD_CLOSE_SERVICE:
-        this.handleForwardClose(message, info, context);
+        handleForwardClose(this, message, info, context);
         break;
       default:
-        this.handleConnectedMessage(data, info, context);
+        handleConnectedMessage(this, data, info, context);
     }
-  }
-
-  handleForwardOpen(message, info, context) {
-    if (this._connectionState === 1) {
-      if (message.status.code === 0) {
-        this._connectionState = 2;
-        const reply = ConnectionManager.ForwardOpenReply(message.data);
-        this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
-        this._TtoOConnectionID = reply.TtoONetworkConnectionID;
-        this._OtoTPacketRate = reply.OtoTActualPacketRate;
-        this._TtoOPacketRate = reply.TtoOActualPacketRate;
-        this._connectionSerialNumber = reply.ConnectionSerialNumber;
-
-        const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
-        this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
-
-        // EIP specific information
-        this.sendInfo = {
-          connectionID: this._OtoTConnectionID,
-          responseID: this._TtoOConnectionID
-        };
-
-        this.sendNextMessage();
-      } else {
-        this._connectionState = 0;
-        console.log('');
-        console.log('CIP Connection Error: Status is not successful or service is not correct:');
-        console.log(message);
-      }
-    }
-
-    if (this._connectCallback) this._connectCallback(message);
-    this._connectCallback = null;
-  }
-
-  // handleForwardOpen(message, info, context) {
-  //   if (message.status.code === 0) {
-  //     this._connectionState = 2;
-  //     const reply = ConnectionManager.ForwardOpenReply(message.data);
-  //     this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
-  //     this._TtoOConnectionID = reply.TtoONetworkConnectionID;
-  //     this._OtoTPacketRate = reply.OtoTActualPacketRate;
-  //     this._TtoOPacketRate = reply.TtoOActualPacketRate;
-  //     this._connectionSerialNumber = reply.ConnectionSerialNumber;
-
-  //     const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
-  //     this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
-
-  //     // EIP specific information
-  //     this.sendInfo = {
-  //       connectionID: this._OtoTConnectionID,
-  //       responseID: this._TtoOConnectionID
-  //     };
-
-  //     this.sendNextMessage();
-  //   } else {
-  //     console.log('');
-  //     console.log('CIP Connection Error: Status is not successful or service is not correct:');
-  //     console.log(message);
-  //   }
-
-  //   if (this._connectCallback) this._connectCallback(message);
-  //   this._connectCallback = null;
-  // }
-
-  handleForwardClose(message, info, context) {
-    this.__stopResend();
-    if (message.status.code === 0) {
-      const reply = ConnectionManager.ForwardCloseReply(message.data);
-      this._connectionState = 0;
-      if (this._disconnectCallback) this._disconnectCallback(reply);
-      this._disconnectCallback = null;
-    }
-  }
-
-  handleConnectedMessage(data, info, context) {
-    const sequenceCount = data.readUInt16LE(0);
-
-    if (this._sequenceToContext.has(sequenceCount) === false) {
-      // This happens when the last message is resent to prevent disconnect
-      // console.log('duplicate message');
-      return;
-    }
-
-    context = this._sequenceToContext.get(sequenceCount);
-    this._sequenceToContext.delete(sequenceCount);
-    this.forward(data.slice(2), info, context);
-  }
-
-  _incrementSequenceCount() {
-    this._sequenceCount = (this._sequenceCount + 1) % 0x10000;
-    return this._sequenceCount;
   }
 }
 
 module.exports = Connection;
 
-Connection.Code = 0x05;
+
+function mergeOptionsWithDefaults(self, options) {
+  if (!options) options = {};
+  self.VendorID = options.VendorID || 0x1339;
+  self.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
+  self.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x01;
+  self.OtoTRPI = options.OtoTRPI || 0x00201234;
+  self.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
+  self.TtoORPI = options.TtoORPI || 0x00204001;
+  self.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
+  self.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+  self.ProcessorSlot = options.ProcessorSlot || 0;
+}
+
+function handleForwardOpen(self, message, info, context) {
+  if (self._connectionState === 1) {
+    if (message.status.code === 0) {
+      self._connectionState = 2;
+      const reply = ConnectionManager.ForwardOpenReply(message.data);
+      self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
+      self._TtoOConnectionID = reply.TtoONetworkConnectionID;
+      self._OtoTPacketRate = reply.OtoTActualPacketRate;
+      self._TtoOPacketRate = reply.TtoOActualPacketRate;
+      self._connectionSerialNumber = reply.ConnectionSerialNumber;
+
+      const rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
+      self._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
+
+      // EIP specific information
+      self.sendInfo = {
+        connectionID: self._OtoTConnectionID,
+        responseID: self._TtoOConnectionID
+      };
+
+      self.sendNextMessage();
+    } else {
+      self._connectionState = 0;
+      console.log('');
+      console.log('CIP Connection Error: Status is not successful or service is not correct:');
+      console.log(message);
+    }
+  }
+
+  if (self._connectCallback) self._connectCallback(message);
+  self._connectCallback = null;
+}
+
+function handleForwardClose(self, message, info, context) {
+  stopResend(self);
+  if (message.status.code === 0) {
+    const reply = ConnectionManager.ForwardCloseReply(message.data);
+    self._connectionState = 0;
+    if (self._disconnectCallback) self._disconnectCallback(reply);
+    self._disconnectCallback = null;
+  }
+}
+
+function handleConnectedMessage(self, data, info, context) {
+  const sequenceCount = data.readUInt16LE(0);
+
+  if (self._sequenceToContext.has(sequenceCount) === false) {
+    // This happens when the last message is resent to prevent disconnect
+    // console.log('duplicate message');
+    return;
+  }
+
+  context = self._sequenceToContext.get(sequenceCount);
+  self._sequenceToContext.delete(sequenceCount);
+  self.forward(data.slice(2), info, context);
+}
+
+function incrementSequenceCount(self) {
+  self._sequenceCount = (self._sequenceCount + 1) % 0x10000;
+  return self._sequenceCount;
+}
+
+function startResend(self, lastMessage) {
+  stopResend(self);
+
+  self.__resendInterval = setInterval(function () {
+    self.send(lastMessage, self.sendInfo, false, null);
+  }, Math.floor(self._connectionTimeout * 3 / 4) * 1000);
+}
+
+function stopResend(self) {
+  if (self.__resendInterval != null) {
+    clearInterval(self.__resendInterval);
+    self.__resendInterval = null;
+  }
+}
+
+
+// Connection.Code = 0x05;
 
 // CIP Vol1 Table 3-4.2
 const ClassServices = {

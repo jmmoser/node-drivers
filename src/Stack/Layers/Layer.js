@@ -128,23 +128,20 @@ class Layer {
     this._queue.addToQueue(obj, priority);
   }
 
-  __incrementContext() {
-    this.__context = (this.__context + 1) % 0x100000000;
-    return this.__context;
-  }
+  
 
   contextCallback(callback, context) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
     if (callback != null) {
       if (context == null) {
-        context = this.__incrementContext();
+        context = incrementContext(this);
       }
       this.__callbacks.set(context, callback);
     }
     return context;
   }
 
-  getCallbackForContext(context) {
+  callbackForContext(context) {
     let callback = null;
     if (this.__callbacks.has(context)) {
       callback = this.__callbacks.get(context);
@@ -156,7 +153,7 @@ class Layer {
   layerContext(layer, context) {
     if (layer != null) {
       if (context == null) {
-        context = this.__incrementContext();
+        context = incrementContext(this);
       }
       this.__contextToLayer.set(context, layer);
     }
@@ -178,3 +175,7 @@ Layer.CallbackPromise = CallbackPromise;
 module.exports = Layer;
 
 
+function incrementContext(self) {
+  self.__context = (self.__context + 1) % 0x100000000;
+  return self.__context;
+}

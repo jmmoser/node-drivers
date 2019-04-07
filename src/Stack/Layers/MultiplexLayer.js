@@ -1,11 +1,12 @@
 'use strict';
 
-/*
-  This layer utitlizes the info field of messages to multiplex messages from
-  multiple upper layers to one lower layer
-*/
+/**
+ * MultiplexLayer utitlizes the info field of messages to multiplex messages from
+ * multiple upper layers to one lower layer
+ */
 
 const Layer = require('./Layer');
+
 
 class MultiplexLayer extends Layer {
   constructor(lowerLayer) {
@@ -13,7 +14,6 @@ class MultiplexLayer extends Layer {
 
     this._context = 0;
     this._callbacks = new Map();
-
     this._layers = new Set();
   }
 
@@ -32,25 +32,6 @@ class MultiplexLayer extends Layer {
         console.log('disconnect timeout');
         resolver.resolve();
       }, 10000);
-
-      // const objectCount = this._layers.size;
-
-      // this._disconnectCount = 0;
-
-      // const layerDisconnectCallback = () => {
-      //   if (this._disconnecting === 0) return;
-
-      //   this._disconnectCount++;
-      //   if (this._disconnectCount >= objectCount) {
-      //     clearTimeout(this._disconnectTimer);
-      //     this._disconnecting = 0;
-      //     resolver.resolve();
-      //   }
-      // };
-
-      // this._layers.forEach(function (layer) {
-      //   layer.disconnect(layerDisconnectCallback);
-      // });
 
       await Promise.all([...this._layers].map(layer => layer.disconnect()));
 
@@ -100,10 +81,9 @@ class MultiplexLayer extends Layer {
 
   sendNextMessage() {
     const request = this.getNextRequest();
-
     if (request != null) {
       this.send(request.message, request.info, false, this.layerContext(request.layer));
-      this.sendNextMessage();
+      setImmediate(() => this.sendNextMessage());
     }
   }
 
@@ -118,11 +98,6 @@ class MultiplexLayer extends Layer {
     } else {
       throw new Error('MultiplexLayer Error: No context');
     }
-  }
-
-  _incrementContext() {
-    this._context = (this._context + 1) % 0x10000;
-    return this._context;
   }
 }
 

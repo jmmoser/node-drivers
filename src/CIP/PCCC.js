@@ -35,7 +35,7 @@ class PCCC extends Layer {
 
       this.send(message, null, false);
 
-      this.sendNextMessage();
+      setImmediate(() => this.sendNextMessage());
     }
   }
 

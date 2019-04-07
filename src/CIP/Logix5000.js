@@ -351,7 +351,7 @@ class Logix5000 extends Layer {
       throw new Error('Logix5000 Error: Unhandled message, context should not be null');
     }
 
-    const callback = this.getCallbackForContext(context);
+    const callback = this.callbackForContext(context);
     if (callback != null) {
       callback(data, info);
     }

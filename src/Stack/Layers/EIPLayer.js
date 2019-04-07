@@ -16,14 +16,11 @@ function SendData_Packet(interfaceHandle, timeout, data) {
 function CPF_UCMM_Packet(data) {
   const buffer = Buffer.alloc(10 + data.length);
   buffer.writeUInt16LE(2, 0); // One address item and one data item
-
   buffer.writeUInt16LE(EIPPacket.CPFItemIDs.NullAddress, 2); // AddressTypeID = 0 to indicate a UCMM message
   buffer.writeUInt16LE(0, 4); // AddressLength = 0 since UCMM messages use the NULL address item
-
   buffer.writeUInt16LE(EIPPacket.CPFItemIDs.UnconnectedMessage, 6); // DataTypeID = 0x00B2 to encapsulate the UCMM
   buffer.writeUInt16LE(data.length, 8);
   data.copy(buffer, 10);
-
   return buffer;
 }
 
@@ -209,7 +206,7 @@ class EIPLayer extends Layer {
 
           this.send(fullMessage, null, false);
 
-          this.sendNextMessage();
+          setImmediate(() => this.sendNextMessage());
         }
       }
     }

@@ -21,11 +21,12 @@ class TCPLayer extends Layer {
       this.sendNextMessage();
     });
 
+    this._connectionState = 1;
     this.socket = socket;
 
-    socket.setNoDelay(true); // Disable Nagle algorithm
+    const handleData = this.handleData.bind(this);
 
-    this._connectionState = 1;
+    socket.setNoDelay(true); // Disable Nagle algorithm
 
     socket.on('error', (err) => {
       this._connectionState = 0;
@@ -33,14 +34,11 @@ class TCPLayer extends Layer {
       console.log(err);
     });
 
-    const handleData = this.handleData.bind(this);
-
     socket.on('data', (data) => {
       handleData(data);
     });
 
     socket.on('close', () => {
-      // console.log('TCPLayer closed')
       if (this._connectionState === 2) {
         socket.destroy();
       }
@@ -64,7 +62,6 @@ class TCPLayer extends Layer {
     return Layer.CallbackPromise(callback, resolver => {
       if (this._connectionState > 0) {
         this._connectionState = -1;
-        // this.socket.end(resolver.resolve);
         this.socket.end(() => {
           this.socket.destroy();
           resolver.resolve();
@@ -86,7 +83,7 @@ class TCPLayer extends Layer {
             console.log('TCPLayer WRITE ERROR:')
             console.log(err);
           }
-          this.sendNextMessage();
+          setImmediate(() => this.sendNextMessage());
         });
       }
     }

@@ -238,7 +238,7 @@ class PCCCLayer extends Layer {
 
       this.send(message, null, false, this.layerContext(request.layer, transaction));
 
-      this.sendNextMessage();
+      setImmediate(() => this.sendNextMessage()); 
     }
   }
 
@@ -246,7 +246,7 @@ class PCCCLayer extends Layer {
   handleData(data, info, context) {
     const packet = PCCCPacket.fromBufferReply(data);
 
-    const callback = this.getCallbackForContext(packet.transaction);
+    const callback = this.callbackForContext(packet.transaction);
     if (callback != null) {
       callback(data, info);
       return;

@@ -3,7 +3,6 @@
 const dgram = require('dgram');
 const Layer = require('./Layer');
 
-// CIP Vol 2 Table 2-4.2 for commands that are allowed over UDP
 
 class UDPLayer extends Layer {
   constructor(options) {
@@ -16,7 +15,6 @@ class UDPLayer extends Layer {
       },
       listen: {
         address: null,
-        // port: 0xAF12
         port: 0
       },
       waitForListen: true
@@ -43,19 +41,6 @@ class UDPLayer extends Layer {
       }
     }
 
-    // this.options = Object.assign({
-    //   target: {
-    //     host: '127.0.0.1',
-    //     port: 0
-    //   },
-    //   listen: {
-    //     address: null,
-    //     // port: 0xAF12
-    //     port: 0
-    //   },
-    //   waitForListen: true
-    // }, options);
-
     this._listening = false;
 
     const socket = dgram.createSocket('udp4', (data) => {
@@ -77,7 +62,6 @@ class UDPLayer extends Layer {
     this.socket = socket;
   }
 
-
   sendNextMessage() {
     if (this.options.waitForListen && !this._listening) {
       return;
@@ -98,10 +82,9 @@ class UDPLayer extends Layer {
         }
       });
 
-      this.sendNextMessage();
+      setImmediate(() => this.sendNextMessage());
     }
   }
-
 
   disconnect(callback) {
     return Layer.CallbackPromise(callback, resolver => {
