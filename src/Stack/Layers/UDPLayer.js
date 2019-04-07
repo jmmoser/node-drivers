@@ -17,20 +17,24 @@ class UDPLayer extends Layer {
         address: null,
         port: 0
       },
-      waitForListen: true
+      // waitForListen: true,
+      broadcast: true
     };
 
     if (options) {
+      if (options.broadcast != null) {
+        this.options.broadcast = !!options.broadcast;
+      }
+      // if (options.waitForListen != null) {
+      //   this.options.waitForListen = !!options.waitForListen;
+      // }
+
       if (options.host) {
         this.options.target.host = options.host;
       }
 
       if (options.port) {
         this.options.target.port = options.port;
-      }
-
-      if (options.waitForListen != null) {
-        this.options.waitForListen = !!options.waitForListen;
       }
 
       if (typeof options.target === 'object') {
@@ -54,6 +58,7 @@ class UDPLayer extends Layer {
 
     socket.on('listening', () => {
       this._listening = true;
+      socket.setBroadcast(this.options.broadcast);
       this.sendNextMessage();
     });
 
@@ -63,7 +68,11 @@ class UDPLayer extends Layer {
   }
 
   sendNextMessage() {
-    if (this.options.waitForListen && !this._listening) {
+    // if (this.options.waitForListen && !this._listening) {
+    //   return;
+    // }
+
+    if (!this._listening) {
       return;
     }
 
