@@ -1,5 +1,8 @@
 'use strict';
 
+const CIP = require('./CIP');
+const { getBit, getBits } = require('../../util');
+
 // Class Code 0x01
 class Identity {
   GetAttributeSingle() {
@@ -16,6 +19,68 @@ class Identity {
 
   SetAttributeSingle() {
     // 0x10
+  }
+
+  static ParseInstanceAttributesAll(buffer, offset, cb) {
+    const item = {};
+
+    item.vendorID = buffer.readUInt16LE(offset); offset += 2;
+    item.deviceType = buffer.readUInt16LE(offset); offset += 2;
+    item.productCode = buffer.readUInt16LE(offset); offset += 2;
+
+    item.revision = {};
+    item.revision.major = buffer.readUInt8(offset); offset += 1;
+    item.revision.minor = buffer.readUInt8(offset); offset += 1;
+
+    offset = this.ParseInstanceAttributeStatus(buffer, offset, value => {
+      item.status = value;
+    });
+
+    item.serialNumber = buffer.readUInt32LE(offset); offset += 4;
+
+    offset = CIP.ParseString(CIP.DataType.SHORT_STRING, buffer, offset, value => {
+      item.productName = value;
+    });
+
+    if (typeof cb === 'function') {
+      cb(item);
+    }
+    
+    return offset;
+  }
+
+  // CIP Vol1 Table 5-2.3
+  static ParseInstanceAttributeStatus(buffer, offset, cb) {
+    const code = buffer.readUInt16LE(offset); offset += 2;
+
+    const status = {
+      code,
+      owned: getBit(code, 0),
+      configured: getBit(code, 3),
+      extendedDeviceStatus: ExtendedDeviceStatusDescription(code), // bits 4 - 7
+      minorRecoverableFault: getBit(code, 8),
+      minorUnrecoverableFault: getBit(code, 9),
+      majorRecoverableFault: getBit(code, 10),
+      majorUnrecoverableFault: getBit(code, 11)
+    };
+
+    if (typeof cb === 'function') {
+      cb(status)
+    }
+
+    return offset;
+  }
+
+  static ParseInstanceAttributeState(buffer, offset, cb) {
+    const code = buffer.readUInt8(offset); offset += 1;
+    const state = {
+      code,
+      description: InstanceStateDescriptions[code] || 'unknown'
+    };
+    if (typeof cb === 'function') {
+      cb(state);
+    }
+    return offset;
   }
 }
 
@@ -54,30 +119,30 @@ const InstanceAttributes = {
   ModbusIdentityInfo: 18
 };
 
-// CIP Vol1 Table 5-2.2
-const InstanceAttributeInfo = {
-  1: { name: 'VendorID', type: 'UINT' },
-  2: { name: 'Device Type', type: 'UINT' },
-  3: { name: 'Product Code', type: 'UINT' },
-  4: { name: 'Revision', type: 'STRUCT' },
-  5: { name: 'Status', type: 'WORD', parser: InstanceAttributeStatusParser},
-  6: { name: 'Serial Number', type: 'UDINT' },
-  7: { name: 'Product Name', type: 'SHORT_STRING' },
-  8: { name: 'State', type: 'USINT'},
-  9: { name: 'Configuration Consistency Value', type: 'UINT' },
-  10: { name: 'Heartbeat Interval', type: 'USINT' },
-  11: { name: 'Active Language', type: 'STRUCT' },
-  12: { name: 'Supported Language List', type: 'ARRAY STRUCT'},
-  13: { name: 'International Product Name', type: 'STRINGI' },
-  14: { name: 'Semaphore', type: 'STRUCT' },
-  15: { name: 'Assigned_Name', type: 'STRINGI' },
-  16: { name: 'Assigned_Description', type: 'STRINGI' },
-  17: { name: 'Geographic_Location', type: 'STRINGI' },
-  18: { name: 'Modbus Identity Info', type: 'STRUCT', parser: ModbusIdentityInfoParser }
-};
+// // CIP Vol1 Table 5-2.2
+// const InstanceAttributeInfo = {
+//   1: { name: 'VendorID', type: 'UINT' },
+//   2: { name: 'Device Type', type: 'UINT' },
+//   3: { name: 'Product Code', type: 'UINT' },
+//   4: { name: 'Revision', type: 'STRUCT' },
+//   5: { name: 'Status', type: 'WORD', },
+//   6: { name: 'Serial Number', type: 'UDINT' },
+//   7: { name: 'Product Name', type: 'SHORT_STRING' },
+//   8: { name: 'State', type: 'USINT'},
+//   9: { name: 'Configuration Consistency Value', type: 'UINT' },
+//   10: { name: 'Heartbeat Interval', type: 'USINT' },
+//   11: { name: 'Active Language', type: 'STRUCT' },
+//   12: { name: 'Supported Language List', type: 'ARRAY STRUCT'},
+//   13: { name: 'International Product Name', type: 'STRINGI' },
+//   14: { name: 'Semaphore', type: 'STRUCT' },
+//   15: { name: 'Assigned_Name', type: 'STRINGI' },
+//   16: { name: 'Assigned_Description', type: 'STRINGI' },
+//   17: { name: 'Geographic_Location', type: 'STRINGI' },
+//   // 18: { name: 'Modbus Identity Info', type: 'STRUCT', parser: ModbusIdentityInfoParser }
+// };
 
 // CIP Vol1 Table 5-2.2, Attribute ID 8, Semantics of Values
-const StateValues = {
+const InstanceStateDescriptions = {
   0: 'Non-existent',
   1: 'Device self testing',
   2: 'Standby',
@@ -87,37 +152,48 @@ const StateValues = {
   255: 'Default for Get_Attributes_All service'
 };
 
-// CIP Vol1 Table 5-2.3
-function InstanceAttributeStatusParser(res, buffer, offset) {
-  let status = buffer.readUInt32LE(buffer, offset);
+Identity.InstanceStateDescriptions = InstanceStateDescriptions;
 
-  res.Status = {
-    Owner: status | (1 << 0),
-    Configured: status | (1 << 2),
-    ExtendedDeviceStatus: ExtendedDeviceStatusDescription(status), // bits 4 - 7
-    MinorRecoverableFault: status | (1 << 8),
-    MinorUnrecoverableFault: status | (1 << 9),
-    MajorRecoverableFault: status | (1 << 10),
-    MajorUnrecoverableFault: status | (1 << 11),
-  };
-}
+// CIP Vol1 Table 5-2.3
+// function ParseInstanceStatus(buffer, offset, cb) {
+//   const code = buffer.readUInt16LE(offset); offset += 2;
+
+//   const status = {
+//     code,
+//     owned: getBit(code, 0),
+//     configured: getBit(code, 3),
+//     extendedDeviceStatus: ExtendedDeviceStatusDescription(code), // bits 4 - 7
+//     minorRecoverableFault: getBit(code, 8),
+//     minorUnrecoverableFault: getBit(code, 9),
+//     majorRecoverableFault: getBit(code, 10),
+//     majorUnrecoverableFault: getBit(code, 11)
+//   };
+
+//   if (typeof cb === 'function') {
+//     cb(status)
+//   }
+
+//   return offset;
+// }
+
+// Identity.ParseInstanceStatus = ParseInstanceStatus;
 
 // CIP Vol1 Table 5-2.4
-const ExtendedDeviceStatusDescription = {
-  0x0000: 'Self-testing or unknown',
-  0x0001: 'Firmware update in progress',
-  0x0010: 'At least one faulted I/O connection',
-  0x0011: 'No I/O connections established',
-  0x0100: 'Non-volatile configuration bad',
-  0x0101: 'Major fault - either bit 10 or bit 11 is true (1)',
-  0x0110: 'At least on I/O connection in run mode',
-  0x0111: 'At least one I/O connection established, all in idle mode'
+const ExtendedDeviceStatusDescriptions = {
+  0b0000: 'Self-testing or unknown',
+  0b0001: 'Firmware update in progress',
+  0b0010: 'At least one faulted I/O connection',
+  0b0011: 'No I/O connections established',
+  0b0100: 'Non-volatile configuration bad',
+  0b0101: 'Major fault - either bit 10 or bit 11 is true (1)',
+  0b0110: 'At least on I/O connection in run mode',
+  0b0111: 'At least one I/O connection established, all in idle mode'
 };
 
 function ExtendedDeviceStatusDescription(status) {
-  const eds = (status << 8) >> 12;
-  const desc = ExtendedDeviceStatusDescription(eds);
-  return desc ? desc : 'Vendor/product specific or unknown';
+  const eds = getBits(status, 4, 8);
+  const desc = ExtendedDeviceStatusDescriptions[eds];
+  return desc ? desc : 'Vendor/Product specific';
 }
 
 

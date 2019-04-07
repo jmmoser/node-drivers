@@ -17,13 +17,11 @@ class Layer {
       if (lowerLayer.handlesForwarding !== true) {
         lowerLayer.upperLayer = this;
       }
-
       lowerLayer.layerAdded(this);
     }
 
     this.__context = 0;
     this.__callbacks = new Map();
-
     this.__contextToLayer = new Map();
   }
 
@@ -32,19 +30,8 @@ class Layer {
     return this;
   }
 
-  _handleData(data, info, context) {
-    if (this._defragger != null) {
-      data = this._defragger.defrag(data);
-      if (data == null) return;
-    }
-
-    this.handleData(data, info, context);
-  }
-
   disconnect(callback) {
     // IMPLEMENT IN SUBCLASS IF NEEDED
-    // if (callback != null) callback();
-
     return CallbackPromise(callback, resolver => {
       resolver.resolve();
     });
@@ -81,17 +68,6 @@ class Layer {
     });
   }
 
-  // close(callback) {
-  //   const self = this;
-  //   if (self.upperLayer != null) {
-  //     self.upperLayer.close(function() {
-  //       self.disconnect(callback);
-  //     });
-  //   } else {
-  //     self.disconnect(callback);
-  //   }
-  // }
-
   forward(data, info, context) {
     if (this.upperLayer != null) {
       this.forwardTo(this.upperLayer, data, info, context);
@@ -99,12 +75,11 @@ class Layer {
   }
 
   forwardTo(layer, data, info, context) {
-    layer._handleData(data, info, context);
+    internalHandleData(layer, data, info, context);
   }
 
   send(message, info, priority, context) {
     const transport = this.lowerLayer != null ? this.lowerLayer : this;
-
     transport.addMessageToQueue(this, message, info, priority, context);
     transport.sendNextMessage();
   }
@@ -128,7 +103,6 @@ class Layer {
     this._queue.addToQueue(obj, priority);
   }
 
-  
 
   contextCallback(callback, context) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
@@ -178,4 +152,13 @@ module.exports = Layer;
 function incrementContext(self) {
   self.__context = (self.__context + 1) % 0x100000000;
   return self.__context;
+}
+
+function internalHandleData(self, data, info, context) {
+  if (self._defragger != null) {
+    data = self._defragger.defrag(data);
+    if (data == null) return;
+  }
+
+  self.handleData(data, info, context);
 }

@@ -1,6 +1,8 @@
 'use strict';
 
+const Identity = require('../../CIP/Objects/Identity');
 const { getBit } = require('../../util');
+// const { ParseInstanceStatus, InstanceStateDescriptions } = require('../../CIP/Objects/Identity');
 
 /*
   Communication Profile Families
@@ -280,37 +282,24 @@ EIPReply[Commands.ListIdentity] = function(packet) {
     if (item.type === CPFItemIDs.ListIdentity) {
       item.encapsulationProtocolVersion = buffer.readUInt16LE(offset); offset += 2;
 
-      const socketAddress = {};
-      socketAddress.family = buffer.readInt16BE(offset); offset += 2;
-      socketAddress.port = buffer.readUInt16BE(offset); offset += 2;
+      const socket = {};
+      socket.family = buffer.readInt16BE(offset); offset += 2;
+      socket.port = buffer.readUInt16BE(offset); offset += 2;
       const addr = [];
       for (let i = 0; i < 4; i++) {
-        addr.push(buffer.readUInt8(offset).toString());
-        offset += 1;
+        addr.push(buffer.readUInt8(offset).toString()); offset += 1;
       }
-      socketAddress.address = addr.join('.');
-      socketAddress.zero = buffer.slice(offset, offset + 8); offset += 8;
-      item.SocketAddress = socketAddress;
+      socket.address = addr.join('.');
+      socket.zero = buffer.slice(offset, offset + 8); offset += 8;
+      item.socket = socket;
 
-      item.vendorID = buffer.readUInt16LE(offset); offset += 2;
-      item.deviceType = buffer.readUInt16LE(offset); offset += 2;
-      item.productCode = buffer.readUInt16LE(offset); offset += 2;
-      item.revision = {};
-      item.revision.major = buffer.readUInt8(offset); offset += 1;
-      item.revision.minor = buffer.readUInt8(offset); offset += 1;
+      offset = Identity.ParseInstanceAttributesAll(buffer, offset, value => {
+        item.attributes = value;
+      });
 
-      item.status = item.status || {};
-      item.status.code = buffer.readUInt16LE(offset); offset += 2; // Data type is WORD
-      item.serialNumber = buffer.readUInt32LE(offset); offset += 4;
-
-      const productNameLength = buffer.readUInt8(offset); offset += 1;
-      item.productName = buffer.toString('ascii', offset, offset + productNameLength); offset += productNameLength;
-
-      item.state = buffer.readUInt8(offset); offset += 1;
-
-      if (IdentityInstanceStateDescriptions[item.state]) {
-        item.stateDescription = IdentityInstanceStateDescriptions[item.state];
-      }
+      offset = Identity.ParseInstanceAttributeState(buffer, offset, value => {
+        item.attributes.state = value;
+      });
     }
   });
 };
@@ -393,13 +382,13 @@ const EIPStatusCodeDescriptions = {
   0x0069: 'Unsupported encapsulation protocol revision.'
 };
 
-// EIP-CIP V1, 5-2.2, page 5-7
-const IdentityInstanceStateDescriptions = {
-  0: 'Nonexistent',
-  1: 'Device Self Testing',
-  2: 'Standby',
-  3: 'Operational',
-  4: 'Major Recoverable Fault',
-  5: 'Major Unrecoverable Fault',
-  255: 'Default for Get Attribute All service'
-};
+// // EIP-CIP V1, 5-2.2, page 5-7
+// const IdentityInstanceStateDescriptions = {
+//   0: 'Nonexistent',
+//   1: 'Device Self Testing',
+//   2: 'Standby',
+//   3: 'Operational',
+//   4: 'Major Recoverable Fault',
+//   5: 'Major Unrecoverable Fault',
+//   255: 'Default for Get Attribute All service'
+// };

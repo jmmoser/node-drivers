@@ -74,14 +74,14 @@ class EIPLayer extends Layer {
   nop(callback) {
     // no response, used to test underlying transport layer
     return Layer.CallbackPromise(callback, resolver => {
-      queueUserRequest(this, EIPPacket.NOPRequest());
+      queueUserRequest(this, EIPPacket.NOPRequest(), null, null);
       resolver.resolve();
     });
   }
 
   listServices(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), function(reply) {
+      queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), null, function(reply) {
         if (reply.status.code !== 0) {
           resolver.reject(reply.status.description, reply);
         } else {
@@ -95,13 +95,52 @@ class EIPLayer extends Layer {
     });
   }
 
-  listIdentity(broadcastTimeout, callback) {
+  listIdentity(options, callback) {
+    let timeout = -1;
+    const hosts = [];
+
     if (arguments.length === 1 && typeof arguments[0] === 'function') {
       callback = arguments[0];
-      broadcastTimeout = -1;
+    } else {
+      switch (typeof options) {
+        case 'number':
+          timeout = options;
+          break;
+        case 'object':
+          timeout = typeof options.timeout === 'number' ? options.timeout : -1;
+          if (Array.isArray(options.hosts)) {
+            options.hosts.forEach(host => {
+              switch (typeof host) {
+                case 'string':
+                  const parts = host.split(':', 2);
+                  if (parts.length === 0) {
+                    hosts.push({ host: parts[0] });
+                  } else {
+                    hosts.push({ host: parts[0], port: parts[1] });
+                  }
+                  break;
+                case 'object':
+                  hosts.push(host);
+                  break;
+                default:
+                  break;
+              }
+            });
+          }
+          break;
+        default:
+          break;
+      }
     }
 
-    const shouldBroadcast = typeof broadcastTimeout === 'number' && broadcastTimeout > 0;
+    if (timeout <= 0) {
+      timeout = 2000;
+    }
+
+    if (hosts.length === 0) {
+      hosts.push({});
+    }
+
     const identities = [];
 
     return Layer.CallbackPromise(callback, resolver => {
@@ -112,36 +151,111 @@ class EIPLayer extends Layer {
         if (error) {
           resolver.reject(error.message, error.info);
         } else {
-          resolver.resolve(identities);
+          resolver.resolve(identities.sort(function(i1, i2) {
+            if (i1.socket && i2.socket) {
+              const s1 = i1.socket;
+              const s2 = i2.socket;
+
+              if (s1.address && s2.address) {
+                if (s1.address < s2.address) return -1;
+                if (s1.address > s2.address) return 1;
+              }
+            }
+            return 0;
+          }));
         }
       }
 
-      if (shouldBroadcast) {
-        timeoutHandler = setTimeout(finalizer, broadcastTimeout)
-      }
+      timeoutHandler = setTimeout(finalizer, timeout);
 
-      queueUserRequest(this, EIPPacket.ListIdentityRequest(), function(reply) {
+      function internalListIdentityReplyHandler(reply) {
         if (reply.status.code !== 0) {
           finalizer(reply.status.description, reply);
         } else {
           if (Array.isArray(reply.Items) && reply.Items.length === 1) {
             identities.push(reply.Items[0]);
-            if (shouldBroadcast) {
-              return true;
-            } else {
-              finalizer();
-            }
+            return true;
           } else {
             finalizer('Unexpected result', reply);
           }
         }
+      }
+
+      hosts.forEach((host, idx) => {
+        const cb = idx === 0 ? internalListIdentityReplyHandler : null;
+        queueUserRequest(this, EIPPacket.ListIdentityRequest(), host, cb);
       });
     });
   }
 
+  // listIdentity(options, callback) {
+  //   let timeout = -1;
+  //   let host = null;
+  //   let port = null;
+
+  //   if (arguments.length === 1 && typeof arguments[0] === 'function') {
+  //     callback = arguments[0];
+  //   } else {
+  //     switch (typeof options) {
+  //       case 'number':
+  //         timeout = options;
+  //         break;
+  //       case 'object':
+  //         timeout = typeof options.timeout === 'number' ? options.timeout : -1;
+  //         host = typeof options.host === 'string' ? options.host : null;
+  //         port = typeof options.port === 'number' ? options.port : null;
+  //         break;
+  //       default:
+  //         break;
+  //     }
+  //   }
+
+  //   const shouldBroadcast = timeout > 0;
+  //   const identities = [];
+
+  //   return Layer.CallbackPromise(callback, resolver => {
+  //     let timeoutHandler;
+
+  //     function finalizer(error) {
+  //       clearTimeout(timeoutHandler);
+  //       if (error) {
+  //         resolver.reject(error.message, error.info);
+  //       } else {
+  //         resolver.resolve(identities);
+  //       }
+  //     }
+
+  //     if (shouldBroadcast) {
+  //       timeoutHandler = setTimeout(finalizer, timeout)
+  //     }
+
+  //     const info = {
+  //       host,
+  //       port
+  //     };
+
+  //     queueUserRequest(this, EIPPacket.ListIdentityRequest(), info, function(reply) {
+  //       if (reply.status.code !== 0) {
+  //         finalizer(reply.status.description, reply);
+  //       } else {
+  //         if (Array.isArray(reply.Items) && reply.Items.length === 1) {
+  //           identities.push(reply.Items[0]);
+  //           if (shouldBroadcast) {
+  //             return true;
+  //           } else {
+  //             finalizer();
+  //           }
+  //         } else {
+  //           finalizer('Unexpected result', reply);
+  //         }
+  //       }
+  //     });
+  //   });
+  // }
+
   listInterfaces(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      queueUserRequest(this, EIPPacket.ListInterfacesRequest(), function (reply) {
+      queueUserRequest(this, EIPPacket.ListInterfacesRequest(), null, function (reply) {
         if (reply.status.code !== 0) {
           resolver.reject(reply.status.description, reply);
         } else {
@@ -313,8 +427,8 @@ function incrementContext(self) {
 }
 
 
-function queueUserRequest(self, buffer, callback) {
-  const command = EIPPacket.Command(buffer);
+function queueUserRequest(self, message, info, callback) {
+  const command = EIPPacket.Command(message);
 
   if (callback) {
     /* no callback for NOP */
@@ -324,18 +438,24 @@ function queueUserRequest(self, buffer, callback) {
     self._userCallbacks.get(command).push(callback);
   }
 
-  self._userRequests.push(buffer);
+  self._userRequests.push({
+    message,
+    info
+  });
+
   sendUserRequests(self);
 }
 
 
 function sendUserRequests(self) {
   if (self._connectionState === 0 || self._connectionState === 2) {
-    let buffer;
-    while ((buffer = self._userRequests.shift())) {
+    // let buffer;
+    let request;
+    while ((request = self._userRequests.shift())) {
       /* overwrite sessionHandle, CIP Vol 2 says it is ignored for some commands but I don't believe it is ignored if a session is established */
-      buffer.writeUInt32LE(self._sessionHandle, 4);
-      self.send(buffer, null, false);
+      const { message, info } = request;
+      message.writeUInt32LE(self._sessionHandle, 4);
+      self.send(message, info, false);
     }
   }
 }

@@ -153,11 +153,64 @@ const ReservedClassAttributes = {
   MaximumIDNumberInstanceAttributes: 7
 };
 
+
+function ParseString(type, buffer, offset, cb) {
+  offset = offset || 0;  
+
+  let length;
+  let charLength;
+  let readFunc;
+  let convertFunc;
+
+  switch (type) {
+    case DataType.STRING:
+      charLength = 1;
+      length = buffer.readUInt16LE(offset); offset += 2;
+      readFunc = buffer.readUInt8.bind(buffer);
+      convertFunc = String.fromCharCode;
+      break;
+    case DataType.STRING2:
+      charLength = 2;
+      length = buffer.readUInt16LE(offset); offset += 2;
+      readFunc = buffer.readUInt16LE.bind(buffer);
+      convertFunc = String.fromCharCode;
+      break;
+    case DataType.SHORT_STRING:
+      charLength = 1;
+      length = buffer.readUInt8(offset); offset += 1;
+      readFunc = buffer.readUInt8.bind(buffer);
+      convertFunc = String.fromCharCode;
+      break;
+    case DataType.STRINGN:
+      //
+      break;
+    case DataType.STRINGI:
+      //
+      break;
+    default:
+    //
+  }
+
+  const characters = [];
+  for (let i = 0; i < length; i++) {
+    characters.push(convertFunc(readFunc(offset)));
+    offset += charLength;
+  }
+
+  if (typeof cb === 'function') {
+    cb(characters.join(''));
+  }
+
+  return offset;
+}
+
+
 module.exports = {
   Classes,
   ClassNames,
   Services,
   DataType,
   DataTypeName,
-  ReservedClassAttributes
+  ReservedClassAttributes,
+  ParseString
 };

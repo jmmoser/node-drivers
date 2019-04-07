@@ -2,6 +2,7 @@
 
 const { getBit, getBits } = require('../util');
 const CIP = require('./Objects/CIP');
+const Identity = require('./Objects/Identity');
 const Layer = require('../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
@@ -206,18 +207,22 @@ class Logix5000 extends Layer {
           const reply = MessageRouter.Reply(message);
 
           if (reply.status.code === 0) {
-            const data = reply.data;
-            const res = {};
-            res.vendorID = data.readUInt16LE(0);
-            res.deviceType = data.readUInt16LE(2);
-            res.productCode = data.readUInt16LE(4);
-            res.majorRevision = data.readUInt8(6);
-            res.minorRevision = data.readUInt8(7);
-            res.status = data.readUInt16LE(8);
-            res.serialNumber = data.readInt32LE(10);
-            const nameLength = data.readUInt8(14);
-            res.productName = data.toString('ascii', 15, 15 + nameLength);
-            resolver.resolve(res);
+            // const data = reply.data;
+            // const res = {};
+            // res.vendorID = data.readUInt16LE(0);
+            // res.deviceType = data.readUInt16LE(2);
+            // res.productCode = data.readUInt16LE(4);
+            // res.majorRevision = data.readUInt8(6);
+            // res.minorRevision = data.readUInt8(7);
+            // res.status = data.readUInt16LE(8);
+            // res.serialNumber = data.readInt32LE(10);
+            // const nameLength = data.readUInt8(14);
+            // res.productName = data.toString('ascii', 15, 15 + nameLength);
+            // resolver.resolve(res);
+
+            Identity.ParseInstanceAttributesAll(reply.data, 0, value => {
+              resolver.resolve(value);
+            });
           } else {
             resolver.reject(`${BASE_ERROR}${reply.status.description}`);
           }
