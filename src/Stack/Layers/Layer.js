@@ -21,7 +21,7 @@ class Layer {
     }
 
     this.__context = 0;
-    this.__callbacks = new Map();
+    this.__contextToCallback = new Map();
     this.__contextToLayer = new Map();
   }
 
@@ -110,16 +110,16 @@ class Layer {
       if (context == null) {
         context = incrementContext(this);
       }
-      this.__callbacks.set(context, callback);
+      this.__contextToCallback.set(context, callback);
     }
     return context;
   }
 
   callbackForContext(context) {
     let callback = null;
-    if (this.__callbacks.has(context)) {
-      callback = this.__callbacks.get(context);
-      this.__callbacks.delete(context);
+    if (this.__contextToCallback.has(context)) {
+      callback = this.__contextToCallback.get(context);
+      this.__contextToCallback.delete(context);
     }
     return callback;
   }
