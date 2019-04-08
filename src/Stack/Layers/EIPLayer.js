@@ -321,7 +321,13 @@ class EIPLayer extends Layer {
           if (info.connectionID != null) {
             fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
             if (request.context != null && info.responseID != null) {
+              // console.log('');
+              // console.log(`setting: ${info.responseID} : ${request.context}`);
+              // console.log(this._connectedContexts);
+              /** There might be an opportunity to improve this, previous request's contexts are overwritten */
               this._connectedContexts.set(info.responseID, request.context);
+              // console.log(this._connectedContexts);
+              // console.log('');
             }
           } else {
             incrementContext(this);
@@ -417,13 +423,15 @@ function setupCallbacks(self) {
   });
 
   self._callbacks.set(EIPCommand.SendUnitData, packet => {
-    // console.log('SendUnitData');
     if (packet.status.code === 0) {
       const info = {
         connected: true,
         connectionID: packet.items[0].address
       };
       const context = self._connectedContexts.get(info.connectionID);
+      // console.log('');
+      // console.log(`EIPLayer using context: ${info.connectionID} -> ${context}`);
+      // console.log('')
       self.forward(packet.items[1].data, info, context);
     } else {
       console.log('EIPLayer Error: Packet Status:');

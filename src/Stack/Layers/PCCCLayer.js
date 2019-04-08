@@ -21,13 +21,11 @@ class PCCCLayer extends Layer {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.WordRangeReadRequest(transaction, address);
 
-      this.send(message, null, false, this.contextCallback(function (data) {
-        const reply = PCCCPacket.fromBufferReply(data);
-        const error = getError(reply.status);
-        if (error != null) {
+      this.send(message, null, false, this.contextCallback(function (error, reply) {
+        if (error) {
           resolver.reject(error, reply);
         } else {
-          resolver.resolve(reply.Data);
+          resolver.resolve(reply.data);
         }
       }, transaction));
     });
@@ -38,10 +36,8 @@ class PCCCLayer extends Layer {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.TypedReadRequest(transaction, address, 1);
 
-      this.send(message, null, false, this.contextCallback(function (data) {
-        const reply = PCCCPacket.fromBufferReply(data);
-        const error = getError(reply.status);
-        if (error != null) {
+      this.send(message, null, false, this.contextCallback(function (error, reply) {
+        if (error) {
           resolver.reject(error, reply);
         } else {
           const value = PCCCPacket.ParseTypedReadData(reply.data);
@@ -60,10 +56,8 @@ class PCCCLayer extends Layer {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
 
-      this.send(message, null, false, this.contextCallback(function (data) {
-        const reply = PCCCPacket.fromBufferReply(data);
-        const error = getError(reply.status);
-        if (error != null) {
+      this.send(message, null, false, this.contextCallback(function (error, reply) {
+        if (error) {
           resolver.reject(error, reply);
         } else {
           resolver.resolve(reply);
@@ -83,10 +77,8 @@ class PCCCLayer extends Layer {
   //   let transaction = incrementTransaction(this);
   //   let message = PCCCPacket.UnprotectedReadRequest(transaction, address, size);
   //
-  //   this.send(message, null, false, this.contextCallback(function(data) {
-  //     let reply = PCCCPacket.fromBufferReply(data);
-  //     let error = getError(reply.status);
-  //     if (error != null) {
+  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
+  //     if (error) {
   //       callback(error);
   //     } else {
   //       callback(null, reply);
@@ -99,13 +91,11 @@ class PCCCLayer extends Layer {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.DiagnosticStatusRequest(transaction);
 
-      this.send(message, null, false, this.contextCallback(function (data) {
-        const reply = PCCCPacket.fromBufferReply(data);
-        const error = getError(reply.status);
+      this.send(message, null, false, this.contextCallback(function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          resolver.resolve(reply.Data);
+          resolver.resolve(reply.data);
         }
       }, transaction));
     });
@@ -117,13 +107,11 @@ class PCCCLayer extends Layer {
   //   const transaction = incrementTransaction(this);
   //   const message = PCCCPacket.WordRangeReadRequest(transaction, address);
 
-  //   this.send(message, null, false, this.contextCallback(function(data) {
-  //     const reply = PCCCPacket.fromBufferReply(data);
-  //     const error = getError(reply.status);
-  //     if (error != null) {
+  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
+  //     if (error) {
   //       callback(error);
   //     } else {
-  //       callback(null, reply.Data);
+  //       callback(null, reply.data);
   //     }
   //   }, transaction));
   // }
@@ -134,11 +122,9 @@ class PCCCLayer extends Layer {
   //   const transaction = incrementTransaction(this);
   //   const message = PCCCPacket.TypedReadRequest(transaction, address, 1);
 
-  //   this.send(message, null, false, this.contextCallback(function(data) {
-  //     const reply = PCCCPacket.fromBufferReply(data);
-  //     const error = getError(reply.status);
-  //     if (error != null) {
-  //       callback(error);
+  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
+  //     if (error) {
+  //       callback(error, reply);
   //     } else {
   //       const value = PCCCPacket.ParseTypedReadData(reply.data);
   //       if (Array.isArray(value) && value.length > 0) {
@@ -156,10 +142,8 @@ class PCCCLayer extends Layer {
   //   const transaction = incrementTransaction(this);
   //   const message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
 
-  //   this.send(message, null, false, this.contextCallback(function(data) {
-  //     const reply = PCCCPacket.fromBufferReply(data);
-  //     const error = getError(reply.status);
-  //     if (error != null) {
+  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
+  //     if (error) {
   //       callback(error);
   //     } else {
   //       callback(null, reply);
@@ -178,11 +162,9 @@ class PCCCLayer extends Layer {
   // //   let transaction = incrementTransaction(this);
   // //   let message = PCCCPacket.UnprotectedReadRequest(transaction, address, size);
   // //
-  // //   this.send(message, null, false, this.contextCallback(function(data) {
-  // //     let reply = PCCCPacket.fromBufferReply(data);
-  // //     let error = getError(reply.status);
-  // //     if (error != null) {
-  // //       callback(error);
+  // //   this.send(message, null, false, this.contextCallback(function(error, reply) {
+  // //     if (error) {
+  // //       callback(error, reply);
   // //     } else {
   // //       callback(null, reply);
   // //     }
@@ -195,13 +177,11 @@ class PCCCLayer extends Layer {
   //   const transaction = incrementTransaction(this);
   //   const message = PCCCPacket.DiagnosticStatusRequest(transaction);
 
-  //   this.send(message, null, false, this.contextCallback(function(data) {
-  //     const reply = PCCCPacket.fromBufferReply(data);
-  //     const error = getError(reply.status);
+  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
   //     if (error) {
-  //       callback(error);
+  //       callback(error, reply);
   //     } else {
-  //       callback(null, reply.Data);
+  //       callback(null, reply.data);
   //     }
   //   }, transaction));
   // }
@@ -220,12 +200,14 @@ class PCCCLayer extends Layer {
       let message = null;
       const transaction = incrementTransaction(this);
 
-      if (request.info != null && request.info.connected === true) {
+      const { info } = request;
+
+      if (info != null && info.connectionID != null && info.transportHeader != null) {
         const data = Buffer.alloc(6 + request.message.length);
         data.writeUInt8(0, 0); // FNC
         data.writeUInt8(0, 1); // Extra
-        data.writeUInt16LE(request.info.connectionID, 2);
-        data.writeUInt16LE(request.info.transportHeader, 4);
+        data.writeUInt16LE(info.connectionID, 2);
+        data.writeUInt16LE(info.transportHeader, 4);
         request.message.copy(data, 6);
         message = PCCCPacket.toBuffer(Commands.Connected, 0, transaction, data);
       } else {
@@ -233,7 +215,7 @@ class PCCCLayer extends Layer {
         data.writeUInt8(0, 0); // FNC
         data.writeUInt8(0, 1); // Extra
         request.message.copy(data, 2);
-        message = PCCCPacket.toBuffer(Commands.Connected, 0, transaction, data);
+        message = PCCCPacket.toBuffer(Commands.Unconnected, 0, transaction, data);
       }
 
       this.send(message, null, false, this.layerContext(request.layer, transaction));
@@ -246,28 +228,32 @@ class PCCCLayer extends Layer {
   handleData(data, info, context) {
     const packet = PCCCPacket.fromBufferReply(data);
 
+    /** Handle response for request originating from PCCCLayer */
     const callback = this.callbackForContext(packet.transaction);
     if (callback != null) {
-      callback(data, info);
+      callback(getError(packet.status), packet, info);
       return;
     }
 
+    /** Handle response for requst originating from an upper layer (embedded CIP) */
     const layer = this.layerForContext(packet.transaction);
     if (layer != null) {
-      this.forwardTo(layer, data, info, context);
-    } else {
-      throw new Error('PCCCLayer Error: No callback or layer for context (transaction)');
+      this.forwardTo(layer, packet.data, info, context);
+      return;
     }
+
+    console.log('PCCCLayer Error: No callback or layer for context (transaction)');
+    console.log(packet);
   }
 }
 
 module.exports = PCCCLayer;
 
+
 function incrementTransaction(layer) {
   layer._transaction++;
   return layer._transaction % 0x10000;
 }
-
 
 function getError(status) {
   if (status.code === 0) return null;
@@ -306,3 +292,25 @@ const Commands = {
     -SLC Protected Typed Logical Read with 2 Address Fields
     -SLC Protected Typed Logical Write with 2 Address Fields
 */
+
+/** Ref. CIP and PCCC v1, Appendix B, pg. 17 */
+const FragmentationFunctions = {
+  Only: 0x00,
+  FirstRequest: 0x01,
+  Middle: 0x02,
+  Last: 0x03,
+  FirstResponse: 0x04,
+  SendMore: 0x05,
+  Abort: 0x06,
+  AckResponse: 0x07,
+  NakResponse: 0x08
+};
+
+
+class Fragger {
+  constructor(data, info) {
+    this.data = data;
+    this.info = info || {};
+    this.connected = this.info.connectionID && this.info.transportHeader;
+  }
+}
