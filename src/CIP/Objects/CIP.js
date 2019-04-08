@@ -1,6 +1,9 @@
 'use strict';
 
-// EIP-CIP-V1 Table 5.1
+/** 
+ * Ref. CIP Vol 1 Table 5.1
+ * and https://github.com/Res260/wireshark/blob/b7107f5fcb9bcc20be33b6263f90d1b20cc1591d/epan/dissectors/packet-cip.c
+ */
 const Classes = {
   Identity: 0x01,
   MessageRouter: 0x02,
@@ -55,6 +58,33 @@ const Classes = {
   MotionAxis: 0x42,
   TimeSync: 0x43,
   Modbus: 0x44,
+  OriginatorConnectionList: 0x45,
+  ModbusSerialLink: 0x46,
+  DeviceLevelRing: 0x47,
+  QoS: 0x48,
+  SafetyAnalogInputPoint: 0x49,
+  SafetyAnalogInputGroup: 0x4A,
+  SafetyDualChannelAnalogInput: 0x4B,
+  SERCOSIIILink: 0x4C,
+  TargetConnectionList: 0x4D,
+  BaseEnergy: 0x4E,
+  ElectricalEnergy: 0x4F,
+  NonElectricalEnergy: 0x50,
+  BaseSwitch: 0x51,
+  SNMP: 0x52,
+  PowerManagement: 0x53,
+  RSTPBridge: 0x54,
+  RSTPPort: 0x55,
+  PRPHSRProtocol: 0x56,
+  PRPHSRNodesTable: 0x57,
+  SafetyFeedback: 0x58,
+  SafetyDualChannelFeedback: 0x59,
+  SafetyStopFunctions: 0x5A,
+  SafetyLimitFunctions: 0x5B,
+  PowerCurtailment: 0x5C,
+  CIPSecurity: 0x5D,
+  EthernetIPSecurity: 0x5E,
+  CertificateManagement: 0x5F,
   PCCC: 0x67,
   SCANportPassThroughParameter: 0x93,
   SCANportPassThroughFaultQueue: 0x97,
