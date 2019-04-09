@@ -141,7 +141,7 @@ function send(driver, service, data, callback) {
   const request = MessageRouter.Request(service, MODBUS_EPATH, data);
   driver.send(request, null, false, this.contextCallback(function(message) {
     const reply = MessageRouter.Reply(message);
-    if (reply.status.code !== 0 || reply.status.code !== 6) {
+    if (reply.status.code !== 0 && reply.status.code !== 6) {
       callback(reply.status.description, reply);
     } else {
       callback(null, reply);
