@@ -88,9 +88,9 @@ class EIPLayer extends Layer {
 
   listServices(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), null, function(reply) {
-        if (reply.status.code !== 0) {
-          resolver.reject(reply.status.description, reply);
+      queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), null, function(error, reply) {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           if (Array.isArray(reply.items)) {
             resolver.resolve(reply.items);
@@ -153,10 +153,10 @@ class EIPLayer extends Layer {
     return Layer.CallbackPromise(callback, resolver => {
       let timeoutHandler;
 
-      function finalizer(error) {
+      function finalizer(error, reply) {
         clearTimeout(timeoutHandler);
         if (error) {
-          resolver.reject(error.message, error.info);
+          resolver.reject(error, reply);
         } else {
           resolver.resolve(identities.sort(function(i1, i2) {
             if (i1.socket && i2.socket) {
@@ -175,9 +175,9 @@ class EIPLayer extends Layer {
 
       timeoutHandler = setTimeout(finalizer, timeout);
 
-      function internalListIdentityReplyHandler(reply) {
-        if (reply.status.code !== 0) {
-          finalizer(reply.status.description, reply);
+      function internalListIdentityReplyHandler(error, reply) {
+        if (error) {
+          finalizer(error, reply);
         } else {
           if (Array.isArray(reply.items) && reply.items.length === 1) {
             identities.push(reply.items[0]);
@@ -223,10 +223,10 @@ class EIPLayer extends Layer {
   //   return Layer.CallbackPromise(callback, resolver => {
   //     let timeoutHandler;
 
-  //     function finalizer(error) {
+  //     function finalizer(error, reply) {
   //       clearTimeout(timeoutHandler);
   //       if (error) {
-  //         resolver.reject(error.message, error.info);
+  //         resolver.reject(error, reply);
   //       } else {
   //         resolver.resolve(identities);
   //       }
@@ -241,9 +241,9 @@ class EIPLayer extends Layer {
   //       port
   //     };
 
-  //     queueUserRequest(this, EIPPacket.ListIdentityRequest(), info, function(reply) {
-  //       if (reply.status.code !== 0) {
-  //         finalizer(reply.status.description, reply);
+  //     queueUserRequest(this, EIPPacket.ListIdentityRequest(), info, function(error, reply) {
+  //       if (error) {
+  //         finalizer(error, reply);
   //       } else {
   //         if (Array.isArray(reply.items) && reply.items.length === 1) {
   //           identities.push(reply.items[0]);
@@ -262,9 +262,9 @@ class EIPLayer extends Layer {
 
   listInterfaces(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      queueUserRequest(this, EIPPacket.ListInterfacesRequest(), null, function (reply) {
-        if (reply.status.code !== 0) {
-          resolver.reject(reply.status.description, reply);
+      queueUserRequest(this, EIPPacket.ListInterfacesRequest(), null, function (error, reply) {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           if (Array.isArray(reply.items)) {
             resolver.resolve(reply.items);
@@ -276,12 +276,11 @@ class EIPLayer extends Layer {
     });
   }
 
-  indicateStatus(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      console.log(reply);
-      queueUserRequest(this, EIPPacket.Ind)
-    });
-  }
+  // indicateStatus(callback) {
+  //   return Layer.CallbackPromise(callback, resolver => {
+  //     queueUserRequest(this, EIPPacket.Ind)
+  //   });
+  // }
 
 
   connect(callback) {
@@ -357,9 +356,14 @@ class EIPLayer extends Layer {
       //   callback.apply(this, [packet]);
       // });
 
+      const error = packet.status.code !== 0 ? packet.status.description || `EIP error code ${packet.status.code}` : null;
+
       this._userCallbacks.set(command, callbacks.filter(callback => {
-        const result = callback.apply(this, [packet]);
-        return result === true;
+        // const result = callback.apply(this, [error, packet]);
+        // return result === true;
+
+        /** `this` is bound to user callbacks  */
+        return callback(error, packet);
       }));
 
     } else if (this._callbacks.has(command)) {
@@ -370,6 +374,16 @@ class EIPLayer extends Layer {
       console.log(this._callbacks);
       console.log(data)
     }
+  }
+
+  handleDestroy(error) {
+    this._userCallbacks.forEach(cb => {
+      cb(error);
+    });
+    this._userCallbacks.clear();
+
+    this._unconnectedContexts.clear();
+    this._connectedContexts.clear();
   }
 }
 
@@ -457,7 +471,7 @@ function queueUserRequest(self, message, info, callback) {
     if (!self._userCallbacks.has(command)) {
       self._userCallbacks.set(command, []);
     }
-    self._userCallbacks.get(command).push(callback);
+    self._userCallbacks.get(command).push(callback.bind(self));
   }
 
   self._userRequests.push({

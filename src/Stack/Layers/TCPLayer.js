@@ -7,9 +7,21 @@ class TCPLayer extends Layer {
   constructor(options) {
     super(null);
 
-    this.options = options || {};
-    this._connectionState = 0;
+    if (typeof options !== 'object') {
+      object = {};
+    }
 
+    if (typeof options.connectTimeout !== 'number' || options.connectTimeout < 0) {
+      options.connectTimeout = 3000;
+    }
+
+    if (typeof options.timeout !== 'number' || options.timeout < 0) {
+      options.timeout = 0;
+    }
+
+    this.options = options;
+
+    this._connectionState = 0;
     this.connect();
   }
 
@@ -18,6 +30,7 @@ class TCPLayer extends Layer {
 
     const socket = net.createConnection(this.options, () => {
       this._connectionState = 2;
+      socket.setTimeout(this.options.timeout);
       this.sendNextMessage();
     });
 
@@ -30,15 +43,18 @@ class TCPLayer extends Layer {
 
     socket.on('error', (err) => {
       this._connectionState = 0;
-      console.log('TCPLayer Error:');
-      console.log(err);
+      // console.log('TCPLayer Error:');
+      // console.log(err);
+      this.destroy(err.message);
     });
 
     socket.on('data', (data) => {
+      // console.log('handling data')
       handleData(data);
     });
 
     socket.on('close', () => {
+      // console.log('TCPLayer closed');
       if (this._connectionState === 2) {
         socket.destroy();
       }
@@ -46,12 +62,26 @@ class TCPLayer extends Layer {
     });
 
     socket.on('timeout', () => {
-      socket.end();
+      // console.log(`TCPLayer timeout: ${this.options.host}:${this.options.port}`);
+      this._connectionState = 0;
+      socket.destroy();
+      this.destroy('TCPLayer timeout');
     });
 
-    // socket.on('end', () => {
-    //   // console.log('TCPLayer ended')
-    // });
+    if (this.options.connectTimeout > 0) {
+      socket.setTimeout(this.options.connectTimeout);
+    }
+    
+    socket.on('end', () => {
+      // console.log('TCPLayer ended')
+      if (this._connectionState === 2) {
+        this.destroy('TCPLayer ended');
+      }
+      this._connectionState = 0;
+      socket.end(() => {
+        socket.destroy();
+      });
+    });
   }
 
   handleData(data) {
@@ -66,9 +96,7 @@ class TCPLayer extends Layer {
           this.socket.destroy();
           resolver.resolve();
         });
-        // this.socket.destroy();
-        // this.socket = null;
-      } else if (this._connectionState === 0) {
+      } else {
         resolver.resolve();
       }
     });

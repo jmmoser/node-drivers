@@ -94,6 +94,10 @@ class Connection extends Layer {
         handleConnectedMessage(this, data, info, context);
     }
   }
+
+  handleDestroy(error) {
+    this._sequenceToContext.clear();
+  }
 }
 
 module.exports = Connection;

@@ -58,6 +58,11 @@ class Layer {
   //   // IMPLEMENT IN SUBCLASS
   // }
 
+  /** Implement in subsclasses */
+  handleDestroy(error) {
+    //
+  }
+
   close(callback) {
     return CallbackPromise(callback, async resolver => {
       if (this.upperLayer != null) {
@@ -67,6 +72,22 @@ class Layer {
       resolver.resolve();
     });
   }
+
+
+  destroy(error) {
+    if (this.upperLayer != null) {
+      this.upperLayer.destroy(error);
+    }
+
+    /** Clear all internal context callbacks */
+    __contextToCallback.forEach(cb => {
+      cb(error);
+    });
+    __contextToCallback.clear();
+
+    this.handleDestroy(error);
+  }
+
 
   forward(data, info, context) {
     if (this.upperLayer != null) {

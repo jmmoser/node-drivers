@@ -9,25 +9,12 @@ const MessageRouter = require('./Objects/MessageRouter');
 class Logix5000 extends Layer {
   readTag(address, callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const BASE_ERROR = 'Logix5000 Error: Read Tag: ';
-
-      if (!address) {
-        return resolver.reject(`${BASE_ERROR}Address must be specified`);
-      }
-
       const path = MessageRouter.ANSIExtSymbolSegment(address);
       const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
 
-      const request = MessageRouter.Request(Services.ReadTag, path, data);
-
-      this.send(request, null, false, this.contextCallback(function (message) {
-        const reply = MessageRouter.Reply(message);
-
-        if (reply.status.code !== 0) {
-          if (READ_TAG_ERRORS[reply.status.code] != null) {
-            reply.status.description = READ_TAG_ERRORS[reply.status.code];
-          }
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Services.ReadTag, path, data, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           try {
             const dataType = reply.data.readUInt16LE(0);
@@ -36,90 +23,132 @@ class Logix5000 extends Layer {
               const value = dataConverter(reply.data, 2);
               resolver.resolve(value);
             } else {
-              resolver.reject(`${BASE_ERROR}No converter for data type: ${dataType}`, reply);
+              resolver.reject(`No converter for data type: ${dataType}`, reply);
             }
           } catch (err) {
-            resolver.reject(`${BASE_ERROR}${err.message}`, reply);
+            resolver.reject(err.message, reply);
           }
         }
-      }));
+      });
     });
   }
 
+  // readTag(address, callback) {
+  //   return Layer.CallbackPromise(callback, resolver => {
+  //     const BASE_ERROR = 'Logix5000 Error: Read Tag: ';
+
+  //     if (!address) {
+  //       return resolver.reject(`${BASE_ERROR}Address must be specified`);
+  //     }
+
+  //     const path = MessageRouter.ANSIExtSymbolSegment(address);
+  //     const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
+
+  //     const request = MessageRouter.Request(Services.ReadTag, path, data);
+
+  //     this.send(request, null, false, this.contextCallback(function (message) {
+  //       const reply = MessageRouter.Reply(message);
+
+  //       if (reply.status.code !== 0) {
+  //         if (READ_TAG_ERRORS[reply.status.code] != null) {
+  //           reply.status.description = READ_TAG_ERRORS[reply.status.code];
+  //         }
+  //         resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+  //       } else {
+  //         try {
+  //           const dataType = reply.data.readUInt16LE(0);
+  //           const dataConverter = DataConverters[dataType];
+  //           if (dataConverter) {
+  //             const value = dataConverter(reply.data, 2);
+  //             resolver.resolve(value);
+  //           } else {
+  //             resolver.reject(`${BASE_ERROR}No converter for data type: ${dataType}`, reply);
+  //           }
+  //         } catch (err) {
+  //           resolver.reject(`${BASE_ERROR}${err.message}`, reply);
+  //         }
+  //       }
+  //     }));
+  //   });
+  // }
 
   writeTag(address, value, callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const BASE_ERROR = 'Logix5000 Error: Write Tag: ';
-      if (!address) {
-        resolver.reject(`${BASE_ERROR}Address must be specified`)
-        return;
-      }
-
       const path = MessageRouter.ANSIExtSymbolSegment(address);
-      const data = Buffer.alloc(8);
 
+      const data = Buffer.alloc(8);
       data.writeUInt16LE(CIP.DataType.REAL, 0);
       data.writeUInt16LE(1, 2);
       data.writeFloatLE(value, 4);
 
-      const request = MessageRouter.Request(Services.WriteTag, path, data);
-
-      this.send(request, null, false, this.contextCallback(function (message) {
-        const reply = MessageRouter.Reply(message);
-        if (reply.status.code === 0) {
-          resolver.resolve();
+      send(this, Services.WriteTag, path, data, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
-          resolver.reject(reply.status.description, reply);
+          resolver.resolve();
         }
-      }));
+      });
     });
   }
 
+  // writeTag(address, value, callback) {
+  //   return Layer.CallbackPromise(callback, resolver => {
+  //     const BASE_ERROR = 'Logix5000 Error: Write Tag: ';
+  //     if (!address) {
+  //       resolver.reject(`${BASE_ERROR}Address must be specified`)
+  //       return;
+  //     }
+
+  //     const path = MessageRouter.ANSIExtSymbolSegment(address);
+  //     const data = Buffer.alloc(8);
+
+  //     data.writeUInt16LE(CIP.DataType.REAL, 0);
+  //     data.writeUInt16LE(1, 2);
+  //     data.writeFloatLE(value, 4);
+
+  //     const request = MessageRouter.Request(Services.WriteTag, path, data);
+
+  //     this.send(request, null, false, this.contextCallback(function (message) {
+  //       const reply = MessageRouter.Reply(message);
+  //       if (reply.status.code === 0) {
+  //         resolver.resolve();
+  //       } else {
+  //         resolver.reject(reply.status.description, reply);
+  //       }
+  //     }));
+  //   });
+  // }
 
   readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
     return Layer.CallbackPromise(callback, resolver => {
       const BASE_ERROR = 'Logix5000 Error: Read Modify Write Tag: ';
       if (!address) {
-        return resolver.reject(
-          `${BASE_ERROR}Address must be specified`
-        );
+        return resolver.reject('Address must be specified');
       }
 
       if (
         !Array.isArray(ORmasks) && !Buffer.isBuffer(ORmasks)
         || !Array.isArray(ANDmasks) && !Buffer.isBuffer(ANDmasks)
       ) {
-        return resolver.reject(
-          `${BASE_ERROR}OR masks and AND masks must be either an array or a buffer`
-        );
+        return resolver.reject('OR masks and AND masks must be either an array or a buffer');
       }
 
       if (ORmasks.length !== ANDmasks.length) {
-        return resolver.reject(
-          `${BASE_ERROR}Length of OR masks must be equal to length of AND masks`
-        );
+        return resolver.reject('Length of OR masks must be equal to length of AND masks');
       }
 
       const sizeOfMasks = ORmasks.length;
 
       if ((new Set([1, 2, 4, 8, 12])).has(sizeOfMasks) === false) {
-        return resolver.reject(
-          `${BASE_ERROR}Size of masks is not valid. Valid lengths are 1, 2, 4, 8, and 12`
-        );
+        return resolver.reject('Size of masks is not valid. Valid lengths are 1, 2, 4, 8, and 12');
       }
 
       for (let i = 0; i < sizeOfMasks; i++) {
-        if (
-          ORmasks[i] < 0 || ORmasks > 0xFF
-          || ANDmasks[i] < 0 || ANDmasks > 0xFF
-        ) {
-          return resolver.reject(
-            `${BASE_ERROR}Values in masks must be greater than or equal to zero and less than or equal to 255`
-          );
+        if (ORmasks[i] < 0 || ORmasks > 0xFF || ANDmasks[i] < 0 || ANDmasks > 0xFF) {
+          return resolver.reject('Values in masks must be greater than or equal to zero and less than or equal to 255');
         }
       }
 
-      const code = Services.ReadModifyWriteTag
       const path = MessageRouter.ANSIExtSymbolSegment(address);
       const data = Buffer.alloc(2 + 2 * sizeOfMasks);
 
@@ -130,23 +159,84 @@ class Logix5000 extends Layer {
         data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
       }
 
-      const request = MessageRouter(code, path, data);
-
-      this.send(request, null, false, this.contextCallback(function (message) {
-        const reply = MessageRouter.Reply(message);
-        if (reply.status.code === 0) {
-          resolver.resolve();
+      send(this, Services.ReadModifyWriteTag, path, data, (error, reply) => {
+        if (error) {
+          resolver.resolve(error, reply);
         } else {
-          resolver.reject(reply.status.description, reply);
+          resolver.resolve();
         }
-      }));
+      });
     });
   }
 
+  // readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
+  //   return Layer.CallbackPromise(callback, resolver => {
+  //     const BASE_ERROR = 'Logix5000 Error: Read Modify Write Tag: ';
+  //     if (!address) {
+  //       return resolver.reject(
+  //         `${BASE_ERROR}Address must be specified`
+  //       );
+  //     }
+
+  //     if (
+  //       !Array.isArray(ORmasks) && !Buffer.isBuffer(ORmasks)
+  //       || !Array.isArray(ANDmasks) && !Buffer.isBuffer(ANDmasks)
+  //     ) {
+  //       return resolver.reject(
+  //         `${BASE_ERROR}OR masks and AND masks must be either an array or a buffer`
+  //       );
+  //     }
+
+  //     if (ORmasks.length !== ANDmasks.length) {
+  //       return resolver.reject(
+  //         `${BASE_ERROR}Length of OR masks must be equal to length of AND masks`
+  //       );
+  //     }
+
+  //     const sizeOfMasks = ORmasks.length;
+
+  //     if ((new Set([1, 2, 4, 8, 12])).has(sizeOfMasks) === false) {
+  //       return resolver.reject(
+  //         `${BASE_ERROR}Size of masks is not valid. Valid lengths are 1, 2, 4, 8, and 12`
+  //       );
+  //     }
+
+  //     for (let i = 0; i < sizeOfMasks; i++) {
+  //       if (
+  //         ORmasks[i] < 0 || ORmasks > 0xFF
+  //         || ANDmasks[i] < 0 || ANDmasks > 0xFF
+  //       ) {
+  //         return resolver.reject(
+  //           `${BASE_ERROR}Values in masks must be greater than or equal to zero and less than or equal to 255`
+  //         );
+  //       }
+  //     }
+
+  //     const path = MessageRouter.ANSIExtSymbolSegment(address);
+  //     const data = Buffer.alloc(2 + 2 * sizeOfMasks);
+
+  //     data.writeUInt16LE(sizeOfMasks, 0);
+
+  //     for (let i = 0; i < sizeOfMasks; i++) {
+  //       data.writeUInt8(ORmasks[i], 2 + i);
+  //       data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
+  //     }
+
+  //     const request = MessageRouter(Services.ReadModifyWriteTag, path, data);
+
+  //     this.send(request, null, false, this.contextCallback(function (message) {
+  //       const reply = MessageRouter.Reply(message);
+  //       if (reply.status.code === 0) {
+  //         resolver.resolve();
+  //       } else {
+  //         resolver.reject(reply.status.description, reply);
+  //       }
+  //     }));
+  //   });
+  // }
+
   supportedObjects(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const BASE_ERROR = 'Logix5000 Supported Objects Error: ';
-
       const path = Buffer.from([
         0x20, // Logical Segment - Class ID
         0x02, // Message Router class
@@ -156,13 +246,11 @@ class Logix5000 extends Layer {
         0x01  // Attribute 1
       ]);
 
-      const request = MessageRouter.Request(CIP.Services.GetAttributeSingle, path);
-
-      this.send(request, null, false, this.contextCallback(message => {
-        try {
-          const reply = MessageRouter.Reply(message);
-
-          if (reply.status.code === 0) {
+      send(this, CIP.Services.GetAttributeSingle, path, null, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          try {
             const data = reply.data;
             const res = [];
             let offset = 0;
@@ -177,22 +265,22 @@ class Logix5000 extends Layer {
               });
             }
 
-            resolver.resolve(res);
-          } else {
-            resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+            resolver.resolve(res.sort(function(o1, o2) {
+              if (o1.id < o2.id) return -1;
+              else if (o1.id > o2.id) return 1;
+              return 0;
+            }));
+
+          } catch(err) {
+            resolver.reject(err.message, reply);
           }
-        } catch (err) {
-          resolver.reject(`${BASE_ERROR}${err.message}`, reply);
         }
-      }));
+      });
     });
   }
 
-
   identity(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const BASE_ERROR = 'Logix5000 Identity Error: ';
-
       const path = Buffer.from([
         0x20, // Logical Segment - Class ID
         0x01, // Identity class
@@ -200,24 +288,18 @@ class Logix5000 extends Layer {
         0x01  // Instance ID
       ]);
 
-      const request = MessageRouter.Request(CIP.Services.GetAttributesAll, path);
-
-      this.send(request, null, false, this.contextCallback(message => {
-        try {
-          const reply = MessageRouter.Reply(message);
-          if (reply.status.code === 0) {
-            Identity.ParseInstanceAttributesAll(reply.data, 0, value => {
-              resolver.resolve(value);
-            });
-          } else {
-            resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
-          }
-        } catch (err) {
-          resolver.reject(`${BASE_ERROR}${err.message}`, reply);
+      send(this, CIP.Services.GetAttributesAll, path, null, function (error, reply) {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          Identity.ParseInstanceAttributesAll(reply.data, 0, value => {
+            resolver.resolve(value);
+          });
         }
-      }));
+      });
     });
   }
+
 
   listTags(callback) {
     return Layer.CallbackPromise(callback, resolver => {
@@ -276,8 +358,6 @@ class Logix5000 extends Layer {
 
   readTemplateInstanceAttributes(templateID, callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const BASE_ERROR = 'Logix5000 Error: Read Template Instance Attributes: ';
-
       const path = Buffer.from([
         0x20, // Logical Segment - Class ID
         Classes.Template.Code,
@@ -302,22 +382,18 @@ class Logix5000 extends Layer {
         data.writeUInt16LE(attributes[i], 2 * (i + 1));
       }
 
-      const request = MessageRouter.Request(Classes.Template.Services.GetAttributeList, path, data);
-
-      this.send(request, null, false, this.contextCallback(message => {
-        const reply = MessageRouter.Reply(message);
-
-        if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Classes.Template.Services.GetAttributeList, path, data, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           try {
             const template = parseReadTemplateInstanceAttributes(reply);
             resolver.resolve(template);
-          } catch (err) {
-            resolver.reject(`${BASE_ERROR}${err.message}`, reply);
+          } catch(err) {
+            resolver.reject(err.message, reply);
           }
         }
-      }));
+      });
     });
   }
 
@@ -352,10 +428,21 @@ class Logix5000 extends Layer {
 module.exports = Logix5000;
 
 
+function send(self, service, path, data, callback) {
+  const request = MessageRouter.Request(service, path, data);
 
-function internalListTags(driver, tags, instanceID, resolver) {
-  const BASE_ERROR = 'Logix5000 Error: List Tags: ';
+  self.send(request, null, false, self.contextCallback(message => {
+    const reply = MessageRouter.Reply(message);
+    if (reply.status.code !== 0 || reply.status.code !== 6) {
+      callback(reply.status.description, reply);
+    } else {
+      callback(null, reply);
+    }
+  }));
+}
 
+
+function internalListTags(self, tags, instanceID, resolver) {
   const path = Buffer.from([
     0x20, // Logical Segment - Class ID
     0x6B, // Symbols
@@ -378,25 +465,21 @@ function internalListTags(driver, tags, instanceID, resolver) {
     data.writeUInt16LE(attributes[i], 2 * (i + 1));
   }
 
-  const request = MessageRouter.Request(Classes.Symbol.Services.GetInstanceAttributeList, path, data);
-
-  driver.send(request, null, false, driver.contextCallback(message => {
-    const reply = MessageRouter.Reply(message);
-
-    const done = reply.status.code === 0;
-
-    if (!done && reply.status.code !== 6) {
-      return resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
-    }
-
-    const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
-
-    if (!done) {
-      setImmediate(() => internalListTags(driver, tags, lastInstanceID, resolver));
+  send(self, Classes.Symbol.Services.GetInstanceAttributeList, path, data, (error, reply) => {
+    if (error) {
+      resolver.reject(error, reply);
     } else {
-      resolver.resolve(tags);
+      const done = reply.status.code === 0;
+
+      const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
+
+      if (!done) {
+        setImmediate(() => internalListTags(self, tags, lastInstanceID + 1, resolver));
+      } else {
+        resolver.resolve(tags);
+      }
     }
-  }));
+  });
 }
 
 
@@ -435,7 +518,6 @@ function parseListTagsResponse(reply, attributes, tags) {
   }
 
   return lastInstanceID;
-  // return tags;
 }
 
 

@@ -114,6 +114,13 @@ class MBTCPLayer extends Layer {
   //     console.log(packet);
   //   }
   // }
+
+  handleDestroy(error) {
+    this._callbacks.forEach(function(resolver) {
+      resolver.reject(error);
+    });
+    this._callbacks.clear();
+  }
 }
 
 module.exports = MBTCPLayer;

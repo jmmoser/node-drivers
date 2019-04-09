@@ -14,9 +14,9 @@ class Modbus extends Layer {
       buffer.writeUInt16LE(address, 0); // offset in table to begin reading
       buffer.writeUInt16LE(count, 2); // number of inputs to read
 
-      __send(this, Services.ReadDiscreteInputs, buffer, reply => {
-        if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Services.ReadDiscreteInputs, buffer, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           resolver.resolve(reply.data);
         }
@@ -31,9 +31,9 @@ class Modbus extends Layer {
       buffer.writeUInt16LE(address, 0);
       buffer.writeUInt16LE(count, 2);
 
-      __send(this, Services.ReadCoils, buffer, reply => {
-        if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Services.ReadCoils, buffer, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           resolver.resolve(reply.data);
         }
@@ -48,9 +48,9 @@ class Modbus extends Layer {
       buffer.writeUInt16LE(address, 0);
       buffer.writeUInt16LE(count, 2);
 
-      __send(this, Services.ReadInputRegisters, buffer, reply => {
-        if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Services.ReadInputRegisters, buffer, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           resolver.resolve(reply.data);
         }
@@ -64,9 +64,9 @@ class Modbus extends Layer {
       buffer.writeUInt16LE(address, 0);
       buffer.writeUInt16LE(count, 2);
 
-      __send(this, Services.ReadHoldingRegisters, buffer, reply => {
-        if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Services.ReadHoldingRegisters, buffer, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           resolver.resolve(reply.data);
         }
@@ -85,9 +85,9 @@ class Modbus extends Layer {
         buffer.writeUInt8(values[i], 4 + i);
       }
 
-      __send(this, Services.WriteCoils, buffer, reply => {
-        if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Services.WriteCoils, buffer, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           resolver.resolve(reply.data);
         }
@@ -106,9 +106,9 @@ class Modbus extends Layer {
         buffer.writeUInt16LE(values[i]);
       }
 
-      __send(this, Services.WriteHoldingRegisters, buffer, reply => {
-        if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Services.WriteHoldingRegisters, buffer, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           resolver.resolve(reply.data);
         }
@@ -122,9 +122,9 @@ class Modbus extends Layer {
     return Layer.CallbackPromise(callback, resolver => {
       const buffer = Buffer.concat([Buffer.from([functionCode]), data]);
 
-      __send(this, Services.Passthrough, buffer, reply => {
-        if (reply.status.code !== 0) {
-          resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
+      send(this, Services.Passthrough, buffer, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
         } else {
           resolver.resolve(reply.data);
         }
@@ -137,10 +137,15 @@ module.exports = Modbus;
 
 Modbus.Code = 0x44;
 
-function __send(driver, service, data, callback) {
+function send(driver, service, data, callback) {
   const request = MessageRouter.Request(service, MODBUS_EPATH, data);
   driver.send(request, null, false, this.contextCallback(function(message) {
-    callback(MessageRouter.Reply(message));
+    const reply = MessageRouter.Reply(message);
+    if (reply.status.code !== 0 || reply.status.code !== 6) {
+      callback(reply.status.description, reply);
+    } else {
+      callback(null, reply);
+    }
   }));
 }
 

@@ -84,7 +84,7 @@ class UDPLayer extends Layer {
       const port = info.port || target.port;
       const host = info.host || target.host;
 
-      // console.log(`UDPLayer sending to ${host}:${port}`);
+      console.log(`UDPLayer sending to ${host}:${port}`);
 
       this.socket.send(message, port, host, err => {
         if (err) {

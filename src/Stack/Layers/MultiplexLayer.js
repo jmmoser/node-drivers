@@ -11,9 +11,6 @@ const Layer = require('./Layer');
 class MultiplexLayer extends Layer {
   constructor(lowerLayer) {
     super(lowerLayer, true);
-
-    this._context = 0;
-    this._callbacks = new Map();
     this._layers = new Set();
   }
 
@@ -23,11 +20,13 @@ class MultiplexLayer extends Layer {
 
   disconnect(callback) {
     return Layer.CallbackPromise(callback, async resolver => {
-      if (this._disconnecting === 1) return;
+      if (this._disconnecting === 1) {
+        resolver.resolve();
+      }
 
       this._disconnecting = 1;
       
-      this._disconnectTimer = setTimeout(() => {
+      const disconnectTimeout = setTimeout(() => {
         this._disconnecting = 0;
         console.log('disconnect timeout');
         resolver.resolve();
@@ -36,7 +35,7 @@ class MultiplexLayer extends Layer {
       await Promise.all([...this._layers].map(layer => layer.disconnect()));
 
       if (this._disconnecting === 1) {
-        clearInterval(this._disconnectTimer);
+        clearTimeout(disconnectTimeout);
         this._disconnecting = 0;
         resolver.resolve();
       }
@@ -98,6 +97,12 @@ class MultiplexLayer extends Layer {
     } else {
       throw new Error('MultiplexLayer Error: No context');
     }
+  }
+
+  handleDestroy(error) {
+    [...this._layers].forEach(layer => {
+      layer.destroy(error);
+    });
   }
 }
 
