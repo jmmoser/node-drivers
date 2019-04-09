@@ -6,7 +6,16 @@ const Identity = require('./Objects/Identity');
 const Layer = require('../Stack/Layers/Layer');
 const MessageRouter = require('./Objects/MessageRouter');
 
+const { DataType } = CIP;
+
 class Logix5000 extends Layer {
+  constructor(lowerLayer) {
+    super(lowerLayer);
+    // this._tagNameToInstanceIDCache = new Map();
+    // this._tagInstanceIDtoDataTypeCache = new Map();
+    this._tagIDtoDataType = new Map();
+  }
+
   readTag(address, callback) {
     return Layer.CallbackPromise(callback, resolver => {
       const path = MessageRouter.ANSIExtSymbolSegment(address);
@@ -18,13 +27,15 @@ class Logix5000 extends Layer {
         } else {
           try {
             const dataType = reply.data.readUInt16LE(0);
-            const dataConverter = DataConverters[dataType];
-            if (dataConverter) {
-              const value = dataConverter(reply.data, 2);
-              resolver.resolve(value);
-            } else {
-              resolver.reject(`No converter for data type: ${dataType}`, reply);
-            }
+            this._tagIDtoDataType.set(address, dataType);
+
+            CIP.DecodeValue(dataType, reply.data, 2, (err, value) => {
+              if (err) {
+                resolver.reject(err, reply);
+              } else {
+                resolver.resolve(value);
+              }
+            });
           } catch (err) {
             resolver.reject(err.message, reply);
           }
@@ -33,53 +44,30 @@ class Logix5000 extends Layer {
     });
   }
 
-  // readTag(address, callback) {
-  //   return Layer.CallbackPromise(callback, resolver => {
-  //     const BASE_ERROR = 'Logix5000 Error: Read Tag: ';
-
-  //     if (!address) {
-  //       return resolver.reject(`${BASE_ERROR}Address must be specified`);
-  //     }
-
-  //     const path = MessageRouter.ANSIExtSymbolSegment(address);
-  //     const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
-
-  //     const request = MessageRouter.Request(Services.ReadTag, path, data);
-
-  //     this.send(request, null, false, this.contextCallback(function (message) {
-  //       const reply = MessageRouter.Reply(message);
-
-  //       if (reply.status.code !== 0) {
-  //         if (READ_TAG_ERRORS[reply.status.code] != null) {
-  //           reply.status.description = READ_TAG_ERRORS[reply.status.code];
-  //         }
-  //         resolver.reject(`${BASE_ERROR}${reply.status.description}`, reply);
-  //       } else {
-  //         try {
-  //           const dataType = reply.data.readUInt16LE(0);
-  //           const dataConverter = DataConverters[dataType];
-  //           if (dataConverter) {
-  //             const value = dataConverter(reply.data, 2);
-  //             resolver.resolve(value);
-  //           } else {
-  //             resolver.reject(`${BASE_ERROR}No converter for data type: ${dataType}`, reply);
-  //           }
-  //         } catch (err) {
-  //           resolver.reject(`${BASE_ERROR}${err.message}`, reply);
-  //         }
-  //       }
-  //     }));
-  //   });
-  // }
 
   writeTag(address, value, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return Layer.CallbackPromise(callback, async resolver => {
+      if (!this._tagIDtoDataType.has(address)) {
+        await this.readTag(address);
+        if (!this._tagIDtoDataType.has(address)) {
+          return resolver.reject('Unable to determine data type');
+        }
+      }
+
+      const dataType = this._tagIDtoDataType.get(address);
+
+      const valueData = CIP.EncodeValue(dataType, value);
+
+      if (!Buffer.isBuffer(valueData)) {
+        return resolver.reject(`Unable to encode data type: ${CIP.DataTypeName[dataType] || dataType}`);
+      }
+
       const path = MessageRouter.ANSIExtSymbolSegment(address);
 
-      const data = Buffer.alloc(8);
-      data.writeUInt16LE(CIP.DataType.REAL, 0);
+      const data = Buffer.alloc(4 + valueData.length);
+      data.writeUInt16LE(dataType, 0);
       data.writeUInt16LE(1, 2);
-      data.writeFloatLE(value, 4);
+      valueData.copy(data, 4);
 
       send(this, Services.WriteTag, path, data, (error, reply) => {
         if (error) {
@@ -91,33 +79,6 @@ class Logix5000 extends Layer {
     });
   }
 
-  // writeTag(address, value, callback) {
-  //   return Layer.CallbackPromise(callback, resolver => {
-  //     const BASE_ERROR = 'Logix5000 Error: Write Tag: ';
-  //     if (!address) {
-  //       resolver.reject(`${BASE_ERROR}Address must be specified`)
-  //       return;
-  //     }
-
-  //     const path = MessageRouter.ANSIExtSymbolSegment(address);
-  //     const data = Buffer.alloc(8);
-
-  //     data.writeUInt16LE(CIP.DataType.REAL, 0);
-  //     data.writeUInt16LE(1, 2);
-  //     data.writeFloatLE(value, 4);
-
-  //     const request = MessageRouter.Request(Services.WriteTag, path, data);
-
-  //     this.send(request, null, false, this.contextCallback(function (message) {
-  //       const reply = MessageRouter.Reply(message);
-  //       if (reply.status.code === 0) {
-  //         resolver.resolve();
-  //       } else {
-  //         resolver.reject(reply.status.description, reply);
-  //       }
-  //     }));
-  //   });
-  // }
 
   readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
     return Layer.CallbackPromise(callback, resolver => {
@@ -150,10 +111,9 @@ class Logix5000 extends Layer {
       }
 
       const path = MessageRouter.ANSIExtSymbolSegment(address);
+
       const data = Buffer.alloc(2 + 2 * sizeOfMasks);
-
       data.writeUInt16LE(sizeOfMasks, 0);
-
       for (let i = 0; i < sizeOfMasks; i++) {
         data.writeUInt8(ORmasks[i], 2 + i);
         data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
@@ -169,71 +129,6 @@ class Logix5000 extends Layer {
     });
   }
 
-  // readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
-  //   return Layer.CallbackPromise(callback, resolver => {
-  //     const BASE_ERROR = 'Logix5000 Error: Read Modify Write Tag: ';
-  //     if (!address) {
-  //       return resolver.reject(
-  //         `${BASE_ERROR}Address must be specified`
-  //       );
-  //     }
-
-  //     if (
-  //       !Array.isArray(ORmasks) && !Buffer.isBuffer(ORmasks)
-  //       || !Array.isArray(ANDmasks) && !Buffer.isBuffer(ANDmasks)
-  //     ) {
-  //       return resolver.reject(
-  //         `${BASE_ERROR}OR masks and AND masks must be either an array or a buffer`
-  //       );
-  //     }
-
-  //     if (ORmasks.length !== ANDmasks.length) {
-  //       return resolver.reject(
-  //         `${BASE_ERROR}Length of OR masks must be equal to length of AND masks`
-  //       );
-  //     }
-
-  //     const sizeOfMasks = ORmasks.length;
-
-  //     if ((new Set([1, 2, 4, 8, 12])).has(sizeOfMasks) === false) {
-  //       return resolver.reject(
-  //         `${BASE_ERROR}Size of masks is not valid. Valid lengths are 1, 2, 4, 8, and 12`
-  //       );
-  //     }
-
-  //     for (let i = 0; i < sizeOfMasks; i++) {
-  //       if (
-  //         ORmasks[i] < 0 || ORmasks > 0xFF
-  //         || ANDmasks[i] < 0 || ANDmasks > 0xFF
-  //       ) {
-  //         return resolver.reject(
-  //           `${BASE_ERROR}Values in masks must be greater than or equal to zero and less than or equal to 255`
-  //         );
-  //       }
-  //     }
-
-  //     const path = MessageRouter.ANSIExtSymbolSegment(address);
-  //     const data = Buffer.alloc(2 + 2 * sizeOfMasks);
-
-  //     data.writeUInt16LE(sizeOfMasks, 0);
-
-  //     for (let i = 0; i < sizeOfMasks; i++) {
-  //       data.writeUInt8(ORmasks[i], 2 + i);
-  //       data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
-  //     }
-
-  //     const request = MessageRouter(Services.ReadModifyWriteTag, path, data);
-
-  //     this.send(request, null, false, this.contextCallback(function (message) {
-  //       const reply = MessageRouter.Reply(message);
-  //       if (reply.status.code === 0) {
-  //         resolver.resolve();
-  //       } else {
-  //         resolver.reject(reply.status.description, reply);
-  //       }
-  //     }));
-  //   });
-  // }
 
   supportedObjects(callback) {
     return Layer.CallbackPromise(callback, resolver => {
@@ -292,8 +187,12 @@ class Logix5000 extends Layer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          Identity.ParseInstanceAttributesAll(reply.data, 0, value => {
-            resolver.resolve(value);
+          Identity.ParseInstanceAttributesAll(reply.data, 0, (err, value) => {
+            if (err) {
+              resolver.reject(err, reply);
+            } else {
+              resolver.resolve(value);
+            }
           });
         }
       });
@@ -433,7 +332,7 @@ function send(self, service, path, data, callback) {
 
   self.send(request, null, false, self.contextCallback(message => {
     const reply = MessageRouter.Reply(message);
-    if (reply.status.code !== 0 || reply.status.code !== 6) {
+    if (reply.status.code !== 0 && reply.status.code !== 6) {
       callback(reply.status.description, reply);
     } else {
       callback(null, reply);
@@ -499,8 +398,11 @@ function parseListTagsResponse(reply, attributes, tags) {
     for (let i = 0; i < attributes.length; i++) {
       switch (attributes[i]) {
         case 0x01:
-          const symbolNameLength = data.readUInt16LE(offset); offset += 2;
-          tag.name = data.toString('ascii', offset, offset + symbolNameLength); offset += symbolNameLength;
+          offset = CIP.DecodeValue(CIP.DataType.STRING, data, offset, (_, value) => {
+            tag.name = value;
+          });
+          // const symbolNameLength = data.readUInt16LE(offset); offset += 2;
+          // tag.name = data.toString('ascii', offset, offset + symbolNameLength); offset += symbolNameLength;
           break;
         case 0x02:
           const typeCode = data.readUInt16LE(offset); offset += 2;
@@ -530,7 +432,7 @@ function parseSymbolType(code) {
 
   if (atomic) {
     res.dataType = getBits(code, 0, 8);
-    if (res.dataType === CIP.DataType.BOOL) {
+    if (res.dataType === DataType.BOOL) {
       res.position = getBits(code, 8, 11);
     }
     res.dataTypeName = CIP.DataTypeName[res.dataType];
@@ -602,26 +504,26 @@ const Services = {
 };
 
 
-const DataConverters = {
-  [CIP.DataType.BOOL]: function (buffer, offset, position) {
-    return getBit(buffer.readUInt8(offset), position);
-  },
-  [CIP.DataType.SINT]: function (buffer, offset) {
-    return buffer.readInt8(offset);
-  },
-  [CIP.DataType.INT]: function (buffer, offset) {
-    return buffer.readInt16LE(offset);
-  },
-  [CIP.DataType.DINT]: function (buffer, offset) {
-    return buffer.readInt32LE(offset);
-  },
-  [CIP.DataType.REAL]: function (buffer, offset) {
-    return buffer.readFloatLE(offset);
-  },
-  [CIP.DataType.DWORD]: function (buffer, offset) {
-    return buffer.readUInt32LE(offset);
-  }
-};
+// const DataConverters = {
+//   [DataType.BOOL]: function (buffer, offset, position) {
+//     return getBit(buffer.readUInt8(offset), position);
+//   },
+//   [DataType.SINT]: function (buffer, offset) {
+//     return buffer.readInt8(offset);
+//   },
+//   [DataType.INT]: function (buffer, offset) {
+//     return buffer.readInt16LE(offset);
+//   },
+//   [DataType.DINT]: function (buffer, offset) {
+//     return buffer.readInt32LE(offset);
+//   },
+//   [DataType.REAL]: function (buffer, offset) {
+//     return buffer.readFloatLE(offset);
+//   },
+//   [DataType.DWORD]: function (buffer, offset) {
+//     return buffer.readUInt32LE(offset);
+//   }
+// };
 
 
 // CIP Logix5000 1756-PM020 Page 19, Read Tag Service Error Codes

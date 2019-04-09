@@ -22,6 +22,7 @@ class Identity {
   }
 
   static ParseInstanceAttributesAll(buffer, offset, cb) {
+    let error;
     const item = {};
 
     item.vendorID = buffer.readUInt16LE(offset); offset += 2;
@@ -32,19 +33,35 @@ class Identity {
     item.revision.major = buffer.readUInt8(offset); offset += 1;
     item.revision.minor = buffer.readUInt8(offset); offset += 1;
 
-    offset = this.ParseInstanceAttributeStatus(buffer, offset, value => {
-      item.status = value;
+    offset = this.ParseInstanceAttributeStatus(buffer, offset, (err, value) => {
+      if (err) {
+        error = err;
+      } else {
+        item.status = value;
+      }
     });
+
+    if (error) {
+      cb(error);
+      return offset;
+    }
 
     item.serialNumber = buffer.readUInt32LE(offset); offset += 4;
 
-    offset = CIP.ParseString(CIP.DataType.SHORT_STRING, buffer, offset, value => {
-      item.productName = value;
+    offset = CIP.DecodeValue(CIP.DataType.SHORT_STRING, buffer, offset, (err, value) => {
+      if (err) {
+        error = err;
+      } else {
+        item.productName = value;
+      }
     });
 
-    if (typeof cb === 'function') {
-      cb(item);
+    if (error) {
+      cb(error);
+      return offset;
     }
+
+    cb(null, item);
     
     return offset;
   }
@@ -64,9 +81,7 @@ class Identity {
       majorUnrecoverableFault: getBit(code, 11)
     };
 
-    if (typeof cb === 'function') {
-      cb(status)
-    }
+    cb(null, status);
 
     return offset;
   }
@@ -77,9 +92,9 @@ class Identity {
       code,
       description: InstanceStateDescriptions[code] || 'unknown'
     };
-    if (typeof cb === 'function') {
-      cb(state);
-    }
+
+    cb(null, state);
+
     return offset;
   }
 }

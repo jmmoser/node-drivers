@@ -184,57 +184,6 @@ const ReservedClassAttributes = {
 };
 
 
-function ParseString(type, buffer, offset, cb) {
-  offset = offset || 0;  
-
-  let length;
-  let charLength;
-  let readFunc;
-  let convertFunc;
-
-  switch (type) {
-    case DataType.STRING:
-      charLength = 1;
-      length = buffer.readUInt16LE(offset); offset += 2;
-      readFunc = buffer.readUInt8.bind(buffer);
-      convertFunc = String.fromCharCode;
-      break;
-    case DataType.STRING2:
-      charLength = 2;
-      length = buffer.readUInt16LE(offset); offset += 2;
-      readFunc = buffer.readUInt16LE.bind(buffer);
-      convertFunc = String.fromCharCode;
-      break;
-    case DataType.SHORT_STRING:
-      charLength = 1;
-      length = buffer.readUInt8(offset); offset += 1;
-      readFunc = buffer.readUInt8.bind(buffer);
-      convertFunc = String.fromCharCode;
-      break;
-    case DataType.STRINGN:
-      //
-      break;
-    case DataType.STRINGI:
-      //
-      break;
-    default:
-    //
-  }
-
-  const characters = [];
-  for (let i = 0; i < length; i++) {
-    characters.push(convertFunc(readFunc(offset)));
-    offset += charLength;
-  }
-
-  if (typeof cb === 'function') {
-    cb(characters.join(''));
-  }
-
-  return offset;
-}
-
-
 module.exports = {
   Classes,
   ClassNames,
@@ -242,5 +191,119 @@ module.exports = {
   DataType,
   DataTypeName,
   ReservedClassAttributes,
-  ParseString
+  DecodeValue,
+  EncodeValue
 };
+
+
+function DecodeValue(dataType, buffer, offset, cb) {
+  let error;
+  let value;
+
+  try {
+    switch (dataType) {
+      case DataType.SINT:
+        value = buffer.readInt8(offset); offset += 1;
+        break;
+      case DataType.INT:
+      case DataType.ITIME:
+        value = buffer.readInt16LE(offset); offset += 2;
+        break;
+      case DataType.DINT:
+      case DataType.TIME:
+      case DataType.FTIME:
+        value = buffer.readInt32LE(offset); offset += 4;
+        break;
+      case DataType.REAL:
+        value = buffer.readFloatLE(offset); offset += 4;
+        break;
+      case DataType.BOOL:
+      case DataType.USINT:
+      case DataType.BYTE:
+        value = buffer.readUInt8(offset); offset += 1;
+        break;
+      case DataType.UINT:
+      case DataType.WORD:
+        value = buffer.readUInt16LE(offset); offset += 2;
+        break;
+      case DataType.UDINT:
+      case DataType.DWORD:
+      case DataType.DATE:
+        value = buffer.readUInt32LE(offset); offset += 4;
+        break;
+      case DataType.STRING: {
+        const length = buffer.readUInt16LE(offset); offset += 2;
+        value = buffer.toString('ascii', offset, offset + length); offset += length;
+        break;
+      }
+      case DataType.SHORT_STRING: {
+        const length = buffer.readUInt8(offset); offset += 1;
+        value = buffer.toString('ascii', offset, offset + length); offset += length;
+        break;
+      }
+      case DataType.STRING2: {
+        const length = buffer.readUInt16LE(offset); offset += 2;
+        value = buffer.toString('utf16le', offset, offset + 2 * length); offset += 2 * length;
+        break;
+      }
+      case DataType.LINT:
+      case DataType.ULINT:
+      case DataType.LREAL:
+      case DataType.LWORD:
+      case DataType.LTIME:
+      default:
+        error = `Data type is not currently supported: ${DataTypeName[dataType] || dataType}`
+        break;
+    }
+  } catch(err) {
+    error = err.message;
+  }
+  
+  if (typeof cb === 'function') {
+    cb(error, value);
+  }
+
+  return offset;
+}
+
+
+function EncodeValue(dataType, value) {
+  let data;
+
+  switch (dataType) {
+    case DataType.SINT:
+      data = Buffer.alloc(1);
+      data.writeInt8(value, 0);
+      break;
+    case DataType.INT:
+    case DataType.ITIME:
+      data = Buffer.alloc(2);
+      data.writeInt16LE(value, 0);
+      break;
+    case DataType.DINT:
+    case DataType.TIME:
+    case DataType.FTIME:
+      data = Buffer.alloc(4);
+      data.writeInt32LE(value, 0);
+      break;
+    case DataType.REAL:
+      data = Buffer.alloc(4);
+      data.writeFloatLE(value, 0);
+      break;
+    case DataType.UINT:
+    case DataType.WORD:
+      data = Buffer.alloc(2);
+      data.writeUInt16LE(value, 0);
+      break;
+    case DataType.UDINT:
+    case DataType.DWORD:
+    case DataType.DATE:
+      data = Buffer.alloc(4);
+      data.writeUInt32LE(value, 0);
+      break;
+    default:
+      break;
+  }
+
+  return data;
+}

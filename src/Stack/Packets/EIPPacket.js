@@ -1,8 +1,7 @@
 'use strict';
 
-const Identity = require('../../CIP/Objects/Identity');
+const CIPIdentity = require('../../CIP/Objects/Identity');
 const { getBit } = require('../../util');
-// const { ParseInstanceStatus, InstanceStateDescriptions } = require('../../CIP/Objects/Identity');
 
 /*
   Communication Profile Families
@@ -271,13 +270,31 @@ EIPReply[Command.ListIdentity] = function(packet) {
       socket.zero = buffer.slice(offset, offset + 8); offset += 8;
       item.socket = socket;
 
-      offset = Identity.ParseInstanceAttributesAll(buffer, offset, value => {
-        item.attributes = value;
+      let error;
+
+      offset = CIPIdentity.ParseInstanceAttributesAll(buffer, offset, (err, value) => {
+        if (err) {
+          error = err;
+        } else {
+          item.attributes = value;
+        }
       });
 
-      offset = Identity.ParseInstanceAttributeState(buffer, offset, value => {
-        item.attributes.state = value;
+      if (error) {
+        return console.log(error);
+      }
+
+      offset = CIPIdentity.ParseInstanceAttributeState(buffer, offset, (err, value) => {
+        if (err) {
+          error = err;
+        } else {
+          item.attributes.state = value;
+        }
       });
+
+      if (error) {
+        return console.log(error);
+      }
     }
   });
 };
