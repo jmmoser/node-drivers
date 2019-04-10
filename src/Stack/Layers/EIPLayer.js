@@ -377,8 +377,10 @@ class EIPLayer extends Layer {
   }
 
   handleDestroy(error) {
-    this._userCallbacks.forEach(cb => {
-      cb(error);
+    this._userCallbacks.forEach(callbacks => {
+      callbacks.forEach(cb => {
+        cb(error);
+      });
     });
     this._userCallbacks.clear();
 

@@ -80,10 +80,10 @@ class Layer {
     }
 
     /** Clear all internal context callbacks */
-    __contextToCallback.forEach(cb => {
+    this.__contextToCallback.forEach(cb => {
       cb(error);
     });
-    __contextToCallback.clear();
+    this.__contextToCallback.clear();
 
     this.handleDestroy(error);
   }
