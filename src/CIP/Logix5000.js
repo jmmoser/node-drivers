@@ -342,6 +342,13 @@ function send(self, service, path, data, callback) {
 
 
 function internalListTags(self, tags, instanceID, resolver) {
+  if (instanceID >= 0xFFFF) {
+    console.log('MAX INSTANCE ID');
+    return resolver.resolve(tags);
+  }
+
+  console.log(instanceID)
+
   const path = Buffer.from([
     0x20, // Logical Segment - Class ID
     0x6B, // Symbols
