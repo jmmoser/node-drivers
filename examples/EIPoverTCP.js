@@ -1,10 +1,7 @@
-const Drivers = require('node-drivers');
+const { Layers } = require('node-drivers');
 
-const TCPLayer = Drivers.Layers.TCPLayer;
-const EIPLayer = Drivers.Layers.EIPLayer;
-
-const tcpLayer = new TCPLayer({ host: '0.0.0.0', port: 44818 });
-const eipLayer = new EIPLayer(tcpLayer);
+const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
+const eipLayer = new Layers.EIP(tcpLayer);
 
 (async () => {
   try {

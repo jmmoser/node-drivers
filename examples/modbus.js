@@ -1,16 +1,14 @@
-const Drivers = require('node-drivers');
-const TCPLayer = Drivers.Layers.TCPLayer;
-const MBLayer = Drivers.Layers.MBTCPLayer;
+const { Layers } = require('node-drivers');
 
-const tcpLayer = new TCPLayer({ host: '0.0.0.0', port: 502 });
-const mbLayer = new MBLayer(tcpLayer);
+const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 502 });
+const mbLayer = new Layers.ModbusTCP(tcpLayer);
 
 // read holding register 40004 of unit 81
-mbLayer.readHoldingRegisters(81, 3, 1, function(err, res) {
+mbLayer.readHoldingRegisters(81, 3, 1, function(err, values) {
   if (err) {
     console.log(err);
   } else {
-    console.log(res.data[0]);
+    console.log(values);
   }
 
   tcpLayer.close(function() {

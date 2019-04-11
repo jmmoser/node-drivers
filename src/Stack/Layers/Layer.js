@@ -49,21 +49,16 @@ class Layer extends EventEmitter {
     // Use in lower layers to handle removals of upper layers
   }
 
-  // connected() {
-  //   // IMPLEMENT IN SUBCLASS
-  // }
+  sendNextMessage() {
+    // IMPLEMENT IN SUBCLASS
+  }
 
-  // sendNextMessage() {
-  //   // IMPLEMENT IN SUBCLASS
-  // }
+  handleData(data) {
+    // IMPLEMENT IN SUBCLASS
+  }
 
-  // handleData(data) {
-  //   // IMPLEMENT IN SUBCLASS
-  // }
-
-  /** Implement in subsclasses */
   handleDestroy(error) {
-    //
+    // IMPLEMENT IN SUBCLASS IF NEEDED
   }
 
   close(callback) {

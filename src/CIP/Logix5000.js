@@ -11,8 +11,6 @@ const { DataType } = CIP;
 class Logix5000 extends Layer {
   constructor(lowerLayer) {
     super(lowerLayer);
-    // this._tagNameToInstanceIDCache = new Map();
-    // this._tagInstanceIDtoDataTypeCache = new Map();
     this._tagIDtoDataType = new Map();
   }
 
@@ -82,7 +80,6 @@ class Logix5000 extends Layer {
 
   readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const BASE_ERROR = 'Logix5000 Error: Read Modify Write Tag: ';
       if (!address) {
         return resolver.reject('Address must be specified');
       }
@@ -209,8 +206,6 @@ class Logix5000 extends Layer {
   // listTags(callback, startInstanceID = 0) {
   //   if (callback == null) return;
 
-  //   const BASE_ERROR = 'Logix5000 Error: List Tags: ';
-
   //   const path = Buffer.from([
   //     0x20, // Logical Segment - Class ID
   //     0x6B, // Symbols
@@ -241,7 +236,7 @@ class Logix5000 extends Layer {
   //     const done = reply.status.code === 0;
 
   //     if (!done && reply.status.code !== 6) {
-  //       return callback(`${BASE_ERROR}${reply.status.description}`);
+  //       return callback(reply.status.description);
   //     }
 
   //     const tags = parseListTagsResponse(reply, attributes);
@@ -300,8 +295,6 @@ class Logix5000 extends Layer {
   // readTemplate(templateID, callback) {
   //   if (!callback) return;
 
-  //   const BASE_ERROR = 'Logix5000 Error: Read Template: ';
-
   //   this.readTemplateInstanceAttributes(templateID, function(err, templateAttributes) {
   //     if (err) {
   //       return callback(err);
@@ -319,7 +312,7 @@ class Logix5000 extends Layer {
 
     const callback = this.callbackForContext(context);
     if (callback != null) {
-      callback(data, info);
+      callback(null, data, info);
     }
   }
 }
@@ -343,19 +336,6 @@ function send(self, service, path, data, callback) {
     }
   }));
 }
-
-// function send(self, service, path, data, callback) {
-//   const request = MessageRouter.Request(service, path, data);
-
-//   self.send(request, null, false, self.contextCallback((error, message) => {
-//     const reply = MessageRouter.Reply(message);
-//     if (reply.status.code !== 0 && reply.status.code !== 6) {
-//       callback(reply.status.description, reply);
-//     } else {
-//       callback(null, reply);
-//     }
-//   }));
-// }
 
 
 function internalListTags(self, tags, instanceID, resolver) {
@@ -423,8 +403,6 @@ function parseListTagsResponse(reply, attributes, tags) {
           offset = CIP.DecodeValue(CIP.DataType.STRING, data, offset, (_, value) => {
             tag.name = value;
           });
-          // const symbolNameLength = data.readUInt16LE(offset); offset += 2;
-          // tag.name = data.toString('ascii', offset, offset + symbolNameLength); offset += symbolNameLength;
           break;
         case 0x02:
           const typeCode = data.readUInt16LE(offset); offset += 2;

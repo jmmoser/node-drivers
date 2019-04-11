@@ -1,10 +1,7 @@
-const Drivers = require('node-drivers');
+const { Layers } = require('node-drivers');
 
-const UDPLayer = Drivers.Layers.UDPLayer;
-const EIPLayer = Drivers.Layers.EIPLayer;
-
-const udpLayer = new UDPLayer({ host: '0.0.0.255', port: 44818 });
-const eipLayer = new EIPLayer(udpLayer);
+const udpLayer = new Layers.UDP({ host: '0.0.0.255', port: 44818 });
+const eipLayer = new Layers.EIP(udpLayer);
 
 (async () => {
   try {

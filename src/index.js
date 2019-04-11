@@ -2,12 +2,12 @@
 
 module.exports = {
   Layers: {
-    Layer: require('./Stack/Layers/Layer'),
-    TCPLayer: require('./Stack/Layers/TCPLayer'),
-    UDPLayer: require('./Stack/Layers/UDPLayer'),
-    EIPLayer: require('./Stack/Layers/EIPLayer'),
-    MBTCPLayer: require('./Stack/Layers/MBTCPLayer'),
-    PCCCLayer: require('./Stack/Layers/PCCCLayer'),
+    // Layer: require('./Stack/Layers/Layer'),
+    TCP: require('./Stack/Layers/TCPLayer'),
+    UDP: require('./Stack/Layers/UDPLayer'),
+    EIP: require('./Stack/Layers/EIPLayer'),
+    ModbusTCP: require('./Stack/Layers/MBTCPLayer'),
+    PCCC: require('./Stack/Layers/PCCCLayer'),
     CIP: {
       Connection: require('./CIP/Objects/Connection'),
       Logix5000: require('./CIP/Logix5000'),
