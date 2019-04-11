@@ -108,7 +108,7 @@ for (let i = 2; i < 255; i++) {
 ```javascript
 const { Layers } = require('../src');
 
-const tcpLayer = new Layers.TCP({ host: '0.0.0.255', port: 44818 });
+const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new Layers.EIP(tcpLayer);
 
 (async () => {
