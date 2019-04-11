@@ -235,7 +235,7 @@ class Logix5000 extends Layer {
 
   //   const request = MessageRouter.Request(Classes.Symbol.Services.GetInstanceAttributeList, path, data);
 
-  //   this.send(request, null, false, this.contextCallback(message => {
+  //   this.send(request, null, false, this.contextCallback((error, message) => {
   //     const reply = MessageRouter.Reply(message);
 
   //     const done = reply.status.code === 0;
@@ -330,15 +330,32 @@ module.exports = Logix5000;
 function send(self, service, path, data, callback) {
   const request = MessageRouter.Request(service, path, data);
 
-  self.send(request, null, false, self.contextCallback(message => {
-    const reply = MessageRouter.Reply(message);
-    if (reply.status.code !== 0 && reply.status.code !== 6) {
-      callback(reply.status.description, reply);
+  self.send(request, null, false, self.contextCallback((error, message) => {
+    if (error) {
+      callback(error);
     } else {
-      callback(null, reply);
+      const reply = MessageRouter.Reply(message);
+      if (reply.status.code !== 0 && reply.status.code !== 6) {
+        callback(reply.status.description, reply);
+      } else {
+        callback(null, reply);
+      }
     }
   }));
 }
+
+// function send(self, service, path, data, callback) {
+//   const request = MessageRouter.Request(service, path, data);
+
+//   self.send(request, null, false, self.contextCallback((error, message) => {
+//     const reply = MessageRouter.Reply(message);
+//     if (reply.status.code !== 0 && reply.status.code !== 6) {
+//       callback(reply.status.description, reply);
+//     } else {
+//       callback(null, reply);
+//     }
+//   }));
+// }
 
 
 function internalListTags(self, tags, instanceID, resolver) {

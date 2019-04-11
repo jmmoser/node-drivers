@@ -139,12 +139,16 @@ Modbus.Code = 0x44;
 
 function send(driver, service, data, callback) {
   const request = MessageRouter.Request(service, MODBUS_EPATH, data);
-  driver.send(request, null, false, this.contextCallback(function(message) {
-    const reply = MessageRouter.Reply(message);
-    if (reply.status.code !== 0 && reply.status.code !== 6) {
-      callback(reply.status.description, reply);
+  driver.send(request, null, false, this.contextCallback(function(error, message) {
+    if (error) {
+      callback(error);
     } else {
-      callback(null, reply);
+      const reply = MessageRouter.Reply(message);
+      if (reply.status.code !== 0 && reply.status.code !== 6) {
+        callback(reply.status.description, reply);
+      } else {
+        callback(null, reply);
+      }
     }
   }));
 }

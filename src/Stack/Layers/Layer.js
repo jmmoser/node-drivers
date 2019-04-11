@@ -1,12 +1,15 @@
 'use strict';
 
+const EventEmitter = require('events');
 const Queue = require('../../Classes/Queue');
 const Defragger = require('../../Classes/Defragger');
 const { CallbackPromise } = require('../../util');
 
 
-class Layer {
+class Layer extends EventEmitter {
   constructor(lowerLayer, handlesForwarding) {
+    super();
+
     this._queue = new Queue();
 
     this.lowerLayer = lowerLayer;
@@ -69,6 +72,7 @@ class Layer {
         await this.upperLayer.close();
       }
       await this.disconnect();
+      this.emit('close');
       resolver.resolve();
     });
   }
@@ -100,6 +104,7 @@ class Layer {
   }
 
   send(message, info, priority, context) {
+    this.emit('send', message, info, priority, context);
     const transport = this.lowerLayer != null ? this.lowerLayer : this;
     transport.addMessageToQueue(this, message, info, priority, context);
     transport.sendNextMessage();
@@ -187,5 +192,6 @@ function internalHandleData(self, data, info, context) {
     if (data == null) return;
   }
 
+  self.emit('data', data, info, context);
   self.handleData(data, info, context);
 }

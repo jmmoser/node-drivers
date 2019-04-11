@@ -18,7 +18,7 @@ function CallbackPromise(callback, func, timeout) {
       resolve: function (res) {
         if (active) {
           active = false;
-          clearInterval(timeoutHandle);
+          clearTimeout(timeoutHandle);
           if (hasCallback) {
             callback(null, res);
           }
@@ -27,9 +27,12 @@ function CallbackPromise(callback, func, timeout) {
       },
       reject: function (message, info) {
         if (active) {
-          const err = { message, info };
+          const err = { message };
+          if (info != null) {
+            err.info = info;
+          }
           active = false;
-          clearInterval(timeoutHandle);
+          clearTimeout(timeoutHandle);
           if (hasCallback) {
             callback(err);
             resolve();
