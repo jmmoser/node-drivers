@@ -35,8 +35,7 @@ class MessageRouter {
 
     const additionalStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
     if (additionalStatusSize > 0) {
-      res.status.additional = {};
-      res.status.additional.buffer = buffer.slice(offset, offset + 2 * additionalStatusSize);
+      res.status.additional = buffer.slice(offset, offset + 2 * additionalStatusSize);
       offset += 2 * additionalStatusSize;
     }
 
