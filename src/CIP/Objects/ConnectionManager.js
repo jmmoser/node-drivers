@@ -42,7 +42,7 @@ class ConnectionManager {
   // EIP-CIP-V1 3-5.5.3, pg. 3-65
   static ForwardClose(connection) {
     let offset = 0;
-    let data = Buffer.alloc(64);
+    const data = Buffer.alloc(64);
 
     data.writeUInt8(0x01, offset); offset += 1; // Connection timing Priority (CIP vol 1 Table 3-5.11)
     data.writeUInt8(0x0E, offset); offset += 1; // Timeout, ticks
@@ -69,7 +69,7 @@ class ConnectionManager {
 
   static ForwardCloseReply(buffer) {
     let offset = 0;
-    let response = {};
+    const response = {};
 
     response.SerialNumber = buffer.readUInt16LE(offset); offset += 2;
     response.VendorID = buffer.readUInt16LE(offset); offset += 2;

@@ -53,27 +53,6 @@ function CallbackPromise(callback, func, timeout) {
   });
 }
 
-// function CallbackPromise(callback, func) {
-//   const hasCallback = typeof callback === 'function';
-//   return new Promise(function (resolve, reject) {
-//     return func({
-//       resolve: function (res) {
-//         if (hasCallback) {
-//           callback(null, res);
-//         }
-//         resolve(res);
-//       },
-//       reject: function (err) {
-//         if (hasCallback) {
-//           callback(err);
-//           resolve();
-//         } else {
-//           reject(err);
-//         }
-//       }
-//     });
-//   });
-// }
 
 module.exports = {
   getBits,
