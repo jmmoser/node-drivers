@@ -17,8 +17,7 @@ const { Layers } = require('node-drivers');
 
 const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new Layers.EIP(tcpLayer);
-const cipConnection = new Layers.CIP.Connection(eipLayer);
-const logix5000 = new Layers.CIP.Logix5000(cipConnection);
+const logix5000 = new Layers.CIP.Logix5000(eipLayer);
 
 (async () => {
   try {
@@ -33,7 +32,7 @@ const logix5000 = new Layers.CIP.Logix5000(cipConnection);
 })();
 ```
 
-### 2. Communicate with a PLC-5 processor using PCCC embedded in CIP:
+### 2. Communicate with a PLC-5, SLC 5/03, or SLC 5/04 processor using PCCC embedded in CIP:
 
 ```javascript
 const { Layers } = require('node-drivers');
@@ -41,9 +40,9 @@ const { Layers } = require('node-drivers');
 const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new Layers.EIP(tcpLayer);
 const cipPCCCLayer = new Layers.CIP.PCCC(eipLayer);
-const plc5 = new Layers.PCCC(cipPCCCLayer);
+const pccc = new Layers.PCCC(cipPCCCLayer);
 
-plc5.typedRead('N10:47', function(err, value) {
+pccc.typedRead('N10:47', function(err, value) {
   if (err) {
     console.log(err);
   } else {
@@ -151,3 +150,8 @@ mbtcpLayer.readHoldingRegisters(81, 3, 1, function(err, values) {
 - EtherNet/IP
 - PCCC embedded in CIP
 - ModbusTCP
+
+# Changelog
+## 1.5.0 / 2019-04-12
+  - CIP.Logix5000 no longer requires including CIP.Connection as a lower layer.
+  - CIP.Connection only connects if needed (e.g. getting all attributes of identity object does not require a connection)

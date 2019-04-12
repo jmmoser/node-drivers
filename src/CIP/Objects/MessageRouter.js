@@ -112,7 +112,7 @@ class MessageRouter {
 
     while (offset < length) {
       count++;
-      if (count > 100) throw new Error('Inifinit loop');
+      if (count > 100) throw new Error('Infinite loop');
 
       let segmentType = utils.getBits(buffer[offset], 5, 8);
       let segment = null;

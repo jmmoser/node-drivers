@@ -1,7 +1,8 @@
 'use strict';
 
 const MessageRouter = require('./Objects/MessageRouter');
-const Layer = require('./../Stack/Layers/Layer');
+const Layer = require('./Objects/CIPLayer');
+// const Layer = require('./../Stack/Layers/Layer');
 
 const MODBUS_EPATH = Buffer.from([0x20, 0x44, 0x24, 0x01]);
 
@@ -135,7 +136,6 @@ class Modbus extends Layer {
 
 module.exports = Modbus;
 
-Modbus.Code = 0x44;
 
 function send(driver, service, data, callback) {
   const request = MessageRouter.Request(service, MODBUS_EPATH, data);

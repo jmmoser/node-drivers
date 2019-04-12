@@ -17,7 +17,6 @@ class UDPLayer extends Layer {
         address: null,
         port: 0
       },
-      // waitForListen: true,
       broadcast: true
     };
 
@@ -25,9 +24,6 @@ class UDPLayer extends Layer {
       if (options.broadcast != null) {
         this.options.broadcast = !!options.broadcast;
       }
-      // if (options.waitForListen != null) {
-      //   this.options.waitForListen = !!options.waitForListen;
-      // }
 
       if (options.host) {
         this.options.target.host = options.host;
@@ -68,10 +64,6 @@ class UDPLayer extends Layer {
   }
 
   sendNextMessage() {
-    // if (this.options.waitForListen && !this._listening) {
-    //   return;
-    // }
-
     if (!this._listening) {
       return;
     }
@@ -84,7 +76,7 @@ class UDPLayer extends Layer {
       const port = info.port || target.port;
       const host = info.host || target.host;
 
-      console.log(`UDPLayer sending to ${host}:${port}`);
+      // console.log(`UDPLayer sending to ${host}:${port}`);
 
       this.socket.send(message, port, host, err => {
         if (err) {

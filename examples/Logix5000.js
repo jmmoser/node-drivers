@@ -2,8 +2,7 @@ const { Layers } = require('node-drivers');
 
 const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new Layers.EIP(tcpLayer);
-const cipConnection = new Layers.CIP.Connection(eipLayer);
-const logix5000 = new Layers.CIP.Logix5000(cipConnection);
+const logix5000 = new Layers.CIP.Logix5000(eipLayer);
 
 (async () => {
   try {

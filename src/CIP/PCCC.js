@@ -1,6 +1,6 @@
 'use strict';
 
-const Layer = require('./../Stack/Layers/Layer');
+const Layer = require('./Objects/CIPLayer');
 const MessageRouter = require('./Objects/MessageRouter');
 
 

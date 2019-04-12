@@ -95,6 +95,7 @@ class Layer extends EventEmitter {
   }
 
   forwardTo(layer, data, info, context) {
+    this.emit('data', data, info, context);
     internalHandleData(layer, data, info, context);
   }
 
@@ -109,8 +110,11 @@ class Layer extends EventEmitter {
     return this._queue.hasNext();
   }
 
-  getNextRequest() {
-    return this._queue.getNext();
+  getNextRequest(peek) {
+    if (peek === true) {
+      return this._queue.peek();
+    }
+    return this._queue.shift();
   }
 
   addMessageToQueue(requestingLayer, message, info, priority, context) {
@@ -186,7 +190,5 @@ function internalHandleData(self, data, info, context) {
     data = self._defragger.defrag(data);
     if (data == null) return;
   }
-
-  self.emit('data', data, info, context);
   self.handleData(data, info, context);
 }

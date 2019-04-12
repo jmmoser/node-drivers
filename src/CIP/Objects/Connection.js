@@ -16,8 +16,6 @@ class Connection extends Layer {
     this._connectionState = 0;
     this._sequenceCount = 0;
     this._sequenceToContext = new Map();
-
-    this.connect();
   }
 
   connect(callback) {
@@ -54,7 +52,18 @@ class Connection extends Layer {
   }
 
   sendNextMessage() {
-    if (this._connectionState === 2) {
+    if (this._connectionState === 0) {
+      const peek = this.getNextRequest(true);
+      if (peek && peek.info) {
+        if (peek.info.connected === true) {
+          this.connect();
+        } else {
+          const request = this.getNextRequest();
+          this.send(request.message, null, false, this.layerContext(request.layer));
+          setImmediate(() => this.sendNextMessage());
+        }
+      }
+    } else if (this._connectionState === 2) {
       const request = this.getNextRequest();
 
       if (request) {
@@ -91,7 +100,7 @@ class Connection extends Layer {
         handleForwardClose(this, message, info, context);
         break;
       default:
-        handleConnectedMessage(this, data, info, context);
+        handleMessage(this, data, info, context);
     }
   }
 
@@ -159,19 +168,30 @@ function handleForwardClose(self, message, info, context) {
   }
 }
 
-function handleConnectedMessage(self, data, info, context) {
-  const sequenceCount = data.readUInt16LE(0);
+function handleMessage(self, data, info, context) {
+  const layer = self.layerForContext(context);
 
-  if (self._sequenceToContext.has(sequenceCount) === false) {
-    // This happens when the last message is resent to prevent disconnect
-    // console.log('duplicate message');
-    return;
+  if (self._connectionState === 2) {
+    const sequenceCount = data.readUInt16LE(0);
+
+    if (self._sequenceToContext.has(sequenceCount) === false) {
+      /* This happens when the last message is resent to prevent CIP connection timeout disconnect */
+      return;
+    }
+
+    context = self._sequenceToContext.get(sequenceCount);
+    self._sequenceToContext.delete(sequenceCount);
+    data = data.slice(2);
   }
 
-  context = self._sequenceToContext.get(sequenceCount);
-  self._sequenceToContext.delete(sequenceCount);
-  self.forward(data.slice(2), info, context);
+  if (layer) {
+    self.forwardTo(layer, data, info, context);
+  } else {
+    /* this should never happen */
+    self.forward(data, info, context);
+  }
 }
+
 
 function incrementSequenceCount(self) {
   self._sequenceCount = (self._sequenceCount + 1) % 0x10000;

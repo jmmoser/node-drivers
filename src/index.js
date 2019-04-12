@@ -2,7 +2,6 @@
 
 module.exports = {
   Layers: {
-    // Layer: require('./Stack/Layers/Layer'),
     TCP: require('./Stack/Layers/TCPLayer'),
     UDP: require('./Stack/Layers/UDPLayer'),
     EIP: require('./Stack/Layers/EIPLayer'),
