@@ -20,6 +20,11 @@ class Logix5000 extends Layer {
   }
 
   readTag(address, number, callback) {
+    if (callback == null && typeof number === 'function') {
+      callback = number;
+      number = 1;
+    }
+
     if (number == null || typeof number !== 'number') {
       number = 1;
     }
@@ -32,6 +37,9 @@ class Logix5000 extends Layer {
       number = parseInt(number, 10);
       if (number > 0xFFFF) {
         return resolver.reject('Too many elements to read');
+      }
+      if (number <= 0) {
+        return resolver.reject('Not enough elements to read');
       }
 
       const path = MessageRouter.ANSIExtSymbolSegment(address);
@@ -47,13 +55,31 @@ class Logix5000 extends Layer {
             const dataType = reply.data.readUInt16LE(0);
             this._tagIDtoDataType.set(address, dataType);
 
-            CIP.DecodeValue(dataType, reply.data, 2, (err, value) => {
-              if (err) {
-                resolver.reject(err, reply);
-              } else {
-                resolver.resolve(value);
+            let offset = 2;
+            const values = [];
+            let decodeError;
+            for (let i = 0; i < number; i++) {
+              offset = CIP.DecodeValue(dataType, reply.data, offset, (err, value) => {
+                if (err) {
+                  decodeError = err;
+                } else {
+                  values.push(value);
+                }
+              });
+              if (decodeError) {
+                break;
               }
-            });
+            }
+
+            if (decodeError) {
+              resolver.reject(decodeError, reply);
+            } else {
+              if (number === 1) {
+                resolver.resolve(values[0]);
+              } else {
+                resolver.resolve(values);
+              }
+            }
           } catch (err) {
             console.log(err)
             resolver.reject(err.message, reply);
