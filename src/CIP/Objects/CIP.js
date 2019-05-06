@@ -218,6 +218,8 @@ function DecodeValue(dataType, buffer, offset, cb) {
         value = buffer.readFloatLE(offset); offset += 4;
         break;
       case DataType.BOOL:
+        value = buffer.readUInt8(offset) > 0; offset += 1;
+        break;
       case DataType.USINT:
       case DataType.BYTE:
         value = buffer.readUInt8(offset); offset += 1;
