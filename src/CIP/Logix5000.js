@@ -178,9 +178,18 @@ class Logix5000 extends Layer {
   }
 
 
-  listTags(callback) {
+  listTags(options, callback) {
+    if (typeof options === 'function') {
+      callback = options;
+    }
+    if (options == null || typeof options !== 'object') {
+      options = {};
+    }
+    if (options.timeout == null) {
+      options.timeout = 10000;
+    }
     return Layer.CallbackPromise(callback, resolver => {
-      internalListTags(this, [], 0, resolver);
+      internalListTags(this, options, [], 0, resolver);
     });
   }
 
@@ -255,7 +264,7 @@ class Logix5000 extends Layer {
 module.exports = Logix5000;
 
 
-function send(self, service, path, data, callback) {
+function send(self, service, path, data, callback, timeout) {
   const request = MessageRouter.Request(service, path, data);
 
   self.send(request, { connected: true }, false, self.contextCallback((error, message) => {
@@ -270,11 +279,11 @@ function send(self, service, path, data, callback) {
         callback(null, reply);
       }
     }
-  }));
+  }, null, timeout));
 }
 
 
-function internalListTags(self, tags, instanceID, resolver) {
+function internalListTags(self, options, tags, instanceID, resolver) {
   if (instanceID >= 0xFFFF) {
     console.log('MAX INSTANCE ID');
     return resolver.resolve(tags);
@@ -304,19 +313,23 @@ function internalListTags(self, tags, instanceID, resolver) {
 
   send(self, Classes.Symbol.Services.GetInstanceAttributeList, path, data, (error, reply) => {
     if (error) {
-      resolver.reject(error, reply);
+      if (tags.length === 0) {
+        resolver.reject(error, reply);
+      } else {
+        resolver.resolve(tags);
+      }
     } else {
       const done = reply.status.code === 0;
 
       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
 
       if (!done) {
-        setImmediate(() => internalListTags(self, tags, lastInstanceID + 1, resolver));
+        setImmediate(() => internalListTags(self, options, tags, lastInstanceID + 1, resolver));
       } else {
         resolver.resolve(tags);
       }
     }
-  });
+  }, options.timeout);
 }
 
 

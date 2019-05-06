@@ -152,6 +152,10 @@ mbtcpLayer.readHoldingRegisters(81, 3, 1, function(err, values) {
 - ModbusTCP
 
 # Changelog
+## 1.5.2 / 2019-05-06
+  - Layer contextCallback added timeout parameter
+  - CIP.Logix5000 listTags added options parameter, allowed fields:
+    - timeout - timeout in milliseconds, will return tags instead of timeout error if atleast one response received with tags (default 10000)
 ## 1.5.1 / 2019-04-12
   - CIP.Logix5000 allows reading multiple elements from tags (e.g. logix.readTag('tagname', 2))
     - e.g. logix.readTag('tagname', 2)

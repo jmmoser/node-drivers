@@ -25,6 +25,7 @@ class Layer extends EventEmitter {
 
     this.__context = 0;
     this.__contextToCallback = new Map();
+    this.__contextToCallbackTimeouts = new Map();
     this.__contextToLayer = new Map();
   }
 
@@ -129,31 +130,66 @@ class Layer extends EventEmitter {
   }
 
 
-  contextCallback(callback, context) {
+  contextCallback(callback, context, timeout) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
-    if (callback != null) {
+    if (typeof callback === 'function') {
       if (context == null) {
         context = incrementContext(this);
       }
       this.__contextToCallback.set(context, callback);
+
+      if (timeout != null && timeout > 0) {
+        const timeoutHandle = setTimeout(() => {
+          this.__contextToCallback.delete(context);
+          callback('Timeout');
+        }, timeout);
+
+        this.__contextToCallbackTimeouts.set(context, timeoutHandle);
+      }
     }
+    
     return context;
   }
 
   callbackForContext(context) {
-    let callback = null;
-    // console.log(`CallbackForContext: ${context}`);
     if (this.__contextToCallback.has(context)) {
-      callback = this.__contextToCallback.get(context);
-      // console.log('')
-      // console.log('deleting');
-      // console.log(this.__contextToCallback)
+      const callback = this.__contextToCallback.get(context);
       this.__contextToCallback.delete(context);
-      // console.log(this.__contextToCallback)
-      // console.log('')
+      
+      if (this.__contextToCallbackTimeouts.has(context)) {
+        const timeoutHandle = this.__contextToCallbackTimeouts.get(context);
+        clearTimeout(timeoutHandle);
+        this.__contextToCallbackTimeouts.delete(context);
+      }
+      return callback;
     }
-    return callback;
   }
+
+  // contextCallback(callback, context) {
+  //   // caller can pass their own context (e.g. PCCCLayer passes the transaction)
+  //   if (callback != null) {
+  //     if (context == null) {
+  //       context = incrementContext(this);
+  //     }
+  //     this.__contextToCallback.set(context, callback);
+  //   }
+  //   return context;
+  // }
+
+  // callbackForContext(context) {
+  //   let callback = null;
+  //   // console.log(`CallbackForContext: ${context}`);
+  //   if (this.__contextToCallback.has(context)) {
+  //     callback = this.__contextToCallback.get(context);
+  //     // console.log('')
+  //     // console.log('deleting');
+  //     // console.log(this.__contextToCallback)
+  //     this.__contextToCallback.delete(context);
+  //     // console.log(this.__contextToCallback)
+  //     // console.log('')
+  //   }
+  //   return callback;
+  // }
 
   layerContext(layer, context) {
     if (layer != null) {
