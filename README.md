@@ -152,6 +152,8 @@ mbtcpLayer.readHoldingRegisters(81, 3, 1, function(err, values) {
 - ModbusTCP
 
 # Changelog
+## 1.5.4 / 2019-05-10
+  - Added CIP.Connection disconnect timeout of 10000 milliseconds
 ## 1.5.3 / 2019-05-06
   - CIP DecodeValue returns true or false for boolean data type
 ## 1.5.2 / 2019-05-06

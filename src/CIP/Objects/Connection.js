@@ -46,6 +46,10 @@ class Connection extends Layer {
         resolver.resolve();
       };
 
+      this._disconnectTimeout = setTimeout(() => {
+        this._disconnectCallback();
+      }, 10000);
+
       this._connectionState = -1;
       this.send(ConnectionManager.ForwardClose(this), null, false);
     });
@@ -163,8 +167,11 @@ function handleForwardClose(self, message, info, context) {
   if (message.status.code === 0) {
     const reply = ConnectionManager.ForwardCloseReply(message.data);
     self._connectionState = 0;
-    if (self._disconnectCallback) self._disconnectCallback(reply);
-    self._disconnectCallback = null;
+    if (self._disconnectCallback) {
+      self._disconnectCallback(reply);
+      clearTimeout(self._disconnectTimeout);
+      self._disconnectCallback = null;
+    }
   }
 }
 
