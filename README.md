@@ -58,7 +58,7 @@ pccc.typedRead('N10:47', function(err, value) {
 ### 3. Find all EtherNet/IP devices in a subnet using the UDP broadcast address:
 
 ```javascript
-const { Layers } = require('../src');
+const { Layers } = require('node-drivers');
 
 const udpLayer = new Layers.UDP({ host: '0.0.0.255', port: 44818 });
 const eipLayer = new Layers.EIP(udpLayer);
@@ -78,7 +78,7 @@ const eipLayer = new Layers.EIP(udpLayer);
 ### 4. Find all EtherNet/IP devices in a subnet manually over UDP
 
 ```javascript
-const { Layers } = require('../src');
+const { Layers } = require('node-drivers');
 
 /* host does not need to be specified if upper layer messages specify it */
 const udpLayer = new Layers.UDP({ port: 44818 });
@@ -105,7 +105,7 @@ for (let i = 2; i < 255; i++) {
 ### 5. List interfaces of EtherNet/IP device over TCP:
 
 ```javascript
-const { Layers } = require('../src');
+const { Layers } = require('node-drivers');
 
 const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new Layers.EIP(tcpLayer);
