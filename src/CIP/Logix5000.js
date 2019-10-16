@@ -176,22 +176,69 @@ class Logix5000 extends Layer {
       });
     });
   }
+  
 
+  async* listTags(options) {
+    const timeout = (options || {}).timeout;
+    let instanceID = (options || {}).instanceID || 0;
 
-  listTags(options, callback) {
-    if (typeof options === 'function') {
-      callback = options;
+    if (instanceID >= 0xFFFF) {
+      throw new Error('MAX INSTANCE ID');
     }
-    if (options == null || typeof options !== 'object') {
-      options = {};
+
+    const path = Buffer.from([
+      0x20, // Logical Segment - Class ID
+      0x6B, // Symbols
+      0x25, // Logical Segment - Instance ID
+      0x00,
+      0x00,
+      0x00
+    ]);
+
+    while(true) {
+      path.writeUInt16LE(instanceID, 4);
+
+      const attributes = [
+        0x01, // Attribute 1 - Symbol Name
+        0x02  // Attribute 2 - Symbol Type
+      ];
+
+      const data = Buffer.alloc(2 + attributes.length * 2);
+      data.writeUInt16LE(attributes.length, 0);
+      for (let i = 0; i < attributes.length; i++) {
+        data.writeUInt16LE(attributes[i], 2 * (i + 1));
+      }
+
+      const reply = await sendPromise(this, Classes.Symbol.Services.GetInstanceAttributeList, path, data, timeout);
+
+      const tags = [];
+      const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
+
+      for (let i = 0; i < tags.length; i++) {
+        yield tags[i];
+      }
+
+      if (reply.status.code === 0 || tags.length <= 0) {
+        break;
+      }
+
+      instanceID = lastInstanceID + 1;
     }
-    if (options.timeout == null) {
-      options.timeout = 10000;
-    }
-    return Layer.CallbackPromise(callback, resolver => {
-      internalListTags(this, options, [], 0, resolver);
-    });
   }
+  // listTags(options, callback) {
+  //   if (typeof options === 'function') {
+  //     callback = options;
+  //   }
+  //   if (options == null || typeof options !== 'object') {
+  //     options = {};
+  //   }
+  //   if (options.timeout == null) {
+  //     options.timeout = 10000;
+  //   }
+  //   return Layer.CallbackPromise(callback, resolver => {
+  //     internalListTags(this, options, [], 0, resolver);
+  //   });
+  // }
 
 
   readTemplateInstanceAttributes(templateID, callback) {
@@ -264,6 +311,18 @@ class Logix5000 extends Layer {
 module.exports = Logix5000;
 
 
+function sendPromise(self, service, path, data, timeout) {
+  return new Promise((resolve, reject) => {
+    send(self, service, path, data, (err, reply) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(reply);
+      }
+    }, timeout);
+  });
+}
+
 function send(self, service, path, data, callback, timeout) {
   const request = MessageRouter.Request(service, path, data);
 
@@ -283,54 +342,103 @@ function send(self, service, path, data, callback, timeout) {
 }
 
 
-function internalListTags(self, options, tags, instanceID, resolver) {
-  if (instanceID >= 0xFFFF) {
-    console.log('MAX INSTANCE ID');
-    return resolver.resolve(tags);
-  }
+// async function* internalListTags(self, options, tags, instanceID, resolver) {
+//   if (instanceID >= 0xFFFF) {
+//     console.log('MAX INSTANCE ID');
+//     return resolver.resolve(tags);
+//   }
 
-  const path = Buffer.from([
-    0x20, // Logical Segment - Class ID
-    0x6B, // Symbols
-    0x25, // Logical Segment - Instance ID
-    0x00,
-    0x00,
-    0x00
-  ]);
+//   const path = Buffer.from([
+//     0x20, // Logical Segment - Class ID
+//     0x6B, // Symbols
+//     0x25, // Logical Segment - Instance ID
+//     0x00,
+//     0x00,
+//     0x00
+//   ]);
 
-  path.writeUInt16LE(instanceID, 4);
+//   path.writeUInt16LE(instanceID, 4);
 
-  const attributes = [
-    0x01, // Attribute 1 - Symbol Name
-    0x02  // Attribute 2 - Symbol Type
-  ];
+//   const attributes = [
+//     0x01, // Attribute 1 - Symbol Name
+//     0x02  // Attribute 2 - Symbol Type
+//   ];
 
-  const data = Buffer.alloc(2 + attributes.length * 2);
-  data.writeUInt16LE(attributes.length, 0);
-  for (let i = 0; i < attributes.length; i++) {
-    data.writeUInt16LE(attributes[i], 2 * (i + 1));
-  }
+//   const data = Buffer.alloc(2 + attributes.length * 2);
+//   data.writeUInt16LE(attributes.length, 0);
+//   for (let i = 0; i < attributes.length; i++) {
+//     data.writeUInt16LE(attributes[i], 2 * (i + 1));
+//   }
 
-  send(self, Classes.Symbol.Services.GetInstanceAttributeList, path, data, (error, reply) => {
-    if (error) {
-      if (tags.length === 0) {
-        resolver.reject(error, reply);
-      } else {
-        resolver.resolve(tags);
-      }
-    } else {
-      const done = reply.status.code === 0;
+//   send(self, Classes.Symbol.Services.GetInstanceAttributeList, path, data, (error, reply) => {
+//     if (error) {
+//       if (tags.length === 0) {
+//         resolver.reject(error, reply);
+//       } else {
+//         resolver.resolve(tags);
+//       }
+//     } else {
+//       const done = reply.status.code === 0;
 
-      const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
+//       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
 
-      if (!done) {
-        setImmediate(() => internalListTags(self, options, tags, lastInstanceID + 1, resolver));
-      } else {
-        resolver.resolve(tags);
-      }
-    }
-  }, options.timeout);
-}
+//       if (!done) {
+//         setImmediate(() => internalListTags(self, options, tags, lastInstanceID + 1, resolver));
+//       } else {
+//         resolver.resolve(tags);
+//       }
+//     }
+//   }, options.timeout);
+// }
+
+// function internalListTags(self, options, tags, instanceID, resolver) {
+//   if (instanceID >= 0xFFFF) {
+//     console.log('MAX INSTANCE ID');
+//     return resolver.resolve(tags);
+//   }
+
+//   const path = Buffer.from([
+//     0x20, // Logical Segment - Class ID
+//     0x6B, // Symbols
+//     0x25, // Logical Segment - Instance ID
+//     0x00,
+//     0x00,
+//     0x00
+//   ]);
+
+//   path.writeUInt16LE(instanceID, 4);
+
+//   const attributes = [
+//     0x01, // Attribute 1 - Symbol Name
+//     0x02  // Attribute 2 - Symbol Type
+//   ];
+
+//   const data = Buffer.alloc(2 + attributes.length * 2);
+//   data.writeUInt16LE(attributes.length, 0);
+//   for (let i = 0; i < attributes.length; i++) {
+//     data.writeUInt16LE(attributes[i], 2 * (i + 1));
+//   }
+
+//   send(self, Classes.Symbol.Services.GetInstanceAttributeList, path, data, (error, reply) => {
+//     if (error) {
+//       if (tags.length === 0) {
+//         resolver.reject(error, reply);
+//       } else {
+//         resolver.resolve(tags);
+//       }
+//     } else {
+//       const done = reply.status.code === 0;
+
+//       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
+
+//       if (!done) {
+//         setImmediate(() => internalListTags(self, options, tags, lastInstanceID + 1, resolver));
+//       } else {
+//         resolver.resolve(tags);
+//       }
+//     }
+//   }, options.timeout);
+// }
 
 
 function parseListTagsResponse(reply, attributes, tags) {
