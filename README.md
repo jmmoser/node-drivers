@@ -19,17 +19,14 @@ const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new Layers.EIP(tcpLayer);
 const logix5000 = new Layers.CIP.Logix5000(eipLayer);
 
-(async () => {
-  try {
-      const value = await logix5000.readTag('R03:9:I.Ch1Data');
-      console.log(value);
-    } catch(err) {
-      console.log(err);
-    }
+try {
+  const value = await logix5000.readTag('R03:9:I.Ch1Data');
+  console.log(value);
+} catch(err) {
+  console.log(err);
+}
 
-    await tcpLayer.close();
-  }
-})();
+await tcpLayer.close();
 ```
 
 ### 2. Communicate with a PLC-5, SLC 5/03, or SLC 5/04 processor using PCCC embedded in CIP:
@@ -63,16 +60,14 @@ const { Layers } = require('node-drivers');
 const udpLayer = new Layers.UDP({ host: '0.0.0.255', port: 44818 });
 const eipLayer = new Layers.EIP(udpLayer);
 
-(async () => {
-  try {
-    const identities = await eipLayer.listIdentity({ timeout: 5000 });
-    console.log(identities);
-  } catch(err) {
-    console.log(err);
-  }
+try {
+  const identities = await eipLayer.listIdentity({ timeout: 5000 });
+  console.log(identities);
+} catch(err) {
+  console.log(err);
+}
 
-  await udpLayer.close();
-})();
+await udpLayer.close();
 ```
 
 ### 4. Find all EtherNet/IP devices in a subnet manually over UDP
@@ -89,17 +84,15 @@ for (let i = 2; i < 255; i++) {
   hosts.push(`0.0.0.${i}`);
 }
 
-(async () => {
-  try {
-    /* hosts override whatever host was specified in the Layers.UDP() constructor */
-    const identities = await eipLayer.listIdentity({ timeout: 5000, hosts });
-    console.log(identities);
-  } catch(err) {
-    console.log(err);
-  }
+try {
+  /* hosts override whatever host was specified in the Layers.UDP() constructor */
+  const identities = await eipLayer.listIdentity({ timeout: 5000, hosts });
+  console.log(identities);
+} catch(err) {
+  console.log(err);
+}
 
-  await udpLayer.close();
-})();
+await udpLayer.close();
 ```
 
 ### 5. List interfaces of EtherNet/IP device over TCP:
@@ -110,16 +103,14 @@ const { Layers } = require('node-drivers');
 const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new Layers.EIP(tcpLayer);
 
-(async () => {
-  try {
-    const identities = await eipLayer.listInterfaces();
-    console.log(identities);
-  } catch(err) {
-    console.log(err);
-  }
+try {
+  const identities = await eipLayer.listInterfaces();
+  console.log(identities);
+} catch(err) {
+  console.log(err);
+}
 
-  await tcpLayer.close();
-})();
+await tcpLayer.close();
 ```
 
 ### 6. Communicate with a ModbusTCP device:
