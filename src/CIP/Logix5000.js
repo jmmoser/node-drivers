@@ -1,15 +1,15 @@
 'use strict';
 
-const { getBit, getBits } = require('../util');
+const { getBit, getBits, CallbackPromise } = require('../util');
 const CIP = require('./Objects/CIP');
-const Layer = require('./Objects/CIPLayer');
-const MessageRouter = require('./Objects/MessageRouter');
+const CIPLayer = require('./Objects/CIPLayer');
+const { ANSIExtSymbolSegment } = require('./Objects/MessageRouter');
 
 const ConnectionLayer = require('./Objects/Connection');
 
 const { DataType } = CIP;
 
-class Logix5000 extends Layer {
+class Logix5000 extends CIPLayer {
   constructor(lowerLayer) {
     if (!(lowerLayer instanceof ConnectionLayer)) {
       /* Inject Connection as lower layer */
@@ -29,7 +29,7 @@ class Logix5000 extends Layer {
       number = 1;
     }
 
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       if (!address) {
         return resolver.reject('Address must be specified');
       }
@@ -42,7 +42,7 @@ class Logix5000 extends Layer {
         return resolver.reject('Not enough elements to read');
       }
 
-      const path = MessageRouter.ANSIExtSymbolSegment(address);
+      const path = ANSIExtSymbolSegment(address);
       // const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
       const data = Buffer.alloc(2);
       data.writeUInt16LE(number, 0);
@@ -91,7 +91,7 @@ class Logix5000 extends Layer {
 
 
   writeTag(address, value, callback) {
-    return Layer.CallbackPromise(callback, async resolver => {
+    return CallbackPromise(callback, async resolver => {
       if (!address) {
         return resolver.reject('Address must be specified');
       }
@@ -111,7 +111,7 @@ class Logix5000 extends Layer {
         return resolver.reject(`Unable to encode data type: ${CIP.DataTypeName[dataType] || dataType}`);
       }
 
-      const path = MessageRouter.ANSIExtSymbolSegment(address);
+      const path = ANSIExtSymbolSegment(address);
 
       const data = Buffer.alloc(4 + valueData.length);
       data.writeUInt16LE(dataType, 0);
@@ -130,7 +130,7 @@ class Logix5000 extends Layer {
 
 
   readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       if (!address) {
         return resolver.reject('Address must be specified');
       }
@@ -158,7 +158,7 @@ class Logix5000 extends Layer {
         }
       }
 
-      const path = MessageRouter.ANSIExtSymbolSegment(address);
+      const path = ANSIExtSymbolSegment(address);
 
       const data = Buffer.alloc(2 + 2 * sizeOfMasks);
       data.writeUInt16LE(sizeOfMasks, 0);
@@ -179,8 +179,16 @@ class Logix5000 extends Layer {
   
 
   async* listTags(options) {
-    const timeout = (options || {}).timeout;
-    let instanceID = (options || {}).instanceID || 0;
+    const {
+      timeout,
+      instanceID
+    } = Object.assign({
+      timeout: 30000,
+      instance: 0
+    }, options);
+
+    // const timeout = (options || {}).timeout;
+    // let instanceID = (options || {}).instanceID || 0;
 
     if (instanceID >= 0xFFFF) {
       throw new Error('MAX INSTANCE ID');
@@ -215,6 +223,13 @@ class Logix5000 extends Layer {
       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
 
       for (let i = 0; i < tags.length; i++) {
+        // const tag = tags[i];
+        // if (tag.type.system !== true) {
+        //   if (tag.type.structure === true) {
+        //     console.log(await this.readTemplateInstanceAttributes(tag.type.template.id));
+        //   }
+        //   yield tags[i];
+        // }
         yield tags[i];
       }
 
@@ -225,6 +240,7 @@ class Logix5000 extends Layer {
       instanceID = lastInstanceID + 1;
     }
   }
+
   // listTags(options, callback) {
   //   if (typeof options === 'function') {
   //     callback = options;
@@ -235,14 +251,43 @@ class Logix5000 extends Layer {
   //   if (options.timeout == null) {
   //     options.timeout = 10000;
   //   }
-  //   return Layer.CallbackPromise(callback, resolver => {
+  //   return CallbackPromise(callback, resolver => {
   //     internalListTags(this, options, [], 0, resolver);
   //   });
   // }
 
+  readTemplate(template, callback) {
+    return CallbackPromise(callback, resolver => {
+      const path = Buffer.from([
+        0x20, // Logical Segment - Class ID
+        Classes.Template.Code,
+        0x25, // Logical Segment - Instance ID
+        0x00,
+        0x00,
+        0x00
+      ]);
+
+      const data = Buffer.alloc(6);
+      data.writeUInt32LE(0, 0);
+      data.writeUInt16LE(0x61, 4);
+
+      send(this, Classes.Template.Services.Read, path, data, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          try {
+            // const template = parseReadTemplateInstanceAttributes(reply);
+            resolver.resolve(template);
+          } catch (err) {
+            resolver.reject(err.message, reply);
+          }
+        }
+      });
+    });
+  }
 
   readTemplateInstanceAttributes(templateID, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const path = Buffer.from([
         0x20, // Logical Segment - Class ID
         Classes.Template.Code,
@@ -323,24 +368,12 @@ function sendPromise(self, service, path, data, timeout) {
   });
 }
 
+/** Use driver specific error handling if exists */
 function send(self, service, path, data, callback, timeout) {
-  const request = MessageRouter.Request(service, path, data);
-
-  self.send(request, { connected: true }, false, self.contextCallback((error, message) => {
-    if (error) {
-      callback(error);
-    } else {
-      const reply = MessageRouter.Reply(message);
-      if (reply.status.code !== 0 && reply.status.code !== 6) {
-        // callback(reply.status.description || READ_TAG_ERRORS[reply.status.code] || 'Unknown error', reply);
-        callback(getError(reply), reply);
-      } else {
-        callback(null, reply);
-      }
-    }
-  }, null, timeout));
+  return CIPLayer.send(self, true, service, path, data, (error, reply) => {
+    callback(error ? getError(reply) : null, reply);
+  }, timeout);
 }
-
 
 // async function* internalListTags(self, options, tags, instanceID, resolver) {
 //   if (instanceID >= 0xFFFF) {
@@ -612,6 +645,7 @@ const ERRORS = {
     }
   }
 }
+
 
 function getError(reply) {
   if (reply.status.description) {

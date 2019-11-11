@@ -18,7 +18,7 @@ class CIPLayer extends Layer {
         0x01  // Instance ID
       ]);
 
-      send(this, false, service, path, null, function (error, reply) {
+      CIPLayer.send(this, false, service, path, null, function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -47,7 +47,7 @@ class CIPLayer extends Layer {
         0x01  // Attribute 1
       ]);
 
-      send(this, true, service, path, null, (error, reply) => {
+      CIPLayer.send(this, true, service, path, null, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -79,26 +79,26 @@ class CIPLayer extends Layer {
       });
     });
   }
+
+
+  static send(layer, connected, service, path, data, callback, timeout) {
+    const request = MessageRouter.Request(service, path, data);
+
+    const info = { connected };
+
+    layer.send(request, info, false, layer.contextCallback((error, message) => {
+      if (error) {
+        callback(error);
+      } else {
+        const reply = MessageRouter.Reply(message);
+        if (reply.status.code !== 0 && reply.status.code !== 6) {
+          callback(reply.status.description || true, reply);
+        } else {
+          callback(null, reply);
+        }
+      }
+    }, null, timeout));
+  }
 }
 
 module.exports = CIPLayer;
-
-
-function send(self, connected, service, path, data, callback) {
-  const request = MessageRouter.Request(service, path, data);
-
-  const info = { connected };
-
-  self.send(request, info, false, self.contextCallback((error, message) => {
-    if (error) {
-      callback(error);
-    } else {
-      const reply = MessageRouter.Reply(message);
-      if (reply.status.code !== 0 && reply.status.code !== 6) {
-        callback(reply.status.description, reply);
-      } else {
-        callback(null, reply);
-      }
-    }
-  }));
-}
