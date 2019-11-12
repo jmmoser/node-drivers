@@ -50,6 +50,7 @@ class TCPLayer extends Layer {
 
     socket.on('data', (data) => {
       // console.log('handling data')
+      // console.log(data);
       handleData(data);
     });
 
@@ -106,8 +107,8 @@ class TCPLayer extends Layer {
     if (this._connectionState === 2) {
       const request = this.getNextRequest();
       if (request) {
-        console.log('SENDING:');
-        console.log(request.message);
+        // console.log('TCP SENDING:');
+        // console.log(request.message);
         this.socket.write(request.message, (err) => {
           if (err) {
             console.log('TCPLayer WRITE ERROR:')

@@ -81,23 +81,42 @@ class CIPLayer extends Layer {
   }
 
 
+  handleData(data, info, context) {
+    console.log('HANDLE DATA');
+    console.log(arguments);
+    if (context == null) {
+      throw new Error('Unhandled message, context should not be null');
+    }
+
+    const callback = this.callbackForContext(context);
+    if (callback != null) {
+      callback(null, data, info);
+    }
+  }
+
+
   static send(layer, connected, service, path, data, callback, timeout) {
     const request = MessageRouter.Request(service, path, data);
 
     const info = { connected };
 
-    layer.send(request, info, false, typeof callback === 'function' && layer.contextCallback((error, message) => {
+    layer.send(request, info, false, typeof callback === 'function' ? layer.contextCallback((error, message) => {
       if (error) {
         callback(error);
       } else {
         const reply = MessageRouter.Reply(message);
+
+        if (reply.service.code !== service) {
+          return callback('Response service does not match request service. This should never happen.', reply);
+        }
+
         if (reply.status.code !== 0 && reply.status.code !== 6) {
           callback(reply.status.description || true, reply);
         } else {
           callback(null, reply);
         }
       }
-    }, null, timeout));
+    }, null, timeout) : undefined);
   }
 }
 

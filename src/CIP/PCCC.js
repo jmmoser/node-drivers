@@ -37,7 +37,24 @@ class PCCC extends CIPLayer {
     }
   }
 
+  // handleData(data, info, context) {
+  //   const offset = data.readUInt8(4);
+  //   const slicedData = data.slice(offset + 4);
+  //   if (context) {
+  //     const callback = this.callbackForContext(context);
+  //     if (callback) {
+  //       return callback(null, data, info);
+  //     }
+  //   }
+    
+  //   this.forward(slicedData, info, context);
+  // }
+
   handleData(data, info, context) {
+    if (context) {
+      super.handleData(data, info, context);
+    }
+    
     const offset = data.readUInt8(4);
     this.forward(data.slice(offset + 4), info, context);
   }
