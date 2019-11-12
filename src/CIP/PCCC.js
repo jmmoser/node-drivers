@@ -1,6 +1,7 @@
 'use strict';
 
 const CIPLayer = require('./Objects/CIPLayer');
+const MessageRouter = require('./Objects/MessageRouter');
 
 const HEADER_LENGTH = 7;
 
@@ -53,10 +54,18 @@ class PCCC extends CIPLayer {
   handleData(data, info, context) {
     if (context) {
       super.handleData(data, info, context);
+      return;
     }
+
+    const reply = MessageRouter.Reply(data);
     
-    const offset = data.readUInt8(4);
-    this.forward(data.slice(offset + 4), info, context);
+    if (data.length > 4 && !reply.status.error) {
+      const offset = data.readUInt8(4);
+      this.forward(data.slice(offset + 4), info, context);
+    } else {
+      console.log('Unexpected PCCC embedded in CIP response:');
+      console.log(reply);
+    }
   }
 }
 

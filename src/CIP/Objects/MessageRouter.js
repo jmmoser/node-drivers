@@ -46,6 +46,7 @@ class MessageRouter {
     res.status.code = statusCode;
     res.status.name = GeneralStatusCodeNames[statusCode] || '';
     res.status.description = GeneralStatusCodeDescriptions[statusCode] || '';
+    res.status.error = statusCode !== 0 && statusCode !== 6;
 
     const additionalStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
     if (additionalStatusSize > 0) {

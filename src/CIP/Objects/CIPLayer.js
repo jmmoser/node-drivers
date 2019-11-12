@@ -82,16 +82,34 @@ class CIPLayer extends Layer {
 
 
   handleData(data, info, context) {
-    console.log('HANDLE DATA');
-    console.log(arguments);
-    if (context == null) {
-      throw new Error('Unhandled message, context should not be null');
-    }
+    // if (context) {
+    //   const callback = this.callbackForContext(context);
+    //   if (callback != null) {
+    //     callback(null, data, info);
+    //   }
+    // }
+    // else {
+    //   console.log('Unhandled message, context should not be null');
+    // }
+
 
     const callback = this.callbackForContext(context);
     if (callback != null) {
       callback(null, data, info);
     }
+
+    // this.forward(data, info, context);
+    
+
+
+    // if (context == null) {
+    //   throw new Error('Unhandled message, context should not be null');
+    // }
+
+    // const callback = this.callbackForContext(context);
+    // if (callback != null) {
+    //   callback(null, data, info);
+    // }
   }
 
 

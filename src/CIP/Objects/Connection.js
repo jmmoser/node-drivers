@@ -4,8 +4,10 @@ const Layer = require('./../../Stack/Layers/Layer');
 const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
 
-const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen | (1 << 7);
-const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose | (1 << 7);
+const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen;
+const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose;
+// const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen | (1 << 7);
+// const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose | (1 << 7);
 
 class Connection extends Layer {
   constructor(lowerLayer, options) {
@@ -96,7 +98,7 @@ class Connection extends Layer {
   handleData(data, info, context) {
     const message = MessageRouter.Reply(data);
 
-    switch (message.service) {
+    switch (message.service.code) {
       case FORWARD_OPEN_SERVICE:
         handleForwardOpen(this, message, info, context);
         break;
@@ -176,6 +178,7 @@ function handleForwardClose(self, message, info, context) {
 }
 
 function handleMessage(self, data, info, context) {
+  /** call layerForContext here just to make sure it is cleared from the underlying Map */
   const layer = self.layerForContext(context);
 
   if (self._connectionState === 2) {
@@ -189,6 +192,12 @@ function handleMessage(self, data, info, context) {
     context = self._sequenceToContext.get(sequenceCount);
     self._sequenceToContext.delete(sequenceCount);
     data = data.slice(2);
+
+    // console.log({
+    //   context,
+    //   data,
+    //   sequenceCount
+    // });
   }
 
   if (layer) {

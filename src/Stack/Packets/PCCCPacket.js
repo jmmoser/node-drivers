@@ -43,14 +43,17 @@ class PCCCPacket {
   }
 
   static fromBufferReply(buffer) {
-    console.log(buffer);
     const packet = new PCCCPacket();
 
     let offset = 0;
-
+    packet.raw = buffer;
     packet.command = buffer.readUInt8(offset); offset += 1;
     packet.status.code = buffer.readUInt8(offset); offset += 1;
     packet.status.description = STSCodeDescriptions[packet.status.code] || '';
+
+    // if (buffer.length < 4) {
+    //   return packet;
+    // }
 
     packet.transaction = buffer.readUInt16LE(offset); offset += 2;
 

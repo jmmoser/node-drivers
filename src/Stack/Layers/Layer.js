@@ -165,32 +165,6 @@ class Layer extends EventEmitter {
     }
   }
 
-  // contextCallback(callback, context) {
-  //   // caller can pass their own context (e.g. PCCCLayer passes the transaction)
-  //   if (callback != null) {
-  //     if (context == null) {
-  //       context = incrementContext(this);
-  //     }
-  //     this.__contextToCallback.set(context, callback);
-  //   }
-  //   return context;
-  // }
-
-  // callbackForContext(context) {
-  //   let callback = null;
-  //   // console.log(`CallbackForContext: ${context}`);
-  //   if (this.__contextToCallback.has(context)) {
-  //     callback = this.__contextToCallback.get(context);
-  //     // console.log('')
-  //     // console.log('deleting');
-  //     // console.log(this.__contextToCallback)
-  //     this.__contextToCallback.delete(context);
-  //     // console.log(this.__contextToCallback)
-  //     // console.log('')
-  //   }
-  //   return callback;
-  // }
-
   layerContext(layer, context) {
     if (layer != null) {
       if (context == null) {

@@ -369,7 +369,10 @@ function sendPromise(self, service, path, data, timeout) {
 /** Use driver specific error handling if exists */
 function send(self, service, path, data, callback, timeout) {
   return CIPLayer.send(self, true, service, path, data, (error, reply) => {
-    callback(error ? getError(reply) : null, reply);
+    if (error && reply) {
+      error = getError(reply);
+    }
+    callback(error, reply);
   }, timeout);
 }
 
