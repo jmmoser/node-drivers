@@ -22,8 +22,8 @@ class PCCC extends CIPLayer {
   }
 
   sendNextMessage() {
-    let request;
-    while ((request = this.getNextRequest())) {
+    const request = this.getNextRequest();
+    if (request != null) {
       const pcccMessage = request.message;
 
       const data = Buffer.concat(
@@ -32,6 +32,8 @@ class PCCC extends CIPLayer {
       );
 
       send(this, Services.ExecutePCCC, data);
+
+      setImmediate(() => this.sendNextMessage());
     }
   }
 

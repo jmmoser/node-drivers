@@ -86,7 +86,7 @@ class CIPLayer extends Layer {
 
     const info = { connected };
 
-    layer.send(request, info, false, layer.contextCallback((error, message) => {
+    layer.send(request, info, false, typeof callback === 'function' && layer.contextCallback((error, message) => {
       if (error) {
         callback(error);
       } else {

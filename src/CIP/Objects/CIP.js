@@ -1,5 +1,7 @@
 'use strict';
 
+const { InvertKeyValues } = require('../../util');
+
 /** 
  * Ref. CIP Vol 1 Table 5.1
  * and https://github.com/Res260/wireshark/blob/b7107f5fcb9bcc20be33b6263f90d1b20cc1591d/epan/dissectors/packet-cip.c
@@ -102,10 +104,11 @@ const Classes = {
   CompoNetRepeater: 0xF8
 };
 
-const ClassNames = {};
-Object.entries(Classes).forEach(([key, value]) => {
-  ClassNames[value] = key;
-});
+const ClassNames = InvertKeyValues(Classes);
+// const ClassNames = {};
+// Object.entries(Classes).forEach(([key, value]) => {
+//   ClassNames[value] = key;
+// });
 
 // CIP Vol1 Appendix A
 const Services = {
@@ -134,7 +137,7 @@ const Services = {
 };
 
 // CIP Vol1 Table C-6.1
-const DataType = {
+const DataTypes = {
   BOOL: 0xC1,
   SINT: 0xC2,
   INT: 0xC3,
@@ -167,10 +170,8 @@ const DataType = {
   STRINGI: 0xDE
 };
 
-const DataTypeName = {};
-Object.entries(DataType).forEach(([key, value]) => {
-  DataTypeName[value] = key;
-});
+const DataTypeNames = InvertKeyValues(DataTypes);
+
 
 // CIP Vol1 Table 4-4.2
 const ReservedClassAttributes = {
@@ -188,8 +189,8 @@ module.exports = {
   Classes,
   ClassNames,
   Services,
-  DataType,
-  DataTypeName,
+  DataTypes,
+  DataTypeNames,
   ReservedClassAttributes,
   DecodeValue,
   EncodeValue
@@ -202,59 +203,59 @@ function DecodeValue(dataType, buffer, offset, cb) {
 
   try {
     switch (dataType) {
-      case DataType.SINT:
+      case DataTypes.SINT:
         value = buffer.readInt8(offset); offset += 1;
         break;
-      case DataType.INT:
-      case DataType.ITIME:
+      case DataTypes.INT:
+      case DataTypes.ITIME:
         value = buffer.readInt16LE(offset); offset += 2;
         break;
-      case DataType.DINT:
-      case DataType.TIME:
-      case DataType.FTIME:
+      case DataTypes.DINT:
+      case DataTypes.TIME:
+      case DataTypes.FTIME:
         value = buffer.readInt32LE(offset); offset += 4;
         break;
-      case DataType.REAL:
+      case DataTypes.REAL:
         value = buffer.readFloatLE(offset); offset += 4;
         break;
-      case DataType.BOOL:
+      case DataTypes.BOOL:
         value = buffer.readUInt8(offset) > 0; offset += 1;
         break;
-      case DataType.USINT:
-      case DataType.BYTE:
+      case DataTypes.USINT:
+      case DataTypes.BYTE:
         value = buffer.readUInt8(offset); offset += 1;
         break;
-      case DataType.UINT:
-      case DataType.WORD:
+      case DataTypes.UINT:
+      case DataTypes.WORD:
         value = buffer.readUInt16LE(offset); offset += 2;
         break;
-      case DataType.UDINT:
-      case DataType.DWORD:
-      case DataType.DATE:
+      case DataTypes.UDINT:
+      case DataTypes.DWORD:
+      case DataTypes.DATE:
         value = buffer.readUInt32LE(offset); offset += 4;
         break;
-      case DataType.STRING: {
+      case DataTypes.STRING: {
         const length = buffer.readUInt16LE(offset); offset += 2;
         value = buffer.toString('ascii', offset, offset + length); offset += length;
         break;
       }
-      case DataType.SHORT_STRING: {
+      case DataTypes.SHORT_STRING: {
         const length = buffer.readUInt8(offset); offset += 1;
         value = buffer.toString('ascii', offset, offset + length); offset += length;
         break;
       }
-      case DataType.STRING2: {
+      case DataTypes.STRING2: {
         const length = buffer.readUInt16LE(offset); offset += 2;
         value = buffer.toString('utf16le', offset, offset + 2 * length); offset += 2 * length;
         break;
       }
-      case DataType.LINT:
-      case DataType.ULINT:
-      case DataType.LREAL:
-      case DataType.LWORD:
-      case DataType.LTIME:
+      case DataTypes.LINT:
+      case DataTypes.ULINT:
+      case DataTypes.LREAL:
+      case DataTypes.LWORD:
+      case DataTypes.LTIME:
       default:
-        error = `Data type is not currently supported: ${DataTypeName[dataType] || dataType}`
+        error = `Data type is not currently supported: ${DataTypeNames[dataType] || dataType}`
         break;
     }
   } catch(err) {
@@ -273,33 +274,33 @@ function EncodeValue(dataType, value) {
   let data;
 
   switch (dataType) {
-    case DataType.SINT:
+    case DataTypes.SINT:
       data = Buffer.alloc(1);
       data.writeInt8(value, 0);
       break;
-    case DataType.INT:
-    case DataType.ITIME:
+    case DataTypes.INT:
+    case DataTypes.ITIME:
       data = Buffer.alloc(2);
       data.writeInt16LE(value, 0);
       break;
-    case DataType.DINT:
-    case DataType.TIME:
-    case DataType.FTIME:
+    case DataTypes.DINT:
+    case DataTypes.TIME:
+    case DataTypes.FTIME:
       data = Buffer.alloc(4);
       data.writeInt32LE(value, 0);
       break;
-    case DataType.REAL:
+    case DataTypes.REAL:
       data = Buffer.alloc(4);
       data.writeFloatLE(value, 0);
       break;
-    case DataType.UINT:
-    case DataType.WORD:
+    case DataTypes.UINT:
+    case DataTypes.WORD:
       data = Buffer.alloc(2);
       data.writeUInt16LE(value, 0);
       break;
-    case DataType.UDINT:
-    case DataType.DWORD:
-    case DataType.DATE:
+    case DataTypes.UDINT:
+    case DataTypes.DWORD:
+    case DataTypes.DATE:
       data = Buffer.alloc(4);
       data.writeUInt32LE(value, 0);
       break;

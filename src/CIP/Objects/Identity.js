@@ -1,25 +1,25 @@
 'use strict';
 
 const CIP = require('./CIP');
-const { getBit, getBits } = require('../../util');
+const { getBit, getBits, InvertKeyValues } = require('../../util');
 
 // Class Code 0x01
 class Identity {
-  GetAttributeSingle() {
-    // 0x0E
-  }
+  // GetAttributeSingle() {
+  //   // 0x0E
+  // }
 
-  Reset() {
-    // 0x05
-  }
+  // Reset() {
+  //   // 0x05
+  // }
 
-  GetAttributesAll() {
-    // 0x01
-  }
+  // GetAttributesAll() {
+  //   // 0x01
+  // }
 
-  SetAttributeSingle() {
-    // 0x10
-  }
+  // SetAttributeSingle() {
+  //   // 0x10
+  // }
 
   static ParseInstanceAttributesAll(buffer, offset, cb) {
     let error;
@@ -48,7 +48,7 @@ class Identity {
 
     item.serialNumber = buffer.readUInt32LE(offset); offset += 4;
 
-    offset = CIP.DecodeValue(CIP.DataType.SHORT_STRING, buffer, offset, (err, value) => {
+    offset = CIP.DecodeValue(CIP.DataTypes.SHORT_STRING, buffer, offset, (err, value) => {
       if (err) {
         error = err;
       } else {
@@ -97,11 +97,15 @@ class Identity {
 
     return offset;
   }
+
+  static get Services() {
+    return ClassServices;
+  }
 }
 
 module.exports = Identity;
 
-Identity.ClassServices = {
+const ClassServices = {
   GetAttributesAll: 0x01,
   Reset: 0x05,
   GetAttributeSingle: 0x0E,
@@ -133,6 +137,9 @@ const InstanceAttributes = {
   GeographicLocation: 17,
   ModbusIdentityInfo: 18
 };
+
+// const InstanceAttributeNames = InvertKeyValues(InstanceAttributes);
+
 
 // // CIP Vol1 Table 5-2.2
 // const InstanceAttributeInfo = {

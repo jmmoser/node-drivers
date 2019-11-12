@@ -1,13 +1,11 @@
 'use strict';
 
 const { getBit, getBits, CallbackPromise } = require('../util');
-const CIP = require('./Objects/CIP');
+const { DataTypes, DataTypeNames, EncodeValue, DecodeValue } = require('./Objects/CIP');
 const CIPLayer = require('./Objects/CIPLayer');
 const { ANSIExtSymbolSegment } = require('./Objects/MessageRouter');
-
 const ConnectionLayer = require('./Objects/Connection');
 
-const { DataType } = CIP;
 
 class Logix5000 extends CIPLayer {
   constructor(lowerLayer) {
@@ -59,7 +57,7 @@ class Logix5000 extends CIPLayer {
             const values = [];
             let decodeError;
             for (let i = 0; i < number; i++) {
-              offset = CIP.DecodeValue(dataType, reply.data, offset, (err, value) => {
+              offset = DecodeValue(dataType, reply.data, offset, (err, value) => {
                 if (err) {
                   decodeError = err;
                 } else {
@@ -105,10 +103,10 @@ class Logix5000 extends CIPLayer {
 
       const dataType = this._tagIDtoDataType.get(address);
 
-      const valueData = CIP.EncodeValue(dataType, value);
+      const valueData = EncodeValue(dataType, value);
 
       if (!Buffer.isBuffer(valueData)) {
-        return resolver.reject(`Unable to encode data type: ${CIP.DataTypeName[dataType] || dataType}`);
+        return resolver.reject(`Unable to encode data type: ${DataTypeNames[dataType] || dataType}`);
       }
 
       const path = ANSIExtSymbolSegment(address);
@@ -490,7 +488,7 @@ function parseListTagsResponse(reply, attributes, tags) {
     for (let i = 0; i < attributes.length; i++) {
       switch (attributes[i]) {
         case 0x01:
-          offset = CIP.DecodeValue(CIP.DataType.STRING, data, offset, (_, value) => {
+          offset = DecodeValue(DataTypes.STRING, data, offset, (_, value) => {
             tag.name = value;
           });
           break;
@@ -522,10 +520,10 @@ function parseSymbolType(code) {
 
   if (atomic) {
     res.dataType = getBits(code, 0, 8);
-    if (res.dataType === DataType.BOOL) {
+    if (res.dataType === DataTypes.BOOL) {
       res.position = getBits(code, 8, 11);
     }
-    res.dataTypeName = CIP.DataTypeName[res.dataType] || 'UNKNOWN';
+    res.dataTypeName = DataTypeNames[res.dataType] || 'UNKNOWN';
   } else {
     const templateID = getBits(code, 0, 12);
     res.template = {

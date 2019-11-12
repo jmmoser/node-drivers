@@ -43,6 +43,7 @@ class PCCCPacket {
   }
 
   static fromBufferReply(buffer) {
+    console.log(buffer);
     const packet = new PCCCPacket();
 
     let offset = 0;
@@ -143,9 +144,13 @@ class PCCCPacket {
     const writeBufferLength = items * dataTypeSize;
     const writeBuffer = new Buffer.alloc(writeBufferLength);
 
+    let writeOffset = 0;
     for (let i = 0; i < items; i++) {
-      info.writeFunction(writeBuffer, i * dataTypeSize, values[i]);
+      writeOffset = EncodeValue(info.datatype, values[i], writeBuffer, writeOffset);
     }
+    // for (let i = 0; i < items; i++) {
+    //   info.writeFunction(writeBuffer, i * dataTypeSize, values[i]);
+    // }
 
     packet.data = Buffer.concat([data.slice(0, offset), writeBuffer], offset + writeBufferLength);
 
@@ -184,6 +189,7 @@ class PCCCPacket {
 
 module.exports = PCCCPacket;
 
+
 function toBuffer(command, status, transaction, data = []) {
   const buffer = Buffer.alloc(4 + data.length);
   buffer.writeUInt8(command, 0);
@@ -195,20 +201,41 @@ function toBuffer(command, status, transaction, data = []) {
   return buffer;
 }
 
+
 function logicalASCIIAddress(address, buffer) {
   let offset = 0;
   buffer.writeUInt8(0x00, offset); offset += 1;
   buffer.writeUInt8(0x24, offset); offset += 1;
-	// buffer[offset] = 0x00; offset += 1;
-	// buffer[offset] = 0x24; offset += 1;
 	for (let i = 0; i < address.length; i++) {
     buffer.writeUInt8(address.charCodeAt(i), offset); offset += 1;
-		// buffer[offset] = address.charCodeAt(i); offset += 1;
   }
   buffer.writeUInt8(0x00, offset); offset += 1;
-	// buffer[offset] = 0x00; offset += 1;
   return offset;
 }
+
+
+function EncodeValue(type, value, buffer, offset) {
+  switch (type) {
+    case 'INT':
+    case PCCCDataType.Integer:
+      buffer.writeInt16LE(value, offset);
+      offset += 2;
+      break;
+    case 'DINT':
+      buffer.writeInt32LE(value, offset);
+      offset += 4;
+      break;
+    case 'REAL':
+    case PCCCDataType.Float:
+      buffer.writeFloatLE(value, offset);
+      offset += 4;
+      break;
+    default:
+      break;
+  }
+  return offset;
+}
+
 
 // Help from https://github.com/plcpeople/nodepccc/blob/00b4824972baec636deb0906454f841d8b832797/nodePCCC.js
 function logicalASCIIAddressInfo(address) {
@@ -225,14 +252,14 @@ function logicalASCIIAddressInfo(address) {
   		info.datatype = "INT";
   		info.size = 2;
       info.dataType = 4;
-      info.writeFunction = (buffer, offset, value) => buffer.writeInt16LE(value, offset);
+      // info.writeFunction = (buffer, offset, value) => buffer.writeInt16LE(value, offset);
       info.readFunction = (buffer, offset) => buffer.readInt16LE(offset);
   		break;
   	case "L": // Micrologix Only
   		info.addrtype = prefix;
   		info.datatype = "DINT";
   		info.size = 4;
-      info.writeFunction = (buffer, offset, value) => buffer.writeInt32LE(value, offset);
+      // info.writeFunction = (buffer, offset, value) => buffer.writeInt32LE(value, offset);
       info.readFunction = (buffer, offset) => buffer.readInt32LE(offset);
   		break;
   	case "F":
@@ -240,7 +267,7 @@ function logicalASCIIAddressInfo(address) {
   		info.datatype = "REAL";
   		info.size = 4;
       info.dataType = 8;
-      info.writeFunction = (buffer, offset, value) => buffer.writeFloatLE(value, offset);
+      // info.writeFunction = (buffer, offset, value) => buffer.writeFloatLE(value, offset);
       info.readFunction = (buffer, offset) => buffer.readFloatLE(offset);
   		break;
   	case "T":
@@ -295,6 +322,20 @@ const PCCCDataType = {
   String: 0x1e,
   BlockTransfer: 0x20
 };
+
+// const PCCCDataTypes = {
+//   1: 'bit',
+//   2: 'bit string',
+//   3: 'byte (or character string)',
+//   4: 'integer',
+//   5: 'Allen-Bradley timer',
+//   6: 'Allen-Bradley counter',
+//   7: 'Allen-Bradley general control structure',
+//   8: 'IEEE floating point',
+//   9: 'array of similar elements',
+//   15: 'address data',
+//   16: 'binary-coded decimal (BCD)'
+// };
 
 const PCCCDataTypeSize = {
   1: 1,
@@ -354,21 +395,22 @@ function TypedReadReplyParserArray(data) {
   const info = TypedReadParserInfo(data);
   const values = [];
 
-  let offset = info.Length;
+  let offset = info.length;
   let readFunction = null;
 
   switch (info.dataTypeID) {
-    case 3:
+    case PCCCDataType.Byte:
       readFunction = function (data, offset) {
-        return String.fromCharCode(data[offset]);
+        // return String.fromCharCode(data[offset]);
+        return data.readUInt8(offset);
       };
       break;
-    case 4:
+    case PCCCDataType.Integer:
       readFunction = function (data, offset) {
         return data.readInt16LE(offset); // return data.readUInt16LE(offset);
       };
       break;
-    case 8:
+    case PCCCDataType.Float:
       readFunction = function (data, offset) {
         return data.readFloatLE(offset);
       };
@@ -410,7 +452,7 @@ function TypedReadReplyParserArray(data) {
 
 function TypedReadReplyParser(data) {
   const info = TypedReadParserInfo(data);
-  let offset = info.Length;
+  let offset = info.length;
   let value = null;
 
   switch (info.dataTypeID) {
@@ -420,7 +462,7 @@ function TypedReadReplyParser(data) {
       value = buffer.readUInt8(offset);
       break;
     case PCCCDataType.Integer:
-      value = buffer.readInt32LE(offset); // buffer.readInt16LE(offset) ??
+      value = buffer.readInt16LE(offset); // buffer.readInt16LE(offset) ??
       break;
     case PCCCDataType.Float:
       value = buffer.readFloatLE(offset);
@@ -433,6 +475,9 @@ function TypedReadReplyParser(data) {
   }
   return value;
 }
+
+
+
 
 
 function TypedReadParserInfo(data) {
@@ -483,26 +528,55 @@ function TypedReadParserInfo(data) {
   }
 
   return {
-    Length: offset,
+    length: offset,
     dataTypeID: dataTypeID,
     dataSize: dataSize
   };
 }
 
 
-const PCCCDataTypes = {
-  1: 'bit',
-  2: 'bit string',
-  3: 'byte (or character string)',
-  4: 'integer',
-  5: 'Allen-Bradley timer',
-  6: 'Allen-Bradley counter',
-  7: 'Allen-Bradley general control structure',
-  8: 'IEEE floating point',
-  9: 'array of similar elements',
-  15: 'address data',
-  16: 'binary-coded decimal (BCD)'
-};
+
+
+// function DecodeValue(dataType, buffer, offset, cb) {
+//   let error;
+//   let value;
+
+//   try {
+//     switch (info.dataTypeID) {
+//       case PCCCDataType.Binary:
+//       case PCCCDataType.BitString:
+//       case PCCCDataType.Byte:
+//         value = buffer.readUInt8(offset);
+//         offset += 1;
+//         break;
+//       case PCCCDataType.Integer:
+//         value = buffer.readInt32LE(offset); // buffer.readInt16LE(offset) ??
+//         offset += 4;
+//         break;
+//       case PCCCDataType.Float:
+//         value = buffer.readFloatLE(offset);
+//         offset += 4;
+//         break;
+//       case PCCCDataType.Array:
+//         value = TypedReadReplyParserArray(data.slice(offset, offset + info.dataSize));
+//         break;
+//       default:
+//         console.log('PCCC Error: Unknown Type: ' + info.dataTypeID);
+//     }
+//   } catch (err) {
+//     error = err.message;
+//   }
+
+//   if (typeof cb === 'function') {
+//     cb(error, value);
+//   }
+
+//   return offset;
+// }
+
+
+
+
 
 const STSCodeDescriptions = {
   0: 'Success',

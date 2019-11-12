@@ -9,6 +9,45 @@ function getBit(k, n) {
   return ((k) & (1 << n)) > 0 ? 1 : 0;
 }
 
+
+/**
+ * @param {Object|Map} obj 
+ */
+function InvertKeyValues(obj) {
+  let inverted;
+  const type = Object.prototype.toString.call(obj);
+  if (type === '[object Object]') {
+    inverted = {};
+    for (let [key, value] of Object.entries(obj)) {
+      inverted[value] = key;
+    }
+  } else if (type === '[object Map]') {
+    inverted = new Map();
+    for (let [key, value] of obj.entries()) {
+      inverted.set(value, key);
+    }
+  }
+  return inverted;
+}
+
+
+// /**
+//  * https://stackoverflow.com/a/12713611/3055415
+//  * @param {Function} fn 
+//  * @param {*} context 
+//  */
+// function once(fn, context) {
+//   let result;
+//   return function() {
+//     if (fn) {
+//       result = fn.apply(context || this, arguments);
+//       fn = null;
+//     }
+//     return result;
+//   };
+// }
+
+
 function CallbackPromise(callback, func, timeout) {
   const hasCallback = typeof callback === 'function';
   return new Promise(function (resolve, reject) {
@@ -43,10 +82,10 @@ function CallbackPromise(callback, func, timeout) {
       }
     };
 
-    if (typeof timeout === 'number' && timeout >= 0) {
-      timeoutHandle = setTimeout(function() {
+    if (Number.isFinite(timeout)) {
+      timeoutHandle = setTimeout(function () {
         resolver.reject('Timeout');
-      }, parseInt(number, 10));
+      }, timeout);
     }
 
     return func(resolver);
@@ -57,5 +96,7 @@ function CallbackPromise(callback, func, timeout) {
 module.exports = {
   getBits,
   getBit,
+  // once,
+  InvertKeyValues,
   CallbackPromise
 };

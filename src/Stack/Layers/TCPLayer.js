@@ -106,6 +106,8 @@ class TCPLayer extends Layer {
     if (this._connectionState === 2) {
       const request = this.getNextRequest();
       if (request) {
+        console.log('SENDING:');
+        console.log(request.message);
         this.socket.write(request.message, (err) => {
           if (err) {
             console.log('TCPLayer WRITE ERROR:')

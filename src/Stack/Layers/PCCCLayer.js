@@ -101,91 +101,6 @@ class PCCCLayer extends Layer {
     });
   }
 
-  // wordRangeRead(address, callback) {
-  //   if (callback == null) return;
-
-  //   const transaction = incrementTransaction(this);
-  //   const message = PCCCPacket.WordRangeReadRequest(transaction, address);
-
-  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
-  //     if (error) {
-  //       callback(error);
-  //     } else {
-  //       callback(null, reply.data);
-  //     }
-  //   }, transaction));
-  // }
-
-  // typedRead(address, callback) {
-  //   if (callback == null) return;
-
-  //   const transaction = incrementTransaction(this);
-  //   const message = PCCCPacket.TypedReadRequest(transaction, address, 1);
-
-  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
-  //     if (error) {
-  //       callback(error, reply);
-  //     } else {
-  //       const value = PCCCPacket.ParseTypedReadData(reply.data);
-  //       if (Array.isArray(value) && value.length > 0) {
-  //         callback(null, value[0]);
-  //       } else {
-  //         callback(null, null);
-  //       }
-  //     }
-  //   }, transaction));
-  // }
-
-  // typedWrite(address, value, callback) {
-  //   if (callback == null) return;
-
-  //   const transaction = incrementTransaction(this);
-  //   const message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
-
-  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
-  //     if (error) {
-  //       callback(error);
-  //     } else {
-  //       callback(null, reply);
-  //     }
-  //   }, transaction));
-  // }
-
-  // // unprotectedRead(address, size, callback) {
-  // //   if (callback == null) return;
-  // //
-  // //   if (size === 0 || size % 2 !== 0) {
-  // //     callback('size must be an even number');
-  // //     return;
-  // //   }
-  // //
-  // //   let transaction = incrementTransaction(this);
-  // //   let message = PCCCPacket.UnprotectedReadRequest(transaction, address, size);
-  // //
-  // //   this.send(message, null, false, this.contextCallback(function(error, reply) {
-  // //     if (error) {
-  // //       callback(error, reply);
-  // //     } else {
-  // //       callback(null, reply);
-  // //     }
-  // //   }, transaction));
-  // // }
-
-  // diagnosticStatus(callback) {
-  //   if (callback == null) return;
-
-  //   const transaction = incrementTransaction(this);
-  //   const message = PCCCPacket.DiagnosticStatusRequest(transaction);
-
-  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
-  //     if (error) {
-  //       callback(error, reply);
-  //     } else {
-  //       callback(null, reply.data);
-  //     }
-  //   }, transaction));
-  // }
-
   
   // this is needed for sending CIP requests over PCCC
   sendNextMessage() {
@@ -293,24 +208,26 @@ const Commands = {
     -SLC Protected Typed Logical Write with 2 Address Fields
 */
 
-/** Ref. CIP and PCCC v1, Appendix B, pg. 17 */
-const FragmentationFunctions = {
-  Only: 0x00,
-  FirstRequest: 0x01,
-  Middle: 0x02,
-  Last: 0x03,
-  FirstResponse: 0x04,
-  SendMore: 0x05,
-  Abort: 0x06,
-  AckResponse: 0x07,
-  NakResponse: 0x08
-};
 
 
-class Fragger {
-  constructor(data, info) {
-    this.data = data;
-    this.info = info || {};
-    this.connected = this.info.connectionID && this.info.transportHeader;
-  }
-}
+// /** Ref. CIP and PCCC v1, Appendix B, pg. 17 */
+// const FragmentationFunctions = {
+//   Only: 0x00,
+//   FirstRequest: 0x01,
+//   Middle: 0x02,
+//   Last: 0x03,
+//   FirstResponse: 0x04,
+//   SendMore: 0x05,
+//   Abort: 0x06,
+//   AckResponse: 0x07,
+//   NakResponse: 0x08
+// };
+
+
+// class Fragger {
+//   constructor(data, info) {
+//     this.data = data;
+//     this.info = info || {};
+//     this.connected = this.info.connectionID && this.info.transportHeader;
+//   }
+// }
