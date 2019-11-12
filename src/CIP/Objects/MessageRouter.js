@@ -35,6 +35,7 @@ class MessageRouter {
     
     res.service = {
       code: service,
+      hex: `0x${service.toString(16)}`,
       name: ServiceNames[service] || 'Unknown'
     };
 

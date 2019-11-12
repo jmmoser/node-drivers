@@ -5,6 +5,7 @@ const MessageRouter = require('./Objects/MessageRouter');
 
 const HEADER_LENGTH = 7;
 
+
 class PCCC extends CIPLayer {
   constructor(lowerLayer, options) {
     super(lowerLayer);
@@ -52,6 +53,7 @@ class PCCC extends CIPLayer {
   // }
 
   handleData(data, info, context) {
+    // console.log(arguments);
     if (context) {
       super.handleData(data, info, context);
       return;
@@ -60,10 +62,17 @@ class PCCC extends CIPLayer {
     const reply = MessageRouter.Reply(data);
     
     if (data.length > 4 && !reply.status.error) {
-      const offset = data.readUInt8(4);
-      this.forward(data.slice(offset + 4), info, context);
+      /** Only ExcutePCCC service supported right now */
+      if (reply.service.code === Services.ExecutePCCC) {
+        this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
+        // const offset = data.readUInt8(4);
+        // this.forward(data.slice(offset + 4), info, context);
+      } else {
+        console.log(reply);
+        console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${Services.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
+      }
     } else {
-      console.log('Unexpected PCCC embedded in CIP response:');
+      console.log('CIP_PCCCLayer: Unexpected PCCC embedded in CIP response:');
       console.log(reply);
     }
   }

@@ -190,7 +190,7 @@ const ReservedClassAttributes = {
 
 // CIP-V1-1.0 Appendix B-1. General status codes
 const GeneralStatusCodeNames = {
-  0x01: 'Success',
+  0x00: 'Success',
   0x01: 'Connection failure',
   0x02: 'Resource unavailable',
   0x03: 'Invalid parameter value',

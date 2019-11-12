@@ -135,6 +135,7 @@ function handleForwardOpen(self, message, info, context) {
   if (self._connectionState === 1) {
     if (message.status.code === 0) {
       self._connectionState = 2;
+      // console.log('CIP CONNECTED!');
       const reply = ConnectionManager.ForwardOpenReply(message.data);
       self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
       self._TtoOConnectionID = reply.TtoONetworkConnectionID;
@@ -169,6 +170,7 @@ function handleForwardClose(self, message, info, context) {
   if (message.status.code === 0) {
     const reply = ConnectionManager.ForwardCloseReply(message.data);
     self._connectionState = 0;
+    // console.log('CIP CLOSED!');
     if (self._disconnectCallback) {
       self._disconnectCallback(reply);
       clearTimeout(self._disconnectTimeout);

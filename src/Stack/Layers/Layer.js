@@ -27,6 +27,8 @@ class Layer extends EventEmitter {
     this.__contextToCallback = new Map();
     this.__contextToCallbackTimeouts = new Map();
     this.__contextToLayer = new Map();
+
+    // this.__closing = false;
   }
 
   setDefragger(isCompleteFunc, lengthCallbackFunc) {
@@ -63,11 +65,16 @@ class Layer extends EventEmitter {
   }
 
   close(callback) {
+    // this.__closing = true;
     return CallbackPromise(callback, async resolver => {
       if (this.upperLayer != null) {
         await this.upperLayer.close();
       }
+      this.destroy('Closing');
+
       await this.disconnect();
+
+      // this.__closing = false;
       this.emit('close');
       resolver.resolve();
     });
