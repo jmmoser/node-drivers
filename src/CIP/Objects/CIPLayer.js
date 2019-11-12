@@ -128,7 +128,7 @@ class CIPLayer extends Layer {
           return callback('Response service does not match request service. This should never happen.', reply);
         }
 
-        if (reply.status.code !== 0 && reply.status.code !== 6) {
+        if (reply.status.error) {
           callback(reply.status.description || true, reply);
         } else {
           callback(null, reply);
