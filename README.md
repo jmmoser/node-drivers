@@ -150,11 +150,12 @@ mbtcpLayer.readHoldingRegisters(81, 3, 1, function(err, values) {
 ## 1.5.2 / 2019-05-06
   - Layer contextCallback added timeout parameter
   - CIP.Logix5000 listTags added options parameter, allowed fields:
-    - timeout - timeout in milliseconds, will return tags instead of timeout error if atleast one response received with tags (default 10000)
+    - timeout - timeout in milliseconds, will return tags instead of timeout error if at least one response received with tags (default 10000)
 ## 1.5.1 / 2019-04-12
-  - CIP.Logix5000 allows reading multiple elements from tags (e.g. logix.readTag('tagname', 2))
+  - CIP.Logix5000 allows reading multiple elements from tags
     - e.g. logix.readTag('tagname', 2)
     - resolves an array of values if number is greater than 1
 ## 1.5.0 / 2019-04-12
   - CIP.Logix5000 no longer requires including CIP.Connection as a lower layer.
-  - CIP.Connection only connects if needed (e.g. getting all attributes of identity object does not require a connection)
+  - CIP.Connection only connects if needed
+    - e.g. getting all attributes of identity object does not require a connection
