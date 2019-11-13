@@ -1,7 +1,8 @@
 'use strict';
 
-const { CallbackPromise } = require('../util');
+const EPath = require('./Objects/EPath');
 const CIPLayer = require('./Objects/CIPLayer');
+const { CallbackPromise } = require('../util');
 
 class Modbus extends CIPLayer {
   readDiscreteInputs(address, count, callback) {
@@ -133,12 +134,10 @@ class Modbus extends CIPLayer {
 module.exports = Modbus;
 
 
-const MODBUS_EPATH = Buffer.from([
-  0x20, // Logical Segment - Class ID
-  0x44,
-  0x24, // Logical Segment - Instance ID
-  0x01
-]);
+const MODBUS_EPATH = EPath.Encode(
+  0x44, // Class ID = Modbus
+  0x01  // Instance ID = 1
+);
 
 
 /** Use driver specific error handling if exists */

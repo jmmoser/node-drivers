@@ -1,10 +1,11 @@
 'use strict';
 
-const { getBit, getBits, CallbackPromise } = require('../util');
-const { DataTypes, DataTypeNames, EncodeValue, DecodeValue } = require('./Objects/CIP');
+const EPath = require('./Objects/EPath');
 const CIPLayer = require('./Objects/CIPLayer');
-const { ANSIExtSymbolSegment } = require('./Objects/MessageRouter');
 const ConnectionLayer = require('./Objects/Connection');
+const { ANSIExtSymbolSegment } = require('./Objects/MessageRouter');
+const { DataTypes, DataTypeNames, EncodeValue, DecodeValue } = require('./Objects/CIP');
+const { getBit, getBits, CallbackPromise } = require('../util');
 
 
 class Logix5000 extends CIPLayer {
@@ -179,43 +180,43 @@ class Logix5000 extends CIPLayer {
   async* listTags(options) {
     const {
       timeout,
-      instanceID
+      instance,
+      includeSystem
     } = Object.assign({
       timeout: 30000,
-      instance: 0
+      instance: 0,
+      includeSystem: false
     }, options);
 
     // const timeout = (options || {}).timeout;
     // let instanceID = (options || {}).instanceID || 0;
 
+    let instanceID = instance;
+
     if (instanceID >= 0xFFFF) {
       throw new Error('MAX INSTANCE ID');
     }
 
-    const path = Buffer.from([
-      0x20, // Logical Segment - Class ID
-      0x6B, // Symbols
-      0x25, // Logical Segment - Instance ID
-      0x00,
-      0x00,
-      0x00
-    ]);
+    const attributes = [
+      Classes.Symbol.Attributes.Name.Code,
+      Classes.Symbol.Attributes.Type.Code
+    ];
+
+    const data = Buffer.alloc(2 + attributes.length * 2);
+    data.writeUInt16LE(attributes.length, 0);
+    for (let i = 0; i < attributes.length; i++) {
+      data.writeUInt16LE(attributes[i], 2 * (i + 1));
+    }
+
+    const service = Classes.Symbol.Services.GetInstanceAttributeList.Code;
 
     while(true) {
-      path.writeUInt16LE(instanceID, 4);
+      const path = EPath.Encode(
+        Classes.Symbol.Code,
+        instanceID
+      );
 
-      const attributes = [
-        0x01, // Attribute 1 - Symbol Name
-        0x02  // Attribute 2 - Symbol Type
-      ];
-
-      const data = Buffer.alloc(2 + attributes.length * 2);
-      data.writeUInt16LE(attributes.length, 0);
-      for (let i = 0; i < attributes.length; i++) {
-        data.writeUInt16LE(attributes[i], 2 * (i + 1));
-      }
-
-      const reply = await sendPromise(this, Classes.Symbol.Services.GetInstanceAttributeList, path, data, timeout);
+      const reply = await sendPromise(this, service, path, data, timeout);
 
       const tags = [];
       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
@@ -228,7 +229,15 @@ class Logix5000 extends CIPLayer {
         //   }
         //   yield tags[i];
         // }
-        yield tags[i];
+
+        const tag = tags[i];
+        if (includeSystem || !tag.type.system) {
+          if (tag.type.atomic !== true) {
+            tag.type.template.attributes = await this.readTemplateInstanceAttributes(tag.type.template.id);
+            tag.type.template.definition = await this.readTemplate(tag.type.template);
+          }
+          yield tags[i];
+        }
       }
 
       if (reply.status.code === 0 || tags.length <= 0) {
@@ -239,43 +248,30 @@ class Logix5000 extends CIPLayer {
     }
   }
 
-  // listTags(options, callback) {
-  //   if (typeof options === 'function') {
-  //     callback = options;
-  //   }
-  //   if (options == null || typeof options !== 'object') {
-  //     options = {};
-  //   }
-  //   if (options.timeout == null) {
-  //     options.timeout = 10000;
-  //   }
-  //   return CallbackPromise(callback, resolver => {
-  //     internalListTags(this, options, [], 0, resolver);
-  //   });
-  // }
 
   readTemplate(template, callback) {
     return CallbackPromise(callback, resolver => {
-      const path = Buffer.from([
-        0x20, // Logical Segment - Class ID
+      const path = EPath.Encode(
         Classes.Template.Code,
-        0x25, // Logical Segment - Instance ID
-        0x00,
-        0x00,
-        0x00
-      ]);
+        template.id // is this right ????
+      );
+
+      const bytesToRead = (template.attributes.definitionSize * 4) - 23;
+
+      let offset = 0;
 
       const data = Buffer.alloc(6);
-      data.writeUInt32LE(0, 0);
-      data.writeUInt16LE(0x61, 4);
+      data.writeUInt32LE(offset, 0);
+      data.writeUInt16LE(bytesToRead, 4);
 
       send(this, Classes.Template.Services.Read, path, data, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
           try {
+            resolver.resolve(parseReadTemplate(reply, template));
             // const template = parseReadTemplateInstanceAttributes(reply);
-            resolver.resolve(template);
+            // resolver.resolve(template);
           } catch (err) {
             resolver.reject(err.message, reply);
           }
@@ -284,24 +280,19 @@ class Logix5000 extends CIPLayer {
     });
   }
 
+
   readTemplateInstanceAttributes(templateID, callback) {
     return CallbackPromise(callback, resolver => {
-      const path = Buffer.from([
-        0x20, // Logical Segment - Class ID
+      const path = EPath.Encode(
         Classes.Template.Code,
-        0x25, // Logical Segment - Instance ID
-        0x00,
-        0x00,
-        0x00
-      ]);
-
-      path.writeUInt16LE(templateID, 4);
+        templateID
+      );
 
       const attributes = [
-        0x01, // Attribute 1 - (UINT) CRC for the members of the structure
-        0x02, // Attribute 2 - (UINT) Number of structure members
-        0x04, // Attribute 4 - (UDINT) Number of 32-bit words
-        0x05  // Attribute 5 - (UDINT) Number of bytes of the structure data
+        Classes.Template.Attributes.StructureHandle.Code,
+        Classes.Template.Attributes.MemberCount.Code,
+        Classes.Template.Attributes.DefinitionSize.Code,
+        Classes.Template.Attributes.StructureSize.Code,
       ];
 
       const data = Buffer.alloc(2 + attributes.length * 2);
@@ -324,19 +315,6 @@ class Logix5000 extends CIPLayer {
       });
     });
   }
-
-
-  // readTemplate(templateID, callback) {
-  //   if (!callback) return;
-
-  //   this.readTemplateInstanceAttributes(templateID, function(err, templateAttributes) {
-  //     if (err) {
-  //       return callback(err);
-  //     }
-
-  //     const 
-  //   });
-  // }
 
 
   handleData(data, info, context) {
@@ -376,104 +354,6 @@ function send(self, service, path, data, callback, timeout) {
   }, timeout);
 }
 
-// async function* internalListTags(self, options, tags, instanceID, resolver) {
-//   if (instanceID >= 0xFFFF) {
-//     console.log('MAX INSTANCE ID');
-//     return resolver.resolve(tags);
-//   }
-
-//   const path = Buffer.from([
-//     0x20, // Logical Segment - Class ID
-//     0x6B, // Symbols
-//     0x25, // Logical Segment - Instance ID
-//     0x00,
-//     0x00,
-//     0x00
-//   ]);
-
-//   path.writeUInt16LE(instanceID, 4);
-
-//   const attributes = [
-//     0x01, // Attribute 1 - Symbol Name
-//     0x02  // Attribute 2 - Symbol Type
-//   ];
-
-//   const data = Buffer.alloc(2 + attributes.length * 2);
-//   data.writeUInt16LE(attributes.length, 0);
-//   for (let i = 0; i < attributes.length; i++) {
-//     data.writeUInt16LE(attributes[i], 2 * (i + 1));
-//   }
-
-//   send(self, Classes.Symbol.Services.GetInstanceAttributeList, path, data, (error, reply) => {
-//     if (error) {
-//       if (tags.length === 0) {
-//         resolver.reject(error, reply);
-//       } else {
-//         resolver.resolve(tags);
-//       }
-//     } else {
-//       const done = reply.status.code === 0;
-
-//       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
-
-//       if (!done) {
-//         setImmediate(() => internalListTags(self, options, tags, lastInstanceID + 1, resolver));
-//       } else {
-//         resolver.resolve(tags);
-//       }
-//     }
-//   }, options.timeout);
-// }
-
-// function internalListTags(self, options, tags, instanceID, resolver) {
-//   if (instanceID >= 0xFFFF) {
-//     console.log('MAX INSTANCE ID');
-//     return resolver.resolve(tags);
-//   }
-
-//   const path = Buffer.from([
-//     0x20, // Logical Segment - Class ID
-//     0x6B, // Symbols
-//     0x25, // Logical Segment - Instance ID
-//     0x00,
-//     0x00,
-//     0x00
-//   ]);
-
-//   path.writeUInt16LE(instanceID, 4);
-
-//   const attributes = [
-//     0x01, // Attribute 1 - Symbol Name
-//     0x02  // Attribute 2 - Symbol Type
-//   ];
-
-//   const data = Buffer.alloc(2 + attributes.length * 2);
-//   data.writeUInt16LE(attributes.length, 0);
-//   for (let i = 0; i < attributes.length; i++) {
-//     data.writeUInt16LE(attributes[i], 2 * (i + 1));
-//   }
-
-//   send(self, Classes.Symbol.Services.GetInstanceAttributeList, path, data, (error, reply) => {
-//     if (error) {
-//       if (tags.length === 0) {
-//         resolver.reject(error, reply);
-//       } else {
-//         resolver.resolve(tags);
-//       }
-//     } else {
-//       const done = reply.status.code === 0;
-
-//       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
-
-//       if (!done) {
-//         setImmediate(() => internalListTags(self, options, tags, lastInstanceID + 1, resolver));
-//       } else {
-//         resolver.resolve(tags);
-//       }
-//     }
-//   }, options.timeout);
-// }
-
 
 function parseListTagsResponse(reply, attributes, tags) {
   const data = reply.data;
@@ -481,6 +361,9 @@ function parseListTagsResponse(reply, attributes, tags) {
 
   let offset = 0;
   let lastInstanceID = 0;
+
+  const NameAttributeCode = Classes.Symbol.Attributes.Name.Code;
+  const TypeAttributeCode = Classes.Symbol.Attributes.Type.Code;
 
   while (offset < length) {
     const tag = {};
@@ -490,12 +373,12 @@ function parseListTagsResponse(reply, attributes, tags) {
 
     for (let i = 0; i < attributes.length; i++) {
       switch (attributes[i]) {
-        case 0x01:
+        case NameAttributeCode:
           offset = DecodeValue(DataTypes.STRING, data, offset, (_, value) => {
             tag.name = value;
           });
           break;
-        case 0x02:
+        case TypeAttributeCode:
           const typeCode = data.readUInt16LE(offset); offset += 2;
           tag.type = parseSymbolType(typeCode);
           break;
@@ -516,12 +399,12 @@ function parseListTagsResponse(reply, attributes, tags) {
 
 function parseSymbolType(code) {
   const res = {};
-  const atomic = getBit(code, 15) === 0;
+  res.atomic = getBit(code, 15) === 0;
   res.system = !!getBit(code, 12);
   res.dimensions = getBits(code, 13, 15);
-  res.structure = !atomic;
+  // res.structure = !atomic;
 
-  if (atomic) {
+  if (res.atomic) {
     res.dataType = getBits(code, 0, 8);
     if (res.dataType === DataTypes.BOOL) {
       res.position = getBits(code, 8, 11);
@@ -538,12 +421,71 @@ function parseSymbolType(code) {
 }
 
 
+function parseTemplateMemberName(data, offset, cb) {
+  const characters = [];
+  const dataLength = data.length;
+  while (offset < dataLength) {
+    const characterCode = data.readUInt8(offset); offset += 1;
+    if (characterCode === 0x3B || characterCode === 0x00) {
+      break;
+    }
+
+    characters.push(String.fromCharCode(characterCode));
+  }
+  cb(characters.join(''));
+  return offset;
+}
+
+
+function parseReadTemplate(reply, template) {
+  const { data } = reply;
+
+  const dataLength = data.length;
+  const members = [];
+
+  let offset = 0;
+  for (let i = 0; i < template.attributes.memberCount; i++) {
+    if (offset < dataLength - 8) {
+      const info = data.readUInt16LE(offset); offset += 2;
+      const type = data.readUInt16LE(offset); offset += 2;
+      const memberOffset = data.readUInt32LE(offset); offset += 4;
+      members.push({
+        info,
+        type,
+        typeName: DataTypeNames[type] || 'UNKNOWN',
+        offset: memberOffset
+      });
+    }
+  }
+
+  /** Read the template name */
+  let structureName;
+  offset = parseTemplateMemberName(data, offset, name => structureName = name);
+
+  /** Read the member names */
+  for (let i = 0; i < members.length; i++) {
+    offset = parseTemplateMemberName(data, offset, name => members[i].name = name);
+  }
+
+  return {
+    name: structureName,
+    members,
+    data: data.slice(offset)
+  };
+}
+
+
 function parseReadTemplateInstanceAttributes(reply) {
-  const data = reply.data;
+  const { data } = reply;
 
   let offset = 0;
   const attributeCount = data.readUInt16LE(offset); offset += 2;
   const template = {};
+
+  const StructureHandleCode = Classes.Template.Attributes.StructureHandle.Code;
+  const MemberCountCode = Classes.Template.Attributes.MemberCount.Code;
+  const DefinitionSizeCode = Classes.Template.Attributes.DefinitionSize.Code;
+  const StructureSizeCode = Classes.Template.Attributes.StructureSize.Code;
 
   for (let i = 0; i < attributeCount; i++) {
     const attribute = data.readUInt16LE(offset); offset += 2;
@@ -551,16 +493,16 @@ function parseReadTemplateInstanceAttributes(reply) {
 
     if (status === 0) {
       switch (attribute) {
-        case 0x01:
-          template.crc = data.readUInt16LE(offset); offset += 2;
+        case StructureHandleCode:
+          template.structureHandle = data.readUInt16LE(offset); offset += 2;
           break;
-        case 0x02:
+        case MemberCountCode:
           template.memberCount = data.readUInt16LE(offset); offset += 2;
           break;
-        case 0x04:
+        case DefinitionSizeCode:
           template.definitionSize = data.readUInt32LE(offset); offset += 4;
           break;
-        case 0x05:
+        case StructureSizeCode:
           template.structureSize = data.readUInt32LE(offset); offset += 4;
           break;
         default:
@@ -692,7 +634,17 @@ const Classes = {
         Returns instance IDs for each created instance of the symbol class,
         along with a list of the attribute data associated with the requested attributes
       */
-      GetInstanceAttributeList: 0x55
+      GetInstanceAttributeList: {
+        Code: 0x55
+      }
+    },
+    Attributes: {
+      Name: {
+        Code: 0x01
+      },
+      Type: {
+        Code: 0x02
+      }
     }
   },
   Template: {
@@ -701,6 +653,34 @@ const Classes = {
       GetAttributeList: 0x03,
       Read: 0x4C
     },
+    // const attributes = [
+    //   0x01, // Attribute 1 - (UINT) Structure Handle, CRC for the members of the structure
+    //   0x02, // Attribute 2 - (UINT) Number of structure members
+    //   0x04, // Attribute 4 - (UDINT) Number of 32-bit words
+    //   0x05  // Attribute 5 - (UDINT) Number of bytes of the structure data
+    // ];
+    Attributes: {
+      StructureHandle: {
+        Code: 0x01,
+        Description: 'Calculated CRC value for members of the structure',
+        // DataType: 'UINT'
+      },
+      MemberCount: {
+        Code: 0x02,
+        Description: 'Number of members defined in the structure',
+        // DataType: 'UINT'
+      },
+      DefinitionSize: {
+        Code: 0x04,
+        Description: 'Size of the template definition structure',
+        // DataType: 'UDINT'
+      },
+      StructureSize: {
+        Code: 0x05,
+        Description: 'Number of bytes transferred on the wire when the structure is read using the Read Tag service',
+        // DataType: 'UDINT'
+      }
+    }
     // ClassAttributes: {
     //   1: {
     //     // description: 'Tag Type Parameter used in Read/Write Tag service',

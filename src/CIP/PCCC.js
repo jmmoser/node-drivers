@@ -1,5 +1,6 @@
 'use strict';
 
+const EPath = require('./Objects/EPath');
 const CIPLayer = require('./Objects/CIPLayer');
 const MessageRouter = require('./Objects/MessageRouter');
 
@@ -39,22 +40,10 @@ class PCCC extends CIPLayer {
     }
   }
 
-  // handleData(data, info, context) {
-  //   const offset = data.readUInt8(4);
-  //   const slicedData = data.slice(offset + 4);
-  //   if (context) {
-  //     const callback = this.callbackForContext(context);
-  //     if (callback) {
-  //       return callback(null, data, info);
-  //     }
-  //   }
-    
-  //   this.forward(slicedData, info, context);
-  // }
 
   handleData(data, info, context) {
-    // console.log(arguments);
     if (context) {
+      /** Since this class extends CIPLayer, allow CIPLayer to handle requests like identity() and supportedObjects() */
       super.handleData(data, info, context);
       return;
     }
@@ -65,8 +54,6 @@ class PCCC extends CIPLayer {
       /** Only ExcutePCCC service supported right now */
       if (reply.service.code === Services.ExecutePCCC) {
         this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
-        // const offset = data.readUInt8(4);
-        // this.forward(data.slice(offset + 4), info, context);
       } else {
         console.log(reply);
         console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${Services.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
@@ -79,23 +66,15 @@ class PCCC extends CIPLayer {
 }
 
 
-const PCCC_EPATH = Buffer.from([
-  0x20, // Logical Segment - Class ID
-  0x67, // PCCC object
-  0x24, // Logical Segment - Instance ID
-  0x01
-]);
+const PCCC_EPATH = EPath.Encode(
+  0x67, // Class ID = PCCC object
+  0x01  // Instance ID = 1
+);
 
 /** Use driver specific error handling if exists */
 function send(self, service, data) {
   return CIPLayer.send(self, false, service, PCCC_EPATH, data);
 }
-// function send(self, service, data, callback, timeout) {
-//   return CIPLayer.send(self, false, service, PCCC_EPATH, data, (error, reply) => {
-//     callback(error, reply);
-//   }, timeout);
-// }
-
 
 const Services = {
   ExecutePCCC: 0x4B

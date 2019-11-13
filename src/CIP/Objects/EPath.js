@@ -677,7 +677,96 @@ function LogicalClassSegment(classID) {
 
 
 
-module.exports = {
-  parsePath,
-  describeSegments
-};
+class EPath {
+  // constructor(classID, instanceID, attributeID) {
+
+  // }
+
+  static Encode(classID, instanceID, attributeID) {
+    const segments = [];
+    let code, length, totalLength = 0;
+
+    if (classID != null) {
+      if (classID < 256) {
+        length = 1;
+        code = 0x20;
+      } else {
+        length = 2;
+        code = 0x21;
+      }
+      totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
+      segments.push({
+        type: 'CLASS',
+        value: classID,
+        code,
+        length
+      });
+    }
+
+    if (instanceID != null) {
+      if (instanceID < 256) {
+        length = 1;
+        code = 0x24;
+      } else {
+        length = 2;
+        code = 0x25;
+      }
+      totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
+      segments.push({
+        type: 'INSTANCE',
+        value: instanceID,
+        code,
+        length
+      });
+    }
+
+    if (attributeID != null) {
+      if (attributeID < 256) {
+        length = 1;
+        code = 0x30;
+      } else {
+        length = 2;
+        code = 0x31;
+      }
+      totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
+      segments.push({
+        type: 'ATTRIBUTE',
+        value: attributeID,
+        code,
+        length
+      });
+    }
+
+    const path = Buffer.alloc(totalLength);
+    let offset = 0;
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      switch (segment.length) {
+        case 1:
+          path.writeUInt8(segment.code, offset); offset += 1;
+          path.writeUInt8(segment.value, offset); offset += 1;
+          break;
+        case 2:
+          path.writeUInt16LE(segment.code, offset); offset += 2;
+          path.writeUInt16LE(segment.value, offset); offset += 2;
+          break;
+        default:
+          throw new Error(`Unexpected segment length ${segment.length}`);
+      }
+    }
+
+    return path;
+  }
+
+  static ParsePath(buffer, offset) {
+    return parsePath(buffer, offset);
+  }
+
+  static DescribeSegments(segments) {
+    return describeSegments(segments);
+  }
+}
+
+
+
+module.exports = EPath;
