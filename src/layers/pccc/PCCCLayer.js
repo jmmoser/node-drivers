@@ -12,7 +12,7 @@ const PCCCPacket = require('./PCCCPacket');
 
 class PCCCLayer extends Layer {
   constructor(lowerLayer) {
-    super(lowerLayer);
+    super('PCCC', lowerLayer);
     this._transaction = 0;
   }
 

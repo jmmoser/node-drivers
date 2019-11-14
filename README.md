@@ -10,7 +10,7 @@ npm install node-drivers
 
 # Examples
 
-### 1. Communicate with a Logix5000 processor:
+### Read a tag from a Logix5000 processor:
 
 ```javascript
 const { TCP, EIP, CIP } = require('node-drivers').Layers;
@@ -19,17 +19,29 @@ const tcpLayer = new TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new EIP(tcpLayer);
 const logix5000 = new CIP.Logix5000(eipLayer);
 
-try {
-  const value = await logix5000.readTag('R03:9:I.Ch1Data');
-  console.log(value);
-} catch(err) {
-  console.log(err);
+const value = await logix5000.readTag('R03:9:I.Ch1Data');
+console.log(value);
+
+await tcpLayer.close();
+```
+
+### List all tags in a Logix5000 processor:
+
+```javascript
+const { TCP, EIP, CIP } = require('node-drivers').Layers;
+
+const tcpLayer = new TCP({ host: '0.0.0.0', port: 44818 });
+const eipLayer = new EIP(tcpLayer);
+const logix5000 = new CIP.Logix5000(eipLayer);
+
+for await (const tag of logix5000.listTags()) {
+  console.log(tag);
 }
 
 await tcpLayer.close();
 ```
 
-### 2. Communicate with a PLC-5, SLC 5/03, or SLC 5/04 processor using PCCC embedded in CIP:
+### Read a tag from a PLC-5, SLC 5/03, or SLC 5/04 processor using PCCC embedded in CIP:
 
 ```javascript
 const { TCP, EIP, CIP, PCCC } = require('node-drivers').Layers;
@@ -39,20 +51,13 @@ const eipLayer = new EIP(tcpLayer);
 const cipPCCCLayer = new CIP.PCCC(eipLayer);
 const pccc = new PCCC(cipPCCCLayer);
 
-pccc.typedRead('N10:47', function(err, value) {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log(value);
-  }
+const value = await pccc.typedRead('N10:47');
+console.log(value);
 
-  tcpLayer.close(function() {
-    console.log('closed');
-  });
-});
+await tcpLayer.close();
 ```
 
-### 3. Find all EtherNet/IP devices in a subnet using the UDP broadcast address:
+### Find all EtherNet/IP devices in a subnet using the UDP broadcast address:
 
 ```javascript
 const { UDP, EIP } = require('node-drivers').Layers;
@@ -60,17 +65,14 @@ const { UDP, EIP } = require('node-drivers').Layers;
 const udpLayer = new UDP({ host: '0.0.0.255', port: 44818 });
 const eipLayer = new EIP(udpLayer);
 
-try {
-  const identities = await eipLayer.listIdentity({ timeout: 5000 });
-  console.log(identities);
-} catch(err) {
-  console.log(err);
-}
+const identities = await eipLayer.listIdentity({ timeout: 5000 });
+console.log(identities);
 
 await udpLayer.close();
 ```
 
-### 4. Find all EtherNet/IP devices in a subnet manually over UDP
+
+### Find all EtherNet/IP devices in a subnet manually over UDP
 
 ```javascript
 const { UDP, EIP } = require('node-drivers').Layers;
@@ -84,18 +86,15 @@ for (let i = 2; i < 255; i++) {
   hosts.push(`0.0.0.${i}`);
 }
 
-try {
-  /* hosts overrides whatever host was specified in the Layers.UDP() constructor */
-  const identities = await eipLayer.listIdentity({ timeout: 5000, hosts });
-  console.log(identities);
-} catch(err) {
-  console.log(err);
-}
+/* hosts overrides whatever host was specified in the Layers.UDP() constructor */
+const identities = await eipLayer.listIdentity({ timeout: 5000, hosts });
+console.log(identities);
 
 await udpLayer.close();
 ```
 
-### 5. List interfaces of EtherNet/IP device over TCP:
+
+### List interfaces of EtherNet/IP device over TCP:
 
 ```javascript
 const { TCP, EIP } = require('node-drivers').Layers;
@@ -103,59 +102,34 @@ const { TCP, EIP } = require('node-drivers').Layers;
 const tcpLayer = new TCP({ host: '0.0.0.0', port: 44818 });
 const eipLayer = new EIP(tcpLayer);
 
-try {
-  const identities = await eipLayer.listInterfaces();
-  console.log(identities);
-} catch(err) {
-  console.log(err);
-}
+const identities = await eipLayer.listInterfaces();
+console.log(identities);
 
 await tcpLayer.close();
 ```
 
-### 6. Communicate with a ModbusTCP device:
+### Communicate with a Modbus device over TCP:
 
 ```javascript
-const { TCP, ModbusTCP } = require('node-drivers').Layers;
+const { TCP, Modbus } = require('node-drivers').Layers;
 
 const tcpLayer = new TCP({ host: '0.0.0.0', port: 502 });
-const mbtcpLayer = new ModbusTCP(tcpLayer);
+const modbusLayer = new Modbus(tcpLayer);
 
-// read holding register 40004 of unit 81
-mbtcpLayer.readHoldingRegisters(81, 3, 1, function(err, values) {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log(values);
-  }
+// read holding register 40004
+const registers = await modbusLayer.readHoldingRegisters(3, 1);
+console.log(registers);
 
-  tcpLayer.close(function() {
-    console.log('closed');
-  });
-});
+await tcpLayer.close();
 ```
 
 # Drivers/Protocols
 
 - Logix5000
 - EtherNet/IP
-- PCCC embedded in CIP
-- ModbusTCP
-
-# Changelog
-## 1.5.4 / 2019-05-10
-  - Added CIP.Connection disconnect timeout of 10000 milliseconds
-## 1.5.3 / 2019-05-06
-  - CIP DecodeValue returns true or false for boolean data type
-## 1.5.2 / 2019-05-06
-  - Layer contextCallback added timeout parameter
-  - CIP.Logix5000 listTags added options parameter, allowed fields:
-    - timeout - timeout in milliseconds, will return tags instead of timeout error if at least one response received with tags (default 10000)
-## 1.5.1 / 2019-04-12
-  - CIP.Logix5000 allows reading multiple elements from tags
-    - e.g. logix.readTag('tagname', 2)
-    - resolves an array of values if number is greater than 1
-## 1.5.0 / 2019-04-12
-  - CIP.Logix5000 no longer requires including CIP.Connection as a lower layer.
-  - CIP.Connection only connects if needed
-    - e.g. getting all attributes of identity object does not require a connection
+- PCCC
+    - embedded in CIP
+- Modbus
+    - TCP frame format
+- TCP
+- UDP

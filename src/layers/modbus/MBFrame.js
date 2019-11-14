@@ -74,16 +74,16 @@ class TCP {
   }
 
   static Length(buffer, offset = 0) {
-    return 6 + this.RemainingLength(buffer, offset);
+    return 6 + TCP.RemainingLength(buffer, offset);
   }
 
   static IsComplete(buffer, length, offset = 0) {
     if (length < 7) return false;
-    return (length >= this.Length(buffer, offset));
+    return (length >= TCP.Length(buffer, offset));
   }
 
   static FromBuffer(buffer, offset = 0) {
-    // if (!this.IsComplete(buffer, buffer.length - offset, offset)) {
+    // if (!TCP.IsComplete(buffer, buffer.length - offset, offset)) {
     //   return null;
     // }
 
@@ -91,7 +91,7 @@ class TCP {
     const protocolID = buffer.readUInt16BE(offset + 2);
     const unitID = buffer.readUInt8(offset + 6);
     const fn = buffer.readUInt8(offset + 7);
-    const data = buffer.slice(offset + 8, offset + this.RemainingLength(buffer, offset) + 6);
+    const data = buffer.slice(offset + 8, offset + TCP.RemainingLength(buffer, offset) + 6);
 
     const reply = {};
 
@@ -107,9 +107,7 @@ class TCP {
         name: FunctionNames[fn] || 'Unknown'
       };
 
-      if (ReplyFunctions[fn]) {
-        reply.data = __parseReplyData(fn, data, 0);
-      }
+      reply.data = TCP.ParseReplyData(fn, data, 0);
     }
 
     return new TCP(new PDU(fn, data), transactionID, unitID, protocolID, buffer, reply);
@@ -129,7 +127,8 @@ class TCP {
     return buffer;
   }
 
-  __parseReplyData(fn, buffer, offset) {
+
+  static ParseReplyData(fn, buffer, offset) {
     switch (fn) {
       case Functions.ReadCoils:
       case Functions.ReadDiscreteInputs: {
@@ -163,5 +162,6 @@ class TCP {
 
 
 module.exports = {
+  PDU,
   TCP
 };

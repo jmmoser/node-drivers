@@ -97,7 +97,7 @@ function CallbackPromise(callback, func, timeout) {
 module.exports = {
   getBits,
   getBit,
-  // once,
+  once,
   InvertKeyValues,
   CallbackPromise
 };

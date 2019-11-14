@@ -116,3 +116,16 @@ const EPath = require('./../src/layers/cip/objects/EPath');
   const CIPObject = require('../src/layers/cip/objects/CIPObject');
   console.log(CIPObject.ReservedClassAttributes);
 })();
+
+
+class ABC {
+  static a() {
+    this.b();
+  }
+
+  static b() {
+    console.log('it worked!');
+  }
+}
+
+ABC.a();

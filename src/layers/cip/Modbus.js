@@ -1,5 +1,6 @@
 'use strict';
 
+const { Classes } = require('./objects/CIP');
 const EPath = require('./objects/EPath');
 const CIPLayer = require('./objects/CIPLayer');
 const { CallbackPromise } = require('../../utils');
@@ -10,13 +11,9 @@ class Modbus extends CIPLayer {
   }
 
   readDiscreteInputs(address, count, callback) {
-    // response - input values, array of octet, each input is packed as a bit within a byte
+    /** response - input values, array of octet, each input is packed as a bit within a byte */
     return CallbackPromise(callback, resolver => {
-      const buffer = Buffer.alloc(4);
-      buffer.writeUInt16LE(address, 0); // offset in table to begin reading
-      buffer.writeUInt16LE(count, 2); // number of inputs to read
-
-      send(this, Services.ReadDiscreteInputs, buffer, (error, reply) => {
+      send(this, Services.ReadDiscreteInputs, createData(address, count), (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -27,13 +24,9 @@ class Modbus extends CIPLayer {
   }
 
   readCoils(address, count, callback) {
-    // response - coil status, array of octet, each coil is packed as a bit within a byte
+    /** response - coil status, array of octet, each coil is packed as a bit within a byte */
     return CallbackPromise(callback, resolver => {
-      const buffer = Buffer.alloc(4);
-      buffer.writeUInt16LE(address, 0);
-      buffer.writeUInt16LE(count, 2);
-
-      send(this, Services.ReadCoils, buffer, (error, reply) => {
+      send(this, Services.ReadCoils, createData(address, count), (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -44,13 +37,9 @@ class Modbus extends CIPLayer {
   }
 
   readInputRegisters(address, count, callback) {
-    // response - input register values, array of 16-bit words, input registers read
+    /** response - input register values, array of 16-bit words, input registers read */
     return CallbackPromise(callback, resolver => {
-      const buffer = Buffer.alloc(4);
-      buffer.writeUInt16LE(address, 0);
-      buffer.writeUInt16LE(count, 2);
-
-      send(this, Services.ReadInputRegisters, buffer, (error, reply) => {
+      send(this, Services.ReadInputRegisters, createData(address, count), (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -62,11 +51,7 @@ class Modbus extends CIPLayer {
 
   readHoldingRegisters(address, count, callback) {
     return CallbackPromise(callback, resolver => {
-      const buffer = Buffer.alloc(4);
-      buffer.writeUInt16LE(address, 0);
-      buffer.writeUInt16LE(count, 2);
-
-      send(this, Services.ReadHoldingRegisters, buffer, (error, reply) => {
+      send(this, Services.ReadHoldingRegisters, createData(address, count), (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -139,16 +124,22 @@ module.exports = Modbus;
 
 
 const MODBUS_EPATH = EPath.Encode(
-  0x44, // Class ID = Modbus
+  Classes.Modbus, // Class ID = Modbus
   0x01  // Instance ID = 1
 );
 
 
+function createData(address, count) {
+  const buffer = Buffer.allocUnsafe(4);
+  buffer.writeUInt16LE(address, 0);
+  buffer.writeUInt16LE(count, 2);
+  return buffer;
+}
+
+
 /** Use driver specific error handling if exists */
 function send(self, service, data, callback) {
-  CIPLayer.send(self, false, service, MODBUS_EPATH, data, this.contextCallback((error, reply) => {
-    callback(error, reply);
-  }));
+  CIPLayer.send(self, false, service, MODBUS_EPATH, data, this.contextCallback(callback));
 }
 
 

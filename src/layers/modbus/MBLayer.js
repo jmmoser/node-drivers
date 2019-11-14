@@ -1,15 +1,9 @@
 'use strict';
 
-const { once } = require('../../utils');
+const { CallbackPromise, once } = require('../../utils');
 const Layer = require('../Layer');
+const MB = require('./MB');
 const MBFrame = require('./MBFrame');
-
-/**
- * TODO:
- * - abstract away transaction
- *    - only ModbusTCP uses transaction
- *
- */
 
 const {
   ReadDiscreteInputs,
@@ -20,21 +14,47 @@ const {
   WriteMultipleCoils,
   WriteSingleRegister,
   // WriteMultipleRegisters
-} = MBTCPPacket.Functions;
+} = MB.Functions;
 
 class MBLayer extends Layer {
   constructor(lowerLayer, options) {
     super('Modbus', lowerLayer);
 
-    this.options = options || {};
-
-    this._transactionCounter = 0;
-    
-
-    // this.setDefragger(MBTCPPacket.IsComplete, MBTCPPacket.Length);
     switch (lowerLayer.name) {
       case 'TCP':
+        const cOpts = Object.assign({
+          unitID: 255,
+          protocolID: 0
+        }, options);
+        this._transactionCounter = 0;
         this._frameClass = MBFrame.TCP;
+        this._send = (fn, data, opts, resolver) => {
+          opts = opts || {};
+          this._transactionCounter = (this._transactionCounter + 1) % 0x10000;
+          const unitID = opts.unitID || cOpts.unitID;
+          const protocolID = opts.protocolID || cOpts.protocolID;
+          const frame = new MBFrame.TCP(
+            new MBFrame.PDU(fn, data),
+            this._transactionCounter,
+            unitID,
+            protocolID
+          );
+
+          const callback = this.contextCallback(
+            once(err => {
+              if (err) {
+                /** e.g. handle timeout error and return null*/
+                resolver.reject(err);
+                return null;
+              } else {
+                return resolver;
+              }
+            }),
+            this._transactionCounter
+          );
+
+          this.send(frame.toBuffer(), null, false, callback);
+        }
         this.setDefragger(MBFrame.TCP.IsComplete, MBFrame.TCP.Length);
         break;
       default:
@@ -43,55 +63,34 @@ class MBLayer extends Layer {
   }
 
   readDiscreteInputs(address, count, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      const data = this._frameClass.ReadRequest(address, count);
-      send(this, ReadDiscreteInputs, data, resolver);
-    });
+    return readRequest(this, ReadDiscreteInputs, address, count, callback);
   }
 
   readCoils(address, count, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      const data = this._frameClass.ReadRequest(address, count);
-      send(this, ReadCoils, data, resolver);
-    });
+    return readRequest(this, ReadCoils, address, count, callback);
   }
 
   readInputRegisters(address, count, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      const data = this._frameClass.ReadRequest(address, count);
-      send(this, ReadInputRegisters, data, resolver);
-    });
+    return readRequest(this, ReadInputRegisters, address, count, callback);
   }
 
   readHoldingRegisters(address, count, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      const data = this._frameClass.ReadRequest(address, count);
-      send(this, ReadHoldingRegisters, data, resolver);
-    });
+    return readRequest(this, ReadHoldingRegisters, address, count, callback);
   }
 
   writeSingleCoil(address, value, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      const data = writeRequest(WriteSingleCoil, address, [value ? 0x00FF : 0x0000]);
-      send(this, WriteSingleCoil, data, resolver);
-    });
+    return writeRequest(this, WriteSingleCoil, address, [value ? 0x00FF : 0x0000], callback);
   }
 
   writeMultipleCoils(address, values, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      for (let i = 0; i < values.length; i++) {
-        values[i] = values[i] ? 0x00FF : 0x0000;
-      }
-      const data = this._frameClass.WriteRequest(address, values);
-      send(this, WriteMultipleCoils, data, resolver);
-    });
+    for (let i = 0; i < values.length; i++) {
+      values[i] = values[i] ? 0x00FF : 0x0000;
+    }
+    return writeRequest(this, WriteMultipleCoils, address, values, callback);
   }
 
   writeSingleRegister(address, values, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
-      const data = this._frameClass.WriteRequest(address, values);
-      send(this, WriteSingleRegister, data, resolver);
-    });
+    return writeRequest(this, WriteSingleRegister, address, values, callback);
   }
 
   writeMultipleRegisters(address, values, callback) {
@@ -150,6 +149,23 @@ class MBLayer extends Layer {
 module.exports = MBLayer;
 
 
+function readRequest(self, fn, address, count, callback) {
+  return CallbackPromise(callback, resolver => {
+    const data = self._frameClass.ReadRequest(address, count);
+    self._send(fn, data, {}, resolver);
+    // send(self, fn, data, resolver);
+  });
+}
+
+function writeRequest(self, fn, address, values, callback) {
+  return CallbackPromise(callback, resolver => {
+    const data = self._frameClass.WriteRequest(address, values);
+    self._send(fn, data, {}, resolver);
+    // send(self, fn, data, resolver);
+  });
+}
+
+
 // function readRequest(startingAddress, count) {
 //   const buffer = Buffer.allocUnsafe(4);
 //   buffer.writeUInt16BE(startingAddress, 0);
@@ -167,22 +183,16 @@ module.exports = MBLayer;
 //   return buffer;
 // }
 
-function incrementTransactionCounter(self) {
-  self._transactionCounter = (self._transactionCounter + 1) % 0x10000;
-  return self._transactionCounter;
-}
+// function incrementTransactionCounter(self) {
+//   self._transactionCounter = (self._transactionCounter + 1) % 0x10000;
+//   return self._transactionCounter;
+// }
 
 
 function send(self, fn, data, resolver, timeout) {
-  const transactionID = incrementTransactionCounter(self);
+  const frame = self._createFrame(fn, data, null);
 
-  // const packet = new MBFrame.TCP()
-  const packet = new MBTCPPacket();
-  packet.transactionID = transactionID;
-  packet.unitID = unitID;
-  packet.data = data;
-
-  const callback = resolver == null ? null : self.contextCallback(
+  const callback = self.contextCallback(
     once(err => {
       if (err) {
         /** e.g. handle timeout error and return null*/
@@ -196,8 +206,9 @@ function send(self, fn, data, resolver, timeout) {
     timeout
   );
 
-  self.send(packet.toBuffer(), null, false, callback);
+  self.send(frame.toBuffer(), null, false, callback);
 }
+
 
 // function send(self, unitID, data, resolver, timeout) {
 //   const transactionID = incrementTransactionCounter(self);
