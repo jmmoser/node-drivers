@@ -1,0 +1,167 @@
+'use strict';
+
+const { Functions, FunctionNames, ErrorDescriptions } = require('./MB');
+
+
+class PDU {
+  constructor(fn, data) {
+    this.fn = fn;
+    this.data = data;
+  }
+
+  // get fn() {
+  //   return this._fn;
+  // }
+
+  // get data() {
+  //   return this._data;
+  // }
+}
+
+
+class TCP {
+  constructor(pdu, transactionID, unitID = 255, protocolID = 0, buffer, reply) {
+    this.transactionID = transactionID;
+    this.protocolID = protocolID;
+    this.unitID = unitID;
+    this.pdu = pdu;
+
+    if (buffer) {
+      this._buffer = buffer;
+    }
+
+    if (reply) {
+      this.reply = reply;
+    }
+  }
+
+  static ReadRequest(startingAddress, count) {
+    const buffer = Buffer.allocUnsafe(4);
+    buffer.writeUInt16BE(startingAddress, 0);
+    buffer.writeUInt16BE(count, 2);
+    return buffer;
+  }
+
+  static WriteRequest(startingAddress, values) {
+    let buffer;
+    if (Buffer.isBuffer(values)) {
+      buffer = Buffer.alloc(2 + values.length);
+      buffer.writeUInt16BE(startingAddress, 0);
+      values.copy(buffer, 2);
+    } else if (Array.isArray(values)) {
+      buffer = Buffer.alloc(2 + 2 * values.length);
+      buffer.writeUInt16BE(startingAddress, 0);
+      for (let i = 0; i < values.length; i++) {
+        const value = values[i];
+        const offset = 2 * i + 2;
+        if (Buffer.isBuffer(value) && value.length === 2) {
+          value.copy(buffer, offset, 0, 2);
+        } else if (Number.isFinite(value)) {
+          buffer.writeInt16BE(value, offset);
+        } else {
+          throw new Error('Modbus TCP write request error: currently supports buffer, array of 2-byte buffers, or array of finite numbers');
+        }
+      }
+    } else {
+      throw new Error('Modbus TCP write request error: currently supports buffer, array of 2-byte buffers, or array of finite numbers');
+    }
+    
+    return buffer;
+  }
+
+  static RemainingLength(buffer, offset = 0) {
+    return buffer.readUInt16BE(offset + 4);
+  }
+
+  static Length(buffer, offset = 0) {
+    return 6 + this.RemainingLength(buffer, offset);
+  }
+
+  static IsComplete(buffer, length, offset = 0) {
+    if (length < 7) return false;
+    return (length >= this.Length(buffer, offset));
+  }
+
+  static FromBuffer(buffer, offset = 0) {
+    // if (!this.IsComplete(buffer, buffer.length - offset, offset)) {
+    //   return null;
+    // }
+
+    const transactionID = buffer.readUInt16BE(offset);
+    const protocolID = buffer.readUInt16BE(offset + 2);
+    const unitID = buffer.readUInt8(offset + 6);
+    const fn = buffer.readUInt8(offset + 7);
+    const data = buffer.slice(offset + 8, offset + this.RemainingLength(buffer, offset) + 6);
+
+    const reply = {};
+
+    if (fn > 0x80) {
+      const errorCode = data.readUInt8(0);
+      reply.error = {
+        code: errorCode,
+        message: ErrorDescriptions[errorCode] || 'Unknown error'
+      };
+    } else {
+      reply.fn = {
+        code: fn,
+        name: FunctionNames[fn] || 'Unknown'
+      };
+
+      if (ReplyFunctions[fn]) {
+        reply.data = __parseReplyData(fn, data, 0);
+      }
+    }
+
+    return new TCP(new PDU(fn, data), transactionID, unitID, protocolID, buffer, reply);
+  }
+
+  toBuffer() {
+    const fn = this.pdu.fn;
+    const data = this.pdu.data;
+
+    const buffer = Buffer.alloc(8 + data.length);
+    buffer.writeUInt16BE(this.transactionID, 0);
+    buffer.writeUInt16BE(this.protocolID, 2);
+    buffer.writeUInt16BE(data.length + 2, 4);
+    buffer.writeUInt8(this.unitID, 6);
+    buffer.writeUInt8(fn, 7);
+    data.copy(buffer, 8);
+    return buffer;
+  }
+
+  __parseReplyData(fn, buffer, offset) {
+    switch (fn) {
+      case Functions.ReadCoils:
+      case Functions.ReadDiscreteInputs: {
+        const values = [];
+        const count = buffer.readUInt8(offset);
+        for (let i = 0; i < count; i++) {
+          values.push(buffer.readUInt8(offset + i + 1));
+        }
+        return values;
+      }
+      case Functions.ReadHoldingRegisters:
+      case Functions.ReadInputRegisters: {
+        const values = [];
+        const count = buffer.readUInt8(offset) / 2;
+        for (let i = 0; i < count; i++) {
+          values.push(buffer.readUInt16BE(offset + 2 * i + 1));
+        }
+        return values;
+      }
+      case Functions.WriteSingleRegister: {
+        return buffer.slice(offset + 2, offset + 4);
+      }
+      case Functions.WriteMultipleRegisters: {
+        return buffer.readUInt16BE(offset + 2);
+      }
+      default:
+        break;
+    }
+  }
+}
+
+
+module.exports = {
+  TCP
+};
