@@ -1,7 +1,7 @@
 'use strict';
 
 const {
-  ServiceNames,
+  CommonServiceNames,
   GeneralStatusCodeNames,
   GeneralStatusCodeDescriptions
 } = require('./CIP');
@@ -36,7 +36,7 @@ class MessageRouter {
     res.service = {
       code: service,
       hex: `0x${service.toString(16)}`,
-      name: ServiceNames[service] || 'Unknown'
+      name: CommonServiceNames[service] || 'Unknown'
     };
 
     offset += 1; // reserved

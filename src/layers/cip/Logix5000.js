@@ -4,7 +4,7 @@ const EPath = require('./objects/EPath');
 const CIPLayer = require('./objects/CIPLayer');
 const ConnectionLayer = require('./objects/Connection');
 const { ANSIExtSymbolSegment } = require('./objects/MessageRouter');
-const { DataTypes, DataTypeNames, EncodeValue, DecodeValue } = require('./objects/CIP');
+const { DataTypes, DataTypeNames, EncodeValue, DecodeValue, CommonServices } = require('./objects/CIP');
 const { getBit, getBits, CallbackPromise } = require('../../utils');
 
 
@@ -222,14 +222,6 @@ class Logix5000 extends CIPLayer {
       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
 
       for (let i = 0; i < tags.length; i++) {
-        // const tag = tags[i];
-        // if (tag.type.system !== true) {
-        //   if (tag.type.structure === true) {
-        //     console.log(await this.readTemplateInstanceAttributes(tag.type.template.id));
-        //   }
-        //   yield tags[i];
-        // }
-
         const tag = tags[i];
         if (includeSystem || !tag.type.system) {
           if (tag.type.atomic !== true) {
@@ -253,7 +245,7 @@ class Logix5000 extends CIPLayer {
     return CallbackPromise(callback, resolver => {
       const path = EPath.Encode(
         Classes.Template.Code,
-        template.id // is this right ????
+        template.id
       );
 
       const bytesToRead = (template.attributes.definitionSize * 4) - 23;
@@ -270,8 +262,6 @@ class Logix5000 extends CIPLayer {
         } else {
           try {
             resolver.resolve(parseReadTemplate(reply, template));
-            // const template = parseReadTemplateInstanceAttributes(reply);
-            // resolver.resolve(template);
           } catch (err) {
             resolver.reject(err.message, reply);
           }
@@ -301,7 +291,7 @@ class Logix5000 extends CIPLayer {
         data.writeUInt16LE(attributes[i], 2 * (i + 1));
       }
 
-      send(this, Classes.Template.Services.GetAttributeList, path, data, (error, reply) => {
+      send(this, CommonServices.GetAttributeList, path, data, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -316,15 +306,76 @@ class Logix5000 extends CIPLayer {
     });
   }
 
+  /**
+   * 1756-PM020, page 53
+   * Use to determine when the tags list and
+   * structure information need refreshing
+   * */
+  readControllerAttributes(callback) {
+    return CallbackPromise(callback, resolver => {
+      const path = EPath.Encode(
+        0xAC,
+        0x01
+      );
+
+      const attributes = [1, 2, 3, 4, 10];
+
+      const data = Buffer.alloc(2 + attributes.length * 2);
+      data.writeUInt16LE(attributes.length, 0);
+      for (let i = 0; i < attributes.length; i++) {
+        data.writeUInt16LE(attributes[i], 2 * (i + 1));
+      }
+
+      send(this, CommonServices.GetAttributeList, path, data, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          const attributeResponses = [];
+          const data = reply.data;
+          let offset = 0;
+
+          const numberOfAttributes = data.readUInt16LE(offset); offset += 2;
+          for (let i = 0; i < numberOfAttributes; i++) {
+            const attributeNumber = data.readUInt16LE(offset); offset += 2;
+            const attributeStatus = data.readUInt16LE(offset); offset += 2;
+            let attributeValue;
+            switch (attributeNumber) {
+              case 1:
+              case 2:
+                attributeValue = data.readUInt16LE(offset); offset += 2;
+                break;
+              case 3:
+              case 4:
+              case 10:
+                attributeValue = data.readUInt32LE(offset); offset += 4;
+                break;
+              default:
+                return resolver.reject(`Unexpected attribute received: ${attributeNumber}`);
+            }
+            attributeResponses.push({
+              attribute: attributeNumber,
+              status: attributeStatus,
+              value: attributeValue
+            });
+          }
+
+          resolver.resolve(attributeResponses);
+        }
+      });
+    });
+  }
+
 
   handleData(data, info, context) {
     if (context == null) {
-      throw new Error('Logix5000 Error: Unhandled message, context should not be null');
+      throw new Error('Logix5000 Error: Unhandled message, context should not be null.');
     }
 
     const callback = this.callbackForContext(context);
     if (callback != null) {
       callback(null, data, info);
+    } else {
+      console.log('Logix5000 Warning: Unhandled data received.');
     }
   }
 }
@@ -650,7 +701,6 @@ const Classes = {
   Template: {
     Code: 0x6C,
     Services: {
-      GetAttributeList: 0x03,
       Read: 0x4C
     },
     // const attributes = [

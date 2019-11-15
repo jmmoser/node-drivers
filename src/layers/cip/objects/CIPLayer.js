@@ -10,7 +10,7 @@ const MessageRouter = require('./MessageRouter');
 class CIPLayer extends Layer {
   identity(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const service = CIP.Services.GetAttributesAll;
+      const service = CIP.CommonServices.GetAttributesAll;
       
       const path = EPath.Encode(
         CIP.Classes.Identity,
@@ -35,7 +35,7 @@ class CIPLayer extends Layer {
 
   supportedObjects(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const service = CIP.Services.GetAttributeSingle;
+      const service = CIP.CommonServices.GetAttributeSingle;
 
       const path = EPath.Encode(
         CIP.Classes.MessageRouter,

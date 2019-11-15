@@ -108,7 +108,7 @@ const ClassNames = InvertKeyValues(Classes);
 
 
 // CIP Vol1 Appendix A
-const Services = {
+const CommonServices = {
   GetAttributesAll: 0x01,
   SetAttributesAll: 0x02,
   GetAttributeList: 0x03,
@@ -133,7 +133,7 @@ const Services = {
   GroupSync: 0x1C
 };
 
-const ServiceNames = InvertKeyValues(Services);
+const CommonServiceNames = InvertKeyValues(CommonServices);
 
 
 // CIP Vol1 Table C-6.1
@@ -473,8 +473,8 @@ function EncodeValue(dataType, value) {
 module.exports = {
   Classes,
   ClassNames,
-  Services,
-  ServiceNames,
+  CommonServices,
+  CommonServiceNames,
   DataTypes,
   DataTypeNames,
   ReservedClassAttributes,

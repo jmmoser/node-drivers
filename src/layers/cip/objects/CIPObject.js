@@ -7,7 +7,7 @@
  */
 
 const EPath = require('./EPath');
-const { DecodeValue, EncodeValue, DataTypes, Services } = require('./CIP');
+const { DecodeValue, EncodeValue, DataTypes, CommonServices } = require('./CIP');
 
 
 class CIPAttribute {
@@ -163,7 +163,7 @@ class CIPObject {
 
   getAttributesAllRequest(instance = 0x01) {
     return this.request(
-      Services.GetAttributesAll,
+      CommonServices.GetAttributesAll,
       EPath.Encode(this.code, instance)
     );
   }
