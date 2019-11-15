@@ -5,7 +5,7 @@ const CIPLayer = require('./objects/CIPLayer');
 const ConnectionLayer = require('./objects/Connection');
 const { ANSIExtSymbolSegment } = require('./objects/MessageRouter');
 const { DataTypes, DataTypeNames, EncodeValue, DecodeValue, CommonServices } = require('./objects/CIP');
-const { getBit, getBits, CallbackPromise } = require('../../utils');
+const { getBit, getBits, CallbackPromise, InvertKeyValues } = require('../../utils');
 
 
 class Logix5000 extends CIPLayer {
@@ -18,19 +18,19 @@ class Logix5000 extends CIPLayer {
     this._tagIDtoDataType = new Map();
   }
 
-  readTag(address, number, callback) {
+
+  readTag(tag, number, callback) {
     if (callback == null && typeof number === 'function') {
       callback = number;
-      number = 1;
     }
 
-    if (number == null || typeof number !== 'number') {
+    if (!Number.isFinite(number)) {
       number = 1;
     }
 
     return CallbackPromise(callback, resolver => {
-      if (!address) {
-        return resolver.reject('Address must be specified');
+      if (!tag) {
+        return resolver.reject('Tag must be specified');
       }
 
       number = parseInt(number, 10);
@@ -41,9 +41,26 @@ class Logix5000 extends CIPLayer {
         return resolver.reject('Not enough elements to read');
       }
 
-      const path = ANSIExtSymbolSegment(address);
-      // const data = Buffer.from([0x01, 0x00]); // number of elements to read (1)
-      const data = Buffer.alloc(2);
+      let path;
+      let userSuppliedTagID;
+      switch (typeof tag) {
+        case 'string':
+          userSuppliedTagID = tag;
+          path = ANSIExtSymbolSegment(tag);
+          break;
+        case 'number':
+          userSuppliedTagID = tag;
+          path = EPath.Encode(Classes.Symbol.Code, tag);
+          break;
+        case 'object':
+          userSuppliedTagID = tag.id;
+          path = EPath.Encode(Classes.Symbol.Code, tag.id);
+          break;
+        default:
+          return resolver.reject('Tag must be a tag name, symbol instance number, or a tag object');
+      }
+
+      const data = Buffer.allocUnsafe(2);
       data.writeUInt16LE(number, 0);
 
       send(this, Services.ReadTag, path, data, (error, reply) => {
@@ -52,7 +69,7 @@ class Logix5000 extends CIPLayer {
         } else {
           try {
             const dataType = reply.data.readUInt16LE(0);
-            this._tagIDtoDataType.set(address, dataType);
+            this._tagIDtoDataType.set(userSuppliedTagID, dataType);
 
             let offset = 2;
             const values = [];
@@ -87,6 +104,75 @@ class Logix5000 extends CIPLayer {
       });
     });
   }
+
+  // readTag(addressOrTag, number, callback) {
+  //   if (callback == null && typeof number === 'function') {
+  //     callback = number;
+  //   }
+
+  //   if (!Number.isFinite(number)) {
+  //     number = 1;
+  //   }
+
+  //   return CallbackPromise(callback, resolver => {
+  //     if (!address) {
+  //       return resolver.reject('Address must be specified');
+  //     }
+
+  //     number = parseInt(number, 10);
+  //     if (number > 0xFFFF) {
+  //       return resolver.reject('Too many elements to read');
+  //     }
+  //     if (number <= 0) {
+  //       return resolver.reject('Not enough elements to read');
+  //     }
+
+  //     const path = ANSIExtSymbolSegment(address);
+
+  //     const data = Buffer.allocUnsafe(2);
+  //     data.writeUInt16LE(number, 0);
+
+  //     send(this, Services.ReadTag, path, data, (error, reply) => {
+  //       if (error) {
+  //         resolver.reject(error, reply);
+  //       } else {
+  //         try {
+  //           const dataType = reply.data.readUInt16LE(0);
+  //           this._tagIDtoDataType.set(address, dataType);
+
+  //           let offset = 2;
+  //           const values = [];
+  //           let decodeError;
+  //           for (let i = 0; i < number; i++) {
+  //             offset = DecodeValue(dataType, reply.data, offset, (err, value) => {
+  //               if (err) {
+  //                 decodeError = err;
+  //               } else {
+  //                 values.push(value);
+  //               }
+  //             });
+  //             if (decodeError) {
+  //               break;
+  //             }
+  //           }
+
+  //           if (decodeError) {
+  //             resolver.reject(decodeError, reply);
+  //           } else {
+  //             if (number === 1) {
+  //               resolver.resolve(values[0]);
+  //             } else {
+  //               resolver.resolve(values);
+  //             }
+  //           }
+  //         } catch (err) {
+  //           console.log(err)
+  //           resolver.reject(err.message, reply);
+  //         }
+  //       }
+  //     });
+  //   });
+  // }
 
 
   writeTag(address, value, callback) {
@@ -401,6 +487,10 @@ function send(self, service, path, data, callback, timeout) {
     if (error && reply) {
       error = getError(reply);
     }
+    /** Update the service name for Logix5000 specific services */
+    if (ServiceNames[reply.service.code]) {
+      reply.service.name = ServiceNames[reply.service.code];
+    }
     callback(error, reply);
   }, timeout);
 }
@@ -586,6 +676,8 @@ const Services = {
 
   MultipleServicePacket: 0x0A // used to combine multiple requests in one message frame
 };
+
+const ServiceNames = InvertKeyValues(Services);
 
 
 const ERRORS = {
