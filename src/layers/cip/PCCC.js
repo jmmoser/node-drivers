@@ -9,7 +9,7 @@ const HEADER_LENGTH = 7;
 
 class PCCC extends CIPLayer {
   constructor(lowerLayer, options) {
-    super('CIP.PCCC', lowerLayer);
+    super('cip.pccc', lowerLayer);
 
     this.options = Object.assign({
       vendorID: 0x0001,

@@ -11,7 +11,7 @@ const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose;
 
 class Connection extends Layer {
   constructor(lowerLayer, options) {
-    super('CIP.Connection', lowerLayer);
+    super('cip.connection', lowerLayer);
 
     mergeOptionsWithDefaults(this, options);
 

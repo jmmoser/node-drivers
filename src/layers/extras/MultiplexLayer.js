@@ -10,7 +10,7 @@ const Layer = require('../Layer');
 
 class MultiplexLayer extends Layer {
   constructor(lowerLayer) {
-    super('Multiplex', lowerLayer, {
+    super('multiplex', lowerLayer, {
       handlesForwarding
     });
     

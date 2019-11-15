@@ -39,34 +39,16 @@ class CIPObjectReservedClassAttributes {
     4,
     DataTypes.STRUCT,
     (buffer, offset, callback) => {
-      let error;
       let numberOfAttributes;
-      offset = DecodeValue(DataTypes.UINT, buffer, offset, (err, value) => {
-        error = err;
-        numberOfAttributes = value;
-      });
-
-      if (error) {
-        return callback(error);
-      }
+      offset = DecodeValue(DataTypes.UINT, buffer, offset, value => numberOfAttributes = value);
 
       const attributes = [];
 
       for (let i = 0; i < numberOfAttributes; i++) {
-        let attribute;
-        offset = DecodeValue(DataTypes.UINT, buffer, offset, (err, value) => {
-          error = err;
-          attribute = value;
-        });
-
-        if (error) {
-          return callback(error);
-        }
-
-        attributes.push(attribute);
+        offset = DecodeValue(DataTypes.UINT, buffer, offset, value => attributes.push(value));
       }
 
-      callback(null, attributes);
+      callback(attributes);
       return offset;
     },
     (attributes) => {
@@ -82,31 +64,15 @@ class CIPObjectReservedClassAttributes {
     5,
     DataTypes.STRUCT,
     (buffer, offset, callback) => {
-      let error;
       let numberOfServices;
-      offset = DecodeValue(DataTypes.UINT, buffer, offset, (err, value) => {
-        error = err;
-        numberOfServices = value;
-      });
-
-      if (error) {
-        return callback(error);
-      }
+      offset = DecodeValue(DataTypes.UINT, buffer, offset, value => numberOfServices = value);
 
       const services = [];
       for (let i = 0; i < numberOfServices; i++) {
-        let attribute;
-        offset = DecodeValue(DataTypes.UINT, buffer, offset, (err, value) => {
-          error = err;
-          attribute = value;
-        });
-        if (error) {
-          return callback(error);
-        }
-        services.push(attribute);
+        offset = DecodeValue(DataTypes.UINT, buffer, offset, value => services.push(value));
       }
 
-      callback(null, services);
+      callback(services);
       return offset;
     },
     (services) => {

@@ -21,13 +21,11 @@ class CIPLayer extends Layer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          Identity.ParseInstanceAttributesAll(reply.data, 0, (err, value) => {
-            if (err) {
-              resolver.reject(err, reply);
-            } else {
-              resolver.resolve(value);
-            }
-          });
+          try {
+            Identity.ParseInstanceAttributesAll(reply.data, 0, value => resolver.resolve(value));
+          } catch (err) {
+            resolver.reject(err, reply);
+          }
         }
       });
     });

@@ -16,7 +16,7 @@
 
 // class MBTCPLayer extends Layer {
 //   constructor(layer) {
-//     super('Modbus.TCP', layer);
+//     super('modbus.tcp', layer);
     
 //     this._transactionCounter = 0;
 

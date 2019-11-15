@@ -24,7 +24,6 @@ class Identity extends CIPObject {
   // }
 
   static ParseInstanceAttributesAll(buffer, offset, cb) {
-    let error;
     const item = {};
 
     item.vendorID = buffer.readUInt16LE(offset); offset += 2;
@@ -35,35 +34,13 @@ class Identity extends CIPObject {
     item.revision.major = buffer.readUInt8(offset); offset += 1;
     item.revision.minor = buffer.readUInt8(offset); offset += 1;
 
-    offset = this.ParseInstanceAttributeStatus(buffer, offset, (err, value) => {
-      if (err) {
-        error = err;
-      } else {
-        item.status = value;
-      }
-    });
-
-    if (error) {
-      cb(error);
-      return offset;
-    }
+    offset = this.ParseInstanceAttributeStatus(buffer, offset, value => item.status = value);
 
     item.serialNumber = buffer.readUInt32LE(offset); offset += 4;
 
-    offset = CIP.DecodeValue(CIP.DataTypes.SHORT_STRING, buffer, offset, (err, value) => {
-      if (err) {
-        error = err;
-      } else {
-        item.productName = value;
-      }
-    });
+    offset = CIP.DecodeValue(CIP.DataTypes.SHORT_STRING, buffer, offset, value => item.productName = value);
 
-    if (error) {
-      cb(error);
-      return offset;
-    }
-
-    cb(null, item);
+    cb(item);
     
     return offset;
   }
@@ -83,7 +60,7 @@ class Identity extends CIPObject {
       majorUnrecoverableFault: getBit(code, 11)
     };
 
-    cb(null, status);
+    cb(status);
 
     return offset;
   }

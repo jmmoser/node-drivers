@@ -221,10 +221,8 @@ const ReservedClassAttributes = {
 //         }
 //       ],
 //       Decode: function(buffer, offset, callback) {
-//         let error;
 //         let numberOfAttributes;
-//         offset = DecodeValue(DataTypes.UINT, buffer, offset, (err, value) => {
-//           error = err;
+//         offset = DecodeValue(DataTypes.UINT, buffer, offset, value => {
 //           numberOfAttributes = value;
 //         });
 
@@ -236,8 +234,7 @@ const ReservedClassAttributes = {
 
 //         for (let i = 0; i < numberOfAttributes; i++) {
 //           let attribute;
-//           offset = DecodeValue(DataTypes.UINT, buffer, offset, (err, value) => {
-//             error = err;
+//           offset = DecodeValue(DataTypes.UINT, buffer, offset, value => {
 //             attribute = value;
 //           });
 
@@ -414,13 +411,19 @@ function DecodeValue(dataType, buffer, offset, cb) {
         error = `Data type is not currently supported: ${DataTypeNames[dataType] || dataType}`
         break;
     }
-  } catch(err) {
+  } catch (err) {
     error = err.message;
   }
   
-  if (typeof cb === 'function') {
-    cb(error, value);
+  // if (typeof cb === 'function') {
+  //   cb(error, value);
+  // }
+
+  if (error) {
+    throw new Error(error);
   }
+
+  cb(value);
 
   return offset;
 }

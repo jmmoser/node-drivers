@@ -14,7 +14,7 @@ class Logix5000 extends CIPLayer {
       /* Inject Connection as lower layer */
       lowerLayer = new ConnectionLayer(lowerLayer);
     }
-    super('CIP.Logix5000', lowerLayer);
+    super('cip.logix5000', lowerLayer);
     this._tagIDtoDataType = new Map();
   }
 
@@ -73,28 +73,14 @@ class Logix5000 extends CIPLayer {
 
             let offset = 2;
             const values = [];
-            let decodeError;
             for (let i = 0; i < number; i++) {
-              offset = DecodeValue(dataType, reply.data, offset, (err, value) => {
-                if (err) {
-                  decodeError = err;
-                } else {
-                  values.push(value);
-                }
-              });
-              if (decodeError) {
-                break;
-              }
+              offset = DecodeValue(dataType, reply.data, offset, value => values.push(value));
             }
 
-            if (decodeError) {
-              resolver.reject(decodeError, reply);
+            if (number === 1) {
+              resolver.resolve(values[0]);
             } else {
-              if (number === 1) {
-                resolver.resolve(values[0]);
-              } else {
-                resolver.resolve(values);
-              }
+              resolver.resolve(values);
             }
           } catch (err) {
             console.log(err)
@@ -104,75 +90,6 @@ class Logix5000 extends CIPLayer {
       });
     });
   }
-
-  // readTag(addressOrTag, number, callback) {
-  //   if (callback == null && typeof number === 'function') {
-  //     callback = number;
-  //   }
-
-  //   if (!Number.isFinite(number)) {
-  //     number = 1;
-  //   }
-
-  //   return CallbackPromise(callback, resolver => {
-  //     if (!address) {
-  //       return resolver.reject('Address must be specified');
-  //     }
-
-  //     number = parseInt(number, 10);
-  //     if (number > 0xFFFF) {
-  //       return resolver.reject('Too many elements to read');
-  //     }
-  //     if (number <= 0) {
-  //       return resolver.reject('Not enough elements to read');
-  //     }
-
-  //     const path = ANSIExtSymbolSegment(address);
-
-  //     const data = Buffer.allocUnsafe(2);
-  //     data.writeUInt16LE(number, 0);
-
-  //     send(this, Services.ReadTag, path, data, (error, reply) => {
-  //       if (error) {
-  //         resolver.reject(error, reply);
-  //       } else {
-  //         try {
-  //           const dataType = reply.data.readUInt16LE(0);
-  //           this._tagIDtoDataType.set(address, dataType);
-
-  //           let offset = 2;
-  //           const values = [];
-  //           let decodeError;
-  //           for (let i = 0; i < number; i++) {
-  //             offset = DecodeValue(dataType, reply.data, offset, (err, value) => {
-  //               if (err) {
-  //                 decodeError = err;
-  //               } else {
-  //                 values.push(value);
-  //               }
-  //             });
-  //             if (decodeError) {
-  //               break;
-  //             }
-  //           }
-
-  //           if (decodeError) {
-  //             resolver.reject(decodeError, reply);
-  //           } else {
-  //             if (number === 1) {
-  //               resolver.resolve(values[0]);
-  //             } else {
-  //               resolver.resolve(values);
-  //             }
-  //           }
-  //         } catch (err) {
-  //           console.log(err)
-  //           resolver.reject(err.message, reply);
-  //         }
-  //       }
-  //     });
-  //   });
-  // }
 
 
   writeTag(address, value, callback) {
@@ -257,6 +174,195 @@ class Logix5000 extends CIPLayer {
           resolver.resolve(error, reply);
         } else {
           resolver.resolve();
+        }
+      });
+    });
+  }
+
+
+  async readTagAttributeList(tag, attributes, callback) {
+    return CallbackPromise(callback, resolver => {
+      let path;
+      switch (typeof tag) {
+        case 'string':
+          path = ANSIExtSymbolSegment(tag);
+          break;
+        case 'number':
+          path = EPath.Encode(Classes.Symbol.Code, tag);
+          break;
+        case 'object':
+          path = EPath.Encode(Classes.Symbol.Code, tag.id);
+          break;
+        default:
+          return resolver.reject('Tag must be a tag name, symbol instance number, or a tag object');
+      }
+
+      const service = CommonServices.GetAttributeList;
+
+      const data = Buffer.alloc(2 + attributes.length * 2);
+      data.writeUInt16LE(attributes.length, 0);
+      for (let i = 0; i < attributes.length; i++) {
+        data.writeUInt16LE(attributes[i], 2 * (i + 1));
+      }
+
+      send(this, service, path, data, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          const data = reply.data;
+
+          let offset = 0;
+          const attributeCount = data.readUInt16LE(offset); offset += 2;
+          const attributeResults = [];
+
+          for (let i = 0; i < attributeCount; i++) {
+            const code = data.readUInt16LE(offset); offset += 2;
+            const status = data.readUInt16LE(offset); offset += 2;
+            let name, value;
+            switch (code) {
+              case 1:
+                name = 'name';
+                offset = DecodeValue(DataTypes.STRING, data, offset, val => value = val);
+                break;
+              case 2:
+                name = 'dataType';
+                offset = DecodeValue(DataTypes.INT, data, offset, val => value = parseSymbolType(val));
+                break;
+              case 3:
+                name = 'unknown';
+                value = data.slice(offset, offset + 4);
+                offset += 4;
+                break;
+              // case 4:
+              //   // Status is non-zero
+              case 5:
+                name = 'unknown';
+                value = data.slice(offset, offset + 4);
+                offset += 4;
+                break;
+              case 6:
+                name = 'unknown';
+                value = data.slice(offset, offset + 4);
+                offset += 4;
+                break;
+              case 7:
+                name = 'bytes';
+                offset = DecodeValue(DataTypes.INT, data, offset, val => value = val);
+                break;
+              case 8:
+                name = 'unknown';
+                value = data.slice(offset, offset + 12);
+                offset += 12;
+                break;
+              case 9:
+                name = 'unknown';
+                value = data.slice(offset, offset + 1);
+                offset += 1;
+                break;
+              case 10:
+                name = 'unknown';
+                value = data.slice(offset, offset + 1);
+                offset += 1;
+                break;
+              case 11:
+                name = 'unknown';
+                value = data.slice(offset, offset + 1);
+                offset += 1;
+                break;
+              default:
+                return resolver.reject(`Unknown attribute received: ${attributeCode}`);
+            }
+            attributeResults.push({
+              code,
+              name,
+              status,
+              value
+            });
+          }
+
+          reply.attributes = attributeResults;
+
+          resolver.resolve(reply);
+        }
+      });
+    });
+  }
+
+
+  async readTagAttributesAll(tag, callback) {
+    return CallbackPromise(callback, resolver => {
+      let path;
+      switch (typeof tag) {
+        case 'string':
+          path = ANSIExtSymbolSegment(tag);
+          break;
+        case 'number':
+          path = EPath.Encode(Classes.Symbol.Code, tag);
+          break;
+        case 'object':
+          path = EPath.Encode(Classes.Symbol.Code, tag.id);
+          break;
+        default:
+          return resolver.reject('Tag must be a tag name, symbol instance number, or a tag object');
+      }
+
+      const service = CommonServices.GetAttributesAll;
+
+      send(this, service, path, null, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          const data = reply.data;
+
+          let offset = 0;
+
+          const attributes = [];
+
+          /** Attribute 1 */
+          offset = DecodeValue(DataTypes.INT, data, offset, val => {
+            const type = parseSymbolType(val);
+            attributes.push({
+              name: 'type',
+              code: 1,
+              value: type
+            });
+          });
+
+          /** Attribute 3 */
+          attributes.push({
+            name: 'unknown',
+            code: 3,
+            value: data.slice(offset, offset + 4)
+          });
+          offset += 4;
+
+          /** Attribute 1 */
+          offset = DecodeValue(DataTypes.STRING, reply.data, 6, val => {
+            attributes.push({
+              name: 'name',
+              code: 1,
+              value: val
+            });
+          });
+
+          /** Attribute 5 */
+          attributes.push({
+            name: 'unknown',
+            code: 5,
+            value: data.slice(offset, offset + 4)
+          });
+          offset += 4;
+
+          /** Attribute 6 */
+          attributes.push({
+            name: 'unknown',
+            code: 6,
+            value: data.slice(offset, offset + 4)
+          });
+          offset += 4;
+
+          reply.info = attributes;
+          resolver.resolve(reply);
         }
       });
     });
@@ -488,7 +594,7 @@ function send(self, service, path, data, callback, timeout) {
       error = getError(reply);
     }
     /** Update the service name for Logix5000 specific services */
-    if (ServiceNames[reply.service.code]) {
+    if (reply && ServiceNames[reply.service.code]) {
       reply.service.name = ServiceNames[reply.service.code];
     }
     callback(error, reply);
@@ -515,9 +621,7 @@ function parseListTagsResponse(reply, attributes, tags) {
     for (let i = 0; i < attributes.length; i++) {
       switch (attributes[i]) {
         case NameAttributeCode:
-          offset = DecodeValue(DataTypes.STRING, data, offset, (_, value) => {
-            tag.name = value;
-          });
+          offset = DecodeValue(DataTypes.STRING, data, offset, val => tag.name = val);
           break;
         case TypeAttributeCode:
           const typeCode = data.readUInt16LE(offset); offset += 2;
@@ -567,11 +671,35 @@ function parseTemplateMemberName(data, offset, cb) {
   const dataLength = data.length;
   while (offset < dataLength) {
     const characterCode = data.readUInt8(offset); offset += 1;
-    if (characterCode === 0x3B || characterCode === 0x00) {
+    if (characterCode === 0x00) {
       break;
     }
 
     characters.push(String.fromCharCode(characterCode));
+  }
+  cb(characters.join(''));
+  return offset;
+}
+
+function parseTemplateName(data, offset, cb) {
+  const characters = [];
+  const dataLength = data.length;
+  let skip = false;
+  while (offset < dataLength) {
+    const characterCode = data.readUInt8(offset); offset += 1;
+
+    if (characterCode === 0x00) {
+      break;
+    }
+
+    /** skip characters on and after 0x3B, continue reading until 0x00 */
+    if (characterCode === 0x3B) {
+      skip = true;
+    }
+
+    if (!skip) {
+      characters.push(String.fromCharCode(characterCode));
+    }
   }
   cb(characters.join(''));
   return offset;
@@ -601,7 +729,7 @@ function parseReadTemplate(reply, template) {
 
   /** Read the template name */
   let structureName;
-  offset = parseTemplateMemberName(data, offset, name => structureName = name);
+  offset = parseTemplateName(data, offset, name => structureName = name);
 
   /** Read the member names */
   for (let i = 0; i < members.length; i++) {

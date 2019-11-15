@@ -18,10 +18,10 @@ const {
 
 class MBLayer extends Layer {
   constructor(lowerLayer, options) {
-    super('Modbus', lowerLayer);
+    super('modbus', lowerLayer);
 
     switch (lowerLayer.name) {
-      case 'TCP':
+      case 'tcp':
         const cOpts = Object.assign({
           unitID: 255,
           protocolID: 0

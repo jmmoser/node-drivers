@@ -5,7 +5,7 @@ const Layer = require('../Layer');
 
 class TCPLayer extends Layer {
   constructor(options) {
-    super('TCP');
+    super('tcp');
 
     if (typeof options !== 'object') {
       object = {};

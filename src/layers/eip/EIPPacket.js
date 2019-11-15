@@ -270,32 +270,11 @@ EIPReply[Command.ListIdentity] = function(packet) {
       socket.zero = buffer.slice(offset, offset + 8); offset += 8;
       item.socket = socket;
 
-      let error;
+      offset = CIPIdentity.ParseInstanceAttributesAll(buffer, offset, value => item.attributes = value);
 
-      offset = CIPIdentity.ParseInstanceAttributesAll(buffer, offset, (err, value) => {
-        if (err) {
-          error = err;
-        } else {
-          item.attributes = value;
-        }
-      });
-
-      if (error) {
-        return console.log(error);
-      }
-
-      offset = CIPIdentity.ParseInstanceAttributeState(buffer, offset, (err, value) => {
-        if (err) {
-          error = err;
-        } else {
-          item.attributes.state = value;
-        }
-      });
-
-      if (error) {
-        return console.log(error);
-      }
+      offset = CIPIdentity.ParseInstanceAttributeState(buffer, offset, value => item.attributes.state = value);
     }
+    return offset;
   });
 };
 

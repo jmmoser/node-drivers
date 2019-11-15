@@ -6,7 +6,7 @@ const Layer = require('../Layer');
 
 class UDPLayer extends Layer {
   constructor(options) {
-    super('UDP');
+    super('udp');
 
     this.options = {
       target: {

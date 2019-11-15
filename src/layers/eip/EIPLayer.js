@@ -65,7 +65,7 @@ function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connection
 
 class EIPLayer extends Layer {
   constructor(lowerLayer) {
-    super('EIP', lowerLayer);
+    super('eip', lowerLayer);
 
     this._sessionHandle = 0;
     this._connectionState = 0;
