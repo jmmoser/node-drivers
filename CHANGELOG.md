@@ -5,13 +5,15 @@
   - Logix5000.readControllerAttributes
       - reads the 0xAC class instance attributes in the controller
       - Use to determine when the tags list and/or structure information has changed
+  - Logix5000.readTagAttributesList
+  - Logix5000.readTagAttributesAll
 ### Changed
   - Logix5000.readTag now accepts a tag name string, a symbol instance id, or a tag object for the tag argument
 ### Fixed
   - Logix5000 error description handling
 
 ## 2.0.0-beta.0 (2019-11-14)
-### New
+### Added
   - Modbus layer - one layer for all Modbus frame formats
     - TCP, RTU (future), and ASCII (future)
 ### Removed
