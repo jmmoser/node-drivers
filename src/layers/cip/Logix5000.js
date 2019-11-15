@@ -746,7 +746,7 @@ function getError(reply) {
   }
 
   const code = reply.status.code;
-  const service = getBits(reply.service, 0, 7);
+  const service = getBits(reply.service.code, 0, 7);
 
   const errorObject = ERRORS[service];
 
