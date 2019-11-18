@@ -31,13 +31,55 @@ class CIPLayer extends Layer {
     });
   }
 
-  supportedObjects(callback) {
+  // supportedClasses(callback) {
+  //   return Layer.CallbackPromise(callback, resolver => {
+  //     const service = CIP.CommonServices.GetAttributeSingle;
+
+  //     const path = EPath.Encode(
+  //       CIP.Classes.MessageRouter,
+  //       0x01,
+  //       0x01
+  //     );
+
+  //     CIPLayer.send(this, true, service, path, null, (error, reply) => {
+  //       if (error) {
+  //         resolver.reject(error, reply);
+  //       } else {
+  //         try {
+  //           const data = reply.data;
+  //           const res = [];
+  //           let offset = 0;
+
+  //           const objectCount = data.readUInt16LE(offset); offset += 2;
+
+  //           for (let i = 0; i < objectCount; i++) {
+  //             const classID = data.readUInt16LE(offset); offset += 2;
+  //             res.push({
+  //               id: classID,
+  //               name: CIP.ClassNames[classID] || 'Unknown'
+  //             });
+  //           }
+
+  //           resolver.resolve(res.sort(function (o1, o2) {
+  //             if (o1.id < o2.id) return -1;
+  //             else if (o1.id > o2.id) return 1;
+  //             return 0;
+  //           }));
+
+  //         } catch (err) {
+  //           resolver.reject(err.message, reply);
+  //         }
+  //       }
+  //     });
+  //   });
+  // }
+
+  messageRouterInstanceAttributes(callback) {
     return Layer.CallbackPromise(callback, resolver => {
-      const service = CIP.CommonServices.GetAttributeSingle;
+      const service = CIP.CommonServices.GetAttributesAll;
 
       const path = EPath.Encode(
         CIP.Classes.MessageRouter,
-        0x01,
         0x01
       );
 
@@ -47,25 +89,43 @@ class CIPLayer extends Layer {
         } else {
           try {
             const data = reply.data;
-            const res = [];
+            let length = data.length;
             let offset = 0;
 
-            const objectCount = data.readUInt16LE(offset); offset += 2;
+            const info = {};
 
-            for (let i = 0; i < objectCount; i++) {
-              const classID = data.readUInt16LE(offset); offset += 2;
-              res.push({
-                id: classID,
-                name: CIP.ClassNames[classID] || 'Unknown'
-              });
+            /** object list may not be supported */
+            if (offset < length) {
+              let classCount;
+              offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => classCount = val);
+
+              const classes = [];
+              for (let i = 0; i < classCount; i++) {
+                offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => classes.push(val));
+              }
+
+              info.classes = classes.map(classCode => ({
+                code: classCode,
+                name: CIP.ClassNames[classCode] || 'Unknown'
+              }));  
+            }   
+
+            /** number active may not be supported */
+            if (offset < length) {
+              offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => info.maximumConnections = val);
+
+              let connectionCount;
+              offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => connectionCount = val);
+
+              const connectionIDs = [];
+              for (let i = 0; i < connectionCount; i++) {
+                offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => connectionIDs.push(val));
+              }
+
+              info.connections = connectionIDs;
             }
 
-            resolver.resolve(res.sort(function (o1, o2) {
-              if (o1.id < o2.id) return -1;
-              else if (o1.id > o2.id) return 1;
-              return 0;
-            }));
-
+            resolver.resolve(info);
           } catch (err) {
             resolver.reject(err.message, reply);
           }
@@ -76,34 +136,12 @@ class CIPLayer extends Layer {
 
 
   handleData(data, info, context) {
-    // if (context) {
-    //   const callback = this.callbackForContext(context);
-    //   if (callback != null) {
-    //     callback(null, data, info);
-    //   }
-    // }
-    // else {
-    //   console.log('Unhandled message, context should not be null');
-    // }
-
-
     const callback = this.callbackForContext(context);
     if (callback != null) {
       callback(null, data, info);
     }
 
     // this.forward(data, info, context);
-    
-
-
-    // if (context == null) {
-    //   throw new Error('Unhandled message, context should not be null');
-    // }
-
-    // const callback = this.callbackForContext(context);
-    // if (callback != null) {
-    //   callback(null, data, info);
-    // }
   }
 
 
