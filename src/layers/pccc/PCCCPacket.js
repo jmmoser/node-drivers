@@ -149,7 +149,7 @@ class PCCCPacket {
 
     let writeOffset = 0;
     for (let i = 0; i < items; i++) {
-      writeOffset = EncodeValue(info.datatype, values[i], writeBuffer, writeOffset);
+      writeOffset = Encode(info.datatype, values[i], writeBuffer, writeOffset);
     }
     // for (let i = 0; i < items; i++) {
     //   info.writeFunction(writeBuffer, i * dataTypeSize, values[i]);
@@ -217,7 +217,7 @@ function logicalASCIIAddress(address, buffer) {
 }
 
 
-function EncodeValue(type, value, buffer, offset) {
+function Encode(type, value, buffer, offset) {
   switch (type) {
     case 'INT':
     case PCCCDataType.Integer:
@@ -540,7 +540,7 @@ function TypedReadParserInfo(data) {
 
 
 
-// function DecodeValue(dataType, buffer, offset, cb) {
+// function Decode(dataType, buffer, offset, cb) {
 //   let error;
 //   let value;
 

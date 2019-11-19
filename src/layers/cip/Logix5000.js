@@ -4,8 +4,22 @@ const EPath = require('./objects/EPath');
 const CIPLayer = require('./objects/CIPLayer');
 const ConnectionLayer = require('./objects/Connection');
 const { ANSIExtSymbolSegment } = require('./objects/MessageRouter');
-const { DataTypes, DataTypeNames, EncodeValue, DecodeValue, CommonServices } = require('./objects/CIP');
-const { getBit, getBits, CallbackPromise, InvertKeyValues } = require('../../utils');
+
+const {
+  DataTypes,
+  DataTypeNames,
+  Encode,
+  Decode,
+  CommonServices
+} = require('./objects/CIP');
+
+const {
+  getBit,
+  getBits,
+  CallbackPromise,
+  InvertKeyValues,
+  InfoError
+} = require('../../utils');
 
 
 class Logix5000 extends CIPLayer {
@@ -19,13 +33,13 @@ class Logix5000 extends CIPLayer {
   }
 
 
-  readTag(tag, number, callback) {
-    if (callback == null && typeof number === 'function') {
-      callback = number;
+  readTag(tag, elements, callback) {
+    if (callback == null && typeof elements === 'function') {
+      callback = elements;
     }
 
-    if (!Number.isFinite(number)) {
-      number = 1;
+    if (!Number.isFinite(elements)) {
+      elements = 1;
     }
 
     return CallbackPromise(callback, resolver => {
@@ -33,11 +47,11 @@ class Logix5000 extends CIPLayer {
         return resolver.reject('Tag must be specified');
       }
 
-      number = parseInt(number, 10);
-      if (number > 0xFFFF) {
+      elements = parseInt(elements, 10);
+      if (elements > 0xFFFF) {
         return resolver.reject('Too many elements to read');
       }
-      if (number <= 0) {
+      if (elements <= 0) {
         return resolver.reject('Not enough elements to read');
       }
 
@@ -61,7 +75,7 @@ class Logix5000 extends CIPLayer {
       }
 
       const data = Buffer.allocUnsafe(2);
-      data.writeUInt16LE(number, 0);
+      data.writeUInt16LE(elements, 0);
 
       send(this, Services.ReadTag, path, data, (error, reply) => {
         if (error) {
@@ -73,18 +87,17 @@ class Logix5000 extends CIPLayer {
 
             let offset = 2;
             const values = [];
-            for (let i = 0; i < number; i++) {
-              offset = DecodeValue(dataType, reply.data, offset, value => values.push(value));
+            for (let i = 0; i < elements; i++) {
+              offset = Decode(dataType, reply.data, offset, value => values.push(value));
             }
 
-            if (number === 1) {
+            if (elements === 1) {
               resolver.resolve(values[0]);
             } else {
               resolver.resolve(values);
             }
           } catch (err) {
-            console.log(err)
-            resolver.reject(err.message, reply);
+            resolver.reject(err, reply);
           }
         }
       });
@@ -107,7 +120,7 @@ class Logix5000 extends CIPLayer {
 
       const dataType = this._tagIDtoDataType.get(address);
 
-      const valueData = EncodeValue(dataType, value);
+      const valueData = Encode(dataType, value);
 
       if (!Buffer.isBuffer(valueData)) {
         return resolver.reject(`Unable to encode data type: ${DataTypeNames[dataType] || dataType}`);
@@ -124,7 +137,7 @@ class Logix5000 extends CIPLayer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          resolver.resolve();
+          resolver.resolve(reply);
         }
       });
     });
@@ -171,9 +184,9 @@ class Logix5000 extends CIPLayer {
 
       send(this, Services.ReadModifyWriteTag, path, data, (error, reply) => {
         if (error) {
-          resolver.resolve(error, reply);
+          resolver.reject(error, reply);
         } else {
-          resolver.resolve();
+          resolver.resolve(reply);
         }
       });
     });
@@ -209,80 +222,84 @@ class Logix5000 extends CIPLayer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          const data = reply.data;
+          try {
+            const data = reply.data;
 
-          let offset = 0;
-          const attributeCount = data.readUInt16LE(offset); offset += 2;
-          const attributeResults = [];
+            let offset = 0;
+            const attributeCount = data.readUInt16LE(offset); offset += 2;
+            const attributeResults = [];
 
-          for (let i = 0; i < attributeCount; i++) {
-            const code = data.readUInt16LE(offset); offset += 2;
-            const status = data.readUInt16LE(offset); offset += 2;
-            let name, value;
-            switch (code) {
-              case 1:
-                name = 'name';
-                offset = DecodeValue(DataTypes.STRING, data, offset, val => value = val);
-                break;
-              case 2:
-                name = 'dataType';
-                offset = DecodeValue(DataTypes.INT, data, offset, val => value = parseSymbolType(val));
-                break;
-              case 3:
-                name = 'unknown';
-                value = data.slice(offset, offset + 4);
-                offset += 4;
-                break;
-              // case 4:
-              //   // Status is non-zero
-              case 5:
-                name = 'unknown';
-                value = data.slice(offset, offset + 4);
-                offset += 4;
-                break;
-              case 6:
-                name = 'unknown';
-                value = data.slice(offset, offset + 4);
-                offset += 4;
-                break;
-              case 7:
-                name = 'bytes';
-                offset = DecodeValue(DataTypes.INT, data, offset, val => value = val);
-                break;
-              case 8:
-                name = 'unknown';
-                value = data.slice(offset, offset + 12);
-                offset += 12;
-                break;
-              case 9:
-                name = 'unknown';
-                value = data.slice(offset, offset + 1);
-                offset += 1;
-                break;
-              case 10:
-                name = 'unknown';
-                value = data.slice(offset, offset + 1);
-                offset += 1;
-                break;
-              case 11:
-                name = 'unknown';
-                value = data.slice(offset, offset + 1);
-                offset += 1;
-                break;
-              default:
-                return resolver.reject(`Unknown attribute received: ${attributeCode}`);
+            for (let i = 0; i < attributeCount; i++) {
+              const code = data.readUInt16LE(offset); offset += 2;
+              const status = data.readUInt16LE(offset); offset += 2;
+              let name, value;
+              switch (code) {
+                case 1:
+                  name = 'name';
+                  offset = Decode(DataTypes.STRING, data, offset, val => value = val);
+                  break;
+                case 2:
+                  name = 'dataType';
+                  offset = Decode(DataTypes.INT, data, offset, val => value = parseSymbolType(val));
+                  break;
+                case 3:
+                  name = 'unknown';
+                  value = data.slice(offset, offset + 4);
+                  offset += 4;
+                  break;
+                // case 4:
+                //   // Status is non-zero
+                case 5:
+                  name = 'unknown';
+                  value = data.slice(offset, offset + 4);
+                  offset += 4;
+                  break;
+                case 6:
+                  name = 'unknown';
+                  value = data.slice(offset, offset + 4);
+                  offset += 4;
+                  break;
+                case 7:
+                  name = 'bytes';
+                  offset = Decode(DataTypes.INT, data, offset, val => value = val);
+                  break;
+                case 8:
+                  name = 'unknown';
+                  value = data.slice(offset, offset + 12);
+                  offset += 12;
+                  break;
+                case 9:
+                  name = 'unknown';
+                  value = data.slice(offset, offset + 1);
+                  offset += 1;
+                  break;
+                case 10:
+                  name = 'unknown';
+                  value = data.slice(offset, offset + 1);
+                  offset += 1;
+                  break;
+                case 11:
+                  name = 'unknown';
+                  value = data.slice(offset, offset + 1);
+                  offset += 1;
+                  break;
+                default:
+                  return resolver.reject(`Unknown attribute received: ${attributeCode}`);
+              }
+              attributeResults.push({
+                code,
+                name,
+                status,
+                value
+              });
             }
-            attributeResults.push({
-              code,
-              name,
-              status,
-              value
-            });
+
+            reply.attributes = attributeResults;
+
+            resolver.resolve(reply);
+          } catch (err) {
+            resolver.reject(err, reply);
           }
-
-          reply.attributes = attributeResults;
-
-          resolver.resolve(reply);
         }
       });
     });
@@ -312,57 +329,61 @@ class Logix5000 extends CIPLayer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          const data = reply.data;
+          try {
+            const data = reply.data;
 
-          let offset = 0;
+            let offset = 0;
 
-          const attributes = [];
+            const attributes = [];
 
-          /** Attribute 1 */
-          offset = DecodeValue(DataTypes.INT, data, offset, val => {
-            const type = parseSymbolType(val);
-            attributes.push({
-              name: 'type',
-              code: 1,
-              value: type
+            /** Attribute 1 */
+            offset = Decode(DataTypes.INT, data, offset, val => {
+              const type = parseSymbolType(val);
+              attributes.push({
+                name: 'type',
+                code: 1,
+                value: type
+              });
             });
-          });
 
-          /** Attribute 3 */
-          attributes.push({
-            name: 'unknown',
-            code: 3,
-            value: data.slice(offset, offset + 4)
-          });
-          offset += 4;
-
-          /** Attribute 1 */
-          offset = DecodeValue(DataTypes.STRING, reply.data, 6, val => {
+            /** Attribute 3 */
             attributes.push({
-              name: 'name',
-              code: 1,
-              value: val
+              name: 'unknown',
+              code: 3,
+              value: data.slice(offset, offset + 4)
             });
-          });
+            offset += 4;
 
-          /** Attribute 5 */
-          attributes.push({
-            name: 'unknown',
-            code: 5,
-            value: data.slice(offset, offset + 4)
-          });
-          offset += 4;
+            /** Attribute 1 */
+            offset = Decode(DataTypes.STRING, reply.data, 6, val => {
+              attributes.push({
+                name: 'name',
+                code: 1,
+                value: val
+              });
+            });
 
-          /** Attribute 6 */
-          attributes.push({
-            name: 'unknown',
-            code: 6,
-            value: data.slice(offset, offset + 4)
-          });
-          offset += 4;
+            /** Attribute 5 */
+            attributes.push({
+              name: 'unknown',
+              code: 5,
+              value: data.slice(offset, offset + 4)
+            });
+            offset += 4;
 
-          reply.info = attributes;
-          resolver.resolve(reply);
+            /** Attribute 6 */
+            attributes.push({
+              name: 'unknown',
+              code: 6,
+              value: data.slice(offset, offset + 4)
+            });
+            offset += 4;
+
+            reply.info = attributes;
+            resolver.resolve(reply);
+          } catch (err) {
+            resolver.reject(err, reply);
+          }
         }
       });
     });
@@ -380,14 +401,15 @@ class Logix5000 extends CIPLayer {
       includeSystem: false
     }, options);
 
-    // const timeout = (options || {}).timeout;
-    // let instanceID = (options || {}).instanceID || 0;
-
-    let instanceID = instance;
-
-    if (instanceID >= 0xFFFF) {
-      throw new Error('MAX INSTANCE ID');
+    if (!Number.isFinite(instance)) {
+      throw new Error(`Instance ID must be a finite integer`);
     }
+
+    if (instance >= 0xFFFF) {
+      throw new Error(`Specified instance ID, ${instance}, is greater than max, 65535`);
+    }
+
+    let instanceID = parseInt(instance, 10);
 
     const attributes = [
       Classes.Symbol.Attributes.Name.Code,
@@ -455,7 +477,7 @@ class Logix5000 extends CIPLayer {
           try {
             resolver.resolve(parseReadTemplate(reply, template));
           } catch (err) {
-            resolver.reject(err.message, reply);
+            resolver.reject(err, reply);
           }
         }
       });
@@ -491,7 +513,7 @@ class Logix5000 extends CIPLayer {
             const template = parseReadTemplateInstanceAttributes(reply);
             resolver.resolve(template);
           } catch (err) {
-            resolver.reject(err.message, reply);
+            resolver.reject(err, reply);
           }
         }
       });
@@ -522,38 +544,125 @@ class Logix5000 extends CIPLayer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          const attributeResponses = [];
-          const data = reply.data;
-          let offset = 0;
+          try {
+            const attributeResponses = [];
+            const data = reply.data;
+            let offset = 0;
 
-          const numberOfAttributes = data.readUInt16LE(offset); offset += 2;
-          for (let i = 0; i < numberOfAttributes; i++) {
-            const attributeNumber = data.readUInt16LE(offset); offset += 2;
-            const attributeStatus = data.readUInt16LE(offset); offset += 2;
-            let attributeValue;
-            switch (attributeNumber) {
-              case 1:
-              case 2:
-                attributeValue = data.readUInt16LE(offset); offset += 2;
-                break;
-              case 3:
-              case 4:
-              case 10:
-                attributeValue = data.readUInt32LE(offset); offset += 4;
-                break;
-              default:
-                return resolver.reject(`Unexpected attribute received: ${attributeNumber}`);
+            const numberOfAttributes = data.readUInt16LE(offset); offset += 2;
+            for (let i = 0; i < numberOfAttributes; i++) {
+              const attributeNumber = data.readUInt16LE(offset); offset += 2;
+              const attributeStatus = data.readUInt16LE(offset); offset += 2;
+              let attributeValue;
+              switch (attributeNumber) {
+                case 1:
+                case 2:
+                  attributeValue = data.readUInt16LE(offset); offset += 2;
+                  break;
+                case 3:
+                case 4:
+                case 10:
+                  attributeValue = data.readUInt32LE(offset); offset += 4;
+                  break;
+                default:
+                  return resolver.reject(`Unexpected attribute received: ${attributeNumber}`, reply);
+              }
+              attributeResponses.push({
+                attribute: attributeNumber,
+                status: attributeStatus,
+                value: attributeValue
+              });
             }
-            attributeResponses.push({
-              attribute: attributeNumber,
-              status: attributeStatus,
-              value: attributeValue
-            });
-          }
 
-          resolver.resolve(attributeResponses);
+            resolver.resolve(attributeResponses);
+          } catch (err) {
+            resolver.reject(err, reply);
+          }
         }
       });
+    });
+  }
+
+
+  readTagFragmented(tag, elements, callback) {
+    if (callback == null && typeof elements === 'function') {
+      callback = elements;
+    }
+
+    if (!Number.isFinite(elements)) {
+      elements = 1;
+    }
+
+    return CallbackPromise(callback, resolver => {
+      if (!tag) {
+        return resolver.reject(new Error('Tag must be specified'));
+      }
+
+      elements = parseInt(elements, 10);
+      if (elements > 0xFFFF) {
+        return resolver.reject(new Error('Too many elements to read'));
+      }
+      if (elements <= 0) {
+        return resolver.reject(new Error('Not enough elements to read'));
+      }
+
+      let path;
+      let userSuppliedTagID;
+      switch (typeof tag) {
+        case 'string':
+          userSuppliedTagID = tag;
+          path = ANSIExtSymbolSegment(tag);
+          break;
+        case 'number':
+          userSuppliedTagID = tag;
+          path = EPath.Encode(Classes.Symbol.Code, tag);
+          break;
+        case 'object':
+          userSuppliedTagID = tag.id;
+          path = EPath.Encode(Classes.Symbol.Code, tag.id);
+          break;
+        default:
+          return resolver.reject('Tag must be a tag name, symbol instance number, or a tag object');
+      }
+
+      const reqData = Buffer.allocUnsafe(6);
+      reqData.writeUInt16LE(elements, 0);
+
+      let dataOffset = 0;
+      const service = Services.ReadTagFragmented;
+      const values = [];
+
+      try {
+        while (true) {
+          reqData.writeUInt32LE(dataOffset, 2);
+          const reply = await sendPromise(this, service, path, reqData);
+
+          let offset = 0;
+          const data = reply.data;
+          const dataLength = data.length;
+
+          let dataType;
+          offset = Decode(DataTypes.UINT, data, offset, val => dataType = val);
+
+          while (offset < dataLength) {
+            offset = Decode(dataType, data, offset, val => values.push(val));
+          }
+
+          if (reply.status.code !== 0x06) {
+            break;
+          } else {
+            dataOffset = dataLength;
+          }
+        }
+
+        if (elements === 1) {
+          resolver.resolve(values.length > 0 ? values[0] : undefined);
+        } else {
+          resolver.resolve(values);
+        }
+      } catch (err) {
+        resolver.reject(err, reply);
+      }
     });
   }
 
@@ -577,9 +686,9 @@ module.exports = Logix5000;
 
 function sendPromise(self, service, path, data, timeout) {
   return new Promise((resolve, reject) => {
-    send(self, service, path, data, (err, reply) => {
-      if (err) {
-        reject(err);
+    send(self, service, path, data, (error, reply) => {
+      if (error) {
+        reject(new InfoError(reply, error));
       } else {
         resolve(reply);
       }
@@ -621,7 +730,7 @@ function parseListTagsResponse(reply, attributes, tags) {
     for (let i = 0; i < attributes.length; i++) {
       switch (attributes[i]) {
         case NameAttributeCode:
-          offset = DecodeValue(DataTypes.STRING, data, offset, val => tag.name = val);
+          offset = Decode(DataTypes.STRING, data, offset, val => tag.name = val);
           break;
         case TypeAttributeCode:
           const typeCode = data.readUInt16LE(offset); offset += 2;
@@ -888,7 +997,7 @@ function getError(reply) {
     }
   }
 
-  return error || 'Unknown error';
+  return error || 'Unknown Logix5000 error';
 }
 
 

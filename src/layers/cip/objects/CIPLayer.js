@@ -31,48 +31,48 @@ class CIPLayer extends Layer {
     });
   }
 
-  // supportedClasses(callback) {
-  //   return Layer.CallbackPromise(callback, resolver => {
-  //     const service = CIP.CommonServices.GetAttributeSingle;
+  supportedClasses(callback) {
+    return Layer.CallbackPromise(callback, resolver => {
+      const service = CIP.CommonServices.GetAttributeSingle;
 
-  //     const path = EPath.Encode(
-  //       CIP.Classes.MessageRouter,
-  //       0x01,
-  //       0x01
-  //     );
+      const path = EPath.Encode(
+        CIP.Classes.MessageRouter,
+        0x01,
+        0x01
+      );
 
-  //     CIPLayer.send(this, true, service, path, null, (error, reply) => {
-  //       if (error) {
-  //         resolver.reject(error, reply);
-  //       } else {
-  //         try {
-  //           const data = reply.data;
-  //           const res = [];
-  //           let offset = 0;
+      CIPLayer.send(this, true, service, path, null, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          try {
+            const data = reply.data;
+            const res = [];
+            let offset = 0;
 
-  //           const objectCount = data.readUInt16LE(offset); offset += 2;
+            const objectCount = data.readUInt16LE(offset); offset += 2;
 
-  //           for (let i = 0; i < objectCount; i++) {
-  //             const classID = data.readUInt16LE(offset); offset += 2;
-  //             res.push({
-  //               id: classID,
-  //               name: CIP.ClassNames[classID] || 'Unknown'
-  //             });
-  //           }
+            for (let i = 0; i < objectCount; i++) {
+              const classID = data.readUInt16LE(offset); offset += 2;
+              res.push({
+                id: classID,
+                name: CIP.ClassNames[classID] || 'Unknown'
+              });
+            }
 
-  //           resolver.resolve(res.sort(function (o1, o2) {
-  //             if (o1.id < o2.id) return -1;
-  //             else if (o1.id > o2.id) return 1;
-  //             return 0;
-  //           }));
+            resolver.resolve(res.sort(function (o1, o2) {
+              if (o1.id < o2.id) return -1;
+              else if (o1.id > o2.id) return 1;
+              return 0;
+            }));
 
-  //         } catch (err) {
-  //           resolver.reject(err.message, reply);
-  //         }
-  //       }
-  //     });
-  //   });
-  // }
+          } catch (err) {
+            resolver.reject(err, reply);
+          }
+        }
+      });
+    });
+  }
 
   messageRouterInstanceAttributes(callback) {
     return Layer.CallbackPromise(callback, resolver => {
@@ -97,11 +97,11 @@ class CIPLayer extends Layer {
             /** object list may not be supported */
             if (offset < length) {
               let classCount;
-              offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => classCount = val);
+              offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => classCount = val);
 
               const classes = [];
               for (let i = 0; i < classCount; i++) {
-                offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => classes.push(val));
+                offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => classes.push(val));
               }
 
               info.classes = classes.map(classCode => ({
@@ -112,14 +112,14 @@ class CIPLayer extends Layer {
 
             /** number active may not be supported */
             if (offset < length) {
-              offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => info.maximumConnections = val);
+              offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => info.maximumConnections = val);
 
               let connectionCount;
-              offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => connectionCount = val);
+              offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => connectionCount = val);
 
               const connectionIDs = [];
               for (let i = 0; i < connectionCount; i++) {
-                offset = CIP.DecodeValue(CIP.DataTypes.UINT, data, offset, val => connectionIDs.push(val));
+                offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => connectionIDs.push(val));
               }
 
               info.connections = connectionIDs;
@@ -127,7 +127,7 @@ class CIPLayer extends Layer {
 
             resolver.resolve(info);
           } catch (err) {
-            resolver.reject(err.message, reply);
+            resolver.reject(err, reply);
           }
         }
       });
@@ -161,7 +161,7 @@ class CIPLayer extends Layer {
         }
 
         if (reply.status.error) {
-          callback(reply.status.description || true, reply);
+          callback(reply.status.description || 'CIP Error', reply);
         } else {
           callback(null, reply);
         }

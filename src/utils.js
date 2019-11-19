@@ -30,7 +30,6 @@ function InvertKeyValues(obj) {
   return inverted;
 }
 
-
 /**
  * https://stackoverflow.com/a/12713611/3055415
  * @param {Function} fn 
@@ -45,6 +44,27 @@ function once(fn, context) {
     }
     return result;
   };
+}
+
+
+/** https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error */
+class InfoError extends Error {
+  constructor(info, err, ...params) {
+    // Pass remaining arguments (including vendor specific ones) to parent constructor
+    if (typeof err === 'object' && err.message) {
+      super(err.message, ...params);
+    } else {
+      super(err, ...params);
+    }
+
+
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, CustomError);
+    }
+
+    this.info = info;
+  }
 }
 
 
@@ -65,12 +85,16 @@ function CallbackPromise(callback, func, timeout) {
           resolve(res);
         }
       },
-      reject: function (message, info) {
+      reject: function (err, info) {
         if (active) {
-          const err = { message };
-          if (info != null) {
-            err.info = info;
+          if (typeof err === 'string') {
+            err = new InfoError(info, err);
+          } else if (err instanceof Error && info != null && err.info == null) {
+            err = new InfoError(info, err.message);
+          } else if (!(err instanceof Error)) {
+            err = new Error(err);
           }
+
           active = false;
           clearTimeout(timeoutHandle);
           if (hasCallback) {
@@ -81,6 +105,22 @@ function CallbackPromise(callback, func, timeout) {
           }
         }
       }
+      // reject: function (message, info) {
+      //   if (active) {
+      //     const err = { message };
+      //     if (info != null) {
+      //       err.info = info;
+      //     }
+      //     active = false;
+      //     clearTimeout(timeoutHandle);
+      //     if (hasCallback) {
+      //       callback(err);
+      //       resolve();
+      //     } else {
+      //       reject(err);
+      //     }
+      //   }
+      // }
     };
 
     if (Number.isFinite(timeout)) {
@@ -99,5 +139,6 @@ module.exports = {
   getBit,
   once,
   InvertKeyValues,
-  CallbackPromise
+  CallbackPromise,
+  InfoError
 };

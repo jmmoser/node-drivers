@@ -222,7 +222,7 @@ const ReservedClassAttributes = {
 //       ],
 //       Decode: function(buffer, offset, callback) {
 //         let numberOfAttributes;
-//         offset = DecodeValue(DataTypes.UINT, buffer, offset, value => {
+//         offset = Decode(DataTypes.UINT, buffer, offset, value => {
 //           numberOfAttributes = value;
 //         });
 
@@ -234,7 +234,7 @@ const ReservedClassAttributes = {
 
 //         for (let i = 0; i < numberOfAttributes; i++) {
 //           let attribute;
-//           offset = DecodeValue(DataTypes.UINT, buffer, offset, value => {
+//           offset = Decode(DataTypes.UINT, buffer, offset, value => {
 //             attribute = value;
 //           });
 
@@ -350,7 +350,7 @@ const GeneralStatusCodeDescriptions = {
 
 
 
-function DecodeValue(dataType, buffer, offset, cb) {
+function Decode(dataType, buffer, offset, cb) {
   let error;
   let value;
 
@@ -429,7 +429,7 @@ function DecodeValue(dataType, buffer, offset, cb) {
 }
 
 
-function EncodeValue(dataType, value) {
+function Encode(dataType, value) {
   let data;
 
   switch (dataType) {
@@ -483,6 +483,6 @@ module.exports = {
   ReservedClassAttributes,
   GeneralStatusCodeNames,
   GeneralStatusCodeDescriptions,
-  DecodeValue,
-  EncodeValue
+  Decode,
+  Encode
 };

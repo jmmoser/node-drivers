@@ -7,7 +7,13 @@
  */
 
 const EPath = require('./EPath');
-const { DecodeValue, EncodeValue, DataTypes, CommonServices } = require('./CIP');
+
+const {
+  Decode,
+  Encode,
+  DataTypes,
+  CommonServices
+} = require('./CIP');
 
 
 class CIPAttribute {
@@ -18,11 +24,11 @@ class CIPAttribute {
     this.encode = encode;
 
     if (!decode) {
-      this.decode = (buffer, offset, callback) => DecodeValue(dataType, buffer, offset, callback);
+      this.decode = (buffer, offset, callback) => Decode(dataType, buffer, offset, callback);
     }
 
     if (!encode) {
-      this.encode = (value) => EncodeValue(dataType, value);
+      this.encode = (value) => Encode(dataType, value);
     }
   }
 }
@@ -40,12 +46,12 @@ class CIPObjectReservedClassAttributes {
     DataTypes.STRUCT,
     (buffer, offset, callback) => {
       let numberOfAttributes;
-      offset = DecodeValue(DataTypes.UINT, buffer, offset, value => numberOfAttributes = value);
+      offset = Decode(DataTypes.UINT, buffer, offset, value => numberOfAttributes = value);
 
       const attributes = [];
 
       for (let i = 0; i < numberOfAttributes; i++) {
-        offset = DecodeValue(DataTypes.UINT, buffer, offset, value => attributes.push(value));
+        offset = Decode(DataTypes.UINT, buffer, offset, value => attributes.push(value));
       }
 
       callback(attributes);
@@ -53,9 +59,9 @@ class CIPObjectReservedClassAttributes {
     },
     (attributes) => {
       const buffers = [];
-      buffers.push(EncodeValue(DataTypes.UINT, attributes.length));
+      buffers.push(Encode(DataTypes.UINT, attributes.length));
       for (let i = 0; i < attributes.length; i++) {
-        buffers.push(EncodeValue(DataTypes.UINT, attributes[i]));
+        buffers.push(Encode(DataTypes.UINT, attributes[i]));
       }
       return Buffer.concat(buffers);
     }
@@ -65,11 +71,11 @@ class CIPObjectReservedClassAttributes {
     DataTypes.STRUCT,
     (buffer, offset, callback) => {
       let numberOfServices;
-      offset = DecodeValue(DataTypes.UINT, buffer, offset, value => numberOfServices = value);
+      offset = Decode(DataTypes.UINT, buffer, offset, value => numberOfServices = value);
 
       const services = [];
       for (let i = 0; i < numberOfServices; i++) {
-        offset = DecodeValue(DataTypes.UINT, buffer, offset, value => services.push(value));
+        offset = Decode(DataTypes.UINT, buffer, offset, value => services.push(value));
       }
 
       callback(services);
@@ -77,9 +83,9 @@ class CIPObjectReservedClassAttributes {
     },
     (services) => {
       const buffers = [];
-      buffers.push(EncodeValue(DataTypes.UINT, services.length));
+      buffers.push(Encode(DataTypes.UINT, services.length));
       for (let i = 0; i < services.length; i++) {
-        buffers.push(EncodeValue(DataTypes.UINT, services[i]));
+        buffers.push(Encode(DataTypes.UINT, services[i]));
       }
       return Buffer.concat(buffers);
     }

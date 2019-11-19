@@ -38,7 +38,7 @@ class Identity extends CIPObject {
 
     item.serialNumber = buffer.readUInt32LE(offset); offset += 4;
 
-    offset = CIP.DecodeValue(CIP.DataTypes.SHORT_STRING, buffer, offset, value => item.productName = value);
+    offset = CIP.Decode(CIP.DataTypes.SHORT_STRING, buffer, offset, value => item.productName = value);
 
     cb(item);
     
