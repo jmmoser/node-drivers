@@ -1,5 +1,6 @@
 'use strict';
 
+const CIP = require('./CIP');
 const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
@@ -82,7 +83,7 @@ class Connection extends Layer {
 
         const message = request.message;
 
-        const buffer = Buffer.alloc(message.length + 2);
+        const buffer = Buffer.allocUnsafe(message.length + 2);
         buffer.writeUInt16LE(sequenceCount, 0);
         message.copy(buffer, 2);
 
@@ -205,7 +206,7 @@ function handleMessage(self, data, info, context) {
   if (layer) {
     self.forwardTo(layer, data, info, context);
   } else {
-    /* this should never happen */
+    /** This should never happen */
     self.forward(data, info, context);
   }
 }
@@ -252,78 +253,78 @@ const ClassServices = {
 const InstanceAttributes = {
   1: {
     name: 'State',
-    type: 'USINT'
+    type: CIP.DataTypes.USINT
   },
   2: {
-    name: 'Instance_type',
-    type: 'USINT'
+    name: 'Instance Type',
+    type: CIP.DataTypes.USINT
   },
   3: {
-    name: 'TransportClass_trigger',
-    type: 'BYTE'
+    name: 'TransportClass Trigger',
+    type: CIP.DataTypes.BYTE
   },
   4: {
-    name: 'DeviceNet_produced_conection_id',
-    type: 'UINT'
+    name: 'DeviceNet Produced Conection ID',
+    type: CIP.DataTypes.UINT
   },
   5: {
-    name: 'DeviceNet_consumed_connection_id',
-    type: 'UINT'
+    name: 'DeviceNet Consumed Connection ID',
+    type: CIP.DataTypes.UINT
   },
   6: {
-    name: 'DeviceNet_initial_comm_characteristics',
-    type: 'BYTE'
+    name: 'DeviceNet Initial Comm Characteristics',
+    type: CIP.DataTypes.BYTE
   },
   7: {
-    name: 'Produced_connection_size',
-    type: 'UINT'
+    name: 'Produced Connection Size',
+    type: CIP.DataTypes.UINT
   },
   8: {
-    name: 'Consumed_connection_size',
-    type: 'UINT'
+    name: 'Consumed Connection Size',
+    type: CIP.DataTypes.UINT
   },
   9: {
-    name: 'Expected_packet_rate',
-    type: 'UINT'
+    name: 'Expected Packet Rate',
+    type: CIP.DataTypes.UINT
   },
   10: {
-    name: 'CIP_produced_connection_id',
-    type: 'UDINT'
+    name: 'CIP Produced Connection ID',
+    type: CIP.DataTypes.UDINT
   },
   11: {
-    name: 'CIP_consumed_connection_id',
-    type: 'UDINT'
+    name: 'CIP Consumed Connection ID',
+    type: CIP.DataTypes.UDINT
   },
   12: {
-    name: 'Watchdog_timeout_action',
-    type: 'USINT'
+    name: 'Watchdog Timeout Action',
+    type: CIP.DataTypes.USINT
   },
   13: {
-    name: 'Produced_connection_path_length',
-    type: 'UINT'
+    name: 'Produced Connection Path Length',
+    type: CIP.DataTypes.UINT
   },
   14: {
-    name: 'Produced_connection_path',
+    name: 'Produced Connection Path',
     type: 'EPATH'
   },
   15: {
-    name: 'Consumed_connection_path_length',
-    type: 'UINT'
+    name: 'Consumed Connection Path Length',
+    type: CIP.DataTypes.UINT
   },
   16: {
-    name: 'Consumed_connection_path',
+    name: 'Consumed Connection Path',
     type: 'EPATH'
   },
   17: {
-    name: 'Production_inhibit_time',
-    type: 'UINT'
+    name: 'Production Inhibit Time',
+    type: CIP.DataTypes.UINT
   },
   18: {
-    name: 'Connection_timeout_multiplier',
-    type: 'USINT'
+    name: 'Connection Timeout Multiplier',
+    type: CIP.DataTypes.USINT
   },
   19: {
-    name: 'Connection_binding_list',
+    name: 'Connection Binding List',
     type: 'UINT[]'
   }
 }

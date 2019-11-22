@@ -57,10 +57,9 @@ class InfoError extends Error {
       super(err, ...params);
     }
 
-
     // Maintains proper stack trace for where our error was thrown (only available on V8)
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, CustomError);
+      Error.captureStackTrace(this, InfoError);
     }
 
     this.info = info;

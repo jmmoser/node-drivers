@@ -127,14 +127,14 @@ class Layer extends EventEmitter {
   }
 
   hasRequest() {
-    return this._queue.hasNext();
+    return this._queue.size();
   }
 
   getNextRequest(peek) {
     if (peek === true) {
       return this._queue.peek();
     }
-    return this._queue.shift();
+    return this._queue.dequeue();
   }
 
   addMessageToQueue(requestingLayer, message, info, priority, context) {
@@ -145,7 +145,7 @@ class Layer extends EventEmitter {
       context: context
     };
 
-    this._queue.addToQueue(obj, priority);
+    this._queue.enqueue(obj, priority);
   }
 
 

@@ -6,7 +6,11 @@ class Queue {
     this._priorityQueue = [];
   }
 
-  addToQueue(obj, priority) {
+  size() {
+    return this._priorityQueue.length > 0 || this._queue.length > 0;
+  }
+
+  enqueue(obj, priority) {
     if (priority) {
       this._priorityQueue.push(obj);
     } else {
@@ -14,11 +18,7 @@ class Queue {
     }
   }
 
-  hasNext() {
-    return this._priorityQueue.length > 0 || this._queue.length > 0;
-  }
-
-  shift() {
+  dequeue() {
     const obj = this._priorityQueue.shift();
     if (obj) return obj;
     return this._queue.shift();

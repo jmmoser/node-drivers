@@ -30,6 +30,9 @@ class Logix5000 extends CIPLayer {
     }
     super('cip.logix5000', lowerLayer);
     this._tagIDtoDataType = new Map();
+    this._templates = new Map();
+    this._tagListAttributes = new Map();
+    this._tags = new Map();
   }
 
 
@@ -55,40 +58,43 @@ class Logix5000 extends CIPLayer {
         return resolver.reject('Not enough elements to read');
       }
 
-      let path;
-      let userSuppliedTagID;
-      switch (typeof tag) {
-        case 'string':
-          userSuppliedTagID = tag;
-          path = ANSIExtSymbolSegment(tag);
-          break;
-        case 'number':
-          userSuppliedTagID = tag;
-          path = EPath.Encode(Classes.Symbol.Code, tag);
-          break;
-        case 'object':
-          userSuppliedTagID = tag.id;
-          path = EPath.Encode(Classes.Symbol.Code, tag.id);
-          break;
-        default:
-          return resolver.reject('Tag must be a tag name, symbol instance number, or a tag object');
-      }
+      const path = encodeTagPath(tag);
 
-      const data = Buffer.allocUnsafe(2);
-      data.writeUInt16LE(elements, 0);
+      const data = Encode(DataTypes.UINT, elements);
 
-      send(this, Services.ReadTag, path, data, (error, reply) => {
+      send(this, SymbolServiceCodes.ReadTag, path, data, async (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
           try {
-            const dataType = reply.data.readUInt16LE(0);
-            this._tagIDtoDataType.set(userSuppliedTagID, dataType);
+            const data = reply.data;
+            let offset = 0;
 
-            let offset = 2;
+            console.log(reply);
+
+            let dataType;
+            offset = Decode(DataTypes.UINT, data, offset, val => dataType = val);
+
+            let isStructure = false, templateID;
+            if (dataType === DataTypes.STRUCT) {
+              isStructure = true;
+              offset = Decode(DataTypes.UINT, data, offset, val => templateID = val);
+            }
+
+            /** 
+             * NEED TO HANDLE STRUCTURE TAGS
+             * */
             const values = [];
-            for (let i = 0; i < elements; i++) {
-              offset = Decode(dataType, reply.data, offset, value => values.push(value));
+
+            if (!isStructure) {
+              for (let i = 0; i < elements; i++) {
+                offset = Decode(dataType, data, offset, value => values.push(value));
+              }
+            } else {
+              // const template = await getTemplateInfo(this, templateID);
+              // console.log(template);
+              console.log(await this.getTagInfo(tag));
+              values.push(data.slice(offset));
             }
 
             if (elements === 1) {
@@ -105,20 +111,20 @@ class Logix5000 extends CIPLayer {
   }
 
 
-  writeTag(address, value, callback) {
+  writeTag(tag, value, callback) {
     return CallbackPromise(callback, async resolver => {
-      if (!address) {
-        return resolver.reject('Address must be specified');
+      if (!tag) {
+        return resolver.reject('tag must be specified');
       }
 
-      if (!this._tagIDtoDataType.has(address)) {
-        await this.readTag(address);
-        if (!this._tagIDtoDataType.has(address)) {
+      if (!this._tagIDtoDataType.has(tag)) {
+        await this.readTag(tag);
+        if (!this._tagIDtoDataType.has(tag)) {
           return resolver.reject('Unable to determine data type');
         }
       }
 
-      const dataType = this._tagIDtoDataType.get(address);
+      const dataType = this._tagIDtoDataType.get(tag);
 
       const valueData = Encode(dataType, value);
 
@@ -126,14 +132,16 @@ class Logix5000 extends CIPLayer {
         return resolver.reject(`Unable to encode data type: ${DataTypeNames[dataType] || dataType}`);
       }
 
-      const path = ANSIExtSymbolSegment(address);
+      const service = SymbolServiceCodes.WriteTag;
+
+      const path = encodeTagPath(tag);
 
       const data = Buffer.alloc(4 + valueData.length);
       data.writeUInt16LE(dataType, 0);
       data.writeUInt16LE(1, 2);
       valueData.copy(data, 4);
 
-      send(this, Services.WriteTag, path, data, (error, reply) => {
+      send(this, service, path, data, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -144,10 +152,10 @@ class Logix5000 extends CIPLayer {
   }
 
 
-  readModifyWriteTag(address, ORmasks, ANDmasks, callback) {
+  readModifyWriteTag(tag, ORmasks, ANDmasks, callback) {
     return CallbackPromise(callback, resolver => {
-      if (!address) {
-        return resolver.reject('Address must be specified');
+      if (tag == null) {
+        return resolver.reject('tag must be specified');
       }
 
       if (
@@ -173,7 +181,9 @@ class Logix5000 extends CIPLayer {
         }
       }
 
-      const path = ANSIExtSymbolSegment(address);
+      const service = SymbolServiceCodes.ReadModifyWriteTag;
+
+      const path = encodeTagPath(tag);
 
       const data = Buffer.alloc(2 + 2 * sizeOfMasks);
       data.writeUInt16LE(sizeOfMasks, 0);
@@ -182,7 +192,7 @@ class Logix5000 extends CIPLayer {
         data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
       }
 
-      send(this, Services.ReadModifyWriteTag, path, data, (error, reply) => {
+      send(this, service, path, data, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -194,23 +204,14 @@ class Logix5000 extends CIPLayer {
 
 
   async readTagAttributeList(tag, attributes, callback) {
-    return CallbackPromise(callback, resolver => {
-      let path;
-      switch (typeof tag) {
-        case 'string':
-          path = ANSIExtSymbolSegment(tag);
-          break;
-        case 'number':
-          path = EPath.Encode(Classes.Symbol.Code, tag);
-          break;
-        case 'object':
-          path = EPath.Encode(Classes.Symbol.Code, tag.id);
-          break;
-        default:
-          return resolver.reject('Tag must be a tag name, symbol instance number, or a tag object');
-      }
+    if (!Array.isArray(attributes)) {
+      attributes = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11];
+    }
 
+    return CallbackPromise(callback, resolver => {
       const service = CommonServices.GetAttributeList;
+
+      const path = encodeTagPath(tag);
 
       const data = Buffer.alloc(2 + attributes.length * 2);
       data.writeUInt16LE(attributes.length, 0);
@@ -308,22 +309,9 @@ class Logix5000 extends CIPLayer {
 
   async readTagAttributesAll(tag, callback) {
     return CallbackPromise(callback, resolver => {
-      let path;
-      switch (typeof tag) {
-        case 'string':
-          path = ANSIExtSymbolSegment(tag);
-          break;
-        case 'number':
-          path = EPath.Encode(Classes.Symbol.Code, tag);
-          break;
-        case 'object':
-          path = EPath.Encode(Classes.Symbol.Code, tag.id);
-          break;
-        default:
-          return resolver.reject('Tag must be a tag name, symbol instance number, or a tag object');
-      }
-
       const service = CommonServices.GetAttributesAll;
+
+      const path = encodeTagPath(tag);
 
       send(this, service, path, null, (error, reply) => {
         if (error) {
@@ -336,12 +324,12 @@ class Logix5000 extends CIPLayer {
 
             const attributes = [];
 
-            /** Attribute 1 */
+            /** Attribute 2 */
             offset = Decode(DataTypes.INT, data, offset, val => {
               const type = parseSymbolType(val);
               attributes.push({
-                name: 'type',
-                code: 1,
+                name: 'dataType',
+                code: 2,
                 value: type
               });
             });
@@ -390,6 +378,56 @@ class Logix5000 extends CIPLayer {
   }
   
 
+  // async test(service, path, data) {
+  //   return CallbackPromise(null, resolver => {
+  //     send(this, service, path, data, (err, reply) => {
+  //       if (err) {
+  //         resolver.reject(err, reply);
+  //       } else {
+  //         resolver.resolve(reply);
+  //       }
+  //     });
+  //   });
+  // }
+
+
+  async getTagInfo(tag) {
+    if (this._tags.has(tag)) {
+      return this._tags.get(tag);
+    }
+
+    const attributes = [
+      SymbolInstanceAttributeCodes.Name,
+      SymbolInstanceAttributeCodes.Type
+    ];
+
+    const data = Buffer.alloc(2 + attributes.length * 2);
+    data.writeUInt16LE(attributes.length, 0);
+    for (let i = 0; i < attributes.length; i++) {
+      data.writeUInt16LE(attributes[i], 2 * (i + 1));
+    }
+
+    const path = encodeTagPath(tag);
+
+    const reply = await sendPromise(
+      this,
+      SymbolServiceCodes.GetInstanceAttributeList,
+      path,
+      data
+    );
+
+    const tags = [];
+
+    parseListTagsResponse(reply, attributes, tags);
+
+    this._tagListAttributes.set(t.id, t);
+    this._tagListAttributes.set(t.name, t);
+
+    // const tag
+    return reply;
+  }
+
+
   async* listTags(options) {
     const {
       timeout,
@@ -412,8 +450,8 @@ class Logix5000 extends CIPLayer {
     let instanceID = parseInt(instance, 10);
 
     const attributes = [
-      Classes.Symbol.Attributes.Name.Code,
-      Classes.Symbol.Attributes.Type.Code
+      SymbolInstanceAttributeCodes.Name,
+      SymbolInstanceAttributeCodes.Type
     ];
 
     const data = Buffer.alloc(2 + attributes.length * 2);
@@ -422,11 +460,11 @@ class Logix5000 extends CIPLayer {
       data.writeUInt16LE(attributes[i], 2 * (i + 1));
     }
 
-    const service = Classes.Symbol.Services.GetInstanceAttributeList.Code;
+    const service = SymbolServiceCodes.GetInstanceAttributeList;
 
     while(true) {
       const path = EPath.Encode(
-        Classes.Symbol.Code,
+        ClassCodes.Symbol,
         instanceID
       );
 
@@ -457,8 +495,10 @@ class Logix5000 extends CIPLayer {
 
   readTemplate(template, callback) {
     return CallbackPromise(callback, resolver => {
+      const service = TemplateServiceCodes.Read;
+      
       const path = EPath.Encode(
-        Classes.Template.Code,
+        ClassCodes.Template,
         template.id
       );
 
@@ -470,7 +510,7 @@ class Logix5000 extends CIPLayer {
       data.writeUInt32LE(offset, 0);
       data.writeUInt16LE(bytesToRead, 4);
 
-      send(this, Classes.Template.Services.Read, path, data, (error, reply) => {
+      send(this, service, path, data, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -487,16 +527,18 @@ class Logix5000 extends CIPLayer {
 
   readTemplateInstanceAttributes(templateID, callback) {
     return CallbackPromise(callback, resolver => {
+      const service = CommonServices.GetAttributeList;
+
       const path = EPath.Encode(
-        Classes.Template.Code,
+        ClassCodes.Template,
         templateID
       );
 
       const attributes = [
-        Classes.Template.Attributes.StructureHandle.Code,
-        Classes.Template.Attributes.MemberCount.Code,
-        Classes.Template.Attributes.DefinitionSize.Code,
-        Classes.Template.Attributes.StructureSize.Code,
+        TemplateInstanceAttributeCodes.StructureHandle,
+        TemplateInstanceAttributeCodes.MemberCount,
+        TemplateInstanceAttributeCodes.DefinitionSize,
+        TemplateInstanceAttributeCodes.StructureSize
       ];
 
       const data = Buffer.alloc(2 + attributes.length * 2);
@@ -505,7 +547,7 @@ class Logix5000 extends CIPLayer {
         data.writeUInt16LE(attributes[i], 2 * (i + 1));
       }
 
-      send(this, CommonServices.GetAttributeList, path, data, (error, reply) => {
+      send(this, service, path, data, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -527,6 +569,8 @@ class Logix5000 extends CIPLayer {
    * */
   readControllerAttributes(callback) {
     return CallbackPromise(callback, resolver => {
+      const service = CommonServices.GetAttributeList;
+
       const path = EPath.Encode(
         0xAC,
         0x01
@@ -540,7 +584,7 @@ class Logix5000 extends CIPLayer {
         data.writeUInt16LE(attributes[i], 2 * (i + 1));
       }
 
-      send(this, CommonServices.GetAttributeList, path, data, (error, reply) => {
+      send(this, service, path, data, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -593,7 +637,7 @@ class Logix5000 extends CIPLayer {
       elements = 1;
     }
 
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, async resolver => {
       if (!tag) {
         return resolver.reject(new Error('Tag must be specified'));
       }
@@ -606,30 +650,13 @@ class Logix5000 extends CIPLayer {
         return resolver.reject(new Error('Not enough elements to read'));
       }
 
-      let path;
-      let userSuppliedTagID;
-      switch (typeof tag) {
-        case 'string':
-          userSuppliedTagID = tag;
-          path = ANSIExtSymbolSegment(tag);
-          break;
-        case 'number':
-          userSuppliedTagID = tag;
-          path = EPath.Encode(Classes.Symbol.Code, tag);
-          break;
-        case 'object':
-          userSuppliedTagID = tag.id;
-          path = EPath.Encode(Classes.Symbol.Code, tag.id);
-          break;
-        default:
-          return resolver.reject('Tag must be a tag name, symbol instance number, or a tag object');
-      }
+      const service = SymbolServiceCodes.ReadTagFragmented;
+      const path = encodeTagPath(tag);
 
       const reqData = Buffer.allocUnsafe(6);
       reqData.writeUInt16LE(elements, 0);
 
       let dataOffset = 0;
-      const service = Services.ReadTagFragmented;
       const values = [];
 
       try {
@@ -703,11 +730,40 @@ function send(self, service, path, data, callback, timeout) {
       error = getError(reply);
     }
     /** Update the service name for Logix5000 specific services */
-    if (reply && ServiceNames[reply.service.code]) {
-      reply.service.name = ServiceNames[reply.service.code];
+    if (reply && SymbolServiceNames[reply.service.code]) {
+      reply.service.name = SymbolServiceNames[reply.service.code];
     }
     callback(error, reply);
   }, timeout);
+}
+
+
+function encodeTagPath(tag) {
+  switch (typeof tag) {
+    case 'string':
+      return ANSIExtSymbolSegment(tag);
+    case 'number':
+      return EPath.Encode(ClassCodes.Symbol, tag);
+    case 'object':
+      return EPath.Encode(ClassCodes.Symbol, tag.id);
+    default:
+      throw new Error('Tag must be a tag name, symbol instance number, or a tag object');
+  }
+}
+
+
+async function getTemplateInfo(self, tag) {
+  if (self._templates.has(tag)) {
+    console.log(`Using cached template info: ${tag}`);
+    return self._templates.get(tag);
+  }
+
+  console.log(`Reading template info: ${tag}`);
+  const template = {};
+  template.attributes = await self.readTemplateInstanceAttributes(templateID);
+  template.definition = await self.readTemplate(template);
+  self._templates.set(templateID, template);
+  return template;
 }
 
 
@@ -718,33 +774,31 @@ function parseListTagsResponse(reply, attributes, tags) {
   let offset = 0;
   let lastInstanceID = 0;
 
-  const NameAttributeCode = Classes.Symbol.Attributes.Name.Code;
-  const TypeAttributeCode = Classes.Symbol.Attributes.Type.Code;
+  const NameAttributeCode = SymbolInstanceAttributeCodes.Name;
+  const TypeAttributeCode = SymbolInstanceAttributeCodes.Type;
 
   while (offset < length) {
     const tag = {};
 
-    tag.id = data.readUInt32LE(offset); offset += 4;
+    offset = Decode(DataTypes.UDINT, data, offset, val => tag.id = val);
     lastInstanceID = tag.id;
 
     for (let i = 0; i < attributes.length; i++) {
-      switch (attributes[i]) {
+      const attribute = attributes[i];
+      const attributeDataType = SymbolInstanceAttributeDataTypes[attribute];
+      switch (attribute) {
         case NameAttributeCode:
-          offset = Decode(DataTypes.STRING, data, offset, val => tag.name = val);
+          offset = Decode(attributeDataType, data, offset, val => tag.name = val);
           break;
         case TypeAttributeCode:
-          const typeCode = data.readUInt16LE(offset); offset += 2;
-          tag.type = parseSymbolType(typeCode);
+          offset = Decode(attributeDataType, data, offset, val => tag.type = parseSymbolType(val));
           break;
         default:
           throw new Error(`Unknown attribute: ${attributes[i]}`);
-        // break;
       }
     }
 
-    if (tag.type.system !== true) {
-      tags.push(tag);
-    }
+    tags.push(tag);
   }
 
   return lastInstanceID;
@@ -756,7 +810,6 @@ function parseSymbolType(code) {
   res.atomic = getBit(code, 15) === 0;
   res.system = !!getBit(code, 12);
   res.dimensions = getBits(code, 13, 15);
-  // res.structure = !atomic;
 
   if (res.atomic) {
     res.dataType = getBits(code, 0, 8);
@@ -776,42 +829,25 @@ function parseSymbolType(code) {
 
 
 function parseTemplateMemberName(data, offset, cb) {
-  const characters = [];
-  const dataLength = data.length;
-  while (offset < dataLength) {
-    const characterCode = data.readUInt8(offset); offset += 1;
-    if (characterCode === 0x00) {
-      break;
-    }
+  const nullIndex = data.indexOf(0x00, offset);
 
-    characters.push(String.fromCharCode(characterCode));
+  if (nullIndex >= 0) {
+    cb(data.toString('ascii', offset, nullIndex));
+    return nullIndex + 1;
   }
-  cb(characters.join(''));
+
   return offset;
 }
 
-function parseTemplateName(data, offset, cb) {
-  const characters = [];
-  const dataLength = data.length;
-  let skip = false;
-  while (offset < dataLength) {
-    const characterCode = data.readUInt8(offset); offset += 1;
 
-    if (characterCode === 0x00) {
-      break;
-    }
-
-    /** skip characters on and after 0x3B, continue reading until 0x00 */
-    if (characterCode === 0x3B) {
-      skip = true;
-    }
-
-    if (!skip) {
-      characters.push(String.fromCharCode(characterCode));
-    }
-  }
-  cb(characters.join(''));
-  return offset;
+function parseTemplateNameInfo(data, offset, cb) {
+  return parseTemplateMemberName(data, offset, fullname => {
+    const parts = fullname.split(';');
+    cb({
+      name: parts.length > 0 ? parts[0] : '',
+      extra: parts.length > 1 ? parts[1] : ''
+    });
+  });
 }
 
 
@@ -836,9 +872,13 @@ function parseReadTemplate(reply, template) {
     }
   }
 
-  /** Read the template name */
+  /** Read the template name and extra characters after ';' */
   let structureName;
-  offset = parseTemplateName(data, offset, name => structureName = name);
+  let extra;
+  offset = parseTemplateNameInfo(data, offset, info => {
+    structureName = info.name;
+    extra = info.extra
+  });
 
   /** Read the member names */
   for (let i = 0; i < members.length; i++) {
@@ -847,6 +887,7 @@ function parseReadTemplate(reply, template) {
 
   return {
     name: structureName,
+    extra,
     members,
     data: data.slice(offset)
   };
@@ -860,28 +901,31 @@ function parseReadTemplateInstanceAttributes(reply) {
   const attributeCount = data.readUInt16LE(offset); offset += 2;
   const template = {};
 
-  const StructureHandleCode = Classes.Template.Attributes.StructureHandle.Code;
-  const MemberCountCode = Classes.Template.Attributes.MemberCount.Code;
-  const DefinitionSizeCode = Classes.Template.Attributes.DefinitionSize.Code;
-  const StructureSizeCode = Classes.Template.Attributes.StructureSize.Code;
+  const StructureHandleCode = TemplateInstanceAttributeCodes.StructureHandle;
+  const MemberCountCode = TemplateInstanceAttributeCodes.MemberCount;
+  const DefinitionSizeCode = TemplateInstanceAttributeCodes.DefinitionSize;
+  const StructureSizeCode = TemplateInstanceAttributeCodes.StructureSize;
 
   for (let i = 0; i < attributeCount; i++) {
-    const attribute = data.readUInt16LE(offset); offset += 2;
-    const status = data.readUInt16LE(offset); offset += 2;
+    let attribute, status;
+    offset = Decode(DataTypes.UINT, data, offset, val => attribute = val);
+    offset = Decode(DataTypes.UINT, data, offset, val => status = val);
+
+    const attributeDataType = TemplateInstanceAttributeDataTypes[attribute];
 
     if (status === 0) {
       switch (attribute) {
         case StructureHandleCode:
-          template.structureHandle = data.readUInt16LE(offset); offset += 2;
+          offset = Decode(attributeDataType, data, offset, val => template.structureHandle = val);
           break;
         case MemberCountCode:
-          template.memberCount = data.readUInt16LE(offset); offset += 2;
+          offset = Decode(attributeDataType, data, offset, val => template.memberCount = val);
           break;
         case DefinitionSizeCode:
-          template.definitionSize = data.readUInt32LE(offset); offset += 4;
+          offset = Decode(attributeDataType, data, offset, val => template.definitionSize = val);
           break;
         case StructureSizeCode:
-          template.structureSize = data.readUInt32LE(offset); offset += 4;
+          offset = Decode(attributeDataType, data, offset, val => template.structureSize = val);
           break;
         default:
           throw new Error(`Unknown attribute: ${attribute}`);
@@ -894,7 +938,7 @@ function parseReadTemplateInstanceAttributes(reply) {
       template.errors.push({
         attribute,
         code: status,
-        description: READ_TAG_ERRORS[status]
+        // description: READ_TAG_ERRORS[status]
       });
     }
   }
@@ -902,72 +946,6 @@ function parseReadTemplateInstanceAttributes(reply) {
   return template;
 }
 
-
-// 1756-PM020, pg. 16
-const Services = {
-  ReadTag: 0x4C,
-  ReadTagFragmented: 0x52,
-  WriteTag: 0x4D,
-  WriteTagFragmented: 0x53,
-  ReadModifyWriteTag: 0x4E,
-
-  MultipleServicePacket: 0x0A // used to combine multiple requests in one message frame
-};
-
-const ServiceNames = InvertKeyValues(Services);
-
-
-const ERRORS = {
-  [Services.ReadTag]: {
-    0x04: 'A syntax error was detected decoding the Request Path',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Access beyond end of the object',
-    }
-  },
-  [Services.ReadTagFragmented]: {
-    0x04: 'A syntax error was detected decoding the Request Path',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Number of Elements or Byte Offset is beyond the end of the requested tag',
-    }
-  },
-  [Services.WriteTag]: {
-    0x04: 'A syntax error was detected decoding the Request Path.',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x10: {
-      0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
-      0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
-    },
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
-      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
-    }
-  },
-  [Services.WriteTagFragmented]: {
-    0x04: 'A syntax error was detected decoding the Request Path.',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x10: {
-      0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
-      0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
-    },
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2104: 'General Error: Offset is beyond end of the requested tag',
-      0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
-      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
-    }
-  }
-}
 
 
 function getError(reply) {
@@ -985,7 +963,7 @@ function getError(reply) {
   const code = reply.status.code;
   const service = getBits(reply.service.code, 0, 7);
 
-  const errorObject = ERRORS[service];
+  const errorObject = SymbolServiceErrors[service];
 
   if (errorObject) {
     if (typeof errorObject[code] === 'object') {
@@ -1001,83 +979,107 @@ function getError(reply) {
 }
 
 
-const Classes = {
-  /*
-    When a tag is created, an instance of the symbol class is created inside the controller.
-    The name of the tag is stored in attribute 1 of the instance.
-    The data type of the tag is stored in attribute 2.
-  */
-  Symbol: {
-    Code: 0x6B,
-    Services: {
-      /*
-        Returns instance IDs for each created instance of the symbol class,
-        along with a list of the attribute data associated with the requested attributes
-      */
-      GetInstanceAttributeList: {
-        Code: 0x55
-      }
-    },
-    Attributes: {
-      Name: {
-        Code: 0x01
-      },
-      Type: {
-        Code: 0x02
-      }
+const ClassCodes = {
+  Symbol: 0x6B,
+  Template: 0x6C
+};
+
+
+
+/** 1756-PM020, pg. 16 */
+const SymbolServiceCodes = {
+  ReadTag: 0x4C,
+  ReadTagFragmented: 0x52,
+  WriteTag: 0x4D,
+  WriteTagFragmented: 0x53,
+  ReadModifyWriteTag: 0x4E,
+  MultipleServicePacket: 0x0A,
+
+  GetInstanceAttributeList: 0x55
+};
+
+const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
+
+const SymbolServiceErrors = {
+  [SymbolServiceCodes.ReadTag]: {
+    0x04: 'A syntax error was detected decoding the Request Path',
+    0x05: 'Request Path destination unknown: Probably instance number is not present',
+    0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
+    0x13: 'Insufficient Request Data: Data too short for expected parameters',
+    0x26: 'The Request Path Size received was shorter or longer than expected',
+    0xFF: {
+      0x2105: 'General Error: Access beyond end of the object',
     }
   },
-  Template: {
-    Code: 0x6C,
-    Services: {
-      Read: 0x4C
-    },
-    // const attributes = [
-    //   0x01, // Attribute 1 - (UINT) Structure Handle, CRC for the members of the structure
-    //   0x02, // Attribute 2 - (UINT) Number of structure members
-    //   0x04, // Attribute 4 - (UDINT) Number of 32-bit words
-    //   0x05  // Attribute 5 - (UDINT) Number of bytes of the structure data
-    // ];
-    Attributes: {
-      StructureHandle: {
-        Code: 0x01,
-        Description: 'Calculated CRC value for members of the structure',
-        // DataType: 'UINT'
-      },
-      MemberCount: {
-        Code: 0x02,
-        Description: 'Number of members defined in the structure',
-        // DataType: 'UINT'
-      },
-      DefinitionSize: {
-        Code: 0x04,
-        Description: 'Size of the template definition structure',
-        // DataType: 'UDINT'
-      },
-      StructureSize: {
-        Code: 0x05,
-        Description: 'Number of bytes transferred on the wire when the structure is read using the Read Tag service',
-        // DataType: 'UDINT'
-      }
+  [SymbolServiceCodes.ReadTagFragmented]: {
+    0x04: 'A syntax error was detected decoding the Request Path',
+    0x05: 'Request Path destination unknown: Probably instance number is not present',
+    0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
+    0x13: 'Insufficient Request Data: Data too short for expected parameters',
+    0x26: 'The Request Path Size received was shorter or longer than expected',
+    0xFF: {
+      0x2105: 'General Error: Number of Elements or Byte Offset is beyond the end of the requested tag',
     }
-    // ClassAttributes: {
-    //   1: {
-    //     // description: 'Tag Type Parameter used in Read/Write Tag service',
-    //     description: 'CRC for the members of the structure',
-    //     type: 'UINT'
-    //   },
-    //   2: {
-    //     description: 'Number of structure members',
-    //     type: 'UINT'
-    //   },
-    //   4: {
-    //     description: 'Number of 32-bit words',
-    //     type: 'UDINT'
-    //   },
-    //   5: {
-    //     description: 'Number of bytes of the structure data',
-    //     type: 'UDINT'
-    //   }
-    // }
+  },
+  [SymbolServiceCodes.WriteTag]: {
+    0x04: 'A syntax error was detected decoding the Request Path.',
+    0x05: 'Request Path destination unknown: Probably instance number is not present',
+    0x10: {
+      0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
+      0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
+    },
+    0x13: 'Insufficient Request Data: Data too short for expected parameters',
+    0x26: 'The Request Path Size received was shorter or longer than expected',
+    0xFF: {
+      0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
+      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
+    }
+  },
+  [SymbolServiceCodes.WriteTagFragmented]: {
+    0x04: 'A syntax error was detected decoding the Request Path.',
+    0x05: 'Request Path destination unknown: Probably instance number is not present',
+    0x10: {
+      0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
+      0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
+    },
+    0x13: 'Insufficient Request Data: Data too short for expected parameters',
+    0x26: 'The Request Path Size received was shorter or longer than expected',
+    0xFF: {
+      0x2104: 'General Error: Offset is beyond end of the requested tag',
+      0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
+      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
+    }
   }
+}
+
+const SymbolInstanceAttributeCodes = {
+  Name: 0x01,
+  Type: 0x02
+};
+
+// const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
+
+const SymbolInstanceAttributeDataTypes = {
+  [SymbolInstanceAttributeCodes.Name]: DataTypes.STRING,
+  [SymbolInstanceAttributeCodes.Type]: DataTypes.UINT
+};
+
+
+const TemplateServiceCodes = {
+  Read: 0x4C
+};
+
+
+const TemplateInstanceAttributeCodes = {
+  StructureHandle: 0x01, /** Calculated CRC value for members of the structure */
+  MemberCount: 0x02, /** Number of members defined in the structure */
+  DefinitionSize: 0x04, /** Size of the template definition structure */
+  StructureSize: 0x05 /** Number of bytes transferred on the wire when the structure is read using the Read Tag service */
+};
+
+const TemplateInstanceAttributeDataTypes = {
+  [TemplateInstanceAttributeCodes.StructureHandle]: DataTypes.UINT,
+  [TemplateInstanceAttributeCodes.MemberCount]: DataTypes.UINT,
+  [TemplateInstanceAttributeCodes.DefinitionSize]: DataTypes.UDINT,
+  [TemplateInstanceAttributeCodes.StructureSize]: DataTypes.UDINT
 };

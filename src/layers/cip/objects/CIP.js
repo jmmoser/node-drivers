@@ -138,8 +138,6 @@ const CommonServiceNames = InvertKeyValues(CommonServices);
 
 // CIP Vol1 Table C-6.1
 const DataTypes = {
-  STRUCT: -1,
-
   BOOL: 0xC1,
   SINT: 0xC2,
   INT: 0xC3,
@@ -169,7 +167,9 @@ const DataTypes = {
   TIME: 0xDB,
   EPATH: 0xDC,
   ENGUNIT: 0xDD,
-  STRINGI: 0xDE
+  STRINGI: 0xDE,
+
+  STRUCT: 0x02A0 /** From 1756-PM020 */
 };
 
 const DataTypeNames = InvertKeyValues(DataTypes);
