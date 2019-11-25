@@ -1,8 +1,8 @@
 'use strict';
 
-const EPath = require('./objects/EPath');
-const CIPLayer = require('./objects/CIPLayer');
-const ConnectionLayer = require('./objects/Connection');
+const EPath = require('../objects/EPath');
+const CIPLayer = require('../objects/CIPLayer');
+const ConnectionLayer = require('../objects/Connection');
 
 const {
   DataTypes,
@@ -10,15 +10,28 @@ const {
   Encode,
   Decode,
   CommonServices
-} = require('./objects/CIP');
+} = require('../objects/CIP');
 
 const {
   getBit,
   getBits,
   CallbackPromise,
-  InvertKeyValues,
   InfoError
-} = require('../../utils');
+} = require('../../../utils');
+
+const {
+  ClassCodes,
+  SymbolServiceCodes,
+  SymbolServiceNames,
+  SymbolServiceErrors,
+  SymbolInstanceAttributeCodes,
+  SymbolInstanceAttributeDataTypes,
+  TemplateServiceCodes,
+  TemplateInstanceAttributeCodes,
+  TemplateInstanceAttributeDataTypes
+} = require('./constants');
+
+const Requests = require('./requests');
 
 
 class Logix5000 extends CIPLayer {
@@ -36,6 +49,12 @@ class Logix5000 extends CIPLayer {
 
 
   readTag(tag, elements, callback) {
+    return CallbackPromise(callback, resolver => {
+      const request = await Request()
+    });
+
+    const request = new Requests.SymbolRequest()
+    return Requests.SymbolRequest.Read()
     if (callback == null && typeof elements === 'function') {
       callback = elements;
     }
@@ -375,7 +394,7 @@ class Logix5000 extends CIPLayer {
       });
     });
   }
-  
+
 
   // async test(service, path, data) {
   //   return CallbackPromise(null, resolver => {
@@ -461,7 +480,7 @@ class Logix5000 extends CIPLayer {
 
     const service = SymbolServiceCodes.GetInstanceAttributeList;
 
-    while(true) {
+    while (true) {
       const path = EPath.Encode(
         ClassCodes.Symbol,
         instanceID
@@ -495,7 +514,7 @@ class Logix5000 extends CIPLayer {
   readTemplate(template, callback) {
     return CallbackPromise(callback, resolver => {
       const service = TemplateServiceCodes.Read;
-      
+
       const path = EPath.Encode(
         ClassCodes.Template,
         template.id
@@ -955,7 +974,7 @@ function getError(reply) {
   let error;
   let extended;
 
-  if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length   >= 2) {
+  if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length >= 2) {
     extended = reply.status.additional.readUInt16LE(0);
   }
 
@@ -976,109 +995,3 @@ function getError(reply) {
 
   return error || 'Unknown Logix5000 error';
 }
-
-
-const ClassCodes = {
-  Symbol: 0x6B,
-  Template: 0x6C
-};
-
-
-
-/** 1756-PM020, pg. 16 */
-const SymbolServiceCodes = {
-  ReadTag: 0x4C,
-  ReadTagFragmented: 0x52,
-  WriteTag: 0x4D,
-  WriteTagFragmented: 0x53,
-  ReadModifyWriteTag: 0x4E,
-  MultipleServicePacket: 0x0A,
-
-  GetInstanceAttributeList: 0x55
-};
-
-const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
-
-const SymbolServiceErrors = {
-  [SymbolServiceCodes.ReadTag]: {
-    0x04: 'A syntax error was detected decoding the Request Path',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Access beyond end of the object',
-    }
-  },
-  [SymbolServiceCodes.ReadTagFragmented]: {
-    0x04: 'A syntax error was detected decoding the Request Path',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Number of Elements or Byte Offset is beyond the end of the requested tag',
-    }
-  },
-  [SymbolServiceCodes.WriteTag]: {
-    0x04: 'A syntax error was detected decoding the Request Path.',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x10: {
-      0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
-      0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
-    },
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
-      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
-    }
-  },
-  [SymbolServiceCodes.WriteTagFragmented]: {
-    0x04: 'A syntax error was detected decoding the Request Path.',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x10: {
-      0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
-      0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
-    },
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2104: 'General Error: Offset is beyond end of the requested tag',
-      0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
-      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
-    }
-  }
-}
-
-const SymbolInstanceAttributeCodes = {
-  Name: 0x01,
-  Type: 0x02
-};
-
-// const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
-
-const SymbolInstanceAttributeDataTypes = {
-  [SymbolInstanceAttributeCodes.Name]: DataTypes.STRING,
-  [SymbolInstanceAttributeCodes.Type]: DataTypes.UINT
-};
-
-
-const TemplateServiceCodes = {
-  Read: 0x4C
-};
-
-
-const TemplateInstanceAttributeCodes = {
-  StructureHandle: 0x01, /** Calculated CRC value for members of the structure */
-  MemberCount: 0x02, /** Number of members defined in the structure */
-  DefinitionSize: 0x04, /** Size of the template definition structure */
-  StructureSize: 0x05 /** Number of bytes transferred on the wire when the structure is read using the Read Tag service */
-};
-
-const TemplateInstanceAttributeDataTypes = {
-  [TemplateInstanceAttributeCodes.StructureHandle]: DataTypes.UINT,
-  [TemplateInstanceAttributeCodes.MemberCount]: DataTypes.UINT,
-  [TemplateInstanceAttributeCodes.DefinitionSize]: DataTypes.UDINT,
-  [TemplateInstanceAttributeCodes.StructureSize]: DataTypes.UDINT
-};

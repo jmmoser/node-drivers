@@ -142,11 +142,11 @@ const kSYMBOLIC_SEGMENT_FORMAT_DESCRIPTIONS = {
 // CIP Vol1 Appendix C-1.4.5
 const DATA_SEGMENT_SUBTYPE = {
   SIMPLE_DATA: 0x00,
-  ANSI_EXTENDED_SYMBOL: 0x11
+  ANSI_EXTENDED_SYMBOL: 0x91
 };
 const DATA_SEGMENT_SUBTYPE_DESCRIPTIONS = {
-  [DATA_SEGMENT_SUBTYPE.SIMPLE_DATA]: 'Simple data',
-  [DATA_SEGMENT_SUBTYPE.ANSI_EXTENDED_SYMBOL]: 'ANSI extended symbol'
+  [DATA_SEGMENT_SUBTYPE.SIMPLE_DATA]: 'Simple Data',
+  [DATA_SEGMENT_SUBTYPE.ANSI_EXTENDED_SYMBOL]: 'ANSI Extended Symbol'
 };
 
 
@@ -678,6 +678,72 @@ function LogicalClassSegment(classID) {
 
 
 class EPath {
+
+  
+
+  /**
+   * CIP Vol 1 Appendix C-1.4.5.2
+   * 
+   * tagname
+   * tagname.member
+   * tagname[element]
+   * tagname[element].member
+   * tagname[idx1,idx2]
+   */
+  static EncodeANSIExtSymbol(symbol) {
+    let offset = 0;
+    const buffer = Buffer.allocUnsafe(512);
+
+    const items = symbol.split('.');
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const items2 = item.split('[');
+
+      const tagname = items2[0];
+      const tagnameLength = tagname.length;
+
+      buffer.writeUInt8(DATA_SEGMENT_SUBTYPE.ANSI_EXTENDED_SYMBOL, offset); offset += 1;
+      buffer.writeUInt8(tagnameLength, offset); offset += 1;
+
+      offset += buffer.write(tagname, offset, 'ascii');
+
+      // offset += tagnameLength % 2 === 1 ? 1 : 0;
+      if (tagnameLength % 2 === 1) {
+        /** THIS MUST STAY IF USING Buffer.allocUnsafe() */
+        buffer.writeUInt8(0, offset); offset += 1;
+      }
+
+      if (items2.length > 1) {
+        const elementsArrayStr = items2[1];
+        const elementsArray = elementsArrayStr.substring(0, elementsArrayStr.length - 1);
+        const elements = elementsArray.split(',');
+
+        for (let j = 0; j < elements.length; j++) {
+          const element = parseInt(elements[j], 10);
+
+          if (!isNaN(element)) {
+            if (element <= 0xFF) {
+              buffer.writeUInt8(0x28, offset); offset += 1;
+              buffer.writeUInt8(element, offset); offset += 1;
+            } else if (element <= 0xFFFF) {
+              buffer.writeUInt16LE(0x29, offset); offset += 2;
+              buffer.writeUInt16LE(element, offset); offset += 2;
+            } else {
+              buffer.writeUInt16LE(0x30, offset); offset += 2;
+              buffer.writeUInt32LE(element, offset); offset += 4;
+            }
+          } else {
+            throw new Error(`Element is not an integer: ${symbol}`);
+          }
+        }
+      }
+    }
+
+    return buffer.slice(0, offset);
+  }
+
+
   static Encode(classID, instanceID, attributeID) {
     const segments = [];
     let code, length, totalLength = 0;
