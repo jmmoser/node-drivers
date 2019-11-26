@@ -59,7 +59,7 @@ class PCCCPacket {
 
     if (packet.status.code === 0xF0) {
       packet.status.extended.code = buffer.readUInt8(offset); offset += 1;
-      packet.status.extended.description = EXTSTSCodeDescriptions[packet.status.extended.code] || '';
+      packet.status.extended.description = EXTSTSCodeDescriptions_CMD_F0[packet.status.extended.code] || '';
     }
 
     packet.data = buffer.slice(offset);
@@ -608,7 +608,8 @@ const STSCodeDescriptions = {
   240: 'Remote: Error code in the EXT STS byte'
 };
 
-const EXTSTSCodeDescriptions = {
+/** DF1 Manual, p. 8-4 */
+const EXTSTSCodeDescriptions_CMD_F0 = {
   // 0: 'Not Used',
   1: 'A field has an illegal value',
   2: 'Less levels specified in address than minimum for any address',

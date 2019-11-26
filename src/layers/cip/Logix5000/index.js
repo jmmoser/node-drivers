@@ -50,7 +50,7 @@ class Logix5000 extends CIPLayer {
 
   readTag(tag, elements, callback) {
     return CallbackPromise(callback, resolver => {
-      const request = await Request()
+      const request = await Requests.SymbolRequest()
     });
 
     const request = new Requests.SymbolRequest()
