@@ -101,6 +101,20 @@ class PCCCLayer extends Layer {
     });
   }
 
+  echo(data, callback) {
+    return Layer.CallbackPromise(callback, resolver => {
+      const transaction = incrementTransaction(this);
+      const message = PCCCPacket.EchoRequest(transaction, data);
+      this.send(message, null, false, this.contextCallback(function (error, reply) {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          resolver.resolve(reply.data);
+        }
+      }, transaction));
+    });
+  }
+
   
   // this is needed for sending CIP requests over PCCC
   sendNextMessage() {
