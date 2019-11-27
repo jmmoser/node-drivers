@@ -84,20 +84,17 @@ class PCCCPacket {
   static WordRangeReadRequest(transaction, address) {
     const info = logicalASCIIAddressInfo(address);
     if (!info) {
-      return null;
+      throw new Error(`Unsupported address: ${address}`);
     }
 
-    const packet = new PCCCPacket(0x0F, 0, transaction);
-
-    const data = Buffer.alloc(200);
     let offset = 0;
+    const data = Buffer.allocUnsafe(9 + address.length);
     offset = data.writeUInt8(0x01, offset); // Function
     offset = data.writeUInt16LE(0, offset); /** Packet offset */
     offset = data.writeUInt16LE(1, offset); // Total Trans
     offset = logicalASCIIAddress(address, data, offset); // PLC system address
     offset = data.writeUInt8(info.size, offset);
-    packet.data = data.slice(0, offset);
-    return packet.toBuffer();
+    return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
   }
 
   static WordRangeReadReply(buffer) {
@@ -108,23 +105,20 @@ class PCCCPacket {
 
 
   static TypedReadRequest(transaction, address, items) {
-    const packet = new PCCCPacket(0x0F, 0, transaction);
-
-    const data = Buffer.alloc(200);
     let offset = 0;
+    const data = Buffer.allocUnsafe(10 + address.length);
     offset = data.writeUInt8(0x68, offset); // function
     offset = data.writeUInt16LE(0, offset); /** Packet offset */
     offset = data.writeUInt16LE(items, offset); // Total Trans
     offset = logicalASCIIAddress(address, data, offset); // PLC system address
     offset = data.writeUInt16LE(items, offset); // Size, number of elements to read from the specified system address
-    packet.data = data.slice(0, offset);
-
-    return packet.toBuffer();
+    return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
   }
 
-  static ParseTypedReadData(data) {
-    // console.log(data);
-    return TypedReadReplyParser(data);
+
+  static ParseTypedReadData(data, offset = 0) {
+    const info = TypedReadParserDataInfo(data, offset);
+    return __TypedReadReplyParser(data, info);
   }
 
 
@@ -151,6 +145,17 @@ class PCCCPacket {
     // console.log(packet);
 
     return packet.toBuffer();
+  }
+
+
+  encodeDataType(data, offset, info) {
+    if (info.dataType > 7) {
+
+      return offset + 2;
+    } else {
+      data.writeUInt8(info.dataType << 4 | info.size, offset);
+      return offset + 1;
+    }
   }
 
 
@@ -378,12 +383,6 @@ const PCCCDataType = {
   "CC CC" is the source link
   "DD" is the source node
 */
-
-
-function TypedReadReplyParser(data, offset = 0) {
-  const info = TypedReadParserDataInfo(data, offset);
-  return __TypedReadReplyParser(data, info);
-}
 
 
 function __TypedReadReplyParser(data, info) {
