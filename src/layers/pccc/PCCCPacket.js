@@ -127,6 +127,7 @@ class PCCCPacket {
 
     const info = logicalASCIIAddressInfo(address);
 
+    /** TODO: FIX: SIZE OF BUFFER DEPENDS OF DATA TYPE/SIZE */
     const dataLength = 5 + (address.length + 3) + 1 + (info.size * valueCount);
 
     let offset = 0;
@@ -135,6 +136,7 @@ class PCCCPacket {
     offset = data.writeUInt16LE(0, offset); /** Packet offset */
     offset = data.writeUInt16LE(valueCount, offset); /** total transmitted */
     offset = logicalASCIIAddress(address, data, offset); /** PLC-5 system address */
+    /** TODO: FIX: SIZE OF BUFFER DEPENDS OF DATA TYPE/SIZE */
     offset = data.writeUInt8(info.dataType << 4 | info.size, offset); /** Type/data */
 
     for (let i = 0; i < valueCount; i++) {
@@ -146,18 +148,6 @@ class PCCCPacket {
 
     return packet.toBuffer();
   }
-
-
-  encodeDataType(data, offset, info) {
-    if (info.dataType > 7) {
-
-      return offset + 2;
-    } else {
-      data.writeUInt8(info.dataType << 4 | info.size, offset);
-      return offset + 1;
-    }
-  }
-
 
   static DiagnosticStatusRequest(transaction) {
     return toBuffer(0x06, 0, transaction, Buffer.from([0x03]));
@@ -221,11 +211,21 @@ function logicalASCIIAddress(address, buffer, offset = 0) {
   return offset;
 }
 
+/** TODO */
+function EncodeDataTypeSize(data, offset, info) {
+  if (info.dataType > 7) {
 
-
-function TypedWriteEncodeValue(buffer, offset, info, value) {
-
+    return offset + 2;
+  } else {
+    data.writeUInt8(info.dataType << 4 | info.size, offset);
+    return offset + 1;
+  }
 }
+
+
+// function TypedWriteEncodeValue(buffer, offset, info, value) {
+
+// }
 
 function EncodeValue(type, value, buffer, offset) {
   switch (type) {
