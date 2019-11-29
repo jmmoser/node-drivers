@@ -68,10 +68,10 @@ class EIPLayer extends Layer {
     super('eip', lowerLayer);
 
     this._sessionHandle = 0;
-    this._connectionState = 0;
     this._context = Buffer.alloc(8);
     this._userRequests = [];
 
+    setConnectionState(this, 0);
     setupCallbacks(this);
 
     this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
@@ -290,14 +290,14 @@ class EIPLayer extends Layer {
     }
     this._connectCallback = callback;
     if (this._connectionState > 0) return;
-    this._connectionState = 1;
+    setConnectionState(this, 1);
     this.send(EIPPacket.RegisterSessionRequest(this._context), null, true);
   }
 
   disconnect(callback) {
     return Layer.CallbackPromise(callback, resolver => {
       if (this._connectionState !== 0) {
-        this._connectionState = 0;
+        setConnectionState(this, 0);
         this.send(EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context), null, true);
       }
       resolver.resolve();
@@ -382,15 +382,31 @@ class EIPLayer extends Layer {
         cb(error);
       });
     });
-    this._userCallbacks.clear();
-
-    this._unconnectedContexts.clear();
-    this._connectedContexts.clear();
+    cleanup(this);
   }
 }
 
 module.exports = EIPLayer;
 
+// let stateCount = 0;
+function setConnectionState(layer, state) {
+  // if (state === 0) {
+  //   stateCount++;
+  //   if (stateCount === 2) {
+  //     console.log(new Error('a'));
+  //   }
+  // }
+  // console.log(`Setting EIP connection state: ${state}`);
+  layer._connectionState = state;
+}
+
+function cleanup(layer) {
+  layer._sessionHandle = 0;
+  layer._userCallbacks.clear();
+  layer._unconnectedContexts.clear();
+  layer._connectedContexts.clear();
+  setConnectionState(layer, 0);
+}
 
 function setupCallbacks(self) {
   self._callbacks = new Map();
@@ -402,19 +418,19 @@ function setupCallbacks(self) {
     // console.log('RegisterSession');
     // console.log(packet);
     if (packet.status.code === 0) {
-      self._connectionState = 2;
+      setConnectionState(self, 2);
       self._sessionHandle = packet.sessionHandle;
       if (self._connectCallback) self._connectCallback();
       self.sendNextMessage();
       sendUserRequests(self);
     } else {
-      self._connectionState = 0;
+      setConnectionState(self, 0);
     }
   });
 
   self._callbacks.set(EIPCommand.UnregisterSession, packet => {
-    // console.log('UnregisterSession');
-    self._connectionState = 0;
+    console.log('UnregisterSession');
+    setConnectionState(self, 0);
     self._sessionHandle = 0;
   });
 

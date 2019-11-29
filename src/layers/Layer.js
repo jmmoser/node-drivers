@@ -83,7 +83,7 @@ class Layer extends EventEmitter {
       if (this.upperLayer != null) {
         await this.upperLayer.close();
       }
-      this.destroy('Closing');
+      // this.destroy('Closing');
 
       await this.disconnect();
 

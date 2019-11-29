@@ -3,6 +3,7 @@
 // EIP-CIP-V1 3.5, page 3-53
 
 const CIP = require('./CIP');
+const EPath = require('./EPath');
 const MessageRouter = require('./MessageRouter');
 
 let ConnectionSerialNumberCounter = 0x0001;
@@ -15,57 +16,40 @@ function incrementNetworkConnectionCounters() {
   TtoONetworkConnectionIDCounter++;
 }
 
+
 class ConnectionManager {
-  // constructor(options) {
-  //
-  //   if (!opts) opts = {};
-  //
-  //   super(opts);
-  //
-  //   this.ProcessorSlot = opts.ProcessorSlot || 0;
-  //   this.SerialNumber = opts.SerialNumber || 0x1234;
-  //   this.VendorID = opts.VendorID || 0x1337;
-  //   this.OriginatorSerialNumber = opts.OriginatorSerialNumber || 42;
-  //
-  //   // this.ConnectionPath = Buffer.from([0x20, 0x02, 0x24, 0x01]);
-  // }
-
-  CommonServices() {
-    // Connection Manager Object Instance Common Services
-    return [0x01, 0x0E, 0x10];
-  }
-
   UnconnectedSend() {
     // 0x52
   }
 
-  // EIP-CIP-V1 3-5.5.3, pg. 3-65
+  /** EIP-CIP-V1 3-5.5.3, pg. 3-65 */
   static ForwardClose(connection) {
     let offset = 0;
     const data = Buffer.alloc(64);
 
-    data.writeUInt8(0x01, offset); offset += 1; // Connection timing Priority (CIP vol 1 Table 3-5.11)
-    data.writeUInt8(0x0E, offset); offset += 1; // Timeout, ticks
+    offset = data.writeUInt8(0x01, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
+    offset = data.writeUInt8(0x0E, offset); // Timeout, ticks
 
-    data.writeUInt16LE(connection.ConnectionSerialNumber, offset); offset += 2;
-    data.writeUInt16LE(connection.VendorID, offset); offset += 2;
-    data.writeUInt32LE(connection.OriginatorSerialNumber, offset); offset += 4;
+    offset = data.writeUInt16LE(connection.ConnectionSerialNumber, offset);
+    offset = data.writeUInt16LE(connection.VendorID, offset);
+    offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
 
-    data.writeUInt8(0x03, offset); offset += 1; // connection path size, 16-bit words
-    offset += 1; // reserved
+    offset = data.writeUInt8(0x03, offset); // connection path size, 16-bit words
+    offset = data.writeUInt8(0, offset); /** Reserved */
     // Padded EPATH
-    data.writeUInt8(0x01, offset); offset += 1; // port segment
-    data.writeUInt8(connection.ProcessorSlot, offset); offset += 1;
-    data.writeUInt8(0x20, offset); offset += 1; // logical segment, class ID, 8-bit address
-    data.writeUInt8(0x02, offset); offset += 1; // class ID (MessageRouter)
-    data.writeUInt8(0x24, offset); offset += 1; // logical segment, instance ID, 8-bit address
-    data.writeUInt8(0x01, offset); offset += 1; // instance ID
+    offset = data.writeUInt8(0x01, offset); // port segment
+    offset = data.writeUInt8(connection.ProcessorSlot, offset);
+    offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit address
+    offset = data.writeUInt8(0x02, offset); // class ID (MessageRouter)
+    offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit address
+    offset = data.writeUInt8(0x01, offset); // instance ID
 
-    return ConnectionManager._Request(
+    return buildRequest(
       Services.ForwardClose,
       data.slice(0, offset)
     );
   }
+  
 
   static ForwardCloseReply(buffer) {
     let offset = 0;
@@ -81,6 +65,7 @@ class ConnectionManager {
     return response;
   }
 
+
   static ForwardOpen(connection) {
     incrementNetworkConnectionCounters();
 
@@ -89,37 +74,40 @@ class ConnectionManager {
     let offset = 0;
     const data = Buffer.alloc(64);
 
-    data.writeUInt8(0x0A, offset); offset += 1; // Connection timing Priority (CIP vol 1 Table 3-5.11)
-    data.writeUInt8(0x0E, offset); offset += 1; // Time-out, ticks
-    data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); offset += 4; // Originator to Target Network Connection ID
-    data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); offset += 4; // Target to Originator Network Connection ID
-    data.writeUInt16LE(ConnectionSerialNumberCounter, offset); offset += 2; // Connection Serial Number
-    data.writeUInt16LE(connection.VendorID, offset); offset += 2;
-    data.writeUInt32LE(connection.OriginatorSerialNumber, offset); offset += 4;
-    data.writeUInt8(connection.ConnectionTimeoutMultiplier, offset); offset += 1; // connection timeout multiplier
+    offset = data.writeUInt8(0x0A, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
+    offset = data.writeUInt8(0x0E, offset); // Time-out, ticks
+    offset = data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); // Originator to Target Network Connection ID
+    offset = data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); // Target to Originator Network Connection ID
+    offset = data.writeUInt16LE(ConnectionSerialNumberCounter, offset);
+    offset = data.writeUInt16LE(connection.VendorID, offset);
+    offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
+    offset = data.writeUInt8(connection.ConnectionTimeoutMultiplier, offset);
     
-    offset += 3; // reserved
+    offset = data.writeUInt8(0, offset); /** Reserved */
+    offset = data.writeUInt8(0, offset); /** Reserved */
+    offset = data.writeUInt8(0, offset); /** Reserved */
 
-    data.writeUInt32LE(connection.OtoTRPI, offset); offset += 4; // Originator to Target requested packet interval (rate), in microseconds
-    data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); offset += 2; // Originator to Target netword connection parameters
-    data.writeUInt32LE(connection.TtoORPI, offset); offset += 4; // Target to Originator requested packet interval (rate), in microseconds
-    data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset); offset += 2; // Target to Originator network connection parameters
+    offset = data.writeUInt32LE(connection.OtoTRPI, offset); // Originator to Target requested packet interval (rate), in microseconds
+    offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
+    offset = data.writeUInt32LE(connection.TtoORPI, offset); // Target to Originator requested packet interval (rate), in microseconds
+    offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
 
-    data.writeUInt8(connection.TransportClassTrigger, offset); offset += 1; // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+    offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
 
-    data.writeUInt8(0x03, offset); offset += 1; // Connection path size
-    data.writeUInt8(0x01, offset); offset += 1; // Port identifier
-    data.writeUInt8(connection.ProcessorSlot, offset); offset += 1;
-    data.writeUInt8(0x20, offset); offset += 1; // logical segment, class ID, 8-bit logical address
-    data.writeUInt8(0x02, offset); offset += 1; // class ID (MessageRouter)
-    data.writeUInt8(0x24, offset); offset += 1; // logical segment, instance ID, 8-bit logical address
-    data.writeUInt8(0x01, offset); offset += 1; // instance ID
+    offset = data.writeUInt8(0x03, offset); // Connection path size
+    offset = data.writeUInt8(0x01, offset); // Port identifier
+    offset = data.writeUInt8(connection.ProcessorSlot, offset);
+    offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit logical address
+    offset = data.writeUInt8(0x02, offset); // class ID (MessageRouter)
+    offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit logical address
+    offset = data.writeUInt8(0x01, offset); // instance ID
 
-    return ConnectionManager._Request(
+    return buildRequest(
       Services.ForwardOpen,
       data.slice(0, offset)
     );
   }
+
 
   static ForwardOpenReply(buffer) {
     let offset = 0;
@@ -140,19 +128,19 @@ class ConnectionManager {
     return res;
   }
 
-  // CIP Vol1 3-5.5.5
+  /** CIP Vol1 3-5.5.5 */
   static GetConnectionDataRequest(connectionNumber) {
     const data = Buffer.alloc(2);
 
     data.writeUInt16LE(connectionNumber, 0);
 
-    return ConnectionManager._Request(
+    return buildRequest(
       Services.GetConnectionData,
       data
     );
   }
 
-  // CIP Vol1 3-5.5.5
+  /** CIP Vol1 3-5.5.5 */
   static GetConnectionDataResponse(buffer) {
     let offset = 0;
     const res = {};
@@ -180,63 +168,58 @@ class ConnectionManager {
     return res;
   }
 
-  // CIP Vol1 3-5.5.6
+  /** CIP Vol1 3-5.5.6 */
   static SearchConnectionDataRequest(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
     let offset = 0;
     const data = Buffer.alloc(8);
 
-    data.writeUInt16LE(connectionSerialNumber, offset); offset += 2;
-    data.writeUInt16LE(originatorVendorID, offset); offset += 2;
-    data.writeUInt32LE(originatorSerialNumber, offset); offset += 4;
+    offset = data.writeUInt16LE(connectionSerialNumber, offset);
+    offset = data.writeUInt16LE(originatorVendorID, offset);
+    offset = data.writeUInt32LE(originatorSerialNumber, offset);
 
-    return ConnectionManager._Request(
+    return buildRequest(
       Services.SearchConnectionData,
       data
     );
   }
 
-  // CIP Vol1 3-5.5.6
+  /** CIP Vol1 3-5.5.6 */
   static SearchConnectionDataResponse(buffer) {
     return GetConnectionDataResponse(buffer);
   }
+
 
   static GetConnectionOwner() {
     let offset = 0;
     const data = Buffer.alloc(64);
 
-    return ConnectionManager._Request(
+    return buildRequest(
       Services.GetConnectionOwner,
       data.slice(0, offset)
     );
   }
-
-  static _Request(code, data) {
-    return MessageRouter.Request(
-      code,
-      ConnectionManager.Path,
-      data
-    );
-  }
 }
 
-// ConnectionManager.Code = 0x06;
-ConnectionManager.Code = CIP.Classes.ConnectionManager;
-
-ConnectionManager.Path = Buffer.from([
-  0x20, // logical segment, class ID, 8-bit logical address
-  ConnectionManager.Code, // Class ID
-  0x24, // logical segment, instance ID, 8-bit logical address
-  0x01 // instance ID
-]);
 
 module.exports = ConnectionManager;
 
-ConnectionManager.CommonServices = [
-  0x01, // Get_Attribute_All
-  0x0E // Get_Attribute_Single
-];
 
-// EIP-CIP-V1 3-5.5, page 3.56
+const ConnectionManager_EPath = EPath.Encode(
+  CIP.Classes.ConnectionManager,
+  0x01
+);
+
+
+function buildRequest(code, data) {
+  return MessageRouter.Request(
+    code,
+    ConnectionManager_EPath,
+    data
+  );
+}
+
+
+/** EIP-CIP-V1 3-5.5, page 3.56 */
 const Services = {
   ForwardClose: 0x4E, // Closes a connection
   UnconnectedSend: 0x52, // Unconnected send service.  Only originating devices and devices that route between links need to implement.
@@ -249,7 +232,7 @@ const Services = {
 
 ConnectionManager.Services = Services;
 
-// CIP Vol 1 Table 3-5.29
+/** CIP Vol 1 Table 3-5.29 */
 ConnectionManager.StatusDescriptions = {
   0x01: {
     0x0100: 'Connection in use or duplicate forward open', // see 3-5.5.2
@@ -323,4 +306,4 @@ ConnectionManager.StatusDescriptions = {
   0x09: 'Error in data segment',
   0x0C: 'Object state error',
   0x10: 'Device state error'
-}
+};

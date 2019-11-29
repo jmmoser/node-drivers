@@ -11,15 +11,16 @@ class MessageRouter {
   static Request(service, path, data) {
     let offset = 0;
 
-    const dataLength = data != null ? data.length : 0;
+    const dataIsBuffer = Buffer.isBuffer(data)
+    const dataLength = dataIsBuffer ? data.length : 0;
 
     const buffer = Buffer.alloc(2 + path.length + dataLength);
-    buffer.writeUInt8(service, offset); offset += 1;
-    buffer.writeUInt8(path.length / 2, offset); offset += 1;
-    path.copy(buffer, offset); offset += path.length;
+    offset = buffer.writeUInt8(service, offset);
+    offset = buffer.writeUInt8(path.length / 2, offset);
+    offset += path.copy(buffer, offset);
     
-    if (Buffer.isBuffer(data)) {
-      data.copy(buffer, offset); offset + dataLength;
+    if (dataIsBuffer) {
+      offset += data.copy(buffer, offset);
     }
 
     return buffer;
@@ -58,64 +59,6 @@ class MessageRouter {
     res.data = buffer.slice(offset);
     return res;
   }
-
-  // // tagname
-  // // tagname.member
-  // // tagname[element]
-  // // tagname[element].member
-  // // tagname[idx1,idx2]
-
-  // // CIP Vol 1 Appendix C-1.4.5.2
-  // static ANSIExtSymbolSegment(address) {
-  //   let offset = 0;
-  //   const buffer = Buffer.alloc(256);
-
-  //   const items = address.split('.');
-
-  //   for (let i = 0; i < items.length; i++) {
-  //     const item = items[i];
-  //     const items2 = item.split('[');
-
-  //     let tagname = items2[0];
-  //     let tagnameLength = tagname.length;
-
-  //     buffer.writeUInt8(0x91, offset); offset += 1;
-  //     buffer.writeUInt8(tagnameLength, offset); offset += 1;
-
-  //     for (let j = 0; j < tagnameLength; j++) {
-  //       buffer.writeUInt8(tagname.charCodeAt(j), offset); offset += 1;
-  //     }
-
-  //     offset += tagnameLength % 2 === 1 ? 1 : 0;
-
-  //     if (items2.length > 1) {
-  //       let elements = items2[1];
-  //       elements = elements.substring(0, elements.length - 1);
-  //       elements = elements.split(',');
-
-  //       for (let j = 0; j < elements.length; j++) {
-  //         const element = parseInt(elements[j], 16);
-
-  //         if (!isNaN(element)) {
-  //           if (element <= 0xFF) {
-  //             buffer.writeUInt8(0x28, offset); offset += 1;
-  //             buffer.writeUInt8(element, offset); offset += 1;
-  //           } else if (element <= 0xFFFF) {
-  //             buffer.writeUInt8(0x29, offset); offset += 2;
-  //             buffer.writeUInt16LE(element, offset); offset += 2;
-  //           } else {
-  //             buffer.writeUInt8(0x30, offset); offset += 2;
-  //             buffer.writeUInt32LE(element, offset); offset += 4;
-  //           }
-  //         } else {
-  //           throw new Error('Element is not an integer: ' + address);
-  //         }
-  //       }
-  //     }
-  //   }
-
-  //   return buffer.slice(0, offset);
-  // }
 
 
   static Segments(buffer) {

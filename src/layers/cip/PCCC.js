@@ -1,6 +1,7 @@
 'use strict';
 
 const EPath = require('./objects/EPath');
+const CIP = require('./objects/CIP');
 const CIPLayer = require('./objects/CIPLayer');
 const MessageRouter = require('./objects/MessageRouter');
 
@@ -67,8 +68,8 @@ class PCCC extends CIPLayer {
 
 
 const PCCC_EPATH = EPath.Encode(
-  0x67, // Class ID = PCCC object
-  0x01  // Instance ID = 1
+  CIP.Classes.PCCC,
+  0x01
 );
 
 /** Use driver specific error handling if exists */

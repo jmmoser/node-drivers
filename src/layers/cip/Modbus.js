@@ -67,7 +67,7 @@ class Modbus extends CIPLayer {
     return CallbackPromise(callback, resolver => {
       const buffer = Buffer.alloc(4 + values.length);
       buffer.writeUInt16LE(address, 0);
-      buffer.writeUInt16LE(count, 2);
+      buffer.writeUInt16LE(values.length, 2);
       for (let i = 0; i < values.length; i++) {
         buffer.writeUInt8(values[i], 4 + i);
       }

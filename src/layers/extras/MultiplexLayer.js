@@ -45,42 +45,6 @@ class MultiplexLayer extends Layer {
     });
   }
 
-
-  // disconnect(callback) {
-  //   if (this._disconnecting === 1) return;
-
-  //   const self = this;
-
-  //   self._disconnecting = 1;
-  //   self._disconnectCount = 0;
-
-  //   self._disconnectTimer = setTimeout(function() {
-  //     self._disconnecting = 0;
-  //     console.log('disconnect timeout');
-  //     if (callback != null) callback();
-  //   }, 10000);
-
-  //   const objectCount = self._layers.size;
-
-  //   const layerDisconnectCallback = function() {
-  //     if (self._disconnecting === 0) return;
-
-  //     self._disconnectCount++;
-  //     if (self._disconnectCount >= objectCount) {
-  //       clearTimeout(self._disconnectTimer);
-  //       self._disconnecting = 0;
-
-  //       if (callback != null) {
-  //         callback();
-  //       }
-  //     }
-  //   };
-
-  //   self._layers.forEach(function(layer) {
-  //     layer.disconnect(layerDisconnectCallback);
-  //   });
-  // }
-
   sendNextMessage() {
     const request = this.getNextRequest();
     if (request != null) {

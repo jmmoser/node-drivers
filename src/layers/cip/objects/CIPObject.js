@@ -144,15 +144,16 @@ class CIPObject {
   request(service, path, data) {
     let offset = 0;
 
-    const dataLength = data != null ? data.length : 0;
+    const dataIsBuffer = Buffer.isBuffer(data);
+    const dataLength = dataIsBuffer ? data.length : 0;
 
     const buffer = Buffer.alloc(2 + path.length + dataLength);
-    buffer.writeUInt8(service, offset); offset += 1;
-    buffer.writeUInt8(path.length / 2, offset); offset += 1;
-    path.copy(buffer, offset); offset += path.length;
+    offset = buffer.writeUInt8(service, offset);
+    offset = buffer.writeUInt8(path.length / 2, offset);
+    offset += path.copy(buffer, offset);
 
-    if (Buffer.isBuffer(data)) {
-      data.copy(buffer, offset); offset + dataLength;
+    if (dataIsBuffer) {
+      offset += data.copy(buffer, offset);
     }
 
     return buffer;

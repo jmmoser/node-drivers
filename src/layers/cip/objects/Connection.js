@@ -112,11 +112,19 @@ class Connection extends Layer {
   }
 
   handleDestroy(error) {
-    this._sequenceToContext.clear();
+    cleanup(this);
+    // this._connectionState === 0;
+    // this._sequenceToContext.clear();
   }
 }
 
 module.exports = Connection;
+
+
+function cleanup(layer) {
+  layer._connectionState === 0;
+  layer._sequenceToContext.clear();
+}
 
 
 function mergeOptionsWithDefaults(self, options) {
