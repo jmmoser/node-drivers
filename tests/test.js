@@ -32,7 +32,8 @@ const EPath = require('./../src/layers/cip/objects/EPath');
 
 (() => {
   const PCCCPacket = require('../src/layers/pccc/PCCCPacket');
-  console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
+  // console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
+  console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', 4));
 })();
 
 

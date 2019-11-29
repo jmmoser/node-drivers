@@ -122,13 +122,16 @@ class PCCCPacket {
   }
 
 
-  static TypedWriteRequest(transaction, address, values) {
-    const valueCount = values.length;
-
+  static TypedWriteRequest(transaction, address, value) {
     const info = logicalASCIIAddressInfo(address);
 
-    /** TODO: FIX: SIZE OF BUFFER DEPENDS OF DATA TYPE/SIZE */
-    const dataLength = 5 + (address.length + 3) + 1 + (info.size * valueCount);
+    const valueIsArray = Array.isArray(value);
+    const valueCount = valueIsArray ? value.length : 1;
+
+    const dataTypeItemLength = dataTypeEncodingLength(info.dataType, info.size);
+    const dataTypeLength = dataTypeItemLength + (valueIsArray ? dataTypeEncodingLength(PCCCDataType.Array, dataTypeItemLength) : 0);
+    const dataValueLength = valueCount * info.size;
+    const dataLength = 5 + (address.length + 3) + dataTypeLength + dataValueLength;
 
     let offset = 0;
     const data = Buffer.allocUnsafe(dataLength);
@@ -136,26 +139,31 @@ class PCCCPacket {
     offset = data.writeUInt16LE(0, offset); /** Packet offset */
     offset = data.writeUInt16LE(valueCount, offset); /** total transmitted */
     offset = logicalASCIIAddress(address, data, offset); /** PLC-5 system address */
-    /** TODO: FIX: SIZE OF BUFFER DEPENDS OF DATA TYPE/SIZE */
-    offset = data.writeUInt8(info.dataType << 4 | info.size, offset); /** Type/data */
+    if (valueIsArray) {
+      offset = encodeDataType(data, offset, PCCCDataType.Array, dataTypeItemLength);
+    }
+    offset = encodeDataType(data, offset, info.dataType, info.size);
 
-    for (let i = 0; i < valueCount; i++) {
-      offset = EncodeValue(info.datatype, values[i], data, offset);
+    if (valueIsArray) {
+      for (let i = 0; i < valueCount; i++) {
+        offset = typedWriteEncodeValue(data, offset, info.datatype, value[i]);
+      }
+    } else {
+      offset = typedWriteEncodeValue(data, offset, info.datatype, value);
     }
 
-    const packet = new PCCCPacket(0x0F, 0, transaction, data);
-    // console.log(packet);
-
-    return packet.toBuffer();
+    return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
   }
+
 
   static DiagnosticStatusRequest(transaction) {
     return toBuffer(0x06, 0, transaction, Buffer.from([0x03]));
   }
 
+
   static EchoRequest(transaction, data) {
     if (!Buffer.isBuffer(data)) {
-      data = Buffer.alloc(0);
+      data = Buffer.allocUnsafe(0);
     }
     const buffer = Buffer.allocUnsafe(data.length + 1);
     buffer.writeUInt8(0, 0);
@@ -165,15 +173,14 @@ class PCCCPacket {
 
 
   static UnprotectedRead(transaction, address, size) {
-    const data = Buffer.alloc(3);
-    data.writeUInt16LE(address, 0);
-    data.writeUInt8(size, 2);
-    return toBuffer(0x01, 0, transaction, data);
+    const buffer = Buffer.allocUnsafe(3);
+    buffer.writeUInt16LE(address, 0);
+    buffer.writeUInt8(size, 2);
+    return toBuffer(0x01, 0, transaction, buffer);
   }
 
   static UnprotectedWrite(transaction, address, writeData) {
-    const writeDataLength = writeData.length;
-    const data = Buffer.alloc(2 + writeDataLength);
+    const data = Buffer.allocUnsafe(2 + writeData.length);
     data.writeUInt16LE(address, 0);
     writeData.copy(data, 2);
     return toBuffer(0x08, 0, transaction, data);
@@ -192,7 +199,7 @@ module.exports = PCCCPacket;
 
 
 function toBuffer(command, status, transaction, data = []) {
-  const buffer = Buffer.alloc(4 + data.length);
+  const buffer = Buffer.allocUnsafe(4 + data.length);
   buffer.writeUInt8(command, 0);
   buffer.writeUInt8(status, 1);
   buffer.writeUInt16LE(transaction, 2);
@@ -211,42 +218,95 @@ function logicalASCIIAddress(address, buffer, offset = 0) {
   return offset;
 }
 
-/** TODO */
-function EncodeDataTypeSize(data, offset, info) {
-  if (info.dataType > 7) {
 
-    return offset + 2;
+function numberOfBytesToSerializeInteger(i) {
+  if (i < 0x10000) {
+    if (i < 0x100) return 1;
+    else return 2;
   } else {
-    data.writeUInt8(info.dataType << 4 | info.size, offset);
-    return offset + 1;
+    if (i < 0x100000000/*L*/) return 4;
+    else return 8;
   }
 }
 
 
-// function TypedWriteEncodeValue(buffer, offset, info, value) {
+function dataTypeAttributeEncodingLength(value) {
+  if (value < 7) {
+    return 1;
+  } else {
+    return 1 + numberOfBytesToSerializeInteger(value);
+  }
+}
 
-// }
 
-function EncodeValue(type, value, buffer, offset) {
+function encodeInteger(data, offset, value, size) {
+  switch (size) {
+    case 1:
+      return data.writeUInt8(value, offset);
+    case 2:
+      return data.writeUInt16LE(value, offset);
+    case 4:
+      return data.writeUInt32LE(value, offset);
+    // case 8:
+    //   return null;
+    default:
+      throw new Error(`Invalid size: ${size}`);
+  }
+}
+
+
+function dataTypeEncodingLength(id, size) {
+  const idLength = dataTypeAttributeEncodingLength(id);
+  const sizeLength = dataTypeAttributeEncodingLength(size);
+  if (idLength === 1 && sizeLength === 1) {
+    return 1;
+  } else if (idLength > 1 && sizeLength === 1) {
+    return 1 + idLength;
+  } else if (idLength === 1 && sizeLength > 1) {
+    return 1 + sizeLength;
+  } else if (idLength > 1 && sizeLength > 1) {
+    return 1 + idLength + sizeLength;
+  }
+  throw new Error(`Unable to encode data type with id ${id} and size ${size}`);
+}
+
+
+function encodeDataType(data, offset, id, size) {
+  const idLength = dataTypeAttributeEncodingLength(id);
+  const sizeLength = dataTypeAttributeEncodingLength(size);
+  if (idLength === 1 && sizeLength === 1) {
+    return data.writeUInt8(id << 4 | size, offset);
+  } else if (idLength > 1 && sizeLength === 1) {
+    offset = data.writeUInt8((0b1000 | idLength) << 4 | size, offset);
+    return encodeInteger(data, offset, id, idLength);
+  } else if (idLength === 1 && sizeLength > 1) {
+    offset = data.writeUInt8((id << 4) | (0b1000 | sizeLength), offset);
+    return encodeInteger(data, offset, size, sizeLength);
+  } else if (idLength > 1 && sizeLength > 1) {
+    offset = data.writeUInt8((0b1000 | idLength) << 4 | (0b1000 | sizeLength));
+    offset = encodeInteger(data, offset, id, idLength);
+    return encodeInteger(data, offset, size, sizeLength);
+  }
+  throw new Error(`Unable to encode data type with id ${id} and size ${size}`);
+}
+
+
+function typedWriteEncodeValue(buffer, offset, type, value) {
   switch (type) {
+    case PCCCDataType.Binary:
+    case PCCCDataType.Byte:
+      return buffer.writeUInt8(value, offset);
     case 'INT':
     case PCCCDataType.Integer:
-      buffer.writeInt16LE(value, offset);
-      offset += 2;
-      break;
+      return buffer.writeInt16LE(value, offset);
     case 'DINT':
-      buffer.writeInt32LE(value, offset);
-      offset += 4;
-      break;
+      return buffer.writeInt32LE(value, offset);
     case 'REAL':
     case PCCCDataType.Float:
-      buffer.writeFloatLE(value, offset);
-      offset += 4;
-      break;
+      return buffer.writeFloatLE(value, offset);
     default:
-      break;
+      throw new Error(`Unable to encode value of type: ${type}`);
   }
-  return offset;
 }
 
 
