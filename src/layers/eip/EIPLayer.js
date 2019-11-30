@@ -297,14 +297,16 @@ class EIPLayer extends Layer {
   disconnect(callback) {
     return Layer.CallbackPromise(callback, resolver => {
       if (this._connectionState !== 0) {
-        setConnectionState(this, 0);
         this.send(EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context), null, true);
+        setConnectionState(this, 0);
       }
       resolver.resolve();
     });
   }
 
+  /** Update this to only connect if needed, can send unconnected messages if not connected */
   sendNextMessage() {
+    // console.log(`EIP layer queue size: ${this.requestQueueSize()}`);
     if (this.hasRequest()) {
       if (this._connectionState === 0) {
         this.connect();
@@ -377,6 +379,8 @@ class EIPLayer extends Layer {
   }
 
   handleDestroy(error) {
+    // console.log(new Error());
+    // console.log(`EIP layer handleDestroy queue size: ${this.requestQueueSize()}`);
     this._userCallbacks.forEach(callbacks => {
       callbacks.forEach(cb => {
         cb(error);
@@ -428,10 +432,10 @@ function setupCallbacks(self) {
     }
   });
 
+  /** This should never be called, UnregisterSession has no response */
   self._callbacks.set(EIPCommand.UnregisterSession, packet => {
-    console.log('UnregisterSession');
-    setConnectionState(self, 0);
-    self._sessionHandle = 0;
+    // console.log('UnregisterSession');
+    cleanup(self);
   });
 
   self._callbacks.set(EIPCommand.SendRRData, packet => {
@@ -461,9 +465,6 @@ function setupCallbacks(self) {
         connectionID: packet.items[0].address
       };
       const context = self._connectedContexts.get(info.connectionID);
-      // console.log('');
-      // console.log(`EIPLayer using context: ${info.connectionID} -> ${context}`);
-      // console.log('')
       self.forward(packet.items[1].data, info, context);
     } else {
       console.log('EIPLayer Error: Packet Status:');
@@ -485,7 +486,7 @@ function queueUserRequest(self, message, info, callback) {
   const command = EIPPacket.CommandFromBuffer(message);
 
   if (callback) {
-    /* no callback for NOP */
+    /* No callback for NOP */
     if (!self._userCallbacks.has(command)) {
       self._userCallbacks.set(command, []);
     }

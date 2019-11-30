@@ -116,7 +116,7 @@ class PCCCLayer extends Layer {
   }
 
   
-  // this is needed for sending CIP requests over PCCC
+  /** For sending CIP requests over PCCC */
   sendNextMessage() {
     const request = this.getNextRequest();
     if (request != null) {
@@ -126,28 +126,28 @@ class PCCCLayer extends Layer {
 
       // Fragmentation protocol is currently not supported
 
-      let message = null;
+      let buffer = null;
       const transaction = incrementTransaction(this);
 
-      const { info } = request;
+      const { info, message } = request;
 
       if (info != null && info.connectionID != null && info.transportHeader != null) {
-        const data = Buffer.alloc(6 + request.message.length);
+        const data = Buffer.allocUnsafe(6 + message.length);
         data.writeUInt8(0, 0); // FNC
         data.writeUInt8(0, 1); // Extra
         data.writeUInt16LE(info.connectionID, 2);
         data.writeUInt16LE(info.transportHeader, 4);
-        request.message.copy(data, 6);
-        message = PCCCPacket.toBuffer(Commands.Connected, 0, transaction, data);
+        message.copy(data, 6);
+        buffer = PCCCPacket.toBuffer(Commands.Connected, 0, transaction, data);
       } else {
-        const data = Buffer.alloc(2 + request.message.length);
+        const data = Buffer.allocUnsafe(2 + message.length);
         data.writeUInt8(0, 0); // FNC
         data.writeUInt8(0, 1); // Extra
-        request.message.copy(data, 2);
-        message = PCCCPacket.toBuffer(Commands.Unconnected, 0, transaction, data);
+        message.copy(data, 2);
+        buffer = PCCCPacket.toBuffer(Commands.Unconnected, 0, transaction, data);
       }
 
-      this.send(message, null, false, this.layerContext(request.layer, transaction));
+      this.send(buffer, null, false, this.layerContext(request.layer, transaction));
 
       setImmediate(() => this.sendNextMessage()); 
     }

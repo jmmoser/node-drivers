@@ -88,6 +88,7 @@ class TCPLayer extends Layer {
         setConnectionState(this, TCPStateCodes.Disconnected);
         resolver.resolve();
       } else if (this._connectionState === TCPStateCodes.Connected) {
+        // console.log(`TCP layer queue size at disconnect: ${this.requestQueueSize()}`);
         setConnectionState(this, TCPStateCodes.Disconnecting);
         this.socket.end(() => {
           setConnectionState(this, TCPStateCodes.Disconnected);
@@ -129,7 +130,7 @@ class TCPLayer extends Layer {
         // console.log('Sending', request.message);
         this.socket.write(request.message, err => {
           if (err) {
-            console.log('TCPLayer WRITE ERROR:')
+            console.log('TCP layer write error:')
             console.log(err);
           }
           setImmediate(() => this.sendNextMessage());
@@ -156,8 +157,6 @@ class TCPLayer extends Layer {
       this._additionalDisconnectCallbacks.forEach(callback => callback());
       this._additionalDisconnectCallbacks.length = 0;
     }
-
-    this.clearMessageQueue();
   }
 }
 
@@ -185,16 +184,13 @@ const TCPStateCodes = {
 // const TCPStateNames = InvertKeyValues(TCPStateCodes);
 
 
-function setConnectionState(layer, state, error) {
+function setConnectionState(layer, state) {
   const previousState = layer._connectionState;
 
   if (previousState !== state) {
     layer._connectionState = state;
 
     // console.log(`${previousState} => ${state}`);
-    // if (error) {
-    //   console.log(error.message ? error.message : error);
-    // }
     // printSocketState(layer.socket);
 
     /**
@@ -224,9 +220,10 @@ function setConnectionState(layer, state, error) {
       throw new Error(`TCP layer error: attempted to immediately transition from disconnecting to connected`);
     }
 
-    if (state === TCPStateCodes.Disconnected) {
-      layer.destroy(error);
-    }
+    // if (state === TCPStateCodes.Disconnected) {
+    //   console.log('TCP layer closed');
+    //   layer.destroy(error);
+    // }
   }
 }
 
@@ -280,6 +277,7 @@ function connect(layer) {
       // console.log('TCP layer Error:');
       // console.log(err);
       setConnectionState(layer, TCPStateCodes.Disconnected, err);
+      layer.destroy(err);
     });
 
     socket.once('close', () => {
@@ -288,7 +286,8 @@ function connect(layer) {
     });
 
     socket.once('timeout', () => {
-      setConnectionState(layer, TCPStateCodes.Disconnected, socket.connecting ? 'Connect timeout' : 'Write timeout');
+      setConnectionState(layer, TCPStateCodes.Disconnected);
+      layer.destroy(socket.connecting ? 'TCP layer connect timeout' : 'TCP layer write timeout');
       if (socket.connecting) {
         resolve(false);
       }
@@ -296,7 +295,8 @@ function connect(layer) {
 
     socket.once('end', () => {
       /** Might not be an error, assume it is an error until use case arrises */
-      setConnectionState(layer, TCPStateCodes.Disconnected, 'TCP layer socket received FIN while connected')
+      setConnectionState(layer, TCPStateCodes.Disconnected);
+      layer.destroy('TCP layer socket received FIN while connected');
     });
   });
 

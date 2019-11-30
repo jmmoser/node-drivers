@@ -17,7 +17,7 @@ class PCCC extends CIPLayer {
       serialNumber: 0x01020304
     }, options);
     
-    const header = Buffer.alloc(HEADER_LENGTH);
+    const header = Buffer.allocUnsafe(HEADER_LENGTH);
     header.writeUInt8(HEADER_LENGTH, 0);
     header.writeUInt16LE(this.options.vendorID, 1);
     header.writeUInt32LE(this.options.serialNumber, 3);

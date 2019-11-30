@@ -80,33 +80,25 @@ class Layer extends EventEmitter {
 
   close(callback) {
     return CallbackPromise(callback, async resolver => {
-      this.emit('closing');
       if (this.upperLayer != null) {
         await this.upperLayer.close();
       }
       
       await this.disconnect();
 
-      this.destroy();
+      /** Do not bubble up since close has already bubbled up */
+      internalDestroy(this);
 
-      this.emit('closed');
       resolver.resolve();
     });
   }
-
 
   destroy(error) {
     if (this.upperLayer != null) {
       this.upperLayer.destroy(error);
     }
 
-    /** Clear all internal context callbacks */
-    this.__contextToCallback.forEach(cb => {
-      cb(error);
-    });
-    this.__contextToCallback.clear();
-
-    this.handleDestroy(error);
+    internalDestroy(this, error);
   }
 
 
@@ -119,7 +111,6 @@ class Layer extends EventEmitter {
   forwardTo(layer, data, info, context) {
     // console.log('emitting data');
     // console.log(data);
-    // this.emit('data', data, info, context);
     internalHandleData(layer, data, info, context);
   }
 
@@ -130,8 +121,12 @@ class Layer extends EventEmitter {
     transport.sendNextMessage();
   }
 
-  hasRequest() {
-    return this._queue.size();
+  requestQueueSize(priority) {
+    return this._queue.size(priority);
+  }
+
+  hasRequest(priority) {
+    return this.requestQueueSize(priority) > 0;
   }
 
   getNextRequest(peek) {
@@ -228,6 +223,7 @@ function incrementContext(self) {
   return self.__context;
 }
 
+
 function internalHandleData(self, data, info, context) {
   if (self._defragger != null) {
     data = self._defragger.defrag(data);
@@ -235,4 +231,15 @@ function internalHandleData(self, data, info, context) {
   }
   self.emit('data', data, info, context);
   self.handleData(data, info, context);
+}
+
+
+function internalDestroy(layer, error) {
+  /** Clear all internal context callbacks */
+  layer.__contextToCallback.forEach(cb => cb(error));
+  layer.__contextToCallback.clear();
+
+  layer.clearMessageQueue();
+
+  layer.handleDestroy(error);
 }

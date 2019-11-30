@@ -6,8 +6,11 @@ class Queue {
     this._priorityQueue = [];
   }
 
-  size() {
-    return this._priorityQueue.length > 0 || this._queue.length > 0;
+  size(priorityOnly) {
+    if (priorityOnly === true) {
+      return this._priorityQueue.length;
+    }
+    return this._priorityQueue.length + this._queue.length;
   }
 
   enqueue(obj, priority) {
@@ -19,19 +22,22 @@ class Queue {
   }
 
   dequeue() {
-    const obj = this._priorityQueue.shift();
-    if (obj) return obj;
-    return this._queue.shift();
+    if (this._priorityQueue.length > 0) {
+      return this._priorityQueue.shift();
+    } else if (this._queue.length > 0) {
+      return this._queue.shift();
+    }
+    // const obj = this._priorityQueue.shift();
+    // if (obj) return obj;
+    // return this._queue.shift();
   }
 
   peek() {
-    let next = null;
     if (this._priorityQueue.length > 0) {
-      next = this._priorityQueue[0];
+      return this._priorityQueue[0];
     } else if (this._queue.length > 0) {
-      next = this._queue[0];
+      return this._queue[0];
     }
-    return next;
   }
 
   clear() {
