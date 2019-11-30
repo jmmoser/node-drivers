@@ -27,9 +27,6 @@ class Queue {
     } else if (this._queue.length > 0) {
       return this._queue.shift();
     }
-    // const obj = this._priorityQueue.shift();
-    // if (obj) return obj;
-    // return this._queue.shift();
   }
 
   peek() {
@@ -43,6 +40,34 @@ class Queue {
   clear() {
     this._queue.length = 0;
     this._priorityQueue.length = 0;
+  }
+
+  
+  iterate(cb) {
+    let finished = false;
+
+    function iterator(queue) {
+      let i = 0;
+      while (i < queue.length) {
+        function consumer() {
+          queue.splice(i, 1);
+          i--;
+        }
+        if (!cb(queue[i], consumer)) {
+          finished = true;
+          break;
+        }
+        i++;
+      }
+    }
+
+    if (!finished) {
+      iterator(this._priorityQueue);
+    }
+
+    if (!finished) {
+      iterator(this._queue);
+    }
   }
 }
 

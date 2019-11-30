@@ -1,12 +1,13 @@
 'use strict';
 
+const { CallbackPromise, InfoError} = require('../../utils');
 const Layer = require('../Layer');
 const EIPPacket = require('./EIPPacket');
 const EIPCommand = EIPPacket.Command;
 
 
 function SendData_Packet(interfaceHandle, timeout, data) {
-  const buffer = Buffer.alloc(data.length + 6);
+  const buffer = Buffer.allocUnsafe(data.length + 6);
   buffer.writeUInt32LE(interfaceHandle, 0);
   buffer.writeUInt16LE(timeout, 4);
   data.copy(buffer, 6);
@@ -14,7 +15,7 @@ function SendData_Packet(interfaceHandle, timeout, data) {
 }
 
 function CPF_UCMM_Packet(data) {
-  const buffer = Buffer.alloc(10 + data.length);
+  const buffer = Buffer.allocUnsafe(10 + data.length);
   buffer.writeUInt16LE(2, 0); // One address item and one data item
   buffer.writeUInt16LE(EIPPacket.CPFItemID.NullAddress, 2); // AddressTypeID = 0 to indicate a UCMM message
   buffer.writeUInt16LE(0, 4); // AddressLength = 0 since UCMM messages use the NULL address item
@@ -25,7 +26,7 @@ function CPF_UCMM_Packet(data) {
 }
 
 function CPF_Connected_Packet(connectionIdentifier, data) {
-  const buffer = Buffer.alloc(14 + data.length);
+  const buffer = Buffer.allocUnsafe(14 + data.length);
   buffer.writeUInt16LE(2, 0);
   buffer.writeUInt16LE(EIPPacket.CPFItemID.ConnectedAddress, 2);
   buffer.writeUInt16LE(4, 4);
@@ -39,24 +40,12 @@ function CPF_Connected_Packet(connectionIdentifier, data) {
 
 function SendRRDataRequest(sessionHandle, senderContext, data) {
   // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
-  // const packet = new EIPPacket();
-  // packet.command = EIPCommand.SendRRData;
-  // packet.sessionHandle = sessionHandle;
-  // packet.senderContext = senderContext;
-  // packet.data = SendData_Packet(0, 0, CPF_UCMM_Packet(data));
-  // return packet.toBuffer();
-
   return EIPPacket.toBuffer(
     EIPCommand.SendRRData, sessionHandle, 0, senderContext, 0, SendData_Packet(0, 0, CPF_UCMM_Packet(data))
   );
 }
 
 function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connectionIdentifier, data) {
-  // const packet = new EIPPacket();
-  // packet.command = EIPCommand.SendUnitData;
-  // packet.sessionHandle = sessionHandle;
-  // packet.data = SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data));
-  // return packet.toBuffer();
   return EIPPacket.toBuffer(
     EIPCommand.SendUnitData, sessionHandle, 0, null, 0, SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data))
   );
@@ -80,14 +69,14 @@ class EIPLayer extends Layer {
 
   nop(callback) {
     // no response, used to test underlying transport layer
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       queueUserRequest(this, EIPPacket.NOPRequest(), null, null);
       resolver.resolve();
     });
   }
 
   listServices(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), null, function(error, reply) {
         if (error) {
           resolver.reject(error, reply);
@@ -150,7 +139,7 @@ class EIPLayer extends Layer {
 
     const identities = [];
 
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       let timeoutHandler;
 
       function finalizer(error, reply) {
@@ -220,7 +209,7 @@ class EIPLayer extends Layer {
   //   const shouldBroadcast = timeout > 0;
   //   const identities = [];
 
-  //   return Layer.CallbackPromise(callback, resolver => {
+  //   return CallbackPromise(callback, resolver => {
   //     let timeoutHandler;
 
   //     function finalizer(error, reply) {
@@ -261,7 +250,7 @@ class EIPLayer extends Layer {
   // }
 
   listInterfaces(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       queueUserRequest(this, EIPPacket.ListInterfacesRequest(), null, function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
@@ -277,11 +266,10 @@ class EIPLayer extends Layer {
   }
 
   // indicateStatus(callback) {
-  //   return Layer.CallbackPromise(callback, resolver => {
+  //   return CallbackPromise(callback, resolver => {
   //     queueUserRequest(this, EIPPacket.Ind)
   //   });
   // }
-
 
   connect(callback) {
     if (this._connectionState === 2) {
@@ -304,7 +292,102 @@ class EIPLayer extends Layer {
     });
   }
 
-  /** Update this to only connect if needed, can send unconnected messages if not connected */
+  // /** Update this to only connect if needed, can send unconnected messages if not connected */
+  // sendNextMessage() {
+  //   // console.log(`EIP layer queue size: ${this.requestQueueSize()}`);
+
+  //   /**
+  //    * If not connected and has unconnected request, send unconnected request
+  //    * 
+  //    * If not connected and has connected request, connect
+  //    * 
+  //    * If not connected and has both unconnected and connected requests, connect
+  //    * 
+  //    * 
+  //    * If has request and in any connection state except connected
+  //    *  - if has at least one connected request, connect
+  //    *  - if all reauests are unconnected, send unconnected
+  //    */
+
+
+  //   // this.iterateRequestQueue((request, consume) => {
+  //   //   if (request.info && request.info.connectionID) {
+  //   //     if (this._connectionState === 0) {
+  //   //       this.connect();
+  //   //     } else if (this._connectionState === 2) {
+  //   //       // fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
+  //   //       if (request.context != null && info.responseID != null) {
+  //   //         /** There might be an opportunity to improve this, previous request's contexts are overwritten */
+  //   //         this._connectedContexts.set(info.responseID, request.context);
+  //   //       }
+  //   //       this.send(SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message), null, false);
+  //   //     }
+  //   //   } else {
+  //   //     incrementContext(this);
+  //   //     // fullMessage = SendRRDataRequest(this._sessionHandle, this._context, message);
+
+  //   //     if (request.context != null) {
+  //   //       this._unconnectedContexts.set(this._context.toString('hex'), request.context);
+  //   //     }
+
+  //   //     this.send(SendRRDataRequest(this._sessionHandle, this._context, message), null, false);
+  //   //   }
+  //   //   return true;
+  //   // });
+
+    
+  //   if (this.hasRequest()) {
+  //     let shouldConnect = false;
+  //     this.iterateRequestQueue(request => {
+  //       if (request.info && request.info.connectionID) {
+  //         shouldConnect = true;
+  //         return false;
+  //       } else {
+  //         return true;
+  //       }
+  //     });
+
+  //     if (shouldConnect && this._connectionState !== 2) {
+  //       if (this._connectionState === 0) {
+  //         this.connect();
+  //       }
+  //     } else {
+  //       const request = this.getNextRequest();
+
+  //       if (request) {
+  //         const { message, info } = request;
+  //         console.log(info);
+
+  //         let fullMessage = null;
+
+  //         if (info && info.connectionID != null) {
+  //           fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
+  //           if (request.context != null && info.responseID != null) {
+  //             // console.log('');
+  //             // console.log(`setting: ${info.responseID} : ${request.context}`);
+  //             // console.log(this._connectedContexts);
+  //             /** There might be an opportunity to improve this, previous request's contexts are overwritten */
+  //             this._connectedContexts.set(info.responseID, request.context);
+  //             // console.log(this._connectedContexts);
+  //             // console.log('');
+  //           }
+  //         } else {
+  //           incrementContext(this);
+  //           fullMessage = SendRRDataRequest(this._sessionHandle, this._context, message);
+
+  //           if (request.context != null) {
+  //             this._unconnectedContexts.set(this._context.toString('hex'), request.context);
+  //           }
+  //         }
+
+  //         this.send(fullMessage, null, false);
+
+  //         setImmediate(() => this.sendNextMessage());
+  //       }
+  //     }
+  //   }
+  // }
+
   sendNextMessage() {
     // console.log(`EIP layer queue size: ${this.requestQueueSize()}`);
     if (this.hasRequest()) {
@@ -314,12 +397,11 @@ class EIPLayer extends Layer {
         const request = this.getNextRequest();
 
         if (request) {
-          const message = request.message;
-          const info = request.info;
+          const { message, info } = request;
 
           let fullMessage = null;
 
-          if (info.connectionID != null) {
+          if (info && info.connectionID != null) {
             fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
             if (request.context != null && info.responseID != null) {
               // console.log('');
@@ -392,15 +474,9 @@ class EIPLayer extends Layer {
 
 module.exports = EIPLayer;
 
-// let stateCount = 0;
+
 function setConnectionState(layer, state) {
-  // if (state === 0) {
-  //   stateCount++;
-  //   if (stateCount === 2) {
-  //     console.log(new Error('a'));
-  //   }
-  // }
-  // console.log(`Setting EIP connection state: ${state}`);
+  // console.log(`EIP connection state: ${layer._connectionState} => ${state}`);
   layer._connectionState = state;
 }
 
@@ -455,7 +531,16 @@ function setupCallbacks(self) {
     //   console.log(self._unconnectedContexts);
     // }
 
-    self.forward(packet.items[1].data, info, context);
+
+    if (!Array.isArray(packet.items)) {
+      self.destroy(new InfoError(packet, packet.status.description))
+    } else {
+      self.forward(
+        Array.isArray(packet.items) ? packet.items[1].data : null,
+        info,
+        context
+      );
+    }
   });
 
   self._callbacks.set(EIPCommand.SendUnitData, packet => {

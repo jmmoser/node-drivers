@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.0-beta.2 (2019-11-30)
+- Added `PCCCLayer.echo()`
+- Fixed `PCCCLayer.typedWrite()` type/data parameter encoding
+- TCPLayer automatically handles reconnects
+
+
 ## 2.0.0-beta.1 (2019-11-15)
 ### Added
   - Logix5000.readControllerAttributes

@@ -147,10 +147,13 @@ class Layer extends EventEmitter {
     this._queue.enqueue(obj, priority);
   }
 
-  clearMessageQueue() {
+  clearRequestQueue() {
     this._queue.clear();
   }
 
+  iterateRequestQueue(cb) {
+    this._queue.iterate(cb);
+  }
 
   contextCallback(callback, context, timeout) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
@@ -239,7 +242,7 @@ function internalDestroy(layer, error) {
   layer.__contextToCallback.forEach(cb => cb(error));
   layer.__contextToCallback.clear();
 
-  layer.clearMessageQueue();
+  layer.clearRequestQueue();
 
   layer.handleDestroy(error);
 }

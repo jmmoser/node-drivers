@@ -42,26 +42,30 @@ class PCCC extends CIPLayer {
   }
 
 
-  handleData(data, info, context) {
+  handleData(data, info, context, error) {
     if (context) {
       /** Since this class extends CIPLayer, allow CIPLayer to handle requests like identity() and supportedObjects() */
-      super.handleData(data, info, context);
+      super.handleData(data, info, context, error);
       return;
     }
 
-    const reply = MessageRouter.Reply(data);
-    
-    if (data.length > 4 && !reply.status.error) {
-      /** Only ExcutePCCC service supported right now */
-      if (reply.service.code === Services.ExecutePCCC) {
-        this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
+    if (data) {
+      const reply = MessageRouter.Reply(data);
+
+      if (data.length > 4 && !reply.status.error) {
+        /** Only ExcutePCCC service supported right now */
+        if (reply.service.code === Services.ExecutePCCC) {
+          this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
+        } else {
+          console.log(reply);
+          console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${Services.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
+        }
       } else {
+        console.log('CIP_PCCCLayer: Unexpected PCCC embedded in CIP response:');
         console.log(reply);
-        console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${Services.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
       }
-    } else {
-      console.log('CIP_PCCCLayer: Unexpected PCCC embedded in CIP response:');
-      console.log(reply);
+    } else if (error) {
+      this.forward(data, info, context, error);
     }
   }
 }
