@@ -33,6 +33,11 @@ class Queue {
     }
     return next;
   }
+
+  clear() {
+    this._queue.length = 0;
+    this._priorityQueue.length = 0;
+  }
 }
 
 module.exports = Queue;

@@ -80,14 +80,16 @@ class Layer extends EventEmitter {
 
   close(callback) {
     return CallbackPromise(callback, async resolver => {
+      this.emit('closing');
       if (this.upperLayer != null) {
         await this.upperLayer.close();
       }
-      // this.destroy('Closing');
-
+      
       await this.disconnect();
 
-      this.emit('close');
+      this.destroy();
+
+      this.emit('closed');
       resolver.resolve();
     });
   }
@@ -115,7 +117,9 @@ class Layer extends EventEmitter {
   }
 
   forwardTo(layer, data, info, context) {
-    this.emit('data', data, info, context);
+    // console.log('emitting data');
+    // console.log(data);
+    // this.emit('data', data, info, context);
     internalHandleData(layer, data, info, context);
   }
 
@@ -146,6 +150,10 @@ class Layer extends EventEmitter {
     };
 
     this._queue.enqueue(obj, priority);
+  }
+
+  clearMessageQueue() {
+    this._queue.clear();
   }
 
 
@@ -225,5 +233,6 @@ function internalHandleData(self, data, info, context) {
     data = self._defragger.defrag(data);
     if (data == null) return;
   }
+  self.emit('data', data, info, context);
   self.handleData(data, info, context);
 }
