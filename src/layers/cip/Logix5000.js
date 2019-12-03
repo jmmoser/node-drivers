@@ -264,9 +264,12 @@ class Logix5000 extends CIPLayer {
                   offset = Decode(DataTypes.INT, data, offset, val => value = val);
                   break;
                 case 8:
-                  name = 'unknown';
+                  name = 'arrayDimensions';
                   value = data.slice(offset, offset + 12);
-                  offset += 12;
+                  value = [];
+                  for (let j = 0; j < 3; j++) {
+                    offset = Decode(DataTypes.DINT, data, offset, val => value.push(val));
+                  }
                   break;
                 case 9:
                   name = 'unknown';
