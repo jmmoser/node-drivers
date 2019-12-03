@@ -1,5 +1,5 @@
 
-const { CommonServices } = require('../objects/CIP');
+const { DataTypes } = require('../objects/CIP');
 
 
 const {

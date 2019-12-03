@@ -44,8 +44,11 @@ class Logix5000 extends CIPLayer {
     super('cip.logix5000', lowerLayer);
     this._tagIDtoDataType = new Map();
     this._templates = new Map();
-    this._tagListAttributes = new Map();
+    // this._tagListAttributes = new Map();
     this._tags = new Map();
+
+    this._templateInstanceAttributes = new Map();
+    // this._template
   }
 
 
@@ -117,8 +120,19 @@ class Logix5000 extends CIPLayer {
             } else {
               // const template = await getTemplateInfo(this, templateID);
               // console.log(template);
-              console.log(await this.getTagInfo(tag));
-              values.push(data.slice(offset));
+              const tagInfo = await this.getTagInfo(tag);
+              console.log(tagInfo.type.template.definition.members);
+              // console.log(await this.getTagInfo(tag));
+
+              const members = tagInfo.type.template.definition.members;
+              const structValues = {};
+              for (let i = 0; i < members.length; i++) {
+                const member = members[i];
+                Decode(member.type, data, member.offset, value => structValues[member.name] = value);
+              }
+
+              // values.push(data.slice(offset));
+              values.push(structValues);
             }
 
             if (elements === 1) {
@@ -160,7 +174,7 @@ class Logix5000 extends CIPLayer {
 
       const path = encodeTagPath(tag);
 
-      const data = Buffer.alloc(4 + valueData.length);
+      const data = Buffer.allocUnsafe(4 + valueData.length);
       data.writeUInt16LE(dataType, 0);
       data.writeUInt16LE(1, 2);
       valueData.copy(data, 4);
@@ -237,7 +251,7 @@ class Logix5000 extends CIPLayer {
 
       const path = encodeTagPath(tag);
 
-      const data = Buffer.alloc(2 + attributes.length * 2);
+      const data = Buffer.allocUnsafe(2 + attributes.length * 2);
       data.writeUInt16LE(attributes.length, 0);
       for (let i = 0; i < attributes.length; i++) {
         data.writeUInt16LE(attributes[i], 2 * (i + 1));
@@ -405,22 +419,25 @@ class Logix5000 extends CIPLayer {
   }
 
 
-  // async test(service, path, data) {
-  //   return CallbackPromise(null, resolver => {
-  //     send(this, service, path, data, (err, reply) => {
-  //       if (err) {
-  //         resolver.reject(err, reply);
-  //       } else {
-  //         resolver.resolve(reply);
-  //       }
-  //     });
-  //   });
-  // }
-
-
   async getTagInfo(tag) {
-    if (this._tags.has(tag)) {
-      return this._tags.get(tag);
+    const tagIDs = [];
+    switch (typeof tag) {
+      case 'string':
+      case 'number':
+        tagIDs.push(tag);
+        break;
+      case 'object':
+        tagIDs.push(tag.id);
+        tagIDs.push(tag.name);
+        break;
+      default:
+        throw new Error('Tag must be a tag name, symbol instance number, or a tag object');
+    }
+
+    for (let i = 0; i < tagIDs.length; i++) {
+      if (this._tags.has(tagIDs[i])) {
+        return this._tags.get(tagIDs[i]);
+      }
     }
 
     const attributes = [
@@ -428,7 +445,7 @@ class Logix5000 extends CIPLayer {
       SymbolInstanceAttributeCodes.Type
     ];
 
-    const data = Buffer.alloc(2 + attributes.length * 2);
+    const data = Buffer.allocUnsafe(2 + attributes.length * 2);
     data.writeUInt16LE(attributes.length, 0);
     for (let i = 0; i < attributes.length; i++) {
       data.writeUInt16LE(attributes[i], 2 * (i + 1));
@@ -443,15 +460,45 @@ class Logix5000 extends CIPLayer {
       data
     );
 
+    console.log('GETTAGINFO');
+    
+
     const tags = [];
 
     parseListTagsResponse(reply, attributes, tags);
 
-    this._tagListAttributes.set(t.id, t);
-    this._tagListAttributes.set(t.name, t);
+    console.log(tags);
 
-    // const tag
-    return reply;
+    // this._tagListAttributes.set(t.id, t);
+    // this._tagListAttributes.set(t.name, t);
+
+    // tags.forEach(t => {
+    //   this._tags.set(t.id, t);
+    //   this._tags.set(t.name, t);
+    // });
+
+
+    for (let i = 0; i < tags.length; i++) {
+      const t = tags[i];
+      if (!t.type.system) {
+        if (t.type.atomic !== true) {
+          const templateID = t.type.template.id;
+          t.type.template.attributes = await this.readTemplateInstanceAttributes(templateID);
+          t.type.template.definition = await this.readTemplate(templateID);
+        }
+      }
+      this._tags.set(t.id, t);
+      this._tags.set(t.name, t);
+    }
+    
+
+
+
+    for (let i = 0; i < tagIDs.length; i++) {
+      if (this._tags.has(tagIDs[i])) {
+        return this._tags.get(tagIDs[i]);
+      }
+    }
   }
 
 
@@ -481,7 +528,7 @@ class Logix5000 extends CIPLayer {
       SymbolInstanceAttributeCodes.Type
     ];
 
-    const data = Buffer.alloc(2 + attributes.length * 2);
+    const data = Buffer.allocUnsafe(2 + attributes.length * 2);
     data.writeUInt16LE(attributes.length, 0);
     for (let i = 0; i < attributes.length; i++) {
       data.writeUInt16LE(attributes[i], 2 * (i + 1));
@@ -504,8 +551,9 @@ class Logix5000 extends CIPLayer {
         const tag = tags[i];
         if (includeSystem || !tag.type.system) {
           if (tag.type.atomic !== true) {
-            tag.type.template.attributes = await this.readTemplateInstanceAttributes(tag.type.template.id);
-            tag.type.template.definition = await this.readTemplate(tag.type.template);
+            const templateID = tag.type.template.id;
+            tag.type.template.attributes = await this.readTemplateInstanceAttributes(templateID);
+            tag.type.template.definition = await this.readTemplate(templateID);
           }
           yield tags[i];
         }
@@ -520,20 +568,26 @@ class Logix5000 extends CIPLayer {
   }
 
 
-  readTemplate(template, callback) {
-    return CallbackPromise(callback, resolver => {
+  readTemplate(templateID, callback) {
+    return CallbackPromise(callback, async resolver => {
       const service = TemplateServiceCodes.Read;
 
       const path = EPath.Encode(
         ClassCodes.Template,
-        template.id
+        templateID
       );
 
-      const bytesToRead = (template.attributes.definitionSize * 4) - 23;
+      let attributes = this._templateInstanceAttributes.get(templateID);
+      if (attributes == null) {
+        attributes = await this.readTemplateInstanceAttributes(templateID);
+      }
+
+      const bytesToRead = attributes[TemplateInstanceAttributeCodes.DefinitionSize] * 4 - 23;
+      // const bytesToRead = (template.attributes.definitionSize * 4) - 23;
 
       let offset = 0;
 
-      const data = Buffer.alloc(6);
+      const data = Buffer.allocUnsafe(6);
       data.writeUInt32LE(offset, 0);
       data.writeUInt16LE(bytesToRead, 4);
 
@@ -541,11 +595,57 @@ class Logix5000 extends CIPLayer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          try {
-            resolver.resolve(parseReadTemplate(reply, template));
-          } catch (err) {
-            resolver.reject(err, reply);
+
+          const { data } = reply;
+
+          const dataLength = data.length;
+          const members = [];
+
+          let offset = 0;
+          for (let i = 0; i < attributes[TemplateInstanceAttributeCodes.MemberCount]; i++) {
+          // for (let i = 0; i < template.attributes.memberCount; i++) {
+            if (offset < dataLength - 8) {
+              const info = data.readUInt16LE(offset); offset += 2;
+              const type = data.readUInt16LE(offset); offset += 2;
+              const memberOffset = data.readUInt32LE(offset); offset += 4;
+              members.push({
+                info,
+                type,
+                typeName: DataTypeNames[type] || 'UNKNOWN',
+                offset: memberOffset
+              });
+            }
           }
+
+          /** Read the template name and extra characters after ';' */
+          let structureName;
+          let extra;
+          offset = parseTemplateNameInfo(data, offset, info => {
+            structureName = info.name;
+            extra = info.extra
+          });
+
+          /** Read the member names */
+          for (let i = 0; i < members.length; i++) {
+            offset = parseTemplateMemberName(data, offset, name => members[i].name = name);
+          }
+
+          const template = {
+            name: structureName,
+            extra,
+            members,
+            data: data.slice(offset)
+          };
+
+          this._templates.set(templateID, template);
+
+          resolver.resolve(template);
+
+          // try {
+          //   resolver.resolve(parseReadTemplate(reply, template));
+          // } catch (err) {
+          //   resolver.reject(err, reply);
+          // }
         }
       });
     });
@@ -568,7 +668,7 @@ class Logix5000 extends CIPLayer {
         TemplateInstanceAttributeCodes.StructureSize
       ];
 
-      const data = Buffer.alloc(2 + attributes.length * 2);
+      const data = Buffer.allocUnsafe(2 + attributes.length * 2);
       data.writeUInt16LE(attributes.length, 0);
       for (let i = 0; i < attributes.length; i++) {
         data.writeUInt16LE(attributes[i], 2 * (i + 1));
@@ -579,8 +679,37 @@ class Logix5000 extends CIPLayer {
           resolver.reject(error, reply);
         } else {
           try {
-            const template = parseReadTemplateInstanceAttributes(reply);
-            resolver.resolve(template);
+            // const attributes = parseReadTemplateInstanceAttributes(reply);
+
+            const { data } = reply;
+
+            let offset = 0;
+            const attributeCount = data.readUInt16LE(offset); offset += 2;
+            const attributes = {};
+
+            for (let i = 0; i < attributeCount; i++) {
+              let attribute, status;
+              offset = Decode(DataTypes.UINT, data, offset, val => attribute = val);
+              offset = Decode(DataTypes.UINT, data, offset, val => status = val);
+
+              const attributeDataType = TemplateInstanceAttributeDataTypes[attribute];
+
+              if (attributeDataType == null) {
+                throw new Error(`Unknown template attribute received: ${attribute}`);
+              }
+
+              if (status === 0) {
+                offset = Decode(attributeDataType, data, offset, val => {
+                  attributes[attribute] = val;
+                });
+              } else {
+                throw new Error(`Attribute ${attribute} has error status: ${GenericServiceStatusDescriptions[status] || 'Unknown'}`);
+              }
+            }
+
+
+            this._templateInstanceAttributes.set(templateID, attributes);
+            resolver.resolve(attributes);
           } catch (err) {
             resolver.reject(err, reply);
           }
@@ -605,7 +734,7 @@ class Logix5000 extends CIPLayer {
 
       const attributes = [1, 2, 3, 4, 10];
 
-      const data = Buffer.alloc(2 + attributes.length * 2);
+      const data = Buffer.allocUnsafe(2 + attributes.length * 2);
       data.writeUInt16LE(attributes.length, 0);
       for (let i = 0; i < attributes.length; i++) {
         data.writeUInt16LE(attributes[i], 2 * (i + 1));
@@ -779,19 +908,19 @@ function encodeTagPath(tag) {
 }
 
 
-async function getTemplateInfo(self, tag) {
-  if (self._templates.has(tag)) {
-    console.log(`Using cached template info: ${tag}`);
-    return self._templates.get(tag);
-  }
+// async function getTemplateInfo(self, tag) {
+//   if (self._templates.has(tag)) {
+//     console.log(`Using cached template info: ${tag}`);
+//     return self._templates.get(tag);
+//   }
 
-  console.log(`Reading template info: ${tag}`);
-  const template = {};
-  template.attributes = await self.readTemplateInstanceAttributes(templateID);
-  template.definition = await self.readTemplate(template);
-  self._templates.set(templateID, template);
-  return template;
-}
+//   console.log(`Reading template info: ${tag}`);
+//   const template = {};
+//   template.attributes = await self.readTemplateInstanceAttributes(templateID);
+//   template.definition = await self.readTemplate(template);
+//   self._templates.set(templateID, template);
+//   return template;
+// }
 
 
 function parseListTagsResponse(reply, attributes, tags) {
@@ -878,100 +1007,100 @@ function parseTemplateNameInfo(data, offset, cb) {
 }
 
 
-function parseReadTemplate(reply, template) {
-  const { data } = reply;
+// function parseReadTemplate(reply, template) {
+//   const { data } = reply;
 
-  const dataLength = data.length;
-  const members = [];
+//   const dataLength = data.length;
+//   const members = [];
 
-  let offset = 0;
-  for (let i = 0; i < template.attributes.memberCount; i++) {
-    if (offset < dataLength - 8) {
-      const info = data.readUInt16LE(offset); offset += 2;
-      const type = data.readUInt16LE(offset); offset += 2;
-      const memberOffset = data.readUInt32LE(offset); offset += 4;
-      members.push({
-        info,
-        type,
-        typeName: DataTypeNames[type] || 'UNKNOWN',
-        offset: memberOffset
-      });
-    }
-  }
+//   let offset = 0;
+//   for (let i = 0; i < template.attributes.memberCount; i++) {
+//     if (offset < dataLength - 8) {
+//       const info = data.readUInt16LE(offset); offset += 2;
+//       const type = data.readUInt16LE(offset); offset += 2;
+//       const memberOffset = data.readUInt32LE(offset); offset += 4;
+//       members.push({
+//         info,
+//         type,
+//         typeName: DataTypeNames[type] || 'UNKNOWN',
+//         offset: memberOffset
+//       });
+//     }
+//   }
 
-  /** Read the template name and extra characters after ';' */
-  let structureName;
-  let extra;
-  offset = parseTemplateNameInfo(data, offset, info => {
-    structureName = info.name;
-    extra = info.extra
-  });
+//   /** Read the template name and extra characters after ';' */
+//   let structureName;
+//   let extra;
+//   offset = parseTemplateNameInfo(data, offset, info => {
+//     structureName = info.name;
+//     extra = info.extra
+//   });
 
-  /** Read the member names */
-  for (let i = 0; i < members.length; i++) {
-    offset = parseTemplateMemberName(data, offset, name => members[i].name = name);
-  }
+//   /** Read the member names */
+//   for (let i = 0; i < members.length; i++) {
+//     offset = parseTemplateMemberName(data, offset, name => members[i].name = name);
+//   }
 
-  return {
-    name: structureName,
-    extra,
-    members,
-    data: data.slice(offset)
-  };
-}
+//   return {
+//     name: structureName,
+//     extra,
+//     members,
+//     data: data.slice(offset)
+//   };
+// }
 
 
-function parseReadTemplateInstanceAttributes(reply) {
-  const { data } = reply;
+// function parseReadTemplateInstanceAttributes(reply) {
+//   const { data } = reply;
 
-  let offset = 0;
-  const attributeCount = data.readUInt16LE(offset); offset += 2;
-  const template = {};
+//   let offset = 0;
+//   const attributeCount = data.readUInt16LE(offset); offset += 2;
+//   const template = {};
 
-  const StructureHandleCode = TemplateInstanceAttributeCodes.StructureHandle;
-  const MemberCountCode = TemplateInstanceAttributeCodes.MemberCount;
-  const DefinitionSizeCode = TemplateInstanceAttributeCodes.DefinitionSize;
-  const StructureSizeCode = TemplateInstanceAttributeCodes.StructureSize;
+//   const StructureHandleCode = TemplateInstanceAttributeCodes.StructureHandle;
+//   const MemberCountCode = TemplateInstanceAttributeCodes.MemberCount;
+//   const DefinitionSizeCode = TemplateInstanceAttributeCodes.DefinitionSize;
+//   const StructureSizeCode = TemplateInstanceAttributeCodes.StructureSize;
 
-  for (let i = 0; i < attributeCount; i++) {
-    let attribute, status;
-    offset = Decode(DataTypes.UINT, data, offset, val => attribute = val);
-    offset = Decode(DataTypes.UINT, data, offset, val => status = val);
+//   for (let i = 0; i < attributeCount; i++) {
+//     let attribute, status;
+//     offset = Decode(DataTypes.UINT, data, offset, val => attribute = val);
+//     offset = Decode(DataTypes.UINT, data, offset, val => status = val);
 
-    const attributeDataType = TemplateInstanceAttributeDataTypes[attribute];
+//     const attributeDataType = TemplateInstanceAttributeDataTypes[attribute];
 
-    if (status === 0) {
-      switch (attribute) {
-        case StructureHandleCode:
-          offset = Decode(attributeDataType, data, offset, val => template.structureHandle = val);
-          break;
-        case MemberCountCode:
-          offset = Decode(attributeDataType, data, offset, val => template.memberCount = val);
-          break;
-        case DefinitionSizeCode:
-          offset = Decode(attributeDataType, data, offset, val => template.definitionSize = val);
-          break;
-        case StructureSizeCode:
-          offset = Decode(attributeDataType, data, offset, val => template.structureSize = val);
-          break;
-        default:
-          throw new Error(`Unknown attribute: ${attribute}`);
-      }
-    } else {
-      if (!template.errors) {
-        template.errors = [];
-      }
+//     if (status === 0) {
+//       switch (attribute) {
+//         case StructureHandleCode:
+//           offset = Decode(attributeDataType, data, offset, val => template.structureHandle = val);
+//           break;
+//         case MemberCountCode:
+//           offset = Decode(attributeDataType, data, offset, val => template.memberCount = val);
+//           break;
+//         case DefinitionSizeCode:
+//           offset = Decode(attributeDataType, data, offset, val => template.definitionSize = val);
+//           break;
+//         case StructureSizeCode:
+//           offset = Decode(attributeDataType, data, offset, val => template.structureSize = val);
+//           break;
+//         default:
+//           throw new Error(`Unknown attribute: ${attribute}`);
+//       }
+//     } else {
+//       if (!template.errors) {
+//         template.errors = [];
+//       }
 
-      template.errors.push({
-        attribute,
-        code: status,
-        // description: READ_TAG_ERRORS[status]
-      });
-    }
-  }
+//       template.errors.push({
+//         attribute,
+//         code: status,
+//         description: GenericServiceStatusDescriptions[status] || 'Unknown'
+//       });
+//     }
+//   }
 
-  return template;
-}
+//   return template;
+// }
 
 
 function getError(reply) {
@@ -1003,32 +1132,3 @@ function getError(reply) {
 
   return error || 'Unknown Logix5000 error';
 }
-// function getError(reply, service, errorDescriptions) {
-//   if (reply.status.description) {
-//     return reply.status.description;
-//   }
-
-//   let error;
-//   let extended;
-
-//   if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length >= 2) {
-//     extended = reply.status.additional.readUInt16LE(0);
-//   }
-
-//   const code = reply.status.code;
-//   const service = getBits(reply.service.code, 0, 7);
-
-//   const errorObject = SymbolServiceErrorDescriptions[service];
-
-//   if (errorObject) {
-//     if (typeof errorObject[code] === 'object') {
-//       if (extended != null) {
-//         error = errorObject[code][extended];
-//       }
-//     } else {
-//       error = errorObject[code];
-//     }
-//   }
-
-//   return error || 'Unknown Logix5000 error';
-// }
