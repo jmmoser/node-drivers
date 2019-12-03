@@ -23,15 +23,16 @@ const {
   ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,
-  SymbolServiceErrors,
+  // SymbolServiceErrorDescriptions,
   SymbolInstanceAttributeCodes,
   SymbolInstanceAttributeDataTypes,
   TemplateServiceCodes,
   TemplateInstanceAttributeCodes,
-  TemplateInstanceAttributeDataTypes
+  TemplateInstanceAttributeDataTypes,
+  GenericServiceStatusDescriptions
 } = require('./constants');
 
-const Requests = require('./requests');
+// const Requests = require('./requests');
 
 
 class Logix5000 extends CIPLayer {
@@ -49,12 +50,12 @@ class Logix5000 extends CIPLayer {
 
 
   readTag(tag, elements, callback) {
-    return CallbackPromise(callback, resolver => {
-      const request = await Requests.SymbolRequest()
-    });
+    // return CallbackPromise(callback, resolver => {
+    //   const request = await Requests.SymbolRequest()
+    // });
 
-    const request = new Requests.SymbolRequest()
-    return Requests.SymbolRequest.Read()
+    // const request = new Requests.SymbolRequest()
+    // return Requests.SymbolRequest.Read()
     if (callback == null && typeof elements === 'function') {
       callback = elements;
     }
@@ -81,6 +82,11 @@ class Logix5000 extends CIPLayer {
       const data = Encode(DataTypes.UINT, elements);
 
       send(this, SymbolServiceCodes.ReadTag, path, data, async (error, reply) => {
+        /** Update the service name for Logix5000 specific services */
+        if (reply && SymbolServiceNames[reply.service.code]) {
+          reply.service.name = SymbolServiceNames[reply.service.code];
+        }
+
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -968,7 +974,6 @@ function parseReadTemplateInstanceAttributes(reply) {
 }
 
 
-
 function getError(reply) {
   if (reply.status.description) {
     return reply.status.description;
@@ -984,7 +989,7 @@ function getError(reply) {
   const code = reply.status.code;
   const service = getBits(reply.service.code, 0, 7);
 
-  const errorObject = SymbolServiceErrors[service];
+  const errorObject = GenericServiceStatusDescriptions[service];
 
   if (errorObject) {
     if (typeof errorObject[code] === 'object') {
@@ -998,3 +1003,32 @@ function getError(reply) {
 
   return error || 'Unknown Logix5000 error';
 }
+// function getError(reply, service, errorDescriptions) {
+//   if (reply.status.description) {
+//     return reply.status.description;
+//   }
+
+//   let error;
+//   let extended;
+
+//   if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length >= 2) {
+//     extended = reply.status.additional.readUInt16LE(0);
+//   }
+
+//   const code = reply.status.code;
+//   const service = getBits(reply.service.code, 0, 7);
+
+//   const errorObject = SymbolServiceErrorDescriptions[service];
+
+//   if (errorObject) {
+//     if (typeof errorObject[code] === 'object') {
+//       if (extended != null) {
+//         error = errorObject[code][extended];
+//       }
+//     } else {
+//       error = errorObject[code];
+//     }
+//   }
+
+//   return error || 'Unknown Logix5000 error';
+// }

@@ -1,3 +1,7 @@
+
+const { CommonServices } = require('../objects/CIP');
+
+
 const {
   InvertKeyValues
 } = require('../../../utils');
@@ -25,57 +29,58 @@ const SymbolServiceCodes = {
 
 const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
 
-const SymbolServiceErrors = {
-  [SymbolServiceCodes.ReadTag]: {
-    0x04: 'A syntax error was detected decoding the Request Path',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Access beyond end of the object',
-    }
-  },
-  [SymbolServiceCodes.ReadTagFragmented]: {
-    0x04: 'A syntax error was detected decoding the Request Path',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Number of Elements or Byte Offset is beyond the end of the requested tag',
-    }
-  },
-  [SymbolServiceCodes.WriteTag]: {
-    0x04: 'A syntax error was detected decoding the Request Path.',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x10: {
-      0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
-      0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
-    },
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
-      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
-    }
-  },
-  [SymbolServiceCodes.WriteTagFragmented]: {
-    0x04: 'A syntax error was detected decoding the Request Path.',
-    0x05: 'Request Path destination unknown: Probably instance number is not present',
-    0x10: {
-      0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
-      0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
-    },
-    0x13: 'Insufficient Request Data: Data too short for expected parameters',
-    0x26: 'The Request Path Size received was shorter or longer than expected',
-    0xFF: {
-      0x2104: 'General Error: Offset is beyond end of the requested tag',
-      0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
-      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
-    }
-  }
-}
+
+// const SymbolServiceErrorDescriptions = {
+//   [SymbolServiceCodes.ReadTag]: {
+//     0x04: 'A syntax error was detected decoding the Request Path',
+//     0x05: 'Request Path destination unknown: Probably instance number is not present',
+//     0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
+//     0x13: 'Insufficient Request Data: Data too short for expected parameters',
+//     0x26: 'The Request Path Size received was shorter or longer than expected',
+//     0xFF: {
+//       0x2105: 'General Error: Access beyond end of the object',
+//     }
+//   },
+//   [SymbolServiceCodes.ReadTagFragmented]: {
+//     0x04: 'A syntax error was detected decoding the Request Path',
+//     0x05: 'Request Path destination unknown: Probably instance number is not present',
+//     0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
+//     0x13: 'Insufficient Request Data: Data too short for expected parameters',
+//     0x26: 'The Request Path Size received was shorter or longer than expected',
+//     0xFF: {
+//       0x2105: 'General Error: Number of Elements or Byte Offset is beyond the end of the requested tag',
+//     }
+//   },
+//   [SymbolServiceCodes.WriteTag]: {
+//     0x04: 'A syntax error was detected decoding the Request Path.',
+//     0x05: 'Request Path destination unknown: Probably instance number is not present',
+//     0x10: {
+//       0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
+//       0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
+//     },
+//     0x13: 'Insufficient Request Data: Data too short for expected parameters',
+//     0x26: 'The Request Path Size received was shorter or longer than expected',
+//     0xFF: {
+//       0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
+//       0x2107: 'General Error: Tag type used in request does not match the target tag\'s data type'
+//     }
+//   },
+//   [SymbolServiceCodes.WriteTagFragmented]: {
+//     0x04: 'A syntax error was detected decoding the Request Path.',
+//     0x05: 'Request Path destination unknown: Probably instance number is not present',
+//     0x10: {
+//       0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
+//       0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
+//     },
+//     0x13: 'Insufficient Request Data: Data too short for expected parameters',
+//     0x26: 'The Request Path Size received was shorter or longer than expected',
+//     0xFF: {
+//       0x2104: 'General Error: Offset is beyond end of the requested tag',
+//       0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
+//       0x2107: 'General Error: Tag type used in request does not match the target tag\'s data type'
+//     }
+//   }
+// }
 
 const SymbolInstanceAttributeCodes = {
   Name: 0x01,
@@ -110,14 +115,52 @@ const TemplateInstanceAttributeDataTypes = {
 };
 
 
+// const TemplateServiceErrorDescriptions = {
+//   [CommonServices.GetAttributeList]: {
+//     0x04: {
+//       0x0000: 'A syntax error was detected decoding the Request Path.'
+//     },
+//     0x05: {
+//       0x0000: 'Request Path destination unknown: probably instance number is not present.'
+//     },
+//     0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data.',
+//     0x0A: 'Attribute list error, generally attribute not supported. The status of the unsupported attribute will be 0x14.',
+//     0x1C: 'Attribute List Shortage: The list of attribute numbers was too few for the number of attributes parameter.',
+//     0x26: 'The Request Path Size received was shorter than expected.'
+//   }
+// };
+
+
+const GenericServiceStatusDescriptions = {
+  0x04: 'A syntax error was detected decoding the Request Path',
+  0x05: 'Request Path destination unknown',
+  0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
+  0x10: {
+    0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
+    0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
+  },
+  0x0A: 'Attribute list error, generally attribute not supported. The status of the unsupported attribute will be 0x14.',
+  0x13: 'Insufficient Request Data: Data too short for expected parameters',
+  0x1C: 'Attribute List Shortage: The list of attribute numbers was too few for the number of attributes parameter.',
+  0x26: 'The Request Path Size received was shorter or longer than expected',
+  0xFF: {
+    0x2104: 'General Error: Offset is beyond end of the requested object',
+    0x2105: 'General Error: Number of Elements extends beyond the end of the requested object',
+    0x2107: 'General Error: Object type used in request does not match the target object\'s data type'
+  }
+};
+
+
 module.exports = {
   ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,
-  SymbolServiceErrors,
   SymbolInstanceAttributeCodes,
   SymbolInstanceAttributeDataTypes,
+  // SymbolServiceErrorDescriptions,
   TemplateServiceCodes,
   TemplateInstanceAttributeCodes,
-  TemplateInstanceAttributeDataTypes
+  TemplateInstanceAttributeDataTypes,
+  // TemplateServiceErrorDescriptions,
+  GenericServiceStatusDescriptions
 };

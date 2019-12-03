@@ -1034,7 +1034,7 @@ const SymbolServiceErrors = {
     0x26: 'The Request Path Size received was shorter or longer than expected',
     0xFF: {
       0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
-      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
+      0x2107: 'General Error: Tag type used in request does not match the target tag\'s data type'
     }
   },
   [SymbolServiceCodes.WriteTagFragmented]: {
@@ -1049,7 +1049,7 @@ const SymbolServiceErrors = {
     0xFF: {
       0x2104: 'General Error: Offset is beyond end of the requested tag',
       0x2105: 'General Error: Number of Elements extends beyond the end of the requested tag',
-      0x2107: 'General Error: Tag type used n request does not match the target tag’s data type'
+      0x2107: 'General Error: Tag type used in request does not match the target tag\'s data type'
     }
   }
 }
