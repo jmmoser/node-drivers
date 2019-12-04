@@ -84,14 +84,16 @@ const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
 
 const SymbolInstanceAttributeCodes = {
   Name: 0x01,
-  Type: 0x02
+  Type: 0x02,
+  Bytes: 0x07
 };
 
-// const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
+const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
 
 const SymbolInstanceAttributeDataTypes = {
   [SymbolInstanceAttributeCodes.Name]: DataTypes.STRING,
-  [SymbolInstanceAttributeCodes.Type]: DataTypes.UINT
+  [SymbolInstanceAttributeCodes.Type]: DataTypes.UINT,
+  [SymbolInstanceAttributeCodes.Bytes]: DataTypes.UINT
 };
 
 
@@ -156,6 +158,7 @@ module.exports = {
   SymbolServiceCodes,
   SymbolServiceNames,
   SymbolInstanceAttributeCodes,
+  SymbolInstanceAttributeNames,
   SymbolInstanceAttributeDataTypes,
   // SymbolServiceErrorDescriptions,
   TemplateServiceCodes,
