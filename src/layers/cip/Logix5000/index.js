@@ -82,13 +82,6 @@ class Logix5000 extends CIPLayer {
       const path = encodeTagPath(tag);
       const data = Encode(DataTypes.UINT, elements);
 
-      // console.log({
-      //   service,
-      //   path,
-      //   data,
-      //   tag
-      // });
-
       send(this, service, path, data, async (error, reply) => {
         /** Update the service name for Logix5000 specific services */
         if (reply && SymbolServiceNames[reply.service.code]) {
@@ -98,16 +91,13 @@ class Logix5000 extends CIPLayer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          // const data = reply.status.code !== 6 ? reply.data : await readTagFragmented(this, path, elements);
-          // resolver.resolve(await parseReadTag(this, tag, elements, data));
-          let d;
+          let data;
           try {
-            const data = reply.status.code !== 6 ? reply.data : await readTagFragmented(this, path, elements);
-            d = data;
+            data = reply.status.code !== 6 ? reply.data : await readTagFragmented(this, path, elements);
             resolver.resolve(await parseReadTag(this, tag, elements, data));
           } catch (err) {
             console.log(err);
-            console.log(d);
+            console.log(data);
             resolver.reject(err, reply);
           }
         }
@@ -157,8 +147,6 @@ class Logix5000 extends CIPLayer {
       });
     });
   }
-
-  
 
 
   readModifyWriteTag(tag, ORmasks, ANDmasks, callback) {
@@ -267,8 +255,8 @@ class Logix5000 extends CIPLayer {
                   name = SymbolInstanceAttributeNames[code];
                   offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => value = val);
                   break;
-                case 8:
-                  name = 'ArrayDimensions';
+                case SymbolInstanceAttributeCodes.ArrayDimensions:
+                  name = SymbolInstanceAttributeNames[code];
                   value = data.slice(offset, offset + 12);
                   value = [];
                   for (let j = 0; j < 3; j++) {
@@ -382,12 +370,6 @@ class Logix5000 extends CIPLayer {
     });
   }
 
-  listTagIDs(program, instance) {
-    const attributes = [
-      SymbolInstanceAttributeCodes.Name
-    ];
-    return listTags(this, attributes, program, instance);
-  }
 
   listTags(program) {
     const attributes = [
@@ -395,55 +377,6 @@ class Logix5000 extends CIPLayer {
       SymbolInstanceAttributeCodes.Type
     ];
     return listTags(this, attributes, program, 0);
-
-    // const scopePath = program ? EPath.EncodeANSIExtSymbol(program) : Buffer.alloc(0);
-
-    // let instanceID = 0;
-    // const timeout = 10000;
-
-    // const attributes = [
-    //   SymbolInstanceAttributeCodes.Name,
-    //   SymbolInstanceAttributeCodes.Type
-    // ];
-
-    // const service = SymbolServiceCodes.GetInstanceAttributeList;
-    // const data = encodeAttributes(attributes);
-
-    // while (true) {
-    //   const symbolPath = EPath.Encode(
-    //     ClassCodes.Symbol,
-    //     instanceID
-    //   );
-
-    //   const path = Buffer.concat([scopePath, symbolPath]);
-
-    //   let retry = 0;
-    //   if (retry < 2) {
-    //     try {
-    //       if (retry > 1) {
-    //         console.log(`retrying: ${retry}, ${instanceID}`);
-    //       }
-    //       const reply = await sendPromise(this, service, path, data, timeout);
-
-    //       const tags = [];
-    //       const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
-
-    //       for (let i = 0; i < tags.length; i++) {
-    //         yield tags[i];
-    //       }
-
-    //       if (reply.status.code === 0 || tags.length <= 0) {
-    //         break;
-    //       }
-
-    //       instanceID = lastInstanceID + 1;
-    //     } catch (err) {
-    //       retry++;
-    //     }
-    //   } else {
-    //     break;
-    //   }
-    // }
   }
 
 
@@ -713,7 +646,6 @@ async function readTagFragmented(layer, path, elements) {
 
     /** remove the tag type bytes if already received */
     const dataTypeOffset = decodeReadTagType(reply.data, 0);
-    // console.log(reply.status.code, reply.data.length, reply.data.slice(0, 8));
     chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
 
     if (reply.status.code === 0x06) {
@@ -779,6 +711,9 @@ async function parseReadTagMemberStructure(layer, structure, data, offset) {
           nextOffset = Decode(member.type.code, data, nextOffset, value => memberValues.push(value));
         }
         structValues[member.name] = memberValues;
+      } else {
+        console.log(member);
+        throw new Error('Currently unable to read members with dimensions other than 0 or 1');
       }
     } else {
       structValues[member.name] = await parseReadTagMemberStructure(layer, member, data, offset + member.offset);
@@ -789,8 +724,6 @@ async function parseReadTagMemberStructure(layer, structure, data, offset) {
 
 
 async function parseReadTag(layer, tag, elements, data) {
-  // console.log(data);
-  // console.log(`DATA LENGTH: ${data.length}`);
   if (data.length === 0) {
     return undefined;
   }
@@ -822,15 +755,17 @@ async function parseReadTag(layer, tag, elements, data) {
         break;
     }
 
-    try {
-      values.push(await parseReadTagMemberStructure(layer, tagInfo, data, offset));
-    } catch (err) {
-      console.log(tag.name || tag);
-      console.log(typeInfo);
-      console.log(tagInfo);
-      console.log(data.slice(0, 20));
-      throw err;
-    }
+    values.push(await parseReadTagMemberStructure(layer, tagInfo, data, offset));
+
+    // try {
+    //   values.push(await parseReadTagMemberStructure(layer, tagInfo, data, offset));
+    // } catch (err) {
+    //   console.log(tag.name || tag);
+    //   console.log(typeInfo);
+    //   console.log(tagInfo);
+    //   console.log(data.slice(0, 20));
+    //   throw err;
+    // }
   }
 
   if (elements === 1) {
@@ -1048,65 +983,6 @@ async function getTagInfo(layer, tagInput) {
     return layer._tags.get(symbolInstanceID);
   }
 }
-
-
-// async function getTagInfo(layer, tagInput) {
-//   let tagName, symbolInstanceID;
-//   switch (typeof tagInput) {
-//     case 'string':
-//       tagName = tagInput;
-//       break;
-//     case 'number':
-//       symbolInstanceID = tagInput;
-//       break;
-//     case 'object':
-//       symbolInstanceID = tagInput.id;
-//       break;
-//     default:
-//       throw new Error('Tag must be a tag name, symbol instance number, or a tag object');
-//   }
-
-//   if (tagName && layer._tagNameToSymbolInstanceID.has(tagName)) {
-//     symbolInstanceID = layer._tagNameToSymbolInstanceID.get(tagName);
-//   } 
-
-//   if (symbolInstanceID != null && layer._tags.has(symbolInstanceID)) {
-//     return layer._tags.get(symbolInstanceID);
-//   }
-
-//   const attributes = [
-//     SymbolInstanceAttributeCodes.Name,
-//     SymbolInstanceAttributeCodes.Type
-//   ];
-
-//   const service = SymbolServiceCodes.GetInstanceAttributeList;
-//   const path = encodeTagPath(tagInput);
-//   const data = encodeAttributes(attributes);
-
-//   const reply = await sendPromise(
-//     layer,
-//     service,
-//     path,
-//     data
-//   );
-
-//   const tags = [];
-
-//   parseListTagsResponse(reply, attributes, tags);
-
-//   for (let i = 0; i < tags.length; i++) {
-//     const tag = tags[i];
-//     if (tag.name === tagName || tag.id === symbolInstanceID) {
-//       symbolInstanceID = tag.id; /** set this incase tagname was used */
-//     }
-//     layer._tagNameToSymbolInstanceID.set(tag.name, tag.id);
-//     layer._tags.set(tag.id, tag);
-//   }
-
-//   if (symbolInstanceID != null && layer._tags.has(symbolInstanceID)) {
-//     return layer._tags.get(symbolInstanceID);
-//   }
-// }
 
 
 async function getTagSymbolInstanceID(layer, tag) {

@@ -279,7 +279,6 @@ const GeneralStatusCodeDescriptions = {
 
 
 function Decode(dataType, buffer, offset, cb) {
-  let error;
   let value;
 
   let dataTypeCode = dataType;
@@ -343,13 +342,16 @@ function Decode(dataType, buffer, offset, cb) {
       break;
     }
     case DataTypes.LINT:
+      value = buffer.readBigInt64LE(offset); offset += 8;
+      break;
     case DataTypes.ULINT:
+      value = buffer.readBigUInt64LE(offset); offset += 8;
+      break;
     case DataTypes.LREAL:
     case DataTypes.LWORD:
     case DataTypes.LTIME:
     default:
-      error = `Data type is not currently supported: ${DataTypeNames[dataType] || dataType}`
-      break;
+      throw new Error(`Data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
 
   if (typeof cb === 'function') {
@@ -365,34 +367,42 @@ function Encode(dataType, value) {
 
   switch (dataType) {
     case DataTypes.SINT:
-      data = Buffer.alloc(1);
+      data = Buffer.allocUnsafe(1);
       data.writeInt8(value, 0);
       break;
     case DataTypes.INT:
     case DataTypes.ITIME:
-      data = Buffer.alloc(2);
+      data = Buffer.allocUnsafe(2);
       data.writeInt16LE(value, 0);
       break;
     case DataTypes.DINT:
     case DataTypes.TIME:
     case DataTypes.FTIME:
-      data = Buffer.alloc(4);
+      data = Buffer.allocUnsafe(4);
       data.writeInt32LE(value, 0);
       break;
     case DataTypes.REAL:
-      data = Buffer.alloc(4);
+      data = Buffer.allocUnsafe(4);
       data.writeFloatLE(value, 0);
       break;
     case DataTypes.UINT:
     case DataTypes.WORD:
-      data = Buffer.alloc(2);
+      data = Buffer.allocUnsafe(2);
       data.writeUInt16LE(value, 0);
       break;
     case DataTypes.UDINT:
     case DataTypes.DWORD:
     case DataTypes.DATE:
-      data = Buffer.alloc(4);
+      data = Buffer.allocUnsafe(4);
       data.writeUInt32LE(value, 0);
+      break;
+    case DataTypes.LINT:
+      data = Buffer.allocUnsafe(8);
+      data.writeBigInt64LE(0);
+      break;
+    case DataTypes.ULINT:
+      data = Buffer.allocUnsafe(8);
+      data.writeBigUInt64LE(0);
       break;
     default:
       break;

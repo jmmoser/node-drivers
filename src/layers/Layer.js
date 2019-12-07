@@ -7,7 +7,7 @@ const { CallbackPromise } = require('../utils');
 
 
 class Layer extends EventEmitter {
-  constructor(name, lowerLayer, options) {
+  constructor(name, lowerLayer, options, defaultOptions) {
     if (!name || typeof name !== 'string') {
       throw new Error('Layer name must be a non-empty string');
     }
@@ -24,7 +24,6 @@ class Layer extends EventEmitter {
     this.lowerLayer = lowerLayer;
 
     this.contextGenerator = options.contextGenerator;
-
     this.handlesForwarding = options.handlesForwarding === true;
 
     if (lowerLayer != null) {
@@ -39,6 +38,10 @@ class Layer extends EventEmitter {
     this.__contextToCallback = new Map();
     this.__contextToCallbackTimeouts = new Map();
     this.__contextToLayer = new Map();
+
+    if (defaultOptions) {
+      passDefaultOptionsDown(defaultOptions, this);
+    }
   }
 
   get name() {
@@ -50,32 +53,42 @@ class Layer extends EventEmitter {
     return this;
   }
 
+  /** OVERRIDE IF NEEDED */
+  handleDefaultOptions(defaultOptions, upperLayer) {
+
+  }
+
+  /** OVERRIDE IF NEEDED */
   disconnect(callback) {
-    // IMPLEMENT IN SUBCLASS IF NEEDED
     return CallbackPromise(callback, resolver => {
       resolver.resolve();
     });
   }
 
+  /** OVERRIDE IF NEEDED */
   layerAdded(layer) {
     // Use in lower layers to handle additions of upper layers
     // Currently used in MultiplexLayer
   }
 
+  /** OVERRIDE IF NEEDED */
   layerRemoved(layer) {
     // Use in lower layers to handle removals of upper layers
   }
 
+  /** OVERRIDE */
   sendNextMessage() {
-    // IMPLEMENT IN SUBCLASS
+    
   }
 
+  /** OVERRIDE */
   handleData(data) {
-    // IMPLEMENT IN SUBCLASS
+
   }
 
+  /** OVERRIDE IF NEEDED */
   handleDestroy(error) {
-    // IMPLEMENT IN SUBCLASS IF NEEDED
+
   }
 
   close(callback) {
@@ -224,6 +237,17 @@ class Layer extends EventEmitter {
 Layer.CallbackPromise = CallbackPromise;
 
 module.exports = Layer;
+
+
+function passDefaultOptionsDown(defaultOptions, upperLayer) {
+  let lowerLayer = upperLayer;
+  while ((lowerLayer = lowerLayer.lowerLayer)) {
+    const layerSpecificDefaultOptions = defaultOptions[lowerLayer.name];
+    if (layerSpecificDefaultOptions) {
+      lowerLayer.handleDefaultOptions(layerSpecificDefaultOptions, upperLayer);
+    }
+  }
+}
 
 
 function incrementContext(self) {

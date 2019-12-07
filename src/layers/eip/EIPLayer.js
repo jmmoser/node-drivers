@@ -52,9 +52,16 @@ function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connection
 }
 
 
+const DefaultOptions = {
+  tcp: {
+    port: 44818
+  }
+};
+
+
 class EIPLayer extends Layer {
   constructor(lowerLayer) {
-    super('eip', lowerLayer);
+    super('eip', lowerLayer, null, DefaultOptions);
 
     this._sessionHandle = 0;
     this._context = Buffer.alloc(8);

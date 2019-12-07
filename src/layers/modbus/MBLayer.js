@@ -16,9 +16,15 @@ const {
   // WriteMultipleRegisters
 } = MB.Functions;
 
+const DefaultOptions = {
+  'tcp': {
+    port: 502
+  }
+};
+
 class MBLayer extends Layer {
   constructor(lowerLayer, options) {
-    super('modbus', lowerLayer);
+    super('modbus', lowerLayer, null, DefaultOptions);
 
     switch (lowerLayer.name) {
       case 'tcp':

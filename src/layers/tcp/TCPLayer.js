@@ -8,6 +8,12 @@ class TCPLayer extends Layer {
   constructor(options) {
     super('tcp');
 
+    if (typeof options === 'string') {
+      options = {
+        host: options
+      };
+    }
+
     if (typeof options !== 'object') {
       object = {};
     }
@@ -24,7 +30,15 @@ class TCPLayer extends Layer {
 
     this._connectionState = TCPStateCodes.Disconnected;
     this._desiredState = TCPStateCodes.Disconnected;
-    connect(this);
+    // connect(this);
+  }
+  
+
+  handleDefaultOptions(defaultOptions, layer) {
+    if (this.options.port == null && defaultOptions.port != null) {
+      // console.log(`${this.name} layer setting port from ${layer.name} layer: ${defaultOptions.port}`);
+      this.options.port = defaultOptions.port;
+    }
   }
 
 
@@ -241,6 +255,7 @@ function connect(layer) {
   }
 
   layer._connect = new Promise(resolve => {
+    // console.log(layer.options);
     const socket = net.createConnection(layer.options, () => {
       // console.log('connected');
       /** sanity check to make sure connection state has not changed since started connecting */

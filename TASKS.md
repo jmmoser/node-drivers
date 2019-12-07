@@ -1,0 +1,16 @@
+- [ ] Add processor specific PCCC layers (SLC/PLC2/PLC5)
+- [X] Default options for lower layers
+  - [X] EIP passes down port 44818 to TCP layer
+  - [X] modbus passes down port 502 to TCP layer
+- [ ] Logix5000 optimizations
+  - [ ] persist processor information to file system
+  - [ ] readTags/bulkReadTags, multiple service packet
+  - [X] remove readTagIDs()
+  - [X] clean up code
+  - [ ] readAttributesAll add Bytes and ArrayDimensions
+- [ ] CIP
+  - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
+  - [ ] CIP add compound DataTypes (Array[Int])
+    - [ ] Add encoding and decoding for compound data types
+- [X] TCP Layer
+  - [X] allow passing just host for options

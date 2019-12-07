@@ -95,7 +95,8 @@ const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
 const SymbolInstanceAttributeCodes = {
   Name: 0x01,
   Type: 0x02,
-  Bytes: 0x07
+  Bytes: 0x07,
+  ArrayDimensions: 0x08
 };
 
 const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
@@ -104,6 +105,7 @@ const SymbolInstanceAttributeDataTypes = {
   [SymbolInstanceAttributeCodes.Name]: DataTypes.STRING,
   [SymbolInstanceAttributeCodes.Type]: DataTypes.UINT,
   [SymbolInstanceAttributeCodes.Bytes]: DataTypes.UINT
+  // TODO: Added ArrayDimensions once compound DataTypes are added
 };
 
 
