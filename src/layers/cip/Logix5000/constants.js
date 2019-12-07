@@ -7,6 +7,16 @@ const {
 } = require('../../../utils');
 
 
+const LDataTypeCodes = {
+  Program: 0x68,
+  Map: 0x69,
+  Routine: 0x6D,
+  Task: 0x70,
+  Cxn: 0x7E
+};
+
+const LDatatypeNames = InvertKeyValues(LDataTypeCodes);
+
 
 const ClassCodes = {
   Symbol: 0x6B,
@@ -154,6 +164,8 @@ const GenericServiceStatusDescriptions = {
 
 
 module.exports = {
+  LDataTypeCodes,
+  LDatatypeNames,
   ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,

@@ -292,7 +292,7 @@ class EIPLayer extends Layer {
     });
   }
 
-  // /** Update this to only connect if needed, can send unconnected messages if not connected */
+  // /** Only connect if needed, can send unconnected messages if not connected?? */
   // sendNextMessage() {
   //   // console.log(`EIP layer queue size: ${this.requestQueueSize()}`);
 
@@ -387,6 +387,8 @@ class EIPLayer extends Layer {
   //     }
   //   }
   // }
+
+
 
   sendNextMessage() {
     // console.log(`EIP layer queue size: ${this.requestQueueSize()}`);

@@ -1,9 +1,15 @@
 # Changelog
 
 ## 2.0.0-beta.2 (2019-11-30)
-- Added `PCCCLayer.echo()`
+- Logix5000 CAN NOW READ STRUCTURES 🔥
+- TCP layer automatically handles reconnects
+- Logix5000 listTags now accepts a scope (e.g. Program:SymbolName)
+- Logix5000 added data types Program, Map, Routine, Task, Cxn
+- Removed `Logix5000.readTagFragmented()`, it is now called automatically when needed
 - Fixed `PCCCLayer.typedWrite()` type/data parameter encoding
-- TCPLayer automatically handles reconnects
+- Added `PCCCLayer.echo()`
+- CIP ConnectionManager can now send unconnected messages - API still a work in progress
+
 
 
 ## 2.0.0-beta.1 (2019-11-15)

@@ -799,25 +799,25 @@ class EPath {
       });
     }
 
-    const path = Buffer.alloc(totalLength);
+    const buffer = Buffer.allocUnsafe(totalLength);
     let offset = 0;
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
       switch (segment.length) {
         case 1:
-          path.writeUInt8(segment.code, offset); offset += 1;
-          path.writeUInt8(segment.value, offset); offset += 1;
+          offset = buffer.writeUInt8(segment.code, offset);
+          offset = buffer.writeUInt8(segment.value, offset);
           break;
         case 2:
-          path.writeUInt16LE(segment.code, offset); offset += 2;
-          path.writeUInt16LE(segment.value, offset); offset += 2;
+          offset = buffer.writeUInt16LE(segment.code, offset);
+          offset = buffer.writeUInt16LE(segment.value, offset);
           break;
         default:
           throw new Error(`Unexpected segment length ${segment.length}`);
       }
     }
 
-    return path;
+    return buffer;
   }
 
   static ParsePath(buffer, offset) {

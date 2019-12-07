@@ -1,6 +1,6 @@
 'use strict';
 
-const { InvertKeyValues } = require('../../../utils');
+const { InvertKeyValues, getBit } = require('../../../utils');
 
 /** 
  * Ref. CIP Vol 1 Table 5.1
@@ -187,78 +187,6 @@ const ReservedClassAttributes = {
 };
 
 
-// const ReservedClassAttributes = {
-//   Revision: {
-//     Code: 0x01,
-//     DataType: {
-//       Code: DataTypes.UINT
-//     }
-//   },
-//   MaxInstance: {
-//     Code: 0x02,
-//     DataType: {
-//       Code: DataTypes.UINT
-//     }
-//   },
-//   NumberOfInstances: {
-//     Code: 0x03,
-//     DataType: {
-//       Code: DataTypes.UINT
-//     }
-//   },
-//   OptionalAttributeList: {
-//     Code: 0x04,
-//     DataType: {
-//       Code: DataTypes.STRUCT,
-//       Structure: [
-//         {
-//           name: 'NumberOfAttributes',
-//           dataType: 'UINT'
-//         },
-//         {
-//           name: 'AttributeNumbers',
-//           dataType: 'UINT[]'
-//         }
-//       ],
-//       Decode: function(buffer, offset, callback) {
-//         let numberOfAttributes;
-//         offset = Decode(DataTypes.UINT, buffer, offset, value => {
-//           numberOfAttributes = value;
-//         });
-
-//         if (error) {
-//           return callback(error);
-//         }
-
-//         const attributes = [];
-
-//         for (let i = 0; i < numberOfAttributes; i++) {
-//           let attribute;
-//           offset = Decode(DataTypes.UINT, buffer, offset, value => {
-//             attribute = value;
-//           });
-
-//           if (error) {
-//             return callback(error);
-//           }
-
-//           attributes.push(attribute);
-//         }
-
-//         callback(null, attributes);
-//         return offset;
-//       }
-//       /**
-//        * STRUCT of
-//        * - (UINT) number of attributes (in the optional attribute list)
-//        * - (ARRAY of UINT) list of optional attribute numbers
-//        */
-//     }
-//   }
-// };
-
-
-
 // CIP-V1-1.0 Appendix B-1. General status codes
 const GeneralStatusCodeNames = {
   0x00: 'Success',
@@ -354,76 +282,79 @@ function Decode(dataType, buffer, offset, cb) {
   let error;
   let value;
 
-  try {
-    switch (dataType) {
-      case DataTypes.SINT:
-        value = buffer.readInt8(offset); offset += 1;
-        break;
-      case DataTypes.INT:
-      case DataTypes.ITIME:
-        value = buffer.readInt16LE(offset); offset += 2;
-        break;
-      case DataTypes.DINT:
-      case DataTypes.TIME:
-      case DataTypes.FTIME:
-        value = buffer.readInt32LE(offset); offset += 4;
-        break;
-      case DataTypes.REAL:
-        value = buffer.readFloatLE(offset); offset += 4;
-        break;
-      case DataTypes.BOOL:
-        value = buffer.readUInt8(offset) > 0; offset += 1;
-        break;
-      case DataTypes.USINT:
-      case DataTypes.BYTE:
-        value = buffer.readUInt8(offset); offset += 1;
-        break;
-      case DataTypes.UINT:
-      case DataTypes.WORD:
-        value = buffer.readUInt16LE(offset); offset += 2;
-        break;
-      case DataTypes.UDINT:
-      case DataTypes.DWORD:
-      case DataTypes.DATE:
-        value = buffer.readUInt32LE(offset); offset += 4;
-        break;
-      case DataTypes.STRING: {
-        const length = buffer.readUInt16LE(offset); offset += 2;
-        value = buffer.toString('ascii', offset, offset + length); offset += length;
-        break;
+  let dataTypeCode = dataType;
+
+  if (typeof dataType === 'object') {
+    dataTypeCode = dataType.code;
+  }
+
+  switch (dataTypeCode) {
+    case DataTypes.SINT:
+      value = buffer.readInt8(offset); offset += 1;
+      break;
+    case DataTypes.INT:
+    case DataTypes.ITIME:
+      value = buffer.readInt16LE(offset); offset += 2;
+      break;
+    case DataTypes.DINT:
+    case DataTypes.TIME:
+    case DataTypes.FTIME:
+      value = buffer.readInt32LE(offset); offset += 4;
+      break;
+    case DataTypes.REAL:
+      value = buffer.readFloatLE(offset); offset += 4;
+      break;
+    case DataTypes.BOOL:
+      value = buffer.readUInt8(offset); offset += 1;
+      if (dataType.info != null) {
+        if (dataType.info > 7) {
+          throw new Error(`Bit position too high: ${dataType.info}`);
+        }
+        value = getBit(value, dataType.info);
       }
-      case DataTypes.SHORT_STRING: {
-        const length = buffer.readUInt8(offset); offset += 1;
-        value = buffer.toString('ascii', offset, offset + length); offset += length;
-        break;
-      }
-      case DataTypes.STRING2: {
-        const length = buffer.readUInt16LE(offset); offset += 2;
-        value = buffer.toString('utf16le', offset, offset + 2 * length); offset += 2 * length;
-        break;
-      }
-      case DataTypes.LINT:
-      case DataTypes.ULINT:
-      case DataTypes.LREAL:
-      case DataTypes.LWORD:
-      case DataTypes.LTIME:
-      default:
-        error = `Data type is not currently supported: ${DataTypeNames[dataType] || dataType}`
-        break;
+      value = value > 0;
+      break;
+    case DataTypes.USINT:
+    case DataTypes.BYTE:
+      value = buffer.readUInt8(offset); offset += 1;
+      break;
+    case DataTypes.UINT:
+    case DataTypes.WORD:
+      value = buffer.readUInt16LE(offset); offset += 2;
+      break;
+    case DataTypes.UDINT:
+    case DataTypes.DWORD:
+    case DataTypes.DATE:
+      value = buffer.readUInt32LE(offset); offset += 4;
+      break;
+    case DataTypes.STRING: {
+      const length = buffer.readUInt16LE(offset); offset += 2;
+      value = buffer.toString('ascii', offset, offset + length); offset += length;
+      break;
     }
-  } catch (err) {
-    error = err.message;
+    case DataTypes.SHORT_STRING: {
+      const length = buffer.readUInt8(offset); offset += 1;
+      value = buffer.toString('ascii', offset, offset + length); offset += length;
+      break;
+    }
+    case DataTypes.STRING2: {
+      const length = buffer.readUInt16LE(offset); offset += 2;
+      value = buffer.toString('utf16le', offset, offset + 2 * length); offset += 2 * length;
+      break;
+    }
+    case DataTypes.LINT:
+    case DataTypes.ULINT:
+    case DataTypes.LREAL:
+    case DataTypes.LWORD:
+    case DataTypes.LTIME:
+    default:
+      error = `Data type is not currently supported: ${DataTypeNames[dataType] || dataType}`
+      break;
   }
-  
-  // if (typeof cb === 'function') {
-  //   cb(error, value);
-  // }
 
-  if (error) {
-    throw new Error(error);
+  if (typeof cb === 'function') {
+    cb(value);
   }
-
-  cb(value);
 
   return offset;
 }

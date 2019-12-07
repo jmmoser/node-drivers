@@ -18,51 +18,30 @@ function incrementNetworkConnectionCounters() {
 
 
 class ConnectionManager {
-  UnconnectedSend() {
-    // 0x52
-  }
+  static UnconnectedSend(message, routePath, options) {
+    options = Object.assign({
+      priority: 0,
+      timeTick: 7,
+      timeoutTicks: 0xE9
+    }, options);
 
-  /** EIP-CIP-V1 3-5.5.3, pg. 3-65 */
-  static ForwardClose(connection) {
+    const messageLength = message.length;
+
     let offset = 0;
-    const data = Buffer.alloc(64);
+    const data = Buffer.allocUnsafe(6 + messageLength + (messageLength % 2) + routePath.length);
 
-    offset = data.writeUInt8(0x01, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
-    offset = data.writeUInt8(0x0E, offset); // Timeout, ticks
-
-    offset = data.writeUInt16LE(connection.ConnectionSerialNumber, offset);
-    offset = data.writeUInt16LE(connection.VendorID, offset);
-    offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
-
-    offset = data.writeUInt8(0x03, offset); // connection path size, 16-bit words
+    offset = data.writeUInt8((options.priority << 4 | options.timeTick), offset);
+    offset = data.writeUInt8(options.timeoutTicks, offset);
+    offset = data.writeUInt16LE(messageLength, offset);
+    offset += message.copy(data, offset);
+    if (messageLength % 2 === 1) {
+      offset = data.writeUInt8(0, offset); /** Pad byte if message length is odd */
+    }
+    offset = data.writeUInt8(routePath.length / 2, offset);
     offset = data.writeUInt8(0, offset); /** Reserved */
-    // Padded EPATH
-    offset = data.writeUInt8(0x01, offset); // port segment
-    offset = data.writeUInt8(connection.ProcessorSlot, offset);
-    offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit address
-    offset = data.writeUInt8(0x02, offset); // class ID (MessageRouter)
-    offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit address
-    offset = data.writeUInt8(0x01, offset); // instance ID
+    offset += routePath.copy(data, offset);
 
-    return buildRequest(
-      Services.ForwardClose,
-      data.slice(0, offset)
-    );
-  }
-  
-
-  static ForwardCloseReply(buffer) {
-    let offset = 0;
-    const response = {};
-
-    response.SerialNumber = buffer.readUInt16LE(offset); offset += 2;
-    response.VendorID = buffer.readUInt16LE(offset); offset += 2;
-    response.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-    let applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
-    offset += 1;
-    if (applicationReplySize > 0) response.Data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
-
-    return response;
+    return buildRequest(Services.UnconnectedSend, data);
   }
 
 
@@ -72,7 +51,7 @@ class ConnectionManager {
     connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
 
     let offset = 0;
-    const data = Buffer.alloc(64);
+    const data = Buffer.allocUnsafe(42);
 
     offset = data.writeUInt8(0x0A, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
     offset = data.writeUInt8(0x0E, offset); // Time-out, ticks
@@ -82,7 +61,7 @@ class ConnectionManager {
     offset = data.writeUInt16LE(connection.VendorID, offset);
     offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
     offset = data.writeUInt8(connection.ConnectionTimeoutMultiplier, offset);
-    
+
     offset = data.writeUInt8(0, offset); /** Reserved */
     offset = data.writeUInt8(0, offset); /** Reserved */
     offset = data.writeUInt8(0, offset); /** Reserved */
@@ -98,14 +77,11 @@ class ConnectionManager {
     offset = data.writeUInt8(0x01, offset); // Port identifier
     offset = data.writeUInt8(connection.ProcessorSlot, offset);
     offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit logical address
-    offset = data.writeUInt8(0x02, offset); // class ID (MessageRouter)
+    offset = data.writeUInt8(CIP.Classes.MessageRouter, offset); // class ID (MessageRouter)
     offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit logical address
     offset = data.writeUInt8(0x01, offset); // instance ID
 
-    return buildRequest(
-      Services.ForwardOpen,
-      data.slice(0, offset)
-    );
+    return buildRequest(Services.ForwardOpen, data);
   }
 
 
@@ -128,9 +104,52 @@ class ConnectionManager {
     return res;
   }
 
+
+  /** EIP-CIP-V1 3-5.5.3, pg. 3-65 */
+  static ForwardClose(connection) {
+    let offset = 0;
+    const data = Buffer.allocUnsafe(18);
+    // const data = Buffer.alloc(64);
+
+    offset = data.writeUInt8(0x01, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
+    offset = data.writeUInt8(0x0E, offset); // Timeout, ticks
+
+    offset = data.writeUInt16LE(connection.ConnectionSerialNumber, offset);
+    offset = data.writeUInt16LE(connection.VendorID, offset);
+    offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
+
+    offset = data.writeUInt8(0x03, offset); // connection path size, 16-bit words
+    offset = data.writeUInt8(0, offset); /** Reserved */
+    // Padded EPATH
+    offset = data.writeUInt8(0x01, offset); // port segment
+    offset = data.writeUInt8(connection.ProcessorSlot, offset);
+    offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit address
+    offset = data.writeUInt8(CIP.Classes.MessageRouter, offset); // class ID (MessageRouter)
+    offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit address
+    offset = data.writeUInt8(0x01, offset); // instance ID
+
+    return buildRequest(Services.ForwardClose, data);
+  }
+  
+
+  static ForwardCloseReply(buffer) {
+    let offset = 0;
+    const response = {};
+
+    response.SerialNumber = buffer.readUInt16LE(offset); offset += 2;
+    response.VendorID = buffer.readUInt16LE(offset); offset += 2;
+    response.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
+    let applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
+    offset += 1;
+    if (applicationReplySize > 0) response.Data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
+
+    return response;
+  }
+
+
   /** CIP Vol1 3-5.5.5 */
   static GetConnectionDataRequest(connectionNumber) {
-    const data = Buffer.alloc(2);
+    const data = Buffer.allocUnsafe(2);
 
     data.writeUInt16LE(connectionNumber, 0);
 
@@ -171,16 +190,13 @@ class ConnectionManager {
   /** CIP Vol1 3-5.5.6 */
   static SearchConnectionDataRequest(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
     let offset = 0;
-    const data = Buffer.alloc(8);
+    const data = Buffer.allocUnsafe(8);
 
     offset = data.writeUInt16LE(connectionSerialNumber, offset);
     offset = data.writeUInt16LE(originatorVendorID, offset);
     offset = data.writeUInt32LE(originatorSerialNumber, offset);
 
-    return buildRequest(
-      Services.SearchConnectionData,
-      data
-    );
+    return buildRequest(Services.SearchConnectionData, data);
   }
 
   /** CIP Vol1 3-5.5.6 */
@@ -189,15 +205,15 @@ class ConnectionManager {
   }
 
 
-  static GetConnectionOwner() {
-    let offset = 0;
-    const data = Buffer.alloc(64);
+  // static GetConnectionOwner() {
+  //   let offset = 0;
+  //   const data = Buffer.alloc(64);
 
-    return buildRequest(
-      Services.GetConnectionOwner,
-      data.slice(0, offset)
-    );
-  }
+  //   return buildRequest(
+  //     Services.GetConnectionOwner,
+  //     data.slice(0, offset)
+  //   );
+  // }
 }
 
 

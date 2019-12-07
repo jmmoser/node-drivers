@@ -30,10 +30,30 @@ const EPath = require('./../src/layers/cip/objects/EPath');
 // })();
 
 
+// (() => {
+//   const PCCCPacket = require('../src/layers/pccc/PCCCPacket');
+//   // console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
+//   console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', 4));
+// })();
+
+
 (() => {
-  const PCCCPacket = require('../src/layers/pccc/PCCCPacket');
-  // console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
-  console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', 4));
+  const CIP = require('../src/layers/cip/objects/CIP');
+  const EPath = require('../src/layers/cip/objects/EPath');
+  const MessageRouter = require('../src/layers/cip/objects/MessageRouter');
+  const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
+
+  const request = MessageRouter.Request(
+    CIP.CommonServices.GetAttributesAll,
+    EPath.Encode(CIP.Classes.Identity, 0x01)
+  );
+
+  const routePath = Buffer.from([
+    0x01,
+    0x01
+  ]);
+
+  console.log(ConnectionManager.UnconnectedSend(request, routePath));
 })();
 
 

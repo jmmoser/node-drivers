@@ -87,7 +87,7 @@ class Layer extends EventEmitter {
       await this.disconnect();
 
       /** Do not bubble up since close has already bubbled up */
-      internalDestroy(this);
+      internalDestroy(this, 'Close');
 
       resolver.resolve();
     });
@@ -104,14 +104,19 @@ class Layer extends EventEmitter {
 
   forward(data, info, context) {
     if (this.upperLayer != null) {
-      this.forwardTo(this.upperLayer, data, info, context);
+      return this.forwardTo(this.upperLayer, data, info, context);
     }
   }
 
   forwardTo(layer, data, info, context) {
-    // console.log('emitting data');
-    // console.log(data);
-    internalHandleData(layer, data, info, context);
+    if (layer._defragger != null) {
+      data = layer._defragger.defrag(data);
+      if (data == null) return;
+    }
+    layer.emit('data', data, info, context);
+    return layer.handleData(data, info, context);
+
+    // return internalHandleData(layer, data, info, context);
   }
 
   send(message, info, priority, context) {
@@ -227,14 +232,14 @@ function incrementContext(self) {
 }
 
 
-function internalHandleData(self, data, info, context) {
-  if (self._defragger != null) {
-    data = self._defragger.defrag(data);
-    if (data == null) return;
-  }
-  self.emit('data', data, info, context);
-  self.handleData(data, info, context);
-}
+// function internalHandleData(self, data, info, context) {
+//   if (self._defragger != null) {
+//     data = self._defragger.defrag(data);
+//     if (data == null) return;
+//   }
+//   self.emit('data', data, info, context);
+//   return self.handleData(data, info, context);
+// }
 
 
 function internalDestroy(layer, error) {

@@ -270,6 +270,8 @@ function connect(layer) {
     socket.on('data', data => {
       // console.log('TCP Handling Data:');
       // console.log(data);
+      // console.log(data.length);
+      // console.log(data.toString('ascii'));
       handleData(data);
     });
 

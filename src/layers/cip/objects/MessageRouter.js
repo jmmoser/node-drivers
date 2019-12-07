@@ -1,6 +1,9 @@
 'use strict';
 
 const {
+  Decode,
+  DataTypes,
+  ClassNames,
   CommonServiceNames,
   GeneralStatusCodeNames,
   GeneralStatusCodeDescriptions
@@ -14,7 +17,7 @@ class MessageRouter {
     const dataIsBuffer = Buffer.isBuffer(data)
     const dataLength = dataIsBuffer ? data.length : 0;
 
-    const buffer = Buffer.alloc(2 + path.length + dataLength);
+    const buffer = Buffer.allocUnsafe(2 + path.length + dataLength);
     offset = buffer.writeUInt8(service, offset);
     offset = buffer.writeUInt8(path.length / 2, offset);
     offset += path.copy(buffer, offset);
@@ -102,6 +105,112 @@ class MessageRouter {
       segments.push(segment);
     }
     return segments;
+  }
+
+  static DecodeSupportedObjects(data, offset, cb) {
+    // const objectCount = data.readUInt16LE(offset); offset += 2;
+    let objectCount;
+    offset = Decode(DataTypes.UINT, data, offset, val => objectCount = val);
+
+    const classes = [];
+    for (let i = 0; i < objectCount; i++) {
+      offset = Decode(DataTypes.UINT, data, offset, val => classes.push(val));
+    }
+
+    cb(classes.sort(function (o1, o2) {
+      if (o1 < o2) return -1;
+      else if (o1 > o2) return 1;
+      return 0;
+    }).map(classCode => ({
+      code: classCode,
+      name: ClassNames[classCode] || 'Unknown'
+    })));
+
+    return offset;
+  }
+
+
+  static DecodeGetAttributesAll(data, offset, cb) {
+    const info = {};
+    info.data = data;
+    const length = data.length;
+
+    if (offset < length) {
+      offset = Decode(DataTypes.UINT, data, offset, val => info.revision = val);
+    }
+
+    if (offset < length) {
+      offset = Decode(DataTypes.UINT, data, offset, val => info.maxInstanceID = val);
+    }
+
+    if (offset < length) {
+      offset = Decode(DataTypes.UINT, data, offset, val => info.numberOfInstances = val);
+    }
+
+    if (offset < length) {
+      let numberOfOptionalAttributes;
+      offset = Decode(DataTypes.UINT, data, offset, val => numberOfOptionalAttributes = val);
+      console.log({
+        numberOfOptionalAttributes
+      });
+
+      info.optionalAttributes = [];
+      for (let i = 0; i < numberOfOptionalAttributes; i++) {
+        if (offset < length) {
+          offset = Decode(DataTypes.UINT, data, offset, val => info.optionalAttributes.push(val));
+        } else {
+          console.log('breaking optional attributes');
+          break;
+        }
+      }
+
+      console.log({
+        numberOfOptionalAttributes,
+        length: info.optionalAttributes.length
+      })
+    }
+
+    if (offset < length) {
+      let numberOfOptionalServices;
+      offset = Decode(DataTypes.UINT, data, offset, val => numberOfOptionalServices = val);
+
+      info.optionalServices = [];
+      for (let i = 0; i < numberOfOptionalServices; i++) {
+        if (offset < length) {
+          offset = Decode(DataTypes.UINT, data, offset, val => info.optionalServices.push({
+            code: val,
+            name: CommonServiceNames[val] || 'Unknown',
+            hex: `0x${val.toString('16')}`
+          }));
+        } else {
+          console.log('breaking optional services');
+          break;
+        }
+      }
+
+      // console.log({
+      //   numberOfOptionalServices,
+      //   length: info.optionalServices.length
+      // })
+    }
+
+    if (offset < length) {
+      offset = Decode(DataTypes.UINT, data, offset, val => info.maxIDNumberOfClassAttributes = val);
+    }
+
+    if (offset < length) {
+      offset = Decode(DataTypes.UINT, data, offset, val => info.maxIDNumberOfInstanceAttributes = val);
+    }
+
+    info.extra = data.slice(offset);
+
+    cb(info);
+
+    // console.log(data.readUInt16LE(length - 4));
+    // console.log(data.readUInt16LE(length - 2));
+    // console.log(data.slice(length - 8));
+
+    return offset;
   }
 }
 

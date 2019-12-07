@@ -31,6 +31,7 @@ class CIPLayer extends Layer {
     });
   }
 
+
   supportedClasses(callback) {
     return Layer.CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributeSingle;
@@ -46,26 +47,9 @@ class CIPLayer extends Layer {
           resolver.reject(error, reply);
         } else {
           try {
-            const data = reply.data;
-            const res = [];
-            let offset = 0;
-
-            const objectCount = data.readUInt16LE(offset); offset += 2;
-
-            for (let i = 0; i < objectCount; i++) {
-              const classID = data.readUInt16LE(offset); offset += 2;
-              res.push({
-                id: classID,
-                name: CIP.ClassNames[classID] || 'Unknown'
-              });
-            }
-
-            resolver.resolve(res.sort(function (o1, o2) {
-              if (o1.id < o2.id) return -1;
-              else if (o1.id > o2.id) return 1;
-              return 0;
-            }));
-
+            MessageRouter.DecodeSupportedObjects(reply.data, 0, function(classes) {
+              resolver.resolve(classes);
+            });
           } catch (err) {
             resolver.reject(err, reply);
           }
@@ -73,6 +57,7 @@ class CIPLayer extends Layer {
       });
     });
   }
+
 
   messageRouterInstanceAttributes(callback) {
     return Layer.CallbackPromise(callback, resolver => {
@@ -96,18 +81,9 @@ class CIPLayer extends Layer {
 
             /** object list may not be supported */
             if (offset < length) {
-              let classCount;
-              offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => classCount = val);
-
-              const classes = [];
-              for (let i = 0; i < classCount; i++) {
-                offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => classes.push(val));
-              }
-
-              info.classes = classes.map(classCode => ({
-                code: classCode,
-                name: CIP.ClassNames[classCode] || 'Unknown'
-              }));  
+              offset = MessageRouter.DecodeSupportedObjects(reply.data, 0, function (classes) {
+                info.classes = classes;
+              });
             }   
 
             /** number active may not be supported */
@@ -135,18 +111,57 @@ class CIPLayer extends Layer {
   }
 
 
+  messageRouterClassAttributes(callback) {
+    return Layer.CallbackPromise(callback, resolver => {
+      const service = CIP.CommonServices.GetAttributesAll;
+
+      const path = EPath.Encode(
+        CIP.Classes.Identity,
+        // null,
+        // 0x04
+      );
+
+      console.log(path);
+
+      CIPLayer.send(this, true, service, path, null, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          try {
+            console.log(reply);
+            // Identity.ParseInstanceAttributesAll(reply.data, 0, function (info) {
+            //   resolver.resolve(info);
+            // });
+            resolver.resolve(reply);
+            // MessageRouter.DecodeGetAttributesAll(reply.data, 0, function(info) {
+            //   resolver.resolve(info);
+            // });
+          } catch (err) {
+            resolver.reject(err, reply);
+          }
+        }
+      });
+    });
+  }
+
+
   handleData(data, info, context) {
     const callback = this.callbackForContext(context);
     if (callback != null) {
       callback(null, data, info);
+      return true;
+    } else {
+      console.log(arguments);
+      console.log(`CIP layer unhandled data`);
+      return false;
     }
-
-    // this.forward(data, info, context);
   }
 
 
   static send(layer, connected, service, path, data, callback, timeout) {
     const request = MessageRouter.Request(service, path, data);
+    // console.log(request);
+    // console.log(new Error());
 
     const info = { connected };
 
@@ -154,7 +169,10 @@ class CIPLayer extends Layer {
       if (error) {
         callback(error);
       } else {
+        // console.log('');
+        // console.log(request);
         const reply = MessageRouter.Reply(message);
+        // console.log(reply);
 
         if (reply.service.code !== service) {
           return callback('Response service does not match request service. This should never happen.', reply);
