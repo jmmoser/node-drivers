@@ -149,10 +149,6 @@ class Logix5000 extends CIPLayer {
       elements = undefined;
     }
 
-    // if (!Number.isFinite(elements)) {
-    //   elements = 1;
-    // }
-
     return CallbackPromise(callback, async resolver => {
       if (!tag) {
         return resolver.reject('Tag must be specified');

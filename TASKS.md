@@ -2,14 +2,16 @@
 - [X] Default options for lower layers
   - [X] EIP passes down port 44818 to TCP layer
   - [X] modbus passes down port 502 to TCP layer
-- [ ] Logix5000 optimizations
-  - [ ] persist processor information to file system
-  - [ ] readTags/bulkReadTags, multiple service packet
+- [ ] Logix5000
+  - [ ] Optimize
+    - [ ] persist processor information to file system
+    - [ ] readTags/bulkReadTags, multiple service packet
   - [X] remove readTagIDs()
   - [X] clean up code
   - [X] readSymbolAttributesAll add Bytes and ArrayDimensions
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays
+  - [ ] When program is read, read all symbols contained
 - [ ] CIP
   - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
   - [ ] CIP add compound DataTypes (Array[Int])
