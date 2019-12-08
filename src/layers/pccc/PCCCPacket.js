@@ -105,10 +105,16 @@ class PCCCPacket {
 
 
   static TypedReadRequest(transaction, address, items) {
+    // const info = logicalASCIIAddressInfo(address);
+    // if (!info) {
+    //   throw new Error(`Unsupported address: ${address}`);
+    // }
+
     let offset = 0;
     const data = Buffer.allocUnsafe(10 + address.length);
     offset = data.writeUInt8(0x68, offset); // function
     offset = data.writeUInt16LE(0, offset); /** Packet offset */
+    // offset = data.writeUInt16LE((items * info.size / 2) + 1, offset); // Total Trans
     offset = data.writeUInt16LE(items, offset); // Total Trans
     offset = logicalASCIIAddress(address, data, offset); // PLC system address
     offset = data.writeUInt16LE(items, offset); // Size, number of elements to read from the specified system address
@@ -118,20 +124,54 @@ class PCCCPacket {
 
   static ParseTypedReadData(data, offset = 0) {
     const info = TypedReadParserDataInfo(data, offset);
-    return __TypedReadReplyParser(data, info);
+    return __TypedReadReplyParser(data, info.offset, info);
   }
 
 
   static TypedWriteRequest(transaction, address, value) {
     const info = logicalASCIIAddressInfo(address);
 
-    const valueIsArray = Array.isArray(value);
-    const valueCount = valueIsArray ? value.length : 1;
+    // const valueIsArray = Array.isArray(value);
+    // const valueCount = valueIsArray ? value.length : 1;
 
-    const dataTypeItemLength = dataTypeEncodingLength(info.dataType, info.size);
-    const dataTypeLength = dataTypeItemLength + (valueIsArray ? dataTypeEncodingLength(PCCCDataType.Array, dataTypeItemLength) : 0);
+    // const dataValueLength = valueCount * info.size;
+    // const dataTypeItemLength = dataTypeEncodingLength(info.id, info.size);
+    // const dataTypeLength = dataTypeItemLength + (valueIsArray ? dataTypeEncodingLength(PCCCDataType.Array, dataTypeItemLength + dataValueLength) : 0);
+    // const dataLength = 5 + (address.length + 3) + dataTypeLength + dataValueLength;
+
+    // if (Array.isArray(value)) {
+    //   const dataValueLength = value.length * info.size;
+
+    // }
+
+    if (!Array.isArray(value)) {
+      value = [value];
+    }
+
+    const valueCount = value.length;
     const dataValueLength = valueCount * info.size;
+    const dataTypeLength = dataTypeEncodingLength(info.id, info.size);
     const dataLength = 5 + (address.length + 3) + dataTypeLength + dataValueLength;
+
+    // console.log({
+    //   valueCount,
+    //   dataValueLength,
+    //   dataTypeLength,
+    //   dataLength
+    // });
+
+    // const dataTypeItemLength = dataTypeEncodingLength(info.id, info.size);
+    // const dataTypeLength = dataTypeItemLength + (valueIsArray ? dataTypeEncodingLength(PCCCDataType.Array, dataTypeItemLength) : 0);
+    // const dataValueLength = valueCount * info.size;
+    // const dataLength = 5 + (address.length + 3) + dataTypeLength + dataValueLength;
+
+    // console.log({
+    //   info,
+    //   dataTypeItemLength,
+    //   dataTypeLength,
+    //   dataValueLength,
+    //   dataLength
+    // })
 
     let offset = 0;
     const data = Buffer.allocUnsafe(dataLength);
@@ -139,18 +179,27 @@ class PCCCPacket {
     offset = data.writeUInt16LE(0, offset); /** Packet offset */
     offset = data.writeUInt16LE(valueCount, offset); /** total transmitted */
     offset = logicalASCIIAddress(address, data, offset); /** PLC-5 system address */
-    if (valueIsArray) {
-      offset = encodeDataType(data, offset, PCCCDataType.Array, dataTypeItemLength);
-    }
-    offset = encodeDataType(data, offset, info.dataType, info.size);
 
-    if (valueIsArray) {
-      for (let i = 0; i < valueCount; i++) {
-        offset = typedWriteEncodeValue(data, offset, info.datatype, value[i]);
-      }
-    } else {
-      offset = typedWriteEncodeValue(data, offset, info.datatype, value);
+    // const dataTypeOffset = offset;
+    // if (valueIsArray) {
+    //   offset = encodeDataType(data, offset, PCCCDataType.Array, dataTypeItemLength);
+    // }
+    offset = encodeDataType(data, offset, info.id, info.size);
+
+    for (let i = 0; i < valueCount; i++) {
+      offset = typedWriteEncodeValue(data, offset, info.datatype, value[i]);
+      // console.log(offset);
     }
+
+    // if (valueIsArray) {
+    //   for (let i = 0; i < valueCount; i++) {
+    //     offset = typedWriteEncodeValue(data, offset, info.datatype, value[i]);
+    //   }
+    // } else {
+    //   offset = typedWriteEncodeValue(data, offset, info.datatype, value);
+    // }
+
+    // console.log(data.length, offset, data.slice(dataTypeOffset));
 
     return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
   }
@@ -230,16 +279,16 @@ function numberOfBytesToSerializeInteger(i) {
 }
 
 
-function dataTypeAttributeEncodingLength(value) {
+function dataTypeAttributeAdditionalEncodingLength(value) {
   if (value < 7) {
-    return 1;
+    return 0;
   } else {
-    return 1 + numberOfBytesToSerializeInteger(value);
+    return numberOfBytesToSerializeInteger(value);
   }
 }
 
 
-function encodeInteger(data, offset, value, size) {
+function encodeUnsignedInteger(data, offset, value, size) {
   switch (size) {
     case 1:
       return data.writeUInt8(value, offset);
@@ -247,8 +296,8 @@ function encodeInteger(data, offset, value, size) {
       return data.writeUInt16LE(value, offset);
     case 4:
       return data.writeUInt32LE(value, offset);
-    // case 8:
-    //   return null;
+    case 8:
+      return data.writeBigUInt64LE(value, offset);
     default:
       throw new Error(`Invalid size: ${size}`);
   }
@@ -256,15 +305,15 @@ function encodeInteger(data, offset, value, size) {
 
 
 function dataTypeEncodingLength(id, size) {
-  const idLength = dataTypeAttributeEncodingLength(id);
-  const sizeLength = dataTypeAttributeEncodingLength(size);
-  if (idLength === 1 && sizeLength === 1) {
+  const idLength = dataTypeAttributeAdditionalEncodingLength(id);
+  const sizeLength = dataTypeAttributeAdditionalEncodingLength(size);
+  if (idLength === 0 && sizeLength === 0) {
     return 1;
-  } else if (idLength > 1 && sizeLength === 1) {
+  } else if (idLength > 0 && sizeLength === 0) {
     return 1 + idLength;
-  } else if (idLength === 1 && sizeLength > 1) {
+  } else if (idLength === 0 && sizeLength > 0) {
     return 1 + sizeLength;
-  } else if (idLength > 1 && sizeLength > 1) {
+  } else if (idLength > 0 && sizeLength > 0) {
     return 1 + idLength + sizeLength;
   }
   throw new Error(`Unable to encode data type with id ${id} and size ${size}`);
@@ -272,20 +321,20 @@ function dataTypeEncodingLength(id, size) {
 
 
 function encodeDataType(data, offset, id, size) {
-  const idLength = dataTypeAttributeEncodingLength(id);
-  const sizeLength = dataTypeAttributeEncodingLength(size);
-  if (idLength === 1 && sizeLength === 1) {
+  const idLength = dataTypeAttributeAdditionalEncodingLength(id);
+  const sizeLength = dataTypeAttributeAdditionalEncodingLength(size);
+  if (idLength === 0 && sizeLength === 0) {
     return data.writeUInt8(id << 4 | size, offset);
-  } else if (idLength > 1 && sizeLength === 1) {
+  } else if (idLength > 0 && sizeLength === 0) {
     offset = data.writeUInt8((0b1000 | idLength) << 4 | size, offset);
-    return encodeInteger(data, offset, id, idLength);
-  } else if (idLength === 1 && sizeLength > 1) {
+    return encodeUnsignedInteger(data, offset, id, idLength);
+  } else if (idLength === 0 && sizeLength > 0) {
     offset = data.writeUInt8((id << 4) | (0b1000 | sizeLength), offset);
-    return encodeInteger(data, offset, size, sizeLength);
-  } else if (idLength > 1 && sizeLength > 1) {
+    return encodeUnsignedInteger(data, offset, size, sizeLength);
+  } else if (idLength > 0 && sizeLength > 0) {
     offset = data.writeUInt8((0b1000 | idLength) << 4 | (0b1000 | sizeLength));
-    offset = encodeInteger(data, offset, id, idLength);
-    return encodeInteger(data, offset, size, sizeLength);
+    offset = encodeUnsignedInteger(data, offset, id, idLength);
+    return encodeUnsignedInteger(data, offset, size, sizeLength);
   }
   throw new Error(`Unable to encode data type with id ${id} and size ${size}`);
 }
@@ -298,9 +347,9 @@ function typedWriteEncodeValue(buffer, offset, type, value) {
       return buffer.writeUInt8(value, offset);
     case 'INT':
     case PCCCDataType.Integer:
-      return buffer.writeInt16LE(value, offset);
+      return buffer.writeUInt16LE(value, offset);
     case 'DINT':
-      return buffer.writeInt32LE(value, offset);
+      return buffer.writeUInt32LE(value, offset);
     case 'REAL':
     case PCCCDataType.Float:
       return buffer.writeFloatLE(value, offset);
@@ -327,7 +376,7 @@ function logicalASCIIAddressInfo(address) {
       info.addrtype = prefix;
       info.datatype = "INT";
       info.size = 2;
-      info.dataType = PCCCDataType.Integer;
+      info.id = PCCCDataType.Integer;
       break;
     case "L": // Micrologix Only
       info.addrtype = prefix;
@@ -338,7 +387,7 @@ function logicalASCIIAddressInfo(address) {
       info.addrtype = prefix;
       info.datatype = "REAL";
       info.size = 4;
-      info.dataType = PCCCDataType.Float;
+      info.id = PCCCDataType.Float;
       break;
     case "T":
       info.addrtype = prefix;
@@ -375,16 +424,16 @@ function logicalASCIIAddressInfo(address) {
 
 
 const PCCCDataType = {
-  Binary: 1,
-  BitString: 2,
-  Byte: 3,
-  Integer: 4,
-  Timer: 5,
-  Counter: 6,
-  Control: 7,
-  Float: 8,
-  Array: 9,
-  Address: 0xf,
+  Binary: 0x01,
+  BitString: 0x02,
+  Byte: 0x03,
+  Integer: 0x04,
+  Timer: 0x05,
+  Counter: 0x06,
+  Control: 0x07,
+  Float: 0x08,
+  Array: 0x09,
+  Address: 0x0F,
   BCD: 0x10,
   PID: 0x15,
   Message: 0x16,
@@ -445,9 +494,8 @@ const PCCCDataType = {
 */
 
 
-function __TypedReadReplyParser(data, info) {
+function __TypedReadReplyParser(data, offset, info) {
   let value;
-  const offset = info.offset;
 
   switch (info.typeID) {
     case PCCCDataType.Binary:
@@ -456,7 +504,7 @@ function __TypedReadReplyParser(data, info) {
       value = data.readUInt8(offset);
       break;
     case PCCCDataType.Integer:
-      value = data.readInt16LE(offset);
+      value = data.readUInt16LE(offset);
       break;
     case PCCCDataType.Float:
       value = data.readFloatLE(offset);
@@ -464,10 +512,10 @@ function __TypedReadReplyParser(data, info) {
     case PCCCDataType.Array: {
       value = [];
       const arrayInfo = TypedReadParserDataInfo(data, offset);
-      let currentOffset = offset;
-      const lastOffset = offset + info.size;
+      let currentOffset = arrayInfo.offset;
+      const lastOffset = info.offset + info.size;
       while (currentOffset < lastOffset) {
-        value.push(__TypedReadReplyParser(data, arrayInfo));
+        value.push(__TypedReadReplyParser(data, currentOffset, arrayInfo));
         currentOffset += arrayInfo.size;
       }
       break;
@@ -523,11 +571,100 @@ function __TypedReadReplyParser(data, info) {
 }
 
 
+// function __TypedReadReplyParser(data, info) {
+//   let value;
+//   const offset = info.offset;
+
+//   switch (info.typeID) {
+//     case PCCCDataType.Binary:
+//     case PCCCDataType.BitString:
+//     case PCCCDataType.Byte:
+//       value = data.readUInt8(offset);
+//       break;
+//     case PCCCDataType.Integer:
+//       value = data.readInt16LE(offset);
+//       break;
+//     case PCCCDataType.Float:
+//       value = data.readFloatLE(offset);
+//       break;
+//     case PCCCDataType.Array: {
+//       value = [];
+//       const arrayInfo = TypedReadParserDataInfo(data, offset);
+//       let currentOffset = arrayInfo.offset;
+//       const lastOffset = info.offset + info.size;
+//       console.log({
+//         info,
+//         arrayInfo,
+//         currentOffset,
+//         lastOffset
+//       });
+//       while (currentOffset < lastOffset) {
+//         value.push(__TypedReadReplyParser(data, arrayInfo));
+//         currentOffset += arrayInfo.size;
+//         console.log({
+//           currentOffset,
+//           lastOffset
+//         })
+//       }
+//       break;
+//     }
+//     case PCCCDataType.Timer: {
+//       /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2721 */
+//       const bits = data.readInt16LE(offset);
+//       value = {
+//         EN: ((bits & (1 << 15)) > 0),
+//         TT: ((bits & (1 << 14)) > 0),
+//         DN: ((bits & (1 << 13)) > 0),
+//         PRE: data.readInt16LE(offset + 2),
+//         ACC: data.readInt16LE(offset + 4)
+//       };
+//       break;
+//     }
+//     case PCCCDataType.Counter: {
+//       /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2728 */
+//       const bits = data.readInt16LE(offset);
+//       value = {
+//         CN: ((bits & (1 << 15)) > 0),
+//         CD: ((bits & (1 << 14)) > 0),
+//         DN: ((bits & (1 << 13)) > 0),
+//         OV: ((bits & (1 << 12)) > 0),
+//         UN: ((bits & (1 << 11)) > 0),
+//         PRE: data.readInt16LE(offset + 2),
+//         ACC: data.readInt16LE(offset + 4)
+//       };
+//       break;
+//     }
+//     case PCCCDataType.Control: {
+//       /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2737 */
+//       const bits = data.readInt16LE(offset);
+//       value = {
+//         EN: ((bits & (1 << 15)) > 0),
+//         EU: ((bits & (1 << 14)) > 0),
+//         DN: ((bits & (1 << 13)) > 0),
+//         EM: ((bits & (1 << 12)) > 0),
+//         ER: ((bits & (1 << 11)) > 0),
+//         UL: ((bits & (1 << 10)) > 0),
+//         IN: ((bits & (1 << 9)) > 0),
+//         FD: ((bits & (1 << 8)) > 0),
+//         LEN: data.readInt16LE(offset + 2),
+//         POS: data.readInt16LE(offset + 4)
+//       };
+//       break;
+//     }
+
+//     default:
+//       console.log('PCCC Error: Unknown Type: ' + info.typeID);
+//   }
+//   console.log(value);
+//   return value;
+// }
+
+
 function TypedReadParserDataInfo(data, offset = 0) {
   const flag = data.readUInt8(offset); offset += 1;
 
-  let typeID = 0;
-  let size = 0;
+  let typeID;
+  let size;
 
   if (getBit(flag, 7)) {
     const dataTypeBytes = getBits(flag, 4, 7);

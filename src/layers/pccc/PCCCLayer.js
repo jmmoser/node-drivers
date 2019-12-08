@@ -31,20 +31,35 @@ class PCCCLayer extends Layer {
     });
   }
 
-  typedRead(address, callback) {
+  typedRead(address, items, callback) {
+    if (callback == null && typeof items === 'function') {
+      callback = items;
+      items = undefined;
+    }
+
     return Layer.CallbackPromise(callback, resolver => {
+      const itemsSpecified = items != null;
+
+      if (itemsSpecified) {
+        if ((!Number.isFinite(items) || items <= 0 || items > 0xFFFF)) {
+          return resolver.reject('If specified, items must be a positive integer between 1 and 65535');
+        }
+      } else {
+        items = 1;
+      }
+
       const transaction = incrementTransaction(this);
-      const message = PCCCPacket.TypedReadRequest(transaction, address, 1);
+      const message = PCCCPacket.TypedReadRequest(transaction, address, items);
 
       this.send(message, null, false, this.contextCallback(function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
           const value = PCCCPacket.ParseTypedReadData(reply.data);
-          if (Array.isArray(value) && value.length > 0) {
+          if (items === 1 && Array.isArray(value) && value.length > 0) {
             resolver.resolve(value[0]);
           } else {
-            resolver.resolve(null);
+            resolver.resolve(value);
           }
         }
       }, transaction));

@@ -27,8 +27,8 @@ const ClassCodes = {
 
 /** 1756-PM020, pg. 16 */
 const SymbolServiceCodes = {
-  ReadTag: 0x4C,
-  ReadTagFragmented: 0x52,
+  Read: 0x4C,
+  ReadFragmented: 0x52,
   WriteTag: 0x4D,
   WriteTagFragmented: 0x53,
   ReadModifyWriteTag: 0x4E,
@@ -41,7 +41,7 @@ const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
 
 
 // const SymbolServiceErrorDescriptions = {
-//   [SymbolServiceCodes.ReadTag]: {
+//   [SymbolServiceCodes.Read]: {
 //     0x04: 'A syntax error was detected decoding the Request Path',
 //     0x05: 'Request Path destination unknown: Probably instance number is not present',
 //     0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
@@ -51,7 +51,7 @@ const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
 //       0x2105: 'General Error: Access beyond end of the object',
 //     }
 //   },
-//   [SymbolServiceCodes.ReadTagFragmented]: {
+//   [SymbolServiceCodes.ReadFragmented]: {
 //     0x04: 'A syntax error was detected decoding the Request Path',
 //     0x05: 'Request Path destination unknown: Probably instance number is not present',
 //     0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
@@ -96,7 +96,7 @@ const SymbolInstanceAttributeCodes = {
   Name: 0x01,
   Type: 0x02,
   Bytes: 0x07,
-  ArrayDimensions: 0x08
+  ArrayDimensionLengths: 0x08
 };
 
 const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);

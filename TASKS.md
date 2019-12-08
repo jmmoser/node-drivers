@@ -7,7 +7,9 @@
   - [ ] readTags/bulkReadTags, multiple service packet
   - [X] remove readTagIDs()
   - [X] clean up code
-  - [ ] readAttributesAll add Bytes and ArrayDimensions
+  - [X] readSymbolAttributesAll add Bytes and ArrayDimensions
+  - [X] Decide if reading an array should return all values or just the first, if all values then fix
+  - [ ] Figure out how to read multidimensional arrays
 - [ ] CIP
   - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
   - [ ] CIP add compound DataTypes (Array[Int])

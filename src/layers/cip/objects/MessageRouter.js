@@ -33,7 +33,8 @@ class MessageRouter {
   static Reply(buffer) {
     let offset = 0;
     const res = {};
-    res.buffer = Buffer.from(buffer);
+    res.buffer = buffer;
+    // res.buffer = Buffer.from(buffer);
     // res.service = buffer.readUInt8(offset); offset += 1;
     const service = buffer.readUInt8(offset) & 0x7F; offset += 1;
     

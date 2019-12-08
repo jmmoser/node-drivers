@@ -1,15 +1,53 @@
 # Changelog
 
-## 2.0.0-beta.2 (2019-11-30)
+## 2.0.0-beta.3 (2019-12-7)
+- `Logix5000.readTag()` now reads the entire array if the tag is a 1-dimensional array
+  - It is still possible to only return one element or a slice of the array by specifying the `elements` argument and/or including the accessed element in the tagname. Here are some examples:
+    - Return the first two elements
+      ```javascript
+      await logix.readTag('tagname', 2);
+      ```
+    - Return the fourth element
+      ```javascript
+      await logix.readTag('tagname[3]');
+      ```
+    - Return the second through the third element
+      ```javascript
+      await logix.readTag('tagname[1]', 2);
+      ```
+- Layers can now specify default options and pass them to lower layers
+  - TCP layer now receives default port 44818 from upper EIP layer if user or previous layer does not specify port
+  - TCP layer now receives default port 502 from upper Modbus layer if user or previous layer does not specify port
+- TCP layer's options argument can now just be a host string if an upper layer specifies a port in the default options (EIP and Modbus layer)
+  - Before:
+    ```javascript
+    const tcpLayer = new TCP({ host: '1.2.3.4', port: 44818 });
+    ```
+  - After:
+    ```javascript
+    const tcpLayer = new TCP('1.2.3.4');
+    ```
+- Fixed `PCCCLayer.typedWrite()` type/data parameter encoding
+- `PCCCLayer.typedRead()` added `items` parameter, allows reading multiple items
+  - Examples:
+  ```javascript
+  await plc5.typedRead('N7:0', 6); // Read the first 6 elements from integer file 7
+  await plc5.typedRead('F8:44', 20); // Read elements 44 through 63 from float file 8
+  ```
+- CIP added encoding and decoding for 8 byte integer (LINT) and unsigned integer (ULINT)
+- `Logix5000.readTagAttributesAll()` added ArrayDimensionLengths
+- Logix5000 fixed error descriptions
+
+
+
+## 2.0.0-beta.2 (2019-12-6)
 - Logix5000 CAN NOW READ STRUCTURES 🔥
 - TCP layer automatically handles reconnects
 - Logix5000 listTags now accepts a scope (e.g. Program:SymbolName)
 - Logix5000 added data types Program, Map, Routine, Task, Cxn
 - Removed `Logix5000.readTagFragmented()`, it is now called automatically when needed
-- Fixed `PCCCLayer.typedWrite()` type/data parameter encoding
 - Added `PCCCLayer.echo()`
 - CIP ConnectionManager can now send unconnected messages - API still a work in progress
-
 
 
 ## 2.0.0-beta.1 (2019-11-15)
@@ -23,6 +61,7 @@
   - Logix5000.readTag now accepts a tag name string, a symbol instance id, or a tag object for the tag argument
 ### Fixed
   - Logix5000 error description handling
+
 
 ## 2.0.0-beta.0 (2019-11-14)
 ### Added

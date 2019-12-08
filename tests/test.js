@@ -30,31 +30,49 @@ const EPath = require('./../src/layers/cip/objects/EPath');
 // })();
 
 
-// (() => {
-//   const PCCCPacket = require('../src/layers/pccc/PCCCPacket');
-//   // console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
-//   console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', 4));
-// })();
-
-
 (() => {
-  const CIP = require('../src/layers/cip/objects/CIP');
-  const EPath = require('../src/layers/cip/objects/EPath');
-  const MessageRouter = require('../src/layers/cip/objects/MessageRouter');
-  const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
+  const PCCCPacket = require('../src/layers/pccc/PCCCPacket');
+  // console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
+  // const writeRequest = PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]);
+  // const writeRequest = PCCCPacket.TypedWriteRequest(3, 'F8:1', 1000.0);
+  const writeRequest = PCCCPacket.TypedWriteRequest(3, 'N7:10', [1000.0, 0, 5.5]);
+  // console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]));
+  // console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]));
+  // console.log(require('../src/utils').getBit(0x94, 7));
+  // console.log(require('../src/utils').getBits(0x94, 4, 7));
 
-  const request = MessageRouter.Request(
-    CIP.CommonServices.GetAttributesAll,
-    EPath.Encode(CIP.Classes.Identity, 0x01)
-  );
+  // const readBuffer = Buffer.from([
+  //   0x92, 0x09, 0x94, 0x08, 0x00, 0x00, 0x7a, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb0, 0xc0
+  // ]);
 
-  const routePath = Buffer.from([
-    0x01,
-    0x01
-  ]);
+  console.log(writeRequest);
 
-  console.log(ConnectionManager.UnconnectedSend(request, routePath));
+  const readBuffer = writeRequest.slice(17);
+  console.log(readBuffer);
+
+  console.log(PCCCPacket.ParseTypedReadData(readBuffer, 0));
 })();
+
+
+
+// (() => {
+//   const CIP = require('../src/layers/cip/objects/CIP');
+//   const EPath = require('../src/layers/cip/objects/EPath');
+//   const MessageRouter = require('../src/layers/cip/objects/MessageRouter');
+//   const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
+
+//   const request = MessageRouter.Request(
+//     CIP.CommonServices.GetAttributesAll,
+//     EPath.Encode(CIP.Classes.Identity, 0x01)
+//   );
+
+//   const routePath = Buffer.from([
+//     0x01,
+//     0x00
+//   ]);
+
+//   console.log(ConnectionManager.UnconnectedSend(request, routePath));
+// })();
 
 
 
