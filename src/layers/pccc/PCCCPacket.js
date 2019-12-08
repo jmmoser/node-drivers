@@ -123,6 +123,7 @@ class PCCCPacket {
 
 
   static ParseTypedReadData(data, offset = 0) {
+    // console.log(data);
     const info = TypedReadParserDataInfo(data, offset);
     return __TypedReadReplyParser(data, info.offset, info);
   }
