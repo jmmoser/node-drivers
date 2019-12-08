@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.0-beta.4 (2019-12-8)
+- UDP layer now receives default port 44818 from upper EIP layer if user or previous layer does not specify port
+
 ## 2.0.0-beta.3 (2019-12-7)
 - `Logix5000.readTag()` now reads the entire array if the tag is a 1-dimensional array
   - It is still possible to only return one element or a slice of the array by specifying the `elements` argument and/or including the accessed element in the tagname. Here are some examples:

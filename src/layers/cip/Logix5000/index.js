@@ -154,21 +154,15 @@ class Logix5000 extends CIPLayer {
         return resolver.reject('Tag must be specified');
       }
 
-      const elementsSpecified = elements != null;
-
-      if (elementsSpecified && (!Number.isFinite(elements) || elements <= 0 || elements > 0xFFFF)) {
-        return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
-      }
-
-      elements = parseInt(elements, 10);
-      if (elements <= 0 || elements > 0xFFFF) {
-        return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
-      }
-
       await this._optimizing;
 
-      // TODO: Update this section when reading multidimensional arrays is figured out
-      if (!elementsSpecified) {
+      if (elements != null) {
+        elements = parseInt(elements, 10);
+        if (!Number.isFinite(elements) || elements <= 0 || elements > 0xFFFF) {
+          return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
+        }
+      } else {
+        // TODO: Update this section when reading multidimensional arrays is figured out
         elements = 1;
 
         /** Don't read more than one element if tag specifies accessing array element */
@@ -238,25 +232,6 @@ class Logix5000 extends CIPLayer {
             // Ignore error
             // console.log(err);
           }
-
-          // try {
-          //   const [
-          //     typeInfo,
-          //     arrayDimensionLengthsInfo
-          //   ] = await this.readSymbolAttributeList(tag, [
-          //     SymbolInstanceAttributeCodes.Type,
-          //     SymbolInstanceAttributeCodes.ArrayDimensionLengths
-          //   ]);
-
-          //   if (typeInfo.value && typeInfo.value.dimensions === 1) {
-          //     if (Array.isArray(arrayDimensionLengthsInfo.value) && arrayDimensionLengthsInfo.value.length > 0) {
-          //       elements = arrayDimensionLengthsInfo.value[0];
-          //     }
-          //   }
-          // } catch (err) {
-          //   // Ignore error
-          //   console.log(err);
-          // }
         }
       }
 
@@ -282,47 +257,6 @@ class Logix5000 extends CIPLayer {
     });
   }
 
-  // readTag(tag, elements, callback) {
-  //   if (callback == null && typeof elements === 'function') {
-  //     callback = elements;
-  //   }
-
-  //   if (!Number.isFinite(elements)) {
-  //     elements = 1;
-  //   }
-
-  //   return CallbackPromise(callback, async resolver => {
-  //     if (!tag) {
-  //       return resolver.reject('Tag must be specified');
-  //     }
-
-  //     elements = parseInt(elements, 10);
-  //     if (elements <= 0 || elements > 0xFFFF) {
-  //       return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
-  //     }
-
-  //     const service = SymbolServiceCodes.Read;
-  //     const path = encodeTagPath(tag);
-  //     const data = Encode(DataTypes.UINT, elements);
-
-  //     send(this, service, path, data, async (error, reply) => {
-  //       if (error) {
-  //         resolver.reject(error, reply);
-  //       } else {
-  //         let data;
-  //         try {
-  //           data = reply.status.code !== 6 ? reply.data : await readTagFragmented(this, path, elements);
-  //           resolver.resolve(await parseReadTag(this, tag, elements, data));
-  //         } catch (err) {
-  //           console.log(err);
-  //           console.log(data);
-  //           resolver.reject(err, reply);
-  //         }
-  //       }
-  //     }, 5000);
-  //   });
-  // }
-
 
   writeTag(tag, value, callback) {
     return CallbackPromise(callback, async resolver => {
@@ -340,7 +274,6 @@ class Logix5000 extends CIPLayer {
       }
 
       const dataType = tagInfo.type.code;
-
       const valueData = Encode(dataType, value);
 
       if (!Buffer.isBuffer(valueData)) {
@@ -348,7 +281,6 @@ class Logix5000 extends CIPLayer {
       }
 
       const service = SymbolServiceCodes.WriteTag;
-
       const path = encodeTagPath(tag);
 
       const data = Buffer.allocUnsafe(4 + valueData.length);
@@ -397,7 +329,6 @@ class Logix5000 extends CIPLayer {
       }
 
       const service = SymbolServiceCodes.ReadModifyWriteTag;
-
       const path = encodeTagPath(tag);
 
       const data = Buffer.alloc(2 + 2 * sizeOfMasks);
@@ -416,18 +347,6 @@ class Logix5000 extends CIPLayer {
       });
     });
   }
-
-
-  // async readAttributeList(input, attributes, callback) {
-  //   if (typeof attributes === 'function') {
-  //     callback = attributes;
-  //     attributes = undefined;
-  //   }
-
-  //   if (!Array.isArray(attributes)) {
-  //     attributes = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11];
-  //   }
-  // }
 
 
   async readSymbolAttributeList(tag, attributes, callback) {
@@ -529,8 +448,6 @@ class Logix5000 extends CIPLayer {
                 value
               });
             }
-
-            // reply.attributes = attributeResults;
 
             resolver.resolve(attributeResults);
           } catch (err) {
@@ -669,25 +586,28 @@ class Logix5000 extends CIPLayer {
         }
 
         const service = TemplateServiceCodes.Read;
-
         const path = EPath.Encode(
           ClassCodes.Template,
           templateID
         );
 
-        let attributes = this._templateInstanceAttributes.get(templateID);
-        if (attributes == null) {
+        let attributes;
+        if (this._templateInstanceAttributes.has(templateID)) {
+          attributes = this._templateInstanceAttributes.get(templateID);
+        } else {
           attributes = await this.readTemplateInstanceAttributes(templateID);
+        }
+
+        if (attributes == null) {
+          return resolver.reject(`Unable to read template attributes for template: ${templateID}`);
         }
 
         /** Documentation says the header is 23 bytes, I'm pretty sure it is only 20 bytes */
         const bytesToRead = attributes[TemplateInstanceAttributeCodes.DefinitionSize] * 4 - 20; // 23;
-
-        let reqOffset = 0;
-
         const reqData = Buffer.allocUnsafe(6);
-        
         const chunks = [];
+        
+        let reqOffset = 0;
 
         while (true) {
           reqData.writeUInt32LE(reqOffset, 0);
@@ -721,9 +641,7 @@ class Logix5000 extends CIPLayer {
           }
         }
 
-        /** Read the template name and extra characters after ';' */
-        let structureName;
-        let nameExtra;
+        let structureName, nameExtra;
         offset = parseTemplateNameInfo(data, offset, info => {
           structureName = info.name;
           nameExtra = info.extra

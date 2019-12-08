@@ -55,6 +55,11 @@ function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connection
 const DefaultOptions = {
   tcp: {
     port: 44818
+  },
+  udp: {
+    target: {
+      port: 44818
+    }
   }
 };
 

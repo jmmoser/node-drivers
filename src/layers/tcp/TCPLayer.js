@@ -30,7 +30,6 @@ class TCPLayer extends Layer {
 
     this._connectionState = TCPStateCodes.Disconnected;
     this._desiredState = TCPStateCodes.Disconnected;
-    // connect(this);
   }
   
 
@@ -71,10 +70,9 @@ class TCPLayer extends Layer {
   }
 
 
-  handleData(data) {
-    this.emit('data', data);
-    this.forward(data);
-  }
+  // handleData(data) {
+  //   this.forward(data);
+  // }
 
 
   disconnect(callback) {
@@ -163,7 +161,7 @@ class TCPLayer extends Layer {
       if (!this.socket.destroyed) {
         this.socket.destroy();
       }
-      cleanupSocketListeners(this.socket);
+      removeSocketListeners(this.socket);
     }
 
     this._disconnect = null;
@@ -271,10 +269,7 @@ function connect(layer) {
 
     layer.socket = socket;
 
-    /** layer._connectionState: 0 -> 1 */
     setConnectionState(layer, TCPStateCodes.Connecting);
-
-    const handleData = layer.handleData.bind(layer);
 
     socket.setNoDelay(true); // Disable Nagle algorithm
 
@@ -283,11 +278,8 @@ function connect(layer) {
     }
 
     socket.on('data', data => {
-      // console.log('TCP Handling Data:');
-      // console.log(data);
-      // console.log(data.length);
-      // console.log(data.toString('ascii'));
-      handleData(data);
+      layer.emit('data', data);
+      layer.forward(data);
     });
 
     socket.once('error', err => {
@@ -321,9 +313,7 @@ function connect(layer) {
 }
 
 
-function cleanupSocketListeners(socket) {
-  // console.log(new Error('a'));
-  // console.log('removing listeners');
+function removeSocketListeners(socket) {
   ['error', 'data', 'close', 'timeout', 'end'].map(eventName => {
     socket.removeAllListeners(eventName);
   });
