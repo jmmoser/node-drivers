@@ -486,6 +486,7 @@ function Decode(dataType, buffer, offset, cb) {
       value = buffer.toString('utf16le', offset, offset + 2 * length); offset += 2 * length;
       break;
     }
+    case DataTypes.LTIME:
     case DataTypes.LINT:
       value = buffer.readBigInt64LE(offset); offset += 8;
       break;
@@ -496,7 +497,6 @@ function Decode(dataType, buffer, offset, cb) {
     case DataTypes.LREAL:
       value = buffer.readDoubleLE(offset);
       break;
-    case DataTypes.LTIME:
     default:
       throw new Error(`Data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
