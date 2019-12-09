@@ -292,21 +292,23 @@ function __DecodeDataType(buffer, offset, includeLength, cb) {
   };
 
   switch (code) {
-    case DataTypes.ABREV_STRUCT:
+    case DataTypes.ABREV_STRUCT: {
       type.constructed = true;
       type.abbreviated = true;
 
       // TODO
 
       break;
-    case DataTypes.ABREV_ARRAY:
+    }
+    case DataTypes.ABREV_ARRAY: {
       type.constructed = true;
       type.abbreviated = true;
 
       // TODO
 
       break;
-    case DataTypes.STRUCT:
+    }
+    case DataTypes.STRUCT: {
       type.constructed = true;
       type.abbreviated = false;
       const length = buffer.readUInt8(offset); offset += 1;
@@ -318,7 +320,8 @@ function __DecodeDataType(buffer, offset, includeLength, cb) {
         });
       }
       break;
-    case DataTypes.ARRAY:
+    }
+    case DataTypes.ARRAY: {
       type.constructed = true;
       type.abbreviated = false;
       const length = buffer.readUInt8(offset); offset += 1;
@@ -335,12 +338,13 @@ function __DecodeDataType(buffer, offset, includeLength, cb) {
 
       type.boundTags = [lowerBoundTag, upperBoundTag];
       type.bounds = [lowerBound, upperBound];
-      
-      offset = DecodeDataType(buffer, offset, function(value) {
+
+      offset = DecodeDataType(buffer, offset, function (value) {
         type.items = value;
       });
 
       break;
+    }
     default:
       if (includeLength) {
         offset += 1;
@@ -485,11 +489,13 @@ function Decode(dataType, buffer, offset, cb) {
     case DataTypes.LINT:
       value = buffer.readBigInt64LE(offset); offset += 8;
       break;
+    case DataTypes.LWORD:
     case DataTypes.ULINT:
       value = buffer.readBigUInt64LE(offset); offset += 8;
       break;
     case DataTypes.LREAL:
-    case DataTypes.LWORD:
+      value = buffer.readDoubleLE(offset);
+      break;
     case DataTypes.LTIME:
     default:
       throw new Error(`Data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
