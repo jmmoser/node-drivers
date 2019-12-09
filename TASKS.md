@@ -13,7 +13,8 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays
 - [ ] CIP
-  - [ ] DecodeDataType with structs/arrays
+  - [X] DecodeDataType with structs/arrays
+  - [ ] Hook up DecodeDataType to Decode
   - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
   - [ ] add encoding/decoding for STRINGI
   - [ ] add encoding/decoding for STRINGN
