@@ -28,13 +28,13 @@ function encodeUnsignedInteger(data, offset, value, size) {
 function decodeUnsignedInteger(data, offset, size) {
   switch (size) {
     case 1:
-      return data.readUInt8(value, offset);
+      return data.readUInt8(offset);
     case 2:
-      return data.readUInt16LE(value, offset);
+      return data.readUInt16LE(offset);
     case 4:
-      return data.readUInt32LE(value, offset);
+      return data.readUInt32LE(offset);
     case 8:
-      return data.readBigUInt64LE(value, offset);
+      return data.readBigUInt64LE(offset);
     default:
       throw new Error(`Invalid size: ${size}`);
   }

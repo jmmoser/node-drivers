@@ -284,28 +284,31 @@ const GeneralStatusCodeDescriptions = {
   0x2A: 'This error code may only be reported by DeviceNet group 2 only servers with 4K or less code space and only in place of Service not supported, Attribute not supported and Attribute not settable.'
 };
 
-function __DecodeDataType(buffer, offset, includeLength, cb) {
+
+function __DecodeDataType(buffer, offset, cb) {
   const code = buffer.readUInt8(offset); offset += 1;
   
   const type = {
-    code
+    code,
+    name: DataTypeNames[code] || 'UNKNOWN'
   };
 
   switch (code) {
     case DataTypes.ABREV_STRUCT: {
       type.constructed = true;
       type.abbreviated = true;
-
-      // TODO
-
+      const length = buffer.readUInt8(offset); offset += 1;
+      type.crc = decodeUnsignedInteger(buffer, offset, length);
+      offset += length;
       break;
     }
     case DataTypes.ABREV_ARRAY: {
       type.constructed = true;
       type.abbreviated = true;
-
-      // TODO
-
+      /* const length = buffer.readUInt8(offset); */ offset += 1;
+      offset = __DecodeDataType(buffer, offset, function (items) {
+        type.items = items;
+      });
       break;
     }
     case DataTypes.STRUCT: {
@@ -315,7 +318,7 @@ function __DecodeDataType(buffer, offset, includeLength, cb) {
       type.members = [];
       const lastOffset = offset + length;
       while (offset < lastOffset) {
-        offset = DecodeDataType(buffer, offset, false, function (member) {
+        offset = __DecodeDataType(buffer, offset, function (member) {
           type.members.push(member);
         });
       }
@@ -324,7 +327,7 @@ function __DecodeDataType(buffer, offset, includeLength, cb) {
     case DataTypes.ARRAY: {
       type.constructed = true;
       type.abbreviated = false;
-      const length = buffer.readUInt8(offset); offset += 1;
+      /* const length = buffer.readUInt8(offset); */ offset += 1;
 
       const lowerBoundTag = buffer.readUInt8(offset); offset += 1;
       const lowerBoundLength = buffer.readUInt8(offset); offset += 1;
@@ -339,16 +342,13 @@ function __DecodeDataType(buffer, offset, includeLength, cb) {
       type.boundTags = [lowerBoundTag, upperBoundTag];
       type.bounds = [lowerBound, upperBound];
 
-      offset = DecodeDataType(buffer, offset, function (value) {
-        type.items = value;
+      offset = __DecodeDataType(buffer, offset, function (items) {
+        type.items = items;
       });
 
       break;
     }
     default:
-      if (includeLength) {
-        offset += 1;
-      }
       break;
   }
 
@@ -361,65 +361,15 @@ function __DecodeDataType(buffer, offset, includeLength, cb) {
 
 
 function DecodeDataType(buffer, offset, cb) {
-  return __DecodeDataType(buffer, offset, true, cb);
-
-  const code = buffer.readUInt8(offset); offset += 1;
-  const length = buffer.readUInt8(offset); offset += 1;
-
-  const type = {
-    code
-  };
-
-  switch (code) {
-    case DataTypes.ABREV_STRUCT:
-      type.constructed = true;
-      type.abbreviated = true;
-      
-
-      break;
-    case DataTypes.ABREV_ARRAY:
-      type.constructed = true;
-      type.abbreviated = true;
-      break;
-    case DataTypes.STRUCT:
-      type.constructed = true;
-      type.abbreviated = false;
-      type.members = [];
-      const lastOffset = offset + length;
-      while (offset < lastOffset) {
-        offset = DecodeDataType(buffer, offset, function (member) {
-          type.members.push(member);
-        });
-      }
-      break;
-    case DataTypes.ARRAY:
-      type.constructed = true;
-      type.abbreviated = false;
-
-      const lowerBoundTag = buffer.readUInt8(offset); offset += 1;
-      const lowerBoundLength = buffer.readUInt8(offset); offset += 1;
-      const lowerBound = decodeUnsignedInteger(buffer, offset, lowerBoundLength);
-      offset += lowerBoundLength;
-
-      const upperBoundTag = buffer.readUInt8(offset); offset += 1;
-      const upperBoundLength = buffer.readUInt8(offset); offset += 1;
-      const upperBound = decodeUnsignedInteger(buffer, offset, upperBoundLength);
-      offset += upperBoundLength;
-
-      type.bounds = [lowerBound, upperBound];
-
-      type.items = De
-      
-      break;
-    default:
-      break;
+  const nextOffset = __DecodeDataType(buffer, offset, cb);
+  if (nextOffset - offset === 1) {
+    /**
+     * If data type is elementary then __DecodeDataType will only
+     * read 1 byte but data type encoding is 2 bytes
+     */
+    return offset + 2;
   }
-
-  if (typeof cb === 'function') {
-    cb(type);
-  }
-  
-  return offset;
+  return nextOffset;
 }
 
 
@@ -435,6 +385,10 @@ function Decode(dataType, buffer, offset, cb) {
   switch (dataTypeCode) {
     case DataTypes.SINT:
       value = buffer.readInt8(offset); offset += 1;
+      break;
+    case DataTypes.USINT:
+    case DataTypes.BYTE:
+      value = buffer.readUInt8(offset); offset += 1;
       break;
     case DataTypes.INT:
     case DataTypes.ITIME:
@@ -457,10 +411,6 @@ function Decode(dataType, buffer, offset, cb) {
         value = getBit(value, dataType.info);
       }
       value = value > 0;
-      break;
-    case DataTypes.USINT:
-    case DataTypes.BYTE:
-      value = buffer.readUInt8(offset); offset += 1;
       break;
     case DataTypes.UINT:
     case DataTypes.WORD:
@@ -498,7 +448,7 @@ function Decode(dataType, buffer, offset, cb) {
       value = buffer.readDoubleLE(offset);
       break;
     default:
-      throw new Error(`Data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
+      throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
 
   if (typeof cb === 'function') {
@@ -512,10 +462,17 @@ function Decode(dataType, buffer, offset, cb) {
 function Encode(dataType, value) {
   let data;
 
-  switch (dataType) {
+  const dataTypeCode = dataType.code != null ? dataType.code : dataType;
+
+  switch (dataTypeCode) {
     case DataTypes.SINT:
       data = Buffer.allocUnsafe(1);
       data.writeInt8(value, 0);
+      break;
+    case DataTypes.USINT:
+    case DataTypes.BYTE:
+      data = Buffer.allocUnsafe(1);
+      data.writeUInt8(value, 0);
       break;
     case DataTypes.INT:
     case DataTypes.ITIME:
@@ -543,16 +500,42 @@ function Encode(dataType, value) {
       data = Buffer.allocUnsafe(4);
       data.writeUInt32LE(value, 0);
       break;
+    case DataTypes.STRING: {
+      const stringBuffer = Buffer.from(value, 'ascii');
+      data = Buffer.allocUnsafe(2 + stringBuffer.length);
+      data.writeUInt16LE(stringBuffer.length, 0);
+      stringBuffer.copy(data, 2);
+      break;
+    }
+    case DataTypes.SHORT_STRING: {
+      const stringBuffer = Buffer.from(value, 'ascii');
+      data = Buffer.allocUnsafe(1 + stringBuffer.length);
+      data.writeUInt8(stringBuffer.length, 0);
+      stringBuffer.copy(data, 1);
+      break;
+    }
+    case DataTypes.STRING2: {
+      const stringBuffer = Buffer.from(value, 'utf16le');
+      data = Buffer.allocUnsafe(2 + stringBuffer.length);
+      data.writeUInt16LE(stringBuffer.length, 0);
+      stringBuffer.copy(data, 2);
+      break;
+    }
+    case DataTypes.LTIME:
     case DataTypes.LINT:
       data = Buffer.allocUnsafe(8);
-      data.writeBigInt64LE(0);
+      data.writeBigInt64LE(value, 0);
       break;
+    case DataTypes.LWORD:
     case DataTypes.ULINT:
       data = Buffer.allocUnsafe(8);
-      data.writeBigUInt64LE(0);
+      data.writeBigUInt64LE(value, 0);
       break;
+    case DataTypes.LREAL:
+      data = Buffer.allocUnsafe(8);
+      data.writeDoubleLE(value, 0);
     default:
-      break;
+      throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
 
   return data;

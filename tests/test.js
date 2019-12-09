@@ -30,27 +30,78 @@ const EPath = require('./../src/layers/cip/objects/EPath');
 // })();
 
 
+// (() => {
+//   const PCCCPacket = require('../src/layers/pccc/PCCCPacket');
+//   // console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
+//   // const writeRequest = PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]);
+//   // const writeRequest = PCCCPacket.TypedWriteRequest(3, 'F8:1', 1000.0);
+//   const writeRequest = PCCCPacket.TypedWriteRequest(3, 'N7:10', [1000.0, 0, 5.5]);
+//   // console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]));
+//   // console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]));
+//   // console.log(require('../src/utils').getBit(0x94, 7));
+//   // console.log(require('../src/utils').getBits(0x94, 4, 7));
+
+//   // const readBuffer = Buffer.from([
+//   //   0x92, 0x09, 0x94, 0x08, 0x00, 0x00, 0x7a, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb0, 0xc0
+//   // ]);
+
+//   console.log(writeRequest);
+
+//   const readBuffer = writeRequest.slice(17);
+//   console.log(readBuffer);
+
+//   console.log(PCCCPacket.ParseTypedReadData(readBuffer, 0));
+// })();
+
 (() => {
-  const PCCCPacket = require('../src/layers/pccc/PCCCPacket');
-  // console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
-  // const writeRequest = PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]);
-  // const writeRequest = PCCCPacket.TypedWriteRequest(3, 'F8:1', 1000.0);
-  const writeRequest = PCCCPacket.TypedWriteRequest(3, 'N7:10', [1000.0, 0, 5.5]);
-  // console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]));
-  // console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]));
-  // console.log(require('../src/utils').getBit(0x94, 7));
-  // console.log(require('../src/utils').getBits(0x94, 4, 7));
+  const CIP = require('../src/layers/cip/objects/CIP');
 
-  // const readBuffer = Buffer.from([
-  //   0x92, 0x09, 0x94, 0x08, 0x00, 0x00, 0x7a, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb0, 0xc0
-  // ]);
+  (() => {
+    const buffer = Buffer.from([
+      0xA2, 0x07, 0xC7, 0xA2, 0x03, 0xC7, 0xC2, 0xC3, 0xC3
+    ]);
+    const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+      console.log(JSON.stringify(type, null, 2));
+    });
 
-  console.log(writeRequest);
+    console.log(buffer.length, offset);
+  })();
 
-  const readBuffer = writeRequest.slice(17);
-  console.log(readBuffer);
+  (() => {
+    const buffer = Buffer.from([
+      0xA0, 0x02, 0xC7, 0x26
+    ]);
+    const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+      console.log(JSON.stringify(type, null, 2));
+    });
 
-  console.log(PCCCPacket.ParseTypedReadData(readBuffer, 0));
+    console.log(buffer.length, offset);
+  })();
+
+  (() => {
+    const buffer = Buffer.from([
+      0xA3, 0x13, 0x80, 0x01, 0x00, 0x81, 0x01, 0x13,
+      0xA3, 0x0B, 0x80, 0x01, 0x00, 0x81, 0x01, 0xFF,
+      0xA2, 0x03, 0xC7, 0xC2, 0xC3
+    ]);
+    const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+      console.log(JSON.stringify(type, null, 2));
+    });
+
+    console.log(buffer.length, offset);
+  })();
+
+  (() => {
+    const buffer = Buffer.from([
+      0xA1, 0x06, 0xA1, 0x04, 0xA0, 0x02, 0x59, 0x51
+    ]);
+    const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+      console.log(JSON.stringify(type, null, 2));
+    });
+
+    console.log(buffer.length, offset);
+  })();
+  
 })();
 
 

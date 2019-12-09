@@ -15,8 +15,14 @@
 - [ ] CIP
   - [ ] DecodeDataType with structs/arrays
   - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
-  - [ ] CIP add compound DataTypes (Array[Int])
-    - [ ] Add encoding and decoding for compound data types
+  - [ ] add encoding/decoding for STRINGI
+  - [ ] add encoding/decoding for STRINGN
+  - [ ] CIP add custructed DataTypes (Array[Int])
+    - [ ] Add encoding and decoding for constructed data types
+  - [ ] Improve data type encoding
+    - [ ] add DataTypeSize calculation
+    - [ ] encode into existing buffer, dont create new buffers
+    - [ ] add encoding for bool
 - [X] TCP Layer
   - [X] allow passing just host for options
 - [X] UDP Layer
