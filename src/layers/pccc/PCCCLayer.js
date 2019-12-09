@@ -17,6 +17,15 @@ class PCCCLayer extends Layer {
   }
 
   wordRangeRead(address, words, callback) {
+    if (callback == null && typeof items === 'function') {
+      callback = items;
+      words = undefined;
+    }
+
+    if (words == null) {
+      words = 1;
+    }
+
     return Layer.CallbackPromise(callback, resolver => {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.WordRangeReadRequest(transaction, address, words);
@@ -55,6 +64,7 @@ class PCCCLayer extends Layer {
         if (error) {
           resolver.reject(error, reply);
         } else {
+          console.log(reply.data);
           const value = PCCCPacket.ParseTypedReadData(reply.data);
           if (items === 1 && Array.isArray(value) && value.length > 0) {
             resolver.resolve(value[0]);
@@ -66,10 +76,21 @@ class PCCCLayer extends Layer {
     });
   }
 
+  /**
+   * value argument can be an array of values
+   */
   typedWrite(address, value, callback) {
     return Layer.CallbackPromise(callback, resolver => {
+      if (value == null) {
+        return resolver.reject(`Unable to write value: ${value}`);
+      }
+
+      if (!Array.isArray(value)) {
+        value = [value];
+      }
+
       const transaction = incrementTransaction(this);
-      const message = PCCCPacket.TypedWriteRequest(transaction, address, [value]);
+      const message = PCCCPacket.TypedWriteRequest(transaction, address, value);
 
       this.send(message, null, false, this.contextCallback(function (error, reply) {
         if (error) {

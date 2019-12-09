@@ -171,56 +171,18 @@ class PCCCPacket {
 
 
   static ParseTypedReadData(data, offset = 0) {
-    console.log(data);
     const info = TypedReadParserDataInfo(data, offset);
     return __TypedReadReplyParser(data, info.offset, info);
   }
 
 
-  static TypedWriteRequest(transaction, address, value) {
+  static TypedWriteRequest(transaction, address, values) {
     const info = logicalASCIIAddressInfo(address);
 
-    // const valueIsArray = Array.isArray(value);
-    // const valueCount = valueIsArray ? value.length : 1;
-
-    // const dataValueLength = valueCount * info.size;
-    // const dataTypeItemLength = dataTypeEncodingLength(info.id, info.size);
-    // const dataTypeLength = dataTypeItemLength + (valueIsArray ? dataTypeEncodingLength(PCCCDataType.Array, dataTypeItemLength + dataValueLength) : 0);
-    // const dataLength = 5 + (address.length + 3) + dataTypeLength + dataValueLength;
-
-    // if (Array.isArray(value)) {
-    //   const dataValueLength = value.length * info.size;
-
-    // }
-
-    if (!Array.isArray(value)) {
-      value = [value];
-    }
-
-    const valueCount = value.length;
+    const valueCount = values.length;
     const dataValueLength = valueCount * info.size;
     const dataTypeLength = dataTypeEncodingLength(info.id, info.size);
     const dataLength = 5 + (address.length + 3) + dataTypeLength + dataValueLength;
-
-    // console.log({
-    //   valueCount,
-    //   dataValueLength,
-    //   dataTypeLength,
-    //   dataLength
-    // });
-
-    // const dataTypeItemLength = dataTypeEncodingLength(info.id, info.size);
-    // const dataTypeLength = dataTypeItemLength + (valueIsArray ? dataTypeEncodingLength(PCCCDataType.Array, dataTypeItemLength) : 0);
-    // const dataValueLength = valueCount * info.size;
-    // const dataLength = 5 + (address.length + 3) + dataTypeLength + dataValueLength;
-
-    // console.log({
-    //   info,
-    //   dataTypeItemLength,
-    //   dataTypeLength,
-    //   dataValueLength,
-    //   dataLength
-    // })
 
     let offset = 0;
     const data = Buffer.allocUnsafe(dataLength);
@@ -229,26 +191,11 @@ class PCCCPacket {
     offset = data.writeUInt16LE(valueCount, offset); /** total transmitted */
     offset = logicalASCIIAddress(address, data, offset); /** PLC-5 system address */
 
-    // const dataTypeOffset = offset;
-    // if (valueIsArray) {
-    //   offset = encodeDataType(data, offset, PCCCDataType.Array, dataTypeItemLength);
-    // }
     offset = encodeDataType(data, offset, info.id, info.size);
 
     for (let i = 0; i < valueCount; i++) {
-      offset = typedWriteEncodeValue(data, offset, info.datatype, value[i]);
-      // console.log(offset);
+      offset = typedWriteEncodeValue(data, offset, info.datatype, values[i]);
     }
-
-    // if (valueIsArray) {
-    //   for (let i = 0; i < valueCount; i++) {
-    //     offset = typedWriteEncodeValue(data, offset, info.datatype, value[i]);
-    //   }
-    // } else {
-    //   offset = typedWriteEncodeValue(data, offset, info.datatype, value);
-    // }
-
-    // console.log(data.length, offset, data.slice(dataTypeOffset));
 
     return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
   }
