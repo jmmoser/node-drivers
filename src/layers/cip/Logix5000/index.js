@@ -143,7 +143,95 @@ class Logix5000 extends CIPLayer {
   // }
 
 
+  async readTagInternal(layer, tag, elements, info) {
+
+  }
+
+  async getSymbolSize(layer, tag) {
+    if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
+      try {
+        const symbolParts = tag.split('.');
+        if (symbolParts.length === 1) {
+          const [
+            typeInfo,
+            arrayDimensionLengthsInfo
+          ] = await layer.readSymbolAttributeList(symbolParts[0], [
+            SymbolInstanceAttributeCodes.Type,
+            SymbolInstanceAttributeCodes.ArrayDimensionLengths
+          ]);
+
+          if (typeInfo.value && typeInfo.value.dimensions === 1) {
+            if (Array.isArray(arrayDimensionLengthsInfo.value) && arrayDimensionLengthsInfo.value.length > 0) {
+              return arrayDimensionLengthsInfo.value[0];
+            }
+          }
+        } else {
+          let symbolPartStartIdx = 1;
+          let tagInfo = await getTagInfo(layer, symbolParts[0]);
+          // console.log('a')
+          // console.log(tagInfo);
+          if (tagInfo && tagInfo.type && tagInfo.type.code === LDataTypeCodes.Program) {
+            // console.log(`FETCHING ${symbolParts[0]}.${symbolParts[1]}`);
+            tagInfo = await getTagInfo(layer, `${symbolParts[1]}`);
+          }
+          // console.log('b');
+          // console.log(tagInfo);
+
+          let memberInfo;
+
+          if (tagInfo && tagInfo.type && tagInfo.type.template && tagInfo.type.template.id != null) {
+            let template;
+            let templateID = tagInfo.type.template.id;
+
+            for (let i = symbolPartStartIdx; i < symbolParts.length; i++) {
+              let symbolPart = symbolParts[i];
+              let symbolPartElementIndex = symbolPart.indexOf('[');
+              if (symbolPartElementIndex >= 0) {
+                symbolPart = symbolPart.substring(0, symbolPartElementIndex);
+              }
+
+              template = await layer.readTemplate(templateID);
+              templateID = null;
+              memberInfo = null;
+
+              if (template && Array.isArray(template.members)) {
+                for (let memberIdx = 0; memberIdx < template.members.length; memberIdx++) {
+                  const member = template.members[memberIdx];
+
+                  if (member.name === symbolPart) {
+                    memberInfo = member;
+                    if (member.type && member.type.template && member.type.template.id != null) {
+                      templateID = member.type.template.id;
+                    }
+                    break;
+                  }
+                }
+              }
+              if (templateID == null) {
+                break;
+              }
+            }
+
+            if (memberInfo && memberInfo.type && memberInfo.type.dimensions === 1) {
+              return memberInfo.info;
+            }
+          }
+          // else if (tagInfo && tagInfo.type && tagInfo.type.code === LDataTypeCodes.Program) {
+
+          // }
+        }
+
+      } catch (err) {
+        // Ignore error
+        // console.log(err);
+      }
+    }
+    return 1;
+  }
+  
+
   readTag(tag, elements, callback) {
+    // console.log(`READING: ${tag}`);
     if (callback == null && typeof elements === 'function') {
       callback = elements;
       elements = undefined;
@@ -162,77 +250,81 @@ class Logix5000 extends CIPLayer {
           return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
         }
       } else {
+        elements = await this.getSymbolSize(this, tag);
+
         // TODO: Update this section when reading multidimensional arrays is figured out
-        elements = 1;
+        // elements = 1;
 
         /** Don't read more than one element if tag specifies accessing array element */
-        if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
-          try {
-            const symbolParts = tag.split('.');
-            if (symbolParts.length === 1) {
-              const [
-                typeInfo,
-                arrayDimensionLengthsInfo
-              ] = await this.readSymbolAttributeList(symbolParts[0], [
-                SymbolInstanceAttributeCodes.Type,
-                SymbolInstanceAttributeCodes.ArrayDimensionLengths
-              ]);
+        // if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
+        //   try {
+        //     const symbolParts = tag.split('.');
+        //     if (symbolParts.length === 1) {
+        //       const [
+        //         typeInfo,
+        //         arrayDimensionLengthsInfo
+        //       ] = await this.readSymbolAttributeList(symbolParts[0], [
+        //         SymbolInstanceAttributeCodes.Type,
+        //         SymbolInstanceAttributeCodes.ArrayDimensionLengths
+        //       ]);
 
-              if (typeInfo.value && typeInfo.value.dimensions === 1) {
-                if (Array.isArray(arrayDimensionLengthsInfo.value) && arrayDimensionLengthsInfo.value.length > 0) {
-                  elements = arrayDimensionLengthsInfo.value[0];
-                }
-              }
-            } else {
-              const tagInfo = await getTagInfo(this, symbolParts[0]);
-              // console.log(tagInfo);
+        //       if (typeInfo.value && typeInfo.value.dimensions === 1) {
+        //         if (Array.isArray(arrayDimensionLengthsInfo.value) && arrayDimensionLengthsInfo.value.length > 0) {
+        //           elements = arrayDimensionLengthsInfo.value[0];
+        //         }
+        //       }
+        //     } else {
+        //       const tagInfo = await getTagInfo(this, symbolParts[0]);
+        //       console.log(tagInfo);
 
-              let memberInfo;
+        //       let memberInfo;
 
-              if (tagInfo && tagInfo.type && tagInfo.type.template && tagInfo.type.template.id != null) {
-                let template;
-                let templateID = tagInfo.type.template.id;
+        //       if (tagInfo && tagInfo.type && tagInfo.type.template && tagInfo.type.template.id != null) {
+        //         let template;
+        //         let templateID = tagInfo.type.template.id;
 
-                for (let i = 1; i < symbolParts.length; i++) {
-                  let symbolPart = symbolParts[i];
-                  let symbolPartElementIndex = symbolPart.indexOf('[');
-                  if (symbolPartElementIndex >= 0) {
-                    symbolPart = symbolPart.substring(0, symbolPartElementIndex);
-                  }
+        //         for (let i = 1; i < symbolParts.length; i++) {
+        //           let symbolPart = symbolParts[i];
+        //           let symbolPartElementIndex = symbolPart.indexOf('[');
+        //           if (symbolPartElementIndex >= 0) {
+        //             symbolPart = symbolPart.substring(0, symbolPartElementIndex);
+        //           }
 
-                  template = await this.readTemplate(templateID);
-                  templateID = null;
-                  memberInfo = null;
+        //           template = await this.readTemplate(templateID);
+        //           templateID = null;
+        //           memberInfo = null;
 
-                  if (template && Array.isArray(template.members)) {
-                    for (let memberIdx = 0; memberIdx < template.members.length; memberIdx++) {
-                      const member = template.members[memberIdx];
-                      
-                      if (member.name === symbolPart) {
-                        memberInfo = member;
-                        if (member.type && member.type.template && member.type.template.id != null) {
-                          templateID = member.type.template.id;
-                        }
-                        break;
-                      }
-                    }
-                  }
-                  if (templateID == null) {
-                    break;
-                  }
-                }
-                
-                if (memberInfo && memberInfo.type && memberInfo.type.dimensions === 1) {
-                  elements = memberInfo.info;
-                }
-              }
-            }
-            
-          } catch (err) {
-            // Ignore error
-            // console.log(err);
-          }
-        }
+        //           if (template && Array.isArray(template.members)) {
+        //             for (let memberIdx = 0; memberIdx < template.members.length; memberIdx++) {
+        //               const member = template.members[memberIdx];
+
+        //               if (member.name === symbolPart) {
+        //                 memberInfo = member;
+        //                 if (member.type && member.type.template && member.type.template.id != null) {
+        //                   templateID = member.type.template.id;
+        //                 }
+        //                 break;
+        //               }
+        //             }
+        //           }
+        //           if (templateID == null) {
+        //             break;
+        //           }
+        //         }
+
+        //         if (memberInfo && memberInfo.type && memberInfo.type.dimensions === 1) {
+        //           elements = memberInfo.info;
+        //         }
+        //       } else if (tagInfo && tagInfo.type && tagInfo.type.code === LDataTypeCodes.Program) {
+
+        //       }
+        //     }
+
+        //   } catch (err) {
+        //     // Ignore error
+        //     // console.log(err);
+        //   }
+        // }
       }
 
       const service = SymbolServiceCodes.Read;
@@ -246,7 +338,33 @@ class Logix5000 extends CIPLayer {
           let data;
           try {
             data = reply.status.code !== 6 ? reply.data : await readTagFragmented(this, path, elements);
-            resolver.resolve(await parseReadTag(this, tag, elements, data));
+
+            if (data.length === 0) {
+              const tagInfo = await getTagInfo(this, tag);
+              // console.log(tagInfo);
+              let value;
+              const tagName = typeof tag.name === 'string' ? tag.name : (typeof tag === 'string' ? tag : null);
+              if (tagName && tagInfo && tagInfo.type && tagInfo.type.code === LDataTypeCodes.Program) {
+                value = {};
+                for await (const programTag of this.listTags(tag)) {
+                  console.log(programTag);
+                  if (programTag.type.system === false) {
+                    if (programTag.type.dimensions === 1) {
+                      // CONTINUE HERE
+                    }
+                    value[programTag.name] = await this.readTag(`${tagName}.${programTag.name}`);
+                  } else {
+                    value[programTag.name] = undefined;
+                  }
+                }
+              }
+
+              resolver.resolve(value);
+            } else {
+              resolver.resolve(await parseReadTag(this, tag, elements, data));
+            }
+
+            
           } catch (err) {
             console.log(err);
             console.log(data);
@@ -256,6 +374,121 @@ class Logix5000 extends CIPLayer {
       }, 5000);
     });
   }
+
+
+  // readTag(tag, elements, callback) {
+  //   if (callback == null && typeof elements === 'function') {
+  //     callback = elements;
+  //     elements = undefined;
+  //   }
+
+  //   return CallbackPromise(callback, async resolver => {
+  //     if (!tag) {
+  //       return resolver.reject('Tag must be specified');
+  //     }
+
+  //     await this._optimizing;
+
+  //     if (elements != null) {
+  //       elements = parseInt(elements, 10);
+  //       if (!Number.isFinite(elements) || elements <= 0 || elements > 0xFFFF) {
+  //         return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
+  //       }
+  //     } else {
+  //       // TODO: Update this section when reading multidimensional arrays is figured out
+  //       elements = 1;
+
+  //       /** Don't read more than one element if tag specifies accessing array element */
+  //       if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
+  //         try {
+  //           const symbolParts = tag.split('.');
+  //           if (symbolParts.length === 1) {
+  //             const [
+  //               typeInfo,
+  //               arrayDimensionLengthsInfo
+  //             ] = await this.readSymbolAttributeList(symbolParts[0], [
+  //               SymbolInstanceAttributeCodes.Type,
+  //               SymbolInstanceAttributeCodes.ArrayDimensionLengths
+  //             ]);
+
+  //             if (typeInfo.value && typeInfo.value.dimensions === 1) {
+  //               if (Array.isArray(arrayDimensionLengthsInfo.value) && arrayDimensionLengthsInfo.value.length > 0) {
+  //                 elements = arrayDimensionLengthsInfo.value[0];
+  //               }
+  //             }
+  //           } else {
+  //             const tagInfo = await getTagInfo(this, symbolParts[0]);
+  //             // console.log(tagInfo);
+
+  //             let memberInfo;
+
+  //             if (tagInfo && tagInfo.type && tagInfo.type.template && tagInfo.type.template.id != null) {
+  //               let template;
+  //               let templateID = tagInfo.type.template.id;
+
+  //               for (let i = 1; i < symbolParts.length; i++) {
+  //                 let symbolPart = symbolParts[i];
+  //                 let symbolPartElementIndex = symbolPart.indexOf('[');
+  //                 if (symbolPartElementIndex >= 0) {
+  //                   symbolPart = symbolPart.substring(0, symbolPartElementIndex);
+  //                 }
+
+  //                 template = await this.readTemplate(templateID);
+  //                 templateID = null;
+  //                 memberInfo = null;
+
+  //                 if (template && Array.isArray(template.members)) {
+  //                   for (let memberIdx = 0; memberIdx < template.members.length; memberIdx++) {
+  //                     const member = template.members[memberIdx];
+                      
+  //                     if (member.name === symbolPart) {
+  //                       memberInfo = member;
+  //                       if (member.type && member.type.template && member.type.template.id != null) {
+  //                         templateID = member.type.template.id;
+  //                       }
+  //                       break;
+  //                     }
+  //                   }
+  //                 }
+  //                 if (templateID == null) {
+  //                   break;
+  //                 }
+  //               }
+                
+  //               if (memberInfo && memberInfo.type && memberInfo.type.dimensions === 1) {
+  //                 elements = memberInfo.info;
+  //               }
+  //             }
+  //           }
+            
+  //         } catch (err) {
+  //           // Ignore error
+  //           // console.log(err);
+  //         }
+  //       }
+  //     }
+
+  //     const service = SymbolServiceCodes.Read;
+  //     const path = encodeTagPath(tag);
+  //     const data = Encode(DataTypes.UINT, elements);
+
+  //     send(this, service, path, data, async (error, reply) => {
+  //       if (error) {
+  //         resolver.reject(error, reply);
+  //       } else {
+  //         let data;
+  //         try {
+  //           data = reply.status.code !== 6 ? reply.data : await readTagFragmented(this, path, elements);
+  //           resolver.resolve(await parseReadTag(this, tag, elements, data));
+  //         } catch (err) {
+  //           console.log(err);
+  //           console.log(data);
+  //           resolver.reject(err, reply);
+  //         }
+  //       }
+  //     }, 5000);
+  //   });
+  // }
 
 
   writeTag(tag, value, callback) {
@@ -918,8 +1151,15 @@ async function parseReadTagMemberStructure(layer, structure, data, offset) {
 
 
 async function parseReadTag(layer, tag, elements, data) {
-  // console.log(data);
   if (data.length === 0) {
+    const tagInfo = await getTagInfo(layer, tag);
+    console.log(tagInfo);
+    if (tagInfo && tagInfo.type && tagInfo.type.code === LDataTypeCodes.Program) {
+      for await (const programTag of layer.listTags(tag)) {
+        console.log(programTag);
+      }
+    }
+
     return undefined;
   }
 

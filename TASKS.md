@@ -13,6 +13,7 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays
 - [ ] CIP
+  - [ ] DecodeDataType with structs/arrays
   - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
   - [ ] CIP add compound DataTypes (Array[Int])
     - [ ] Add encoding and decoding for compound data types
@@ -21,3 +22,6 @@
 - [X] UDP Layer
   - [X] allow passing just host for options
   - [X] setup socket from sendNextMessage() if not listening
+- [ ] PCCC
+  - [ ] Word range read request must be an even number of bytes??
+  - [ ] Abstract word range read request where total bytes to read is greater than 228

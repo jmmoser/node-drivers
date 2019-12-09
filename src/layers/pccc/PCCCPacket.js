@@ -1,6 +1,10 @@
 'use strict';
 
-const { getBit, getBits } = require('../../utils');
+const {
+  getBit,
+  getBits,
+  encodeUnsignedInteger
+} = require('../../utils');
 
 
 class PCCCPacket {
@@ -81,7 +85,7 @@ class PCCCPacket {
   }
 
 
-  static WordRangeReadRequest(transaction, address) {
+  static WordRangeReadRequest(transaction, address, words) {
     const info = logicalASCIIAddressInfo(address);
     if (!info) {
       throw new Error(`Unsupported address: ${address}`);
@@ -90,12 +94,56 @@ class PCCCPacket {
     let offset = 0;
     const data = Buffer.allocUnsafe(9 + address.length);
     offset = data.writeUInt8(0x01, offset); // Function
-    offset = data.writeUInt16LE(0, offset); /** Packet offset */
-    offset = data.writeUInt16LE(1, offset); // Total Trans
+
+    /**
+     * PACKET OFFSET
+     * Contains the offset in words from the address in the in the address field.
+     * For example, if the previous command read the maximum 244 bytes, the next
+     * offset should be 122.
+     */
+    offset = data.writeUInt16LE(0, offset); 
+    /**
+     * TOTAL TRANSACTION
+     * Indicates the total amount of PLC-3 data table words (low byte first)
+     * that are transferred for the entire transaction.
+     */
+    offset = data.writeUInt16LE(words, offset);
+    
+    /**
+     * ADDRESS
+     */
     offset = logicalASCIIAddress(address, data, offset); // PLC system address
-    offset = data.writeUInt8(info.size, offset);
+    // offset = data.writeUInt8(info.size, offset);
+    
+    /**
+     * SIZE
+     * Specifies how many bytes of PLC-3 data table information you read in this transaction.
+     * The word range read command reads a maximum of 244 bytes per message packet.
+     */
+    const size = 2 * words;
+    if (size > 244) {
+      throw new Error(`Maximum size of a single word range read transaction is 244. Received: ${size}`);
+    }
+    offset = data.writeUInt8(size, offset); 
+    console.log(new PCCCPacket(0x0F, 0, transaction, data).toBuffer().length);
     return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
   }
+
+  // static WordRangeReadRequest(transaction, address, words) {
+  //   const info = logicalASCIIAddressInfo(address);
+  //   if (!info) {
+  //     throw new Error(`Unsupported address: ${address}`);
+  //   }
+
+  //   let offset = 0;
+  //   const data = Buffer.allocUnsafe(9 + address.length);
+  //   offset = data.writeUInt8(0x01, offset); // Function
+  //   offset = data.writeUInt16LE(0, offset); /** Packet offset */
+  //   offset = data.writeUInt16LE(1, offset); // Total Trans
+  //   offset = logicalASCIIAddress(address, data, offset); // PLC system address
+  //   offset = data.writeUInt8(info.size, offset);
+  //   return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
+  // }
 
   static WordRangeReadReply(buffer) {
     // I believe there is a mistake in the DF1 manual,
@@ -123,7 +171,7 @@ class PCCCPacket {
 
 
   static ParseTypedReadData(data, offset = 0) {
-    // console.log(data);
+    console.log(data);
     const info = TypedReadParserDataInfo(data, offset);
     return __TypedReadReplyParser(data, info.offset, info);
   }
@@ -285,22 +333,6 @@ function dataTypeAttributeAdditionalEncodingLength(value) {
     return 0;
   } else {
     return numberOfBytesToSerializeInteger(value);
-  }
-}
-
-
-function encodeUnsignedInteger(data, offset, value, size) {
-  switch (size) {
-    case 1:
-      return data.writeUInt8(value, offset);
-    case 2:
-      return data.writeUInt16LE(value, offset);
-    case 4:
-      return data.writeUInt32LE(value, offset);
-    case 8:
-      return data.writeBigUInt64LE(value, offset);
-    default:
-      throw new Error(`Invalid size: ${size}`);
   }
 }
 

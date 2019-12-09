@@ -151,8 +151,8 @@ class CIPLayer extends Layer {
       callback(null, data, info);
       return true;
     } else {
-      console.log(arguments);
-      console.log(`CIP layer unhandled data`);
+      // console.log(arguments);
+      // console.log(`CIP layer unhandled data`);
       return false;
     }
   }

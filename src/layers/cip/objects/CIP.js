@@ -1,6 +1,10 @@
 'use strict';
 
-const { InvertKeyValues, getBit } = require('../../../utils');
+const {
+  getBit,
+  decodeUnsignedInteger,
+  InvertKeyValues
+} = require('../../../utils');
 
 /** 
  * Ref. CIP Vol 1 Table 5.1
@@ -169,7 +173,11 @@ const DataTypes = {
   ENGUNIT: 0xDD,
   STRINGI: 0xDE,
 
-  STRUCT: 0x02A0 /** From 1756-PM020 */
+  /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
+  ABREV_STRUCT: 0xA0, /* Data is an abbreviated struct type, i.e. a CRC of the actual type descriptor */
+  ABREV_ARRAY: 0xA1, /* Data is an abbreviated array type. The limits are left off */
+  STRUCT: 0xA2, /* Data is a struct type descriptor */
+  ARRAY: 0xA3 /* Data is an array type descriptor */
 };
 
 const DataTypeNames = InvertKeyValues(DataTypes);
@@ -276,6 +284,139 @@ const GeneralStatusCodeDescriptions = {
   0x2A: 'This error code may only be reported by DeviceNet group 2 only servers with 4K or less code space and only in place of Service not supported, Attribute not supported and Attribute not settable.'
 };
 
+function __DecodeDataType(buffer, offset, includeLength, cb) {
+  const code = buffer.readUInt8(offset); offset += 1;
+  
+  const type = {
+    code
+  };
+
+  switch (code) {
+    case DataTypes.ABREV_STRUCT:
+      type.constructed = true;
+      type.abbreviated = true;
+
+      // TODO
+
+      break;
+    case DataTypes.ABREV_ARRAY:
+      type.constructed = true;
+      type.abbreviated = true;
+
+      // TODO
+
+      break;
+    case DataTypes.STRUCT:
+      type.constructed = true;
+      type.abbreviated = false;
+      const length = buffer.readUInt8(offset); offset += 1;
+      type.members = [];
+      const lastOffset = offset + length;
+      while (offset < lastOffset) {
+        offset = DecodeDataType(buffer, offset, false, function (member) {
+          type.members.push(member);
+        });
+      }
+      break;
+    case DataTypes.ARRAY:
+      type.constructed = true;
+      type.abbreviated = false;
+      const length = buffer.readUInt8(offset); offset += 1;
+
+      const lowerBoundTag = buffer.readUInt8(offset); offset += 1;
+      const lowerBoundLength = buffer.readUInt8(offset); offset += 1;
+      const lowerBound = decodeUnsignedInteger(buffer, offset, lowerBoundLength);
+      offset += lowerBoundLength;
+
+      const upperBoundTag = buffer.readUInt8(offset); offset += 1;
+      const upperBoundLength = buffer.readUInt8(offset); offset += 1;
+      const upperBound = decodeUnsignedInteger(buffer, offset, upperBoundLength);
+      offset += upperBoundLength;
+
+      type.boundTags = [lowerBoundTag, upperBoundTag];
+      type.bounds = [lowerBound, upperBound];
+      
+      offset = DecodeDataType(buffer, offset, function(value) {
+        type.items = value;
+      });
+
+      break;
+    default:
+      if (includeLength) {
+        offset += 1;
+      }
+      break;
+  }
+
+  if (typeof cb === 'function') {
+    cb(type);
+  }
+
+  return offset;
+}
+
+
+function DecodeDataType(buffer, offset, cb) {
+  return __DecodeDataType(buffer, offset, true, cb);
+
+  const code = buffer.readUInt8(offset); offset += 1;
+  const length = buffer.readUInt8(offset); offset += 1;
+
+  const type = {
+    code
+  };
+
+  switch (code) {
+    case DataTypes.ABREV_STRUCT:
+      type.constructed = true;
+      type.abbreviated = true;
+      
+
+      break;
+    case DataTypes.ABREV_ARRAY:
+      type.constructed = true;
+      type.abbreviated = true;
+      break;
+    case DataTypes.STRUCT:
+      type.constructed = true;
+      type.abbreviated = false;
+      type.members = [];
+      const lastOffset = offset + length;
+      while (offset < lastOffset) {
+        offset = DecodeDataType(buffer, offset, function (member) {
+          type.members.push(member);
+        });
+      }
+      break;
+    case DataTypes.ARRAY:
+      type.constructed = true;
+      type.abbreviated = false;
+
+      const lowerBoundTag = buffer.readUInt8(offset); offset += 1;
+      const lowerBoundLength = buffer.readUInt8(offset); offset += 1;
+      const lowerBound = decodeUnsignedInteger(buffer, offset, lowerBoundLength);
+      offset += lowerBoundLength;
+
+      const upperBoundTag = buffer.readUInt8(offset); offset += 1;
+      const upperBoundLength = buffer.readUInt8(offset); offset += 1;
+      const upperBound = decodeUnsignedInteger(buffer, offset, upperBoundLength);
+      offset += upperBoundLength;
+
+      type.bounds = [lowerBound, upperBound];
+
+      type.items = De
+      
+      break;
+    default:
+      break;
+  }
+
+  if (typeof cb === 'function') {
+    cb(type);
+  }
+  
+  return offset;
+}
 
 
 function Decode(dataType, buffer, offset, cb) {
@@ -425,5 +566,6 @@ module.exports = {
   GeneralStatusCodeNames,
   GeneralStatusCodeDescriptions,
   Decode,
-  Encode
+  Encode,
+  DecodeDataType
 };

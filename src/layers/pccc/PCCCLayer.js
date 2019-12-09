@@ -16,10 +16,10 @@ class PCCCLayer extends Layer {
     this._transaction = 0;
   }
 
-  wordRangeRead(address, callback) {
+  wordRangeRead(address, words, callback) {
     return Layer.CallbackPromise(callback, resolver => {
       const transaction = incrementTransaction(this);
-      const message = PCCCPacket.WordRangeReadRequest(transaction, address);
+      const message = PCCCPacket.WordRangeReadRequest(transaction, address, words);
 
       this.send(message, null, false, this.contextCallback(function (error, reply) {
         if (error) {

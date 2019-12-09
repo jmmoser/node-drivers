@@ -10,6 +10,37 @@ function getBit(k, n) {
 }
 
 
+function encodeUnsignedInteger(data, offset, value, size) {
+  switch (size) {
+    case 1:
+      return data.writeUInt8(value, offset);
+    case 2:
+      return data.writeUInt16LE(value, offset);
+    case 4:
+      return data.writeUInt32LE(value, offset);
+    case 8:
+      return data.writeBigUInt64LE(value, offset);
+    default:
+      throw new Error(`Invalid size: ${size}`);
+  }
+}
+
+function decodeUnsignedInteger(data, offset, size) {
+  switch (size) {
+    case 1:
+      return data.readUInt8(value, offset);
+    case 2:
+      return data.readUInt16LE(value, offset);
+    case 4:
+      return data.readUInt32LE(value, offset);
+    case 8:
+      return data.readBigUInt64LE(value, offset);
+    default:
+      throw new Error(`Invalid size: ${size}`);
+  }
+}
+
+
 /**
  * @param {Object|Map} obj 
  */
@@ -136,6 +167,8 @@ function CallbackPromise(callback, func, timeout) {
 module.exports = {
   getBits,
   getBit,
+  encodeUnsignedInteger,
+  decodeUnsignedInteger,
   once,
   InvertKeyValues,
   CallbackPromise,
