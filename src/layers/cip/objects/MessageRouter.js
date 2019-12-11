@@ -2,7 +2,7 @@
 
 const {
   Decode,
-  DataTypes,
+  DataType,
   ClassNames,
   CommonServiceNames,
   GeneralStatusCodeNames,
@@ -111,11 +111,11 @@ class MessageRouter {
   static DecodeSupportedObjects(data, offset, cb) {
     // const objectCount = data.readUInt16LE(offset); offset += 2;
     let objectCount;
-    offset = Decode(DataTypes.UINT, data, offset, val => objectCount = val);
+    offset = Decode(DataType.UINT, data, offset, val => objectCount = val);
 
     const classes = [];
     for (let i = 0; i < objectCount; i++) {
-      offset = Decode(DataTypes.UINT, data, offset, val => classes.push(val));
+      offset = Decode(DataType.UINT, data, offset, val => classes.push(val));
     }
 
     cb(classes.sort(function (o1, o2) {
@@ -137,20 +137,20 @@ class MessageRouter {
     const length = data.length;
 
     if (offset < length) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.revision = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.revision = val);
     }
 
     if (offset < length) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.maxInstanceID = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.maxInstanceID = val);
     }
 
     if (offset < length) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.numberOfInstances = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.numberOfInstances = val);
     }
 
     if (offset < length) {
       let numberOfOptionalAttributes;
-      offset = Decode(DataTypes.UINT, data, offset, val => numberOfOptionalAttributes = val);
+      offset = Decode(DataType.UINT, data, offset, val => numberOfOptionalAttributes = val);
       console.log({
         numberOfOptionalAttributes
       });
@@ -158,7 +158,7 @@ class MessageRouter {
       info.optionalAttributes = [];
       for (let i = 0; i < numberOfOptionalAttributes; i++) {
         if (offset < length) {
-          offset = Decode(DataTypes.UINT, data, offset, val => info.optionalAttributes.push(val));
+          offset = Decode(DataType.UINT, data, offset, val => info.optionalAttributes.push(val));
         } else {
           console.log('breaking optional attributes');
           break;
@@ -173,12 +173,12 @@ class MessageRouter {
 
     if (offset < length) {
       let numberOfOptionalServices;
-      offset = Decode(DataTypes.UINT, data, offset, val => numberOfOptionalServices = val);
+      offset = Decode(DataType.UINT, data, offset, val => numberOfOptionalServices = val);
 
       info.optionalServices = [];
       for (let i = 0; i < numberOfOptionalServices; i++) {
         if (offset < length) {
-          offset = Decode(DataTypes.UINT, data, offset, val => info.optionalServices.push({
+          offset = Decode(DataType.UINT, data, offset, val => info.optionalServices.push({
             code: val,
             name: CommonServiceNames[val] || 'Unknown',
             hex: `0x${val.toString('16')}`
@@ -196,11 +196,11 @@ class MessageRouter {
     }
 
     if (offset < length) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.maxIDNumberOfClassAttributes = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.maxIDNumberOfClassAttributes = val);
     }
 
     if (offset < length) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.maxIDNumberOfInstanceAttributes = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.maxIDNumberOfInstanceAttributes = val);
     }
 
     info.extra = data.slice(offset);

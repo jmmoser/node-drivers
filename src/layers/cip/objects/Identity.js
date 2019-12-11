@@ -1,6 +1,6 @@
 'use strict';
 
-const { Decode, DataTypes } = require('./CIP');
+const { Decode, DataType } = require('./CIP');
 const CIPObject = require('./CIPObject');
 const { getBit, getBits } = require('../../../utils');
 
@@ -38,7 +38,7 @@ class Identity extends CIPObject {
 
     item.serialNumber = buffer.readUInt32LE(offset); offset += 4;
 
-    offset = Decode(DataTypes.SHORT_STRING, buffer, offset, value => item.productName = value);
+    offset = Decode(DataType.SHORT_STRING, buffer, offset, value => item.productName = value);
 
     cb(item);
     
@@ -87,25 +87,25 @@ class Identity extends CIPObject {
     const length = data.length;
 
     if (offset < length - 1) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.vendor = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.vendor = val);
     }
 
     if (offset < length - 1) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.maxInstanceID = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.maxInstanceID = val);
     }
 
     if (offset < length - 1) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.numberOfInstances = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.numberOfInstances = val);
     }
 
     if (offset < length - 1) {
       let numberOfOptionalAttributes;
-      offset = Decode(DataTypes.UINT, data, offset, val => numberOfOptionalAttributes = val);
+      offset = Decode(DataType.UINT, data, offset, val => numberOfOptionalAttributes = val);
 
       info.optionalAttributes = [];
       for (let i = 0; i < numberOfOptionalAttributes; i++) {
         if (offset < length - 1) {
-          offset = Decode(DataTypes.UINT, data, offset, val => info.optionalAttributes.push(val));
+          offset = Decode(DataType.UINT, data, offset, val => info.optionalAttributes.push(val));
         } else {
           console.log('breaking optional attributes');
           break;
@@ -120,12 +120,12 @@ class Identity extends CIPObject {
 
     if (offset < length - 1) {
       let numberOfOptionalServices;
-      offset = Decode(DataTypes.UINT, data, offset, val => numberOfOptionalServices = val);
+      offset = Decode(DataType.UINT, data, offset, val => numberOfOptionalServices = val);
 
       info.optionalServices = [];
       for (let i = 0; i < numberOfOptionalServices; i++) {
         if (offset < length - 1) {
-          offset = Decode(DataTypes.UINT, data, offset, val => info.optionalServices.push({
+          offset = Decode(DataType.UINT, data, offset, val => info.optionalServices.push({
             code: val,
             name: CommonServiceNames[val] || 'Unknown',
             hex: `0x${val.toString('16')}`
@@ -143,11 +143,11 @@ class Identity extends CIPObject {
     }
 
     if (offset < length - 1) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.maxIDNumberOfClassAttributes = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.maxIDNumberOfClassAttributes = val);
     }
 
     if (offset < length - 1) {
-      offset = Decode(DataTypes.UINT, data, offset, val => info.maxIDNumberOfInstanceAttributes = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.maxIDNumberOfInstanceAttributes = val);
     }
 
     info.extra = data.slice(offset);

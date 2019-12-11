@@ -12,7 +12,8 @@ const ConnectionLayer = require('../objects/Connection');
 // };
 
 const {
-  DataTypes,
+  DataType,
+  DataTypeCodes,
   DataTypeNames,
   Encode,
   Decode,
@@ -333,7 +334,7 @@ class Logix5000 extends CIPLayer {
 
       const service = SymbolServiceCodes.Read;
       const path = encodeTagPath(tag);
-      const data = Encode(DataTypes.UINT, elements);
+      const data = Encode(DataType.UINT, elements);
 
       send(this, service, path, data, async (error, reply) => {
         if (error) {
@@ -474,7 +475,7 @@ class Logix5000 extends CIPLayer {
 
   //     const service = SymbolServiceCodes.Read;
   //     const path = encodeTagPath(tag);
-  //     const data = Encode(DataTypes.UINT, elements);
+  //     const data = Encode(DataType.UINT, elements);
 
   //     send(this, service, path, data, async (error, reply) => {
   //       if (error) {
@@ -657,7 +658,7 @@ class Logix5000 extends CIPLayer {
                   value = data.slice(offset, offset + 12);
                   value = [];
                   for (let j = 0; j < 3; j++) {
-                    offset = Decode(DataTypes.DINT, data, offset, val => value.push(val));
+                    offset = Decode(DataType.DINT, data, offset, val => value.push(val));
                   }
                   break;
                 case 9:
@@ -779,7 +780,7 @@ class Logix5000 extends CIPLayer {
             attributeCode = SymbolInstanceAttributeCodes.ArrayDimensionLengths;
             const arrayDimensionLengths = [];
             for (let i = 0; i < 3; i++) {
-              offset = Decode(DataTypes.UDINT, data, offset, val => {
+              offset = Decode(DataType.UDINT, data, offset, val => {
                 arrayDimensionLengths.push(val);
               });
             }
@@ -888,7 +889,7 @@ class Logix5000 extends CIPLayer {
         for (let i = 0; i < members.length; i++) {
           const member = members[i];
           offset = parseTemplateMemberName(data, offset, name => member.name = name);
-          if (member.type.code === DataTypes.SINT && member.name.indexOf('ZZZZZZZZZZ') === 0) {
+          if (member.type.code === DataTypeCodes.SINT && member.name.indexOf('ZZZZZZZZZZ') === 0) {
             /** Member is a host member for holding boolean members */
             // console.log(`HOST: ${member.name}`);
             // console.log(member);
@@ -953,8 +954,8 @@ class Logix5000 extends CIPLayer {
 
               for (let i = 0; i < attributeCount; i++) {
                 let attribute, status;
-                offset = Decode(DataTypes.UINT, data, offset, val => attribute = val);
-                offset = Decode(DataTypes.UINT, data, offset, val => status = val);
+                offset = Decode(DataType.UINT, data, offset, val => attribute = val);
+                offset = Decode(DataType.UINT, data, offset, val => status = val);
 
                 const attributeDataType = TemplateInstanceAttributeDataTypes[attribute];
 
@@ -1325,7 +1326,7 @@ function parseListTagsResponse(reply, attributes, tags) {
   while (offset < length) {
     const tag = {};
 
-    offset = Decode(DataTypes.UDINT, data, offset, val => tag.id = val);
+    offset = Decode(DataType.UDINT, data, offset, val => tag.id = val);
     lastInstanceID = tag.id;
 
     for (let i = 0; i < attributes.length; i++) {
@@ -1359,7 +1360,7 @@ function parseTypeCode(code) {
 
   if (res.atomic) {
     res.code = getBits(code, 0, 8);
-    if (res.code === DataTypes.BOOL) {
+    if (res.code === DataTypeCodes.BOOL) {
       res.position = getBits(code, 8, 11);
     }
     res.name = getDataTypeName(res.code);
