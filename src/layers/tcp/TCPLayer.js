@@ -1,5 +1,6 @@
 'use strict';
 
+const { CallbackPromise } = require('../../utils');
 const net = require('net');
 const Layer = require('../Layer');
 
@@ -64,7 +65,7 @@ class TCPLayer extends Layer {
 
 
   connected(callback) {
-    return Layer.CallbackPromise(callback, async resolver => {
+    return CallbackPromise(callback, async resolver => {
       resolver.resolve(await this._connect);
     });
   }
@@ -95,7 +96,7 @@ class TCPLayer extends Layer {
       return this._disconnect;
     }
     
-    this._disconnect = Layer.CallbackPromise(callback, async resolver => {
+    this._disconnect = CallbackPromise(callback, async resolver => {
       if (this._connectionState === TCPStateCodes.Connecting) {
         setConnectionState(this, TCPStateCodes.Disconnected);
         resolver.resolve();
@@ -115,7 +116,7 @@ class TCPLayer extends Layer {
   }
 
   // disconnect(callback) {
-  //   return Layer.CallbackPromise(callback, resolver => {
+  //   return CallbackPromise(callback, resolver => {
   //     if (this._connectionState > 0) {
   //       if (this._connectionState === 1) {
   //         this._connectionState = 0;

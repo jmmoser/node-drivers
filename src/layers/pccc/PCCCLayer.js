@@ -2,6 +2,7 @@
 
 // REF: CIP and PCCC v1.pdf
 
+const { CallbackPromise } = require('../../utils');
 const Layer = require('../Layer');
 const PCCCPacket = require('./PCCCPacket');
 
@@ -26,7 +27,7 @@ class PCCCLayer extends Layer {
       words = 1;
     }
 
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.WordRangeReadRequest(transaction, address, words);
 
@@ -46,7 +47,7 @@ class PCCCLayer extends Layer {
       items = undefined;
     }
 
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const itemsSpecified = items != null;
 
       if (itemsSpecified) {
@@ -80,7 +81,7 @@ class PCCCLayer extends Layer {
    * value argument can be an array of values
    */
   typedWrite(address, value, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       if (value == null) {
         return resolver.reject(`Unable to write value: ${value}`);
       }
@@ -123,7 +124,7 @@ class PCCCLayer extends Layer {
   // }
 
   diagnosticStatus(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.DiagnosticStatusRequest(transaction);
 
@@ -138,7 +139,7 @@ class PCCCLayer extends Layer {
   }
 
   echo(data, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.EchoRequest(transaction, data);
       this.send(message, null, false, this.contextCallback(function (error, reply) {

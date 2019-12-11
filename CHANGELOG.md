@@ -2,7 +2,7 @@
 
 ## 2.0.0-beta.4 (2019-12-8)
 - UDP layer now receives default port 44818 from upper EIP layer if user or previous layer does not specify port
-- CIP added decoding for data types LREAL, LWORD, and LTIME
+- CIP added decoding for data types LREAL, LWORD, and LTIME, STRINGN, STRUCT (formal encoding)
 - CIP added encoding for data types USINT, BYTE, LWORD, LREAL, STRING, SHORT_STRING, STRING2
 
 ## 2.0.0-beta.3 (2019-12-7)

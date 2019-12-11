@@ -100,7 +100,7 @@ class MBLayer extends Layer {
   }
 
   writeMultipleRegisters(address, values, callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       // const fn = Functions.WriteMultipleRegisters;
       resolver.reject('Not supported yet');
     });

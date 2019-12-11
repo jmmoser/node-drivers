@@ -16,16 +16,19 @@
   - [X] DecodeDataType with structs/arrays
   - [ ] Hook up DecodeDataType to Decode
   - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
-  - [ ] add encoding/decoding for STRINGI
-  - [ ] add encoding/decoding for STRINGN
+  - [ ] add encoding for STRINGI
+  - [ ] add decoding for STRINGI
+  - [ ] add encoding for STRINGN
+  - [X] add decoding for STRINGN
   - [ ] CIP add custructed DataTypes (Array[Int])
     - [ ] Add encoding and decoding for constructed data types
   - [ ] Improve data type encoding
     - [ ] add DataTypeSize calculation
     - [ ] encode into existing buffer, dont create new buffers
     - [ ] add encoding for bool
-- [X] TCP Layer
+- TCP Layer
   - [X] allow passing just host for options
+  - [ ] create TLS layer or just use options.tls?
 - [X] UDP Layer
   - [X] allow passing just host for options
   - [X] setup socket from sendNextMessage() if not listening

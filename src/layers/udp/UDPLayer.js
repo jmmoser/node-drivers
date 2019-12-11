@@ -1,5 +1,6 @@
 'use strict';
 
+const { CallbackPromise } = require('../../utils');
 const dgram = require('dgram');
 const Layer = require('../Layer');
 
@@ -84,7 +85,7 @@ class UDPLayer extends Layer {
 
 
   disconnect(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       this._listening = false;
       this.socket.close(resolver.resolve);
     });

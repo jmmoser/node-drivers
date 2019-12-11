@@ -16,6 +16,7 @@ const {
   DataTypeNames,
   Encode,
   Decode,
+  DecodeDataType,
   CommonServices
 } = require('../objects/CIP');
 
@@ -169,7 +170,6 @@ class Logix5000 extends CIPLayer {
           let symbolPartStartIdx = 1;
           let tagInfo = await getTagInfo(layer, symbolParts[0]);
           // console.log('a')
-          // console.log(tagInfo);
           if (tagInfo && tagInfo.type && tagInfo.type.code === LDataTypeCodes.Program) {
             // console.log(`FETCHING ${symbolParts[0]}.${symbolParts[1]}`);
             tagInfo = await getTagInfo(layer, `${symbolParts[1]}`);
@@ -250,7 +250,11 @@ class Logix5000 extends CIPLayer {
           return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
         }
       } else {
+        console.log(await getTagInfo(this, tag));
+        console.log('getting size');
+        console.time('a');
         elements = await this.getSymbolSize(this, tag);
+        console.timeEnd('a');
 
         // TODO: Update this section when reading multidimensional arrays is figured out
         // elements = 1;
@@ -1072,7 +1076,7 @@ async function readTagFragmented(layer, path, elements) {
     const reply = await sendPromise(layer, service, path, reqData, 5000);
 
     /** remove the tag type bytes if already received */
-    const dataTypeOffset = decodeReadTagType(reply.data, 0);
+    const dataTypeOffset = DecodeDataType(reply.data, 0);
     chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
 
     if (reply.status.code === 0x06) {
@@ -1085,28 +1089,6 @@ async function readTagFragmented(layer, path, elements) {
   }
 
   return Buffer.concat(chunks);
-}
-
-
-function decodeReadTagType(data, offset, cb) {
-  let code;
-  offset = Decode(DataTypes.UINT, data, offset, val => code = val);
-
-  let atomic = true, structureHandle;
-  if (code === DataTypes.STRUCT) {
-    atomic = false;
-    offset = Decode(DataTypes.UINT, data, offset, val => structureHandle = val);
-  }
-
-  if (typeof cb === 'function') {
-    cb({
-      code,
-      atomic,
-      structureHandle
-    });
-  }
-
-  return offset;
 }
 
 
@@ -1164,13 +1146,15 @@ async function parseReadTag(layer, tag, elements, data) {
   }
 
   let typeInfo;
-  let offset = decodeReadTagType(data, 0, val => typeInfo = val);
+  let offset = DecodeDataType(data, 0, val => typeInfo = val);
 
   const values = [];
 
-  if (typeInfo.atomic) {
+  if (!typeInfo.constructed || typeInfo.abbreviated === false) {
     for (let i = 0; i < elements; i++) {
-      offset = Decode(typeInfo.code, data, offset, value => values.push(value));
+      // console.log(typeInfo);
+      console.log('reading');
+      offset = Decode(typeInfo, data, offset, value => values.push(value));
     }
   } else {
     const tagInfo = await getTagInfo(layer, tag);
@@ -1209,6 +1193,69 @@ async function parseReadTag(layer, tag, elements, data) {
 
   return values;
 }
+
+
+// async function parseReadTag(layer, tag, elements, data) {
+//   if (data.length === 0) {
+//     const tagInfo = await getTagInfo(layer, tag);
+//     console.log(tagInfo);
+//     if (tagInfo && tagInfo.type && tagInfo.type.code === LDataTypeCodes.Program) {
+//       for await (const programTag of layer.listTags(tag)) {
+//         console.log(programTag);
+//       }
+//     }
+
+//     return undefined;
+//   }
+
+//   let typeInfo;
+//   let offset = DecodeDataType(data, 0, val => typeInfo = val);
+
+//   throw new Error('')
+//   const values = [];
+
+//   if (typeInfo.atomic) {
+//     for (let i = 0; i < elements; i++) {
+//       console.log(typeInfo);
+//       offset = Decode(typeInfo.code, data, offset, value => values.push(value));
+//     }
+//   } else {
+//     const tagInfo = await getTagInfo(layer, tag);
+
+//     if (!tagInfo) {
+//       throw new Error(`Invalid tag: ${tag}`);
+//     }
+
+//     switch (tagInfo.type.code) {
+//       case LDataTypeCodes.Map:
+//       case LDataTypeCodes.Cxn:
+//       case LDataTypeCodes.Program:
+//       case LDataTypeCodes.Routine:
+//       case LDataTypeCodes.Task:
+//         throw new Error(`Unable to directly read type ${LDatatypeNames[tagInfo.type.code].toUpperCase()}: ${tag}`);
+//       default:
+//         break;
+//     }
+
+//     values.push(await parseReadTagMemberStructure(layer, tagInfo, data, offset));
+
+//     // try {
+//     //   values.push(await parseReadTagMemberStructure(layer, tagInfo, data, offset));
+//     // } catch (err) {
+//     //   console.log(tag.name || tag);
+//     //   console.log(typeInfo);
+//     //   console.log(tagInfo);
+//     //   console.log(data.slice(0, 20));
+//     //   throw err;
+//     // }
+//   }
+
+//   if (elements === 1) {
+//     return values[0];
+//   }
+
+//   return values;
+// }
 
 
 function sendPromise(self, service, path, data, timeout) {

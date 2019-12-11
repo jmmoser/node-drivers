@@ -345,7 +345,6 @@ function __DecodeDataType(buffer, offset, cb) {
       offset = __DecodeDataType(buffer, offset, function (items) {
         type.items = items;
       });
-
       break;
     }
     default:
@@ -436,6 +435,13 @@ function Decode(dataType, buffer, offset, cb) {
       value = buffer.toString('utf16le', offset, offset + 2 * length); offset += 2 * length;
       break;
     }
+    case DataTypes.STRINGN: {
+      const width = buffer.readUInt16LE(offset); offset += 2;
+      const length = buffer.readUInt16LE(offset); offset += 2;
+      const total = width * length;
+      value = buffer.toString('utf16le', offset, offset + total); offset += total;
+      break;
+    }
     case DataTypes.LTIME:
     case DataTypes.LINT:
       value = buffer.readBigInt64LE(offset); offset += 8;
@@ -447,6 +453,16 @@ function Decode(dataType, buffer, offset, cb) {
     case DataTypes.LREAL:
       value = buffer.readDoubleLE(offset);
       break;
+    case DataTypes.STRUCT: {
+      /** Name of members is not known so use array to hold decoded member values */
+      value = [];
+      dataType.members.forEach(member => {
+        offset = Decode(member, data, offset, function(memberValue) {
+          value.push(memberValue);
+        });
+      });
+      break;
+    }
     default:
       throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }

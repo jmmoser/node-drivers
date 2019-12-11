@@ -1,5 +1,6 @@
 'use strict';
 
+const { CallbackPromise } = require('../../../utils');
 const EPath = require('./EPath');
 const CIP = require('./CIP');
 const Layer = require('./../../Layer');
@@ -8,8 +9,20 @@ const MessageRouter = require('./MessageRouter');
 
 
 class CIPLayer extends Layer {
+  request(service, path, data, callback) {
+    return CallbackPromise(callback, resolver => {
+      CIPLayer.send(this, false, service, path, data, function (error, reply) {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          resolver.resolve(reply);
+        }
+      });
+    });
+  }
+
   identity(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
       
       const path = EPath.Encode(
@@ -33,7 +46,7 @@ class CIPLayer extends Layer {
 
 
   supportedClasses(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributeSingle;
 
       const path = EPath.Encode(
@@ -60,7 +73,7 @@ class CIPLayer extends Layer {
 
 
   messageRouterInstanceAttributes(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
 
       const path = EPath.Encode(
@@ -112,7 +125,7 @@ class CIPLayer extends Layer {
 
 
   messageRouterClassAttributes(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
 
       const path = EPath.Encode(
@@ -120,8 +133,6 @@ class CIPLayer extends Layer {
         // null,
         // 0x04
       );
-
-      console.log(path);
 
       CIPLayer.send(this, true, service, path, null, (error, reply) => {
         if (error) {
@@ -160,7 +171,7 @@ class CIPLayer extends Layer {
 
   static send(layer, connected, service, path, data, callback, timeout) {
     const request = MessageRouter.Request(service, path, data);
-    // console.log(request);
+    console.log(request);
     // console.log(new Error());
 
     const info = { connected };

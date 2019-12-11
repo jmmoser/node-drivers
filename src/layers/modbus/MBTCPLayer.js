@@ -1,5 +1,6 @@
 // 'use strict';
 
+// const { CallbackPromise } = require('../../utils');
 // const Layer = require('../Layer');
 // const MBTCPPacket = require('./MBTCPPacket');
 
@@ -24,42 +25,42 @@
 //   }
 
 //   readDiscreteInputs(unitID, address, count, callback) {
-//     return Layer.CallbackPromise(callback, resolver => {
+//     return CallbackPromise(callback, resolver => {
 //       const data = readRequest(ReadDiscreteInputs, address, count);
 //       send(this, unitID, data, resolver);
 //     });
 //   }
 
 //   readCoils(unitID, address, count, callback) {
-//     return Layer.CallbackPromise(callback, resolver => {
+//     return CallbackPromise(callback, resolver => {
 //       const data = readRequest(ReadCoils, address, count);
 //       send(this, unitID, data, resolver);
 //     });
 //   }
 
 //   readInputRegisters(unitID, address, count, callback) {
-//     return Layer.CallbackPromise(callback, resolver => {
+//     return CallbackPromise(callback, resolver => {
 //       const data = readRequest(ReadInputRegisters, address, count);
 //       send(this, unitID, data, resolver);
 //     });
 //   }
 
 //   readHoldingRegisters(unitID, address, count, callback) {
-//     return Layer.CallbackPromise(callback, resolver => {
+//     return CallbackPromise(callback, resolver => {
 //       const data = readRequest(ReadHoldingRegisters, address, count);
 //       send(this, unitID, data, resolver);
 //     });
 //   }
 
 //   writeSingleCoil(unitID, address, value, callback) {
-//     return Layer.CallbackPromise(callback, resolver => {
+//     return CallbackPromise(callback, resolver => {
 //       const data = writeRequest(WriteSingleCoil, address, [value ? 0x00FF : 0x0000]);
 //       send(this, unitID, data, resolver);
 //     });
 //   }
 
 //   writeMultipleCoils(unitID, address, values, callback) {
-//     return Layer.CallbackPromise(callback, resolver => {
+//     return CallbackPromise(callback, resolver => {
 //       for (let i = 0; i < values.length; i++) {
 //         values[i] = values[i] ? 0x00FF : 0x0000;
 //       }
@@ -69,14 +70,14 @@
 //   }
 
 //   writeSingleRegister(unitID, address, value, callback) {
-//     return Layer.CallbackPromise(callback, resolver => {
+//     return CallbackPromise(callback, resolver => {
 //       const data = writeRequest(WriteSingleRegister, address, [value]);
 //       send(this, unitID, data, resolver);
 //     });
 //   }
 
 //   writeMultipleRegisters(unitID, address, values, callback) {
-//     return Layer.CallbackPromise(callback, resolver => {
+//     return CallbackPromise(callback, resolver => {
 //       // const fn = Functions.WriteMultipleRegisters;
 //       resolver.reject('Not supported yet');
 //     });

@@ -1,5 +1,6 @@
 'use strict';
 
+const { CallbackPromise } = require('../../../utils');
 const CIP = require('./CIP');
 const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
@@ -36,7 +37,7 @@ class Connection extends Layer {
   }
 
   disconnect(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       if (this._connectionState === 0) {
         return resolver.resolve();
       }

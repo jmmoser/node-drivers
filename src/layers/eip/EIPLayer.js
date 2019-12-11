@@ -1,6 +1,6 @@
 'use strict';
 
-const { CallbackPromise, InfoError} = require('../../utils');
+const { CallbackPromise, InfoError } = require('../../utils');
 const Layer = require('../Layer');
 const EIPPacket = require('./EIPPacket');
 const EIPCommand = EIPPacket.Command;
@@ -295,7 +295,7 @@ class EIPLayer extends Layer {
   }
 
   disconnect(callback) {
-    return Layer.CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, resolver => {
       if (this._connectionState !== 0) {
         this.send(EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context), null, true);
         setConnectionState(this, 0);

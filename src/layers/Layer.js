@@ -234,7 +234,6 @@ class Layer extends EventEmitter {
   }
 }
 
-Layer.CallbackPromise = CallbackPromise;
 
 module.exports = Layer;
 

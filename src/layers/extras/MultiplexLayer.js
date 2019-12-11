@@ -5,6 +5,7 @@
  * multiple upper layers to one lower layer
  */
 
+const { CallbackPromise } = require('../../utils');
 const Layer = require('../Layer');
 
 
@@ -22,7 +23,7 @@ class MultiplexLayer extends Layer {
   }
 
   disconnect(callback) {
-    return Layer.CallbackPromise(callback, async resolver => {
+    return CallbackPromise(callback, async resolver => {
       if (this._disconnecting === 1) {
         resolver.resolve();
       }
