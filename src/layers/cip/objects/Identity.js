@@ -2,7 +2,7 @@
 
 const { Decode, DataTypes } = require('./CIP');
 const CIPObject = require('./CIPObject');
-const { getBit, getBits, InvertKeyValues } = require('../../../utils');
+const { getBit, getBits } = require('../../../utils');
 
 // Class Code 0x01
 class Identity extends CIPObject {

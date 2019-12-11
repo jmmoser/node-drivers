@@ -1,5 +1,8 @@
 
-const { DataTypes } = require('../objects/CIP');
+const {
+  DataTypes,
+  DataTypeCodes
+} = require('../objects/CIP');
 
 
 const {
@@ -102,9 +105,9 @@ const SymbolInstanceAttributeCodes = {
 const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
 
 const SymbolInstanceAttributeDataTypes = {
-  [SymbolInstanceAttributeCodes.Name]: DataTypes.STRING,
-  [SymbolInstanceAttributeCodes.Type]: DataTypes.UINT,
-  [SymbolInstanceAttributeCodes.Bytes]: DataTypes.UINT
+  [SymbolInstanceAttributeCodes.Name]: DataTypeCodes.STRING,
+  [SymbolInstanceAttributeCodes.Type]: DataTypeCodes.UINT,
+  [SymbolInstanceAttributeCodes.Bytes]: DataTypeCodes.UINT
   // TODO: Added ArrayDimensions once compound DataTypes are added
 };
 
@@ -122,10 +125,10 @@ const TemplateInstanceAttributeCodes = {
 };
 
 const TemplateInstanceAttributeDataTypes = {
-  [TemplateInstanceAttributeCodes.StructureHandle]: DataTypes.UINT,
-  [TemplateInstanceAttributeCodes.MemberCount]: DataTypes.UINT,
-  [TemplateInstanceAttributeCodes.DefinitionSize]: DataTypes.UDINT,
-  [TemplateInstanceAttributeCodes.StructureSize]: DataTypes.UDINT
+  [TemplateInstanceAttributeCodes.StructureHandle]: DataTypeCodes.UINT,
+  [TemplateInstanceAttributeCodes.MemberCount]: DataTypeCodes.UINT,
+  [TemplateInstanceAttributeCodes.DefinitionSize]: DataTypeCodes.UDINT,
+  [TemplateInstanceAttributeCodes.StructureSize]: DataTypeCodes.UDINT
 };
 
 

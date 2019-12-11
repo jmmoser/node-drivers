@@ -141,7 +141,7 @@ const CommonServiceNames = InvertKeyValues(CommonServices);
 
 
 // CIP Vol1 Table C-6.1
-const DataTypes = {
+const DataTypeCodes = {
   BOOL: 0xC1,
   SINT: 0xC2,
   INT: 0xC3,
@@ -180,7 +180,421 @@ const DataTypes = {
   ARRAY: 0xA3 /* Data is an array type descriptor */
 };
 
-const DataTypeNames = InvertKeyValues(DataTypes);
+const DataTypeNames = InvertKeyValues(DataTypeCodes);
+
+
+const DataType = {
+  BOOL(position) {
+    return { type: DataType.BOOL, code: DataTypeCodes.BOOL, position }
+  },
+  SINT() {
+    return { type: DataType.SINT, code: DataTypeCodes.SINT }
+  },
+  INT() {
+    return { type: DataType.INT, code: DataTypeCodes.INT }
+  },
+  DINT() {
+    return { type: DataType.DINT, code: DataTypeCodes.DINT }
+  },
+  LINT() {
+    return { type: DataType.LINT, code: DataTypeCodes.LINT }
+  },
+  USINT() {
+    return { type: DataType.USINT, code: DataTypeCodes.USINT }
+  },
+  UINT() {
+    return { type: DataType.UINT, code: DataTypeCodes.UINT }
+  },
+  UDINT() {
+    return { type: DataType.UDINT, code: DataTypeCodes.UDINT }
+  },
+  ULINT() {
+    return { type: DataType.ULINT, code: DataTypeCodes.ULINT }
+  },
+  REAL() {
+    return { type: DataType.REAL, code: DataTypeCodes.REAL }
+  },
+  LREAL() {
+    return { type: DataType.LREAL, code: DataTypeCodes.LREAL }
+  },
+  STIME() {
+    return { type: DataType.STIME, code: DataTypeCodes.STIME }
+  },
+  DATE() {
+    return { type: DataType.DATE, code: DataTypeCodes.DATE }
+  },
+  TIME_OF_DAY() {
+    return { type: DataType.TIME_OF_DAY, code: DataTypeCodes.TIME_OF_DAY }
+  },
+  DATE_AND_TIME() {
+    return { type: DataType.DATE_AND_TIME, code: DataTypeCodes.DATE_AND_TIME }
+  },
+  STRING() {
+    return { type: DataType.STRING, code: DataTypeCodes.STRING }
+  },
+  BYTE() {
+    return { type: DataType.BYTE, code: DataTypeCodes.BYTE }
+  },
+  WORD() {
+    return { type: DataType.WORD, code: DataTypeCodes.WORD }
+  },
+  DWORD() {
+    return { type: DataType.DWORD, code: DataTypeCodes.DWORD }
+  },
+  LWORD() {
+    return { type: DataType.LWORD, code: DataTypeCodes.LWORD }
+  },
+  STRING2() {
+    return { type: DataType.STRING2, code: DataTypeCodes.STRING2 }
+  },
+  FTIME() {
+    return { type: DataType.FTIME, code: DataTypeCodes.FTIME }
+  },
+  LTIME() {
+    return { type: DataType.LTIME, code: DataTypeCodes.LTIME }
+  },
+  ITIME() {
+    return { type: DataType.ITIME, code: DataTypeCodes.ITIME }
+  },
+  STRINGN() {
+    return { type: DataType.STRINGN, code: DataTypeCodes.STRINGN }
+  },
+  SHORT_STRING() {
+    return { type: DataType.SHORT_STRING, code: DataTypeCodes.SHORT_STRING }
+  },
+  TIME() {
+    return { type: DataType.TIME, code: DataTypeCodes.TIME }
+  },
+  EPATH() {
+    return { type: DataType.EPATH, code: DataTypeCodes.EPATH }
+  },
+  ENGUNIT() {
+    return { type: DataType.ENGUNIT, code: DataTypeCodes.ENGUNIT }
+  },
+  STRINGI() {
+    return { type: DataType.STRINGI, code: DataTypeCodes.STRINGI }
+  },
+
+  /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
+  ABREV_STRUCT(crc) {
+    return {
+      type: DataType.ABREV_STRUCT,
+      code: DataTypeCodes.ABREV_STRUCT,
+      constructed: true,
+      abbreviated: true,
+      crc
+    }
+  },
+  ABREV_ARRAY() {
+    return {
+      type: DataType.ABREV_ARRAY,
+      code: DataTypeCodes.ABREV_ARRAY,
+      constructed: true,
+      abbreviated: true
+    }
+  },
+  STRUCT(members) {
+    return {
+      type: DataType.STRUCT,
+      code: DataTypeCodes.STRUCT,
+      constructed: true,
+      abbreviated: false,
+      members
+    }
+  },
+  ARRAY() {
+    return {
+      type: DataType.ARRAY,
+      code: DataTypeCodes.ARRAY,
+      constructed: true,
+      abbreviated: false
+    }
+  },
+};
+
+
+function DataTypeFromCode(code) {
+  return DataType[DataTypeNames[code]];
+}
+
+
+
+function __DecodeDataType(buffer, offset, cb) {
+  const code = buffer.readUInt8(offset); offset += 1;
+  
+  // const type = {
+  //   code,
+  //   name: DataTypeNames[code] || 'UNKNOWN'
+  // };
+
+  const type = DataTypeFromCode(code);
+
+  switch (code) {
+    case DataTypeCodes.ABREV_STRUCT: {
+      type.constructed = true;
+      type.abbreviated = true;
+      const length = buffer.readUInt8(offset); offset += 1;
+      type.crc = decodeUnsignedInteger(buffer, offset, length);
+      offset += length;
+      break;
+    }
+    case DataTypeCodes.ABREV_ARRAY: {
+      type.constructed = true;
+      type.abbreviated = true;
+      /* const length = buffer.readUInt8(offset); */ offset += 1;
+      offset = __DecodeDataType(buffer, offset, function (items) {
+        type.items = items;
+      });
+      break;
+    }
+    case DataTypeCodes.STRUCT: {
+      type.constructed = true;
+      type.abbreviated = false;
+      const length = buffer.readUInt8(offset); offset += 1;
+      type.members = [];
+      const lastOffset = offset + length;
+      while (offset < lastOffset) {
+        offset = __DecodeDataType(buffer, offset, function (member) {
+          type.members.push(member);
+        });
+      }
+      break;
+    }
+    case DataTypeCodes.ARRAY: {
+      type.constructed = true;
+      type.abbreviated = false;
+      /* const length = buffer.readUInt8(offset); */ offset += 1;
+
+      const lowerBoundTag = buffer.readUInt8(offset); offset += 1;
+      const lowerBoundLength = buffer.readUInt8(offset); offset += 1;
+      const lowerBound = decodeUnsignedInteger(buffer, offset, lowerBoundLength);
+      offset += lowerBoundLength;
+
+      const upperBoundTag = buffer.readUInt8(offset); offset += 1;
+      const upperBoundLength = buffer.readUInt8(offset); offset += 1;
+      const upperBound = decodeUnsignedInteger(buffer, offset, upperBoundLength);
+      offset += upperBoundLength;
+
+      type.boundTags = [lowerBoundTag, upperBoundTag];
+      type.bounds = [lowerBound, upperBound];
+
+      offset = __DecodeDataType(buffer, offset, function (items) {
+        type.items = items;
+      });
+      break;
+    }
+    default:
+      break;
+  }
+
+  if (typeof cb === 'function') {
+    cb(type);
+  }
+
+  return offset;
+}
+
+
+function DecodeDataType(buffer, offset, cb) {
+  const nextOffset = __DecodeDataType(buffer, offset, cb);
+  if (nextOffset - offset === 1) {
+    /**
+     * If data type is elementary then __DecodeDataType will only
+     * read 1 byte but data type encoding is 2 bytes
+     */
+    return offset + 2;
+  }
+  return nextOffset;
+}
+
+
+function Decode(dataType, buffer, offset, cb) {
+  let value;
+
+  let dataTypeCode = dataType;
+
+  if (typeof dataType === 'object') {
+    dataTypeCode = dataType.code;
+  }
+
+  switch (dataTypeCode) {
+    case DataTypeCodes.SINT:
+      value = buffer.readInt8(offset); offset += 1;
+      break;
+    case DataTypeCodes.USINT:
+    case DataTypeCodes.BYTE:
+      value = buffer.readUInt8(offset); offset += 1;
+      break;
+    case DataTypeCodes.INT:
+    case DataTypeCodes.ITIME:
+      value = buffer.readInt16LE(offset); offset += 2;
+      break;
+    case DataTypeCodes.DINT:
+    case DataTypeCodes.TIME:
+    case DataTypeCodes.FTIME:
+      value = buffer.readInt32LE(offset); offset += 4;
+      break;
+    case DataTypeCodes.REAL:
+      value = buffer.readFloatLE(offset); offset += 4;
+      break;
+    case DataTypeCodes.BOOL:
+      value = buffer.readUInt8(offset); offset += 1;
+      if (dataType.info != null) {
+        if (dataType.info > 7) {
+          throw new Error(`Bit position too high: ${dataType.info}`);
+        }
+        value = getBit(value, dataType.info);
+      }
+      value = value > 0;
+      break;
+    case DataTypeCodes.UINT:
+    case DataTypeCodes.WORD:
+      value = buffer.readUInt16LE(offset); offset += 2;
+      break;
+    case DataTypeCodes.UDINT:
+    case DataTypeCodes.DWORD:
+    case DataTypeCodes.DATE:
+      value = buffer.readUInt32LE(offset); offset += 4;
+      break;
+    case DataTypeCodes.STRING: {
+      const length = buffer.readUInt16LE(offset); offset += 2;
+      value = buffer.toString('ascii', offset, offset + length); offset += length;
+      break;
+    }
+    case DataTypeCodes.SHORT_STRING: {
+      const length = buffer.readUInt8(offset); offset += 1;
+      value = buffer.toString('ascii', offset, offset + length); offset += length;
+      break;
+    }
+    case DataTypeCodes.STRING2: {
+      const length = buffer.readUInt16LE(offset); offset += 2;
+      value = buffer.toString('utf16le', offset, offset + 2 * length); offset += 2 * length;
+      break;
+    }
+    case DataTypeCodes.STRINGN: {
+      const width = buffer.readUInt16LE(offset); offset += 2;
+      const length = buffer.readUInt16LE(offset); offset += 2;
+      const total = width * length;
+      value = buffer.toString('utf16le', offset, offset + total); offset += total;
+      break;
+    }
+    case DataTypeCodes.LTIME:
+    case DataTypeCodes.LINT:
+      value = buffer.readBigInt64LE(offset); offset += 8;
+      break;
+    case DataTypeCodes.LWORD:
+    case DataTypeCodes.ULINT:
+      value = buffer.readBigUInt64LE(offset); offset += 8;
+      break;
+    case DataTypeCodes.LREAL:
+      value = buffer.readDoubleLE(offset);
+      break;
+    case DataTypeCodes.STRUCT: {
+      /** Name of members is not known so use array to hold decoded member values */
+      value = [];
+      dataType.members.forEach(member => {
+        offset = Decode(member, data, offset, function(memberValue) {
+          value.push(memberValue);
+        });
+      });
+      break;
+    }
+    default:
+      throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
+  }
+
+  if (typeof cb === 'function') {
+    cb(value);
+  }
+
+  return offset;
+}
+
+
+function Encode(dataType, value) {
+  if (dataType instanceof Function) dataType = dataType();
+
+  let data;
+
+  const dataTypeCode = dataType.code != null ? dataType.code : dataType;
+
+  switch (dataTypeCode) {
+    case DataTypeCodes.SINT:
+      data = Buffer.allocUnsafe(1);
+      data.writeInt8(value, 0);
+      break;
+    case DataTypeCodes.USINT:
+    case DataTypeCodes.BYTE:
+      data = Buffer.allocUnsafe(1);
+      data.writeUInt8(value, 0);
+      break;
+    case DataTypeCodes.INT:
+    case DataTypeCodes.ITIME:
+      data = Buffer.allocUnsafe(2);
+      data.writeInt16LE(value, 0);
+      break;
+    case DataTypeCodes.DINT:
+    case DataTypeCodes.TIME:
+    case DataTypeCodes.FTIME:
+      data = Buffer.allocUnsafe(4);
+      data.writeInt32LE(value, 0);
+      break;
+    case DataTypeCodes.REAL:
+      data = Buffer.allocUnsafe(4);
+      data.writeFloatLE(value, 0);
+      break;
+    case DataTypeCodes.UINT:
+    case DataTypeCodes.WORD:
+      data = Buffer.allocUnsafe(2);
+      data.writeUInt16LE(value, 0);
+      break;
+    case DataTypeCodes.UDINT:
+    case DataTypeCodes.DWORD:
+    case DataTypeCodes.DATE:
+      data = Buffer.allocUnsafe(4);
+      data.writeUInt32LE(value, 0);
+      break;
+    case DataTypeCodes.STRING: {
+      const stringBuffer = Buffer.from(value, 'ascii');
+      data = Buffer.allocUnsafe(2 + stringBuffer.length);
+      data.writeUInt16LE(stringBuffer.length, 0);
+      stringBuffer.copy(data, 2);
+      break;
+    }
+    case DataTypeCodes.SHORT_STRING: {
+      const stringBuffer = Buffer.from(value, 'ascii');
+      data = Buffer.allocUnsafe(1 + stringBuffer.length);
+      data.writeUInt8(stringBuffer.length, 0);
+      stringBuffer.copy(data, 1);
+      break;
+    }
+    case DataTypeCodes.STRING2: {
+      const stringBuffer = Buffer.from(value, 'utf16le');
+      data = Buffer.allocUnsafe(2 + stringBuffer.length);
+      data.writeUInt16LE(stringBuffer.length, 0);
+      stringBuffer.copy(data, 2);
+      break;
+    }
+    case DataTypeCodes.LTIME:
+    case DataTypeCodes.LINT:
+      data = Buffer.allocUnsafe(8);
+      data.writeBigInt64LE(value, 0);
+      break;
+    case DataTypeCodes.LWORD:
+    case DataTypeCodes.ULINT:
+      data = Buffer.allocUnsafe(8);
+      data.writeBigUInt64LE(value, 0);
+      break;
+    case DataTypeCodes.LREAL:
+      data = Buffer.allocUnsafe(8);
+      data.writeDoubleLE(value, 0);
+    default:
+      throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
+  }
+
+  return data;
+}
+
 
 
 // CIP Vol1 Edition 3.3 Table 4-4.2
@@ -283,279 +697,6 @@ const GeneralStatusCodeDescriptions = {
   0x29: 'A request to modify a non-modifiable member was received.',
   0x2A: 'This error code may only be reported by DeviceNet group 2 only servers with 4K or less code space and only in place of Service not supported, Attribute not supported and Attribute not settable.'
 };
-
-
-function __DecodeDataType(buffer, offset, cb) {
-  const code = buffer.readUInt8(offset); offset += 1;
-  
-  const type = {
-    code,
-    name: DataTypeNames[code] || 'UNKNOWN'
-  };
-
-  switch (code) {
-    case DataTypes.ABREV_STRUCT: {
-      type.constructed = true;
-      type.abbreviated = true;
-      const length = buffer.readUInt8(offset); offset += 1;
-      type.crc = decodeUnsignedInteger(buffer, offset, length);
-      offset += length;
-      break;
-    }
-    case DataTypes.ABREV_ARRAY: {
-      type.constructed = true;
-      type.abbreviated = true;
-      /* const length = buffer.readUInt8(offset); */ offset += 1;
-      offset = __DecodeDataType(buffer, offset, function (items) {
-        type.items = items;
-      });
-      break;
-    }
-    case DataTypes.STRUCT: {
-      type.constructed = true;
-      type.abbreviated = false;
-      const length = buffer.readUInt8(offset); offset += 1;
-      type.members = [];
-      const lastOffset = offset + length;
-      while (offset < lastOffset) {
-        offset = __DecodeDataType(buffer, offset, function (member) {
-          type.members.push(member);
-        });
-      }
-      break;
-    }
-    case DataTypes.ARRAY: {
-      type.constructed = true;
-      type.abbreviated = false;
-      /* const length = buffer.readUInt8(offset); */ offset += 1;
-
-      const lowerBoundTag = buffer.readUInt8(offset); offset += 1;
-      const lowerBoundLength = buffer.readUInt8(offset); offset += 1;
-      const lowerBound = decodeUnsignedInteger(buffer, offset, lowerBoundLength);
-      offset += lowerBoundLength;
-
-      const upperBoundTag = buffer.readUInt8(offset); offset += 1;
-      const upperBoundLength = buffer.readUInt8(offset); offset += 1;
-      const upperBound = decodeUnsignedInteger(buffer, offset, upperBoundLength);
-      offset += upperBoundLength;
-
-      type.boundTags = [lowerBoundTag, upperBoundTag];
-      type.bounds = [lowerBound, upperBound];
-
-      offset = __DecodeDataType(buffer, offset, function (items) {
-        type.items = items;
-      });
-      break;
-    }
-    default:
-      break;
-  }
-
-  if (typeof cb === 'function') {
-    cb(type);
-  }
-
-  return offset;
-}
-
-
-function DecodeDataType(buffer, offset, cb) {
-  const nextOffset = __DecodeDataType(buffer, offset, cb);
-  if (nextOffset - offset === 1) {
-    /**
-     * If data type is elementary then __DecodeDataType will only
-     * read 1 byte but data type encoding is 2 bytes
-     */
-    return offset + 2;
-  }
-  return nextOffset;
-}
-
-
-function Decode(dataType, buffer, offset, cb) {
-  let value;
-
-  let dataTypeCode = dataType;
-
-  if (typeof dataType === 'object') {
-    dataTypeCode = dataType.code;
-  }
-
-  switch (dataTypeCode) {
-    case DataTypes.SINT:
-      value = buffer.readInt8(offset); offset += 1;
-      break;
-    case DataTypes.USINT:
-    case DataTypes.BYTE:
-      value = buffer.readUInt8(offset); offset += 1;
-      break;
-    case DataTypes.INT:
-    case DataTypes.ITIME:
-      value = buffer.readInt16LE(offset); offset += 2;
-      break;
-    case DataTypes.DINT:
-    case DataTypes.TIME:
-    case DataTypes.FTIME:
-      value = buffer.readInt32LE(offset); offset += 4;
-      break;
-    case DataTypes.REAL:
-      value = buffer.readFloatLE(offset); offset += 4;
-      break;
-    case DataTypes.BOOL:
-      value = buffer.readUInt8(offset); offset += 1;
-      if (dataType.info != null) {
-        if (dataType.info > 7) {
-          throw new Error(`Bit position too high: ${dataType.info}`);
-        }
-        value = getBit(value, dataType.info);
-      }
-      value = value > 0;
-      break;
-    case DataTypes.UINT:
-    case DataTypes.WORD:
-      value = buffer.readUInt16LE(offset); offset += 2;
-      break;
-    case DataTypes.UDINT:
-    case DataTypes.DWORD:
-    case DataTypes.DATE:
-      value = buffer.readUInt32LE(offset); offset += 4;
-      break;
-    case DataTypes.STRING: {
-      const length = buffer.readUInt16LE(offset); offset += 2;
-      value = buffer.toString('ascii', offset, offset + length); offset += length;
-      break;
-    }
-    case DataTypes.SHORT_STRING: {
-      const length = buffer.readUInt8(offset); offset += 1;
-      value = buffer.toString('ascii', offset, offset + length); offset += length;
-      break;
-    }
-    case DataTypes.STRING2: {
-      const length = buffer.readUInt16LE(offset); offset += 2;
-      value = buffer.toString('utf16le', offset, offset + 2 * length); offset += 2 * length;
-      break;
-    }
-    case DataTypes.STRINGN: {
-      const width = buffer.readUInt16LE(offset); offset += 2;
-      const length = buffer.readUInt16LE(offset); offset += 2;
-      const total = width * length;
-      value = buffer.toString('utf16le', offset, offset + total); offset += total;
-      break;
-    }
-    case DataTypes.LTIME:
-    case DataTypes.LINT:
-      value = buffer.readBigInt64LE(offset); offset += 8;
-      break;
-    case DataTypes.LWORD:
-    case DataTypes.ULINT:
-      value = buffer.readBigUInt64LE(offset); offset += 8;
-      break;
-    case DataTypes.LREAL:
-      value = buffer.readDoubleLE(offset);
-      break;
-    case DataTypes.STRUCT: {
-      /** Name of members is not known so use array to hold decoded member values */
-      value = [];
-      dataType.members.forEach(member => {
-        offset = Decode(member, data, offset, function(memberValue) {
-          value.push(memberValue);
-        });
-      });
-      break;
-    }
-    default:
-      throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
-  }
-
-  if (typeof cb === 'function') {
-    cb(value);
-  }
-
-  return offset;
-}
-
-
-function Encode(dataType, value) {
-  let data;
-
-  const dataTypeCode = dataType.code != null ? dataType.code : dataType;
-
-  switch (dataTypeCode) {
-    case DataTypes.SINT:
-      data = Buffer.allocUnsafe(1);
-      data.writeInt8(value, 0);
-      break;
-    case DataTypes.USINT:
-    case DataTypes.BYTE:
-      data = Buffer.allocUnsafe(1);
-      data.writeUInt8(value, 0);
-      break;
-    case DataTypes.INT:
-    case DataTypes.ITIME:
-      data = Buffer.allocUnsafe(2);
-      data.writeInt16LE(value, 0);
-      break;
-    case DataTypes.DINT:
-    case DataTypes.TIME:
-    case DataTypes.FTIME:
-      data = Buffer.allocUnsafe(4);
-      data.writeInt32LE(value, 0);
-      break;
-    case DataTypes.REAL:
-      data = Buffer.allocUnsafe(4);
-      data.writeFloatLE(value, 0);
-      break;
-    case DataTypes.UINT:
-    case DataTypes.WORD:
-      data = Buffer.allocUnsafe(2);
-      data.writeUInt16LE(value, 0);
-      break;
-    case DataTypes.UDINT:
-    case DataTypes.DWORD:
-    case DataTypes.DATE:
-      data = Buffer.allocUnsafe(4);
-      data.writeUInt32LE(value, 0);
-      break;
-    case DataTypes.STRING: {
-      const stringBuffer = Buffer.from(value, 'ascii');
-      data = Buffer.allocUnsafe(2 + stringBuffer.length);
-      data.writeUInt16LE(stringBuffer.length, 0);
-      stringBuffer.copy(data, 2);
-      break;
-    }
-    case DataTypes.SHORT_STRING: {
-      const stringBuffer = Buffer.from(value, 'ascii');
-      data = Buffer.allocUnsafe(1 + stringBuffer.length);
-      data.writeUInt8(stringBuffer.length, 0);
-      stringBuffer.copy(data, 1);
-      break;
-    }
-    case DataTypes.STRING2: {
-      const stringBuffer = Buffer.from(value, 'utf16le');
-      data = Buffer.allocUnsafe(2 + stringBuffer.length);
-      data.writeUInt16LE(stringBuffer.length, 0);
-      stringBuffer.copy(data, 2);
-      break;
-    }
-    case DataTypes.LTIME:
-    case DataTypes.LINT:
-      data = Buffer.allocUnsafe(8);
-      data.writeBigInt64LE(value, 0);
-      break;
-    case DataTypes.LWORD:
-    case DataTypes.ULINT:
-      data = Buffer.allocUnsafe(8);
-      data.writeBigUInt64LE(value, 0);
-      break;
-    case DataTypes.LREAL:
-      data = Buffer.allocUnsafe(8);
-      data.writeDoubleLE(value, 0);
-    default:
-      throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
-  }
-
-  return data;
-}
 
 
 
