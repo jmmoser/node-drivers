@@ -46,20 +46,40 @@ function decodeUnsignedInteger(data, offset, size) {
  */
 function InvertKeyValues(obj) {
   let inverted;
-  const type = Object.prototype.toString.call(obj);
-  if (type === '[object Object]') {
-    inverted = {};
-    for (let [key, value] of Object.entries(obj)) {
-      inverted[value] = key;
-    }
-  } else if (type === '[object Map]') {
-    inverted = new Map();
-    for (let [key, value] of obj.entries()) {
-      inverted.set(value, key);
-    }
+  switch (Object.prototype.toString.call(obj)) {
+    case '[object Object]':
+      inverted = {};
+      for (let [key, value] of Object.entries(obj)) {
+        inverted[value] = key;
+      }
+      break;
+    case '[object Map]':
+      inverted = new Map();
+      for (let [key, value] of obj.entries()) {
+        inverted.set(value, key);
+      }
+      break;
+    default:
+      break;
   }
   return inverted;
 }
+// function InvertKeyValues(obj) {
+//   let inverted;
+//   const type = Object.prototype.toString.call(obj);
+//   if (type === '[object Object]') {
+//     inverted = {};
+//     for (let [key, value] of Object.entries(obj)) {
+//       inverted[value] = key;
+//     }
+//   } else if (type === '[object Map]') {
+//     inverted = new Map();
+//     for (let [key, value] of obj.entries()) {
+//       inverted.set(value, key);
+//     }
+//   }
+//   return inverted;
+// }
 
 /**
  * https://stackoverflow.com/a/12713611/3055415
