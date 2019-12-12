@@ -101,14 +101,14 @@ class CIPLayer extends Layer {
 
             /** number active may not be supported */
             if (offset < length) {
-              offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => info.maximumConnections = val);
+              offset = CIP.Decode(CIP.DataType.UINT, data, offset, val => info.maximumConnections = val);
 
               let connectionCount;
-              offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => connectionCount = val);
+              offset = CIP.Decode(CIP.DataType.UINT, data, offset, val => connectionCount = val);
 
               const connectionIDs = [];
               for (let i = 0; i < connectionCount; i++) {
-                offset = CIP.Decode(CIP.DataTypes.UINT, data, offset, val => connectionIDs.push(val));
+                offset = CIP.Decode(CIP.DataType.UINT, data, offset, val => connectionIDs.push(val));
               }
 
               info.connections = connectionIDs;
@@ -171,8 +171,7 @@ class CIPLayer extends Layer {
 
   static send(layer, connected, service, path, data, callback, timeout) {
     const request = MessageRouter.Request(service, path, data);
-    console.log(request);
-    // console.log(new Error());
+    // console.log(request);
 
     const info = { connected };
 

@@ -3,6 +3,7 @@
   - [X] EIP passes down port 44818 to TCP layer
   - [X] modbus passes down port 502 to TCP layer
 - [ ] Logix5000
+  - [ ] getTagSymbolInstanceID and _highestListedSymbolInstanceID need to be scoped (global scope vs program scope)
   - [ ] When Program data type is read, read all symbols contained
   - [ ] Optimize
     - [ ] persist processor information to file system

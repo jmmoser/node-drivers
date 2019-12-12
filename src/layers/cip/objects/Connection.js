@@ -138,6 +138,7 @@ function mergeOptionsWithDefaults(self, options) {
   self.TtoORPI = options.TtoORPI || 0x00204001;
   self.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
   self.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+  self.Port = options.Port || 1;
   self.ProcessorSlot = options.ProcessorSlot || 0;
 }
 

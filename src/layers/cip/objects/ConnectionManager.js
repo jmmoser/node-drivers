@@ -74,7 +74,7 @@ class ConnectionManager {
     offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
 
     offset = data.writeUInt8(0x03, offset); // Connection path size
-    offset = data.writeUInt8(0x01, offset); // Port identifier
+    offset = data.writeUInt8(connection.Port, offset); // Port identifier
     offset = data.writeUInt8(connection.ProcessorSlot, offset);
     offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit logical address
     offset = data.writeUInt8(CIP.Classes.MessageRouter, offset); // class ID (MessageRouter)
