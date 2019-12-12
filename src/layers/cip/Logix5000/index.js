@@ -145,94 +145,6 @@ class Logix5000 extends CIPLayer {
   //   //   });
   //   // }
   // }
-
-
-  async getSymbolSize(layer, scope, tag) {
-    // console.log('STARTING getSymbolSize:', tag);
-    if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
-      try {
-        const symbolParts = tag.split('.');
-        if (symbolParts.length === 1) {
-          const [
-            typeInfo,
-            arrayDimensionLengthsInfo
-          ] = await layer.readSymbolAttributeList(scope, symbolParts[0], [
-            SymbolInstanceAttributeCodes.Type,
-            SymbolInstanceAttributeCodes.ArrayDimensionLengths
-          ]);
-
-          // console.log(typeInfo);
-
-          // TODO: Update this section when reading multidimensional arrays is figured out
-          if (typeInfo.value && typeInfo.value.dimensions === 1) {
-            if (Array.isArray(arrayDimensionLengthsInfo.value) && arrayDimensionLengthsInfo.value.length > 0) {
-              // console.log(`SIZE: ${tag}: RETURNING DIMENSION LENGTH FROM TYPE INFO: ${arrayDimensionLengthsInfo.value[0]}`);
-              return arrayDimensionLengthsInfo.value[0];
-            }
-          }
-        } else {
-          let symbolPartStartIdx = 1;
-          const tagInfo = await getSymbolInfo(layer, scope, symbolParts[0], [
-            SymbolInstanceAttributeCodes.Type
-          ]);
-
-          const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
-          
-          if (tagType && tagType.code === LDataTypeCodes.Program) {
-            return layer.getSymbolSize(layer, symbolParts[0], symbolParts.slice(1).join('.'));
-          }
-
-          let memberInfo;
-
-          if (tagType && tagType.template && tagType.template.id != null) {
-            let template;
-            let templateID = tagType.template.id;
-
-            for (let i = symbolPartStartIdx; i < symbolParts.length; i++) {
-              let symbolPart = symbolParts[i];
-              let symbolPartElementIndex = symbolPart.indexOf('[');
-              if (symbolPartElementIndex >= 0) {
-                symbolPart = symbolPart.substring(0, symbolPartElementIndex);
-              }
-
-              template = await layer.readTemplate(templateID);
-              templateID = null;
-              memberInfo = null;
-
-              if (template && Array.isArray(template.members)) {
-                for (let memberIdx = 0; memberIdx < template.members.length; memberIdx++) {
-                  const member = template.members[memberIdx];
-
-                  if (member.name === symbolPart) {
-                    memberInfo = member;
-                    if (member.type && member.type.template && member.type.template.id != null) {
-                      templateID = member.type.template.id;
-                    }
-                    break;
-                  }
-                }
-              }
-              if (templateID == null) {
-                break;
-              }
-            }
-
-            // TODO: Update this section when reading multidimensional arrays is figured out
-            if (memberInfo && memberInfo.type && memberInfo.type.dimensions === 1) {
-              // console.log(`SIZE: ${tag}: RETURNING DIMENSION LENGTH FROM MEMBER: ${memberInfo.info}`);
-              return memberInfo.info;
-            }
-          }
-        }
-
-      } catch (err) {
-        // Ignore error
-        console.log(err);
-      }
-    }
-    // console.log(`SIZE: ${tag}: RETURNING DIMENSION LENGTH 1`);
-    return 1;
-  }
   
 
   readTag(tag, elements, callback) {
@@ -254,10 +166,7 @@ class Logix5000 extends CIPLayer {
           return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
         }
       } else {
-        // console.log(await getSymbolInfo(this, null, tag));
-        console.time('a');
-        elements = await this.getSymbolSize(this, null, tag);
-        console.timeEnd('a');
+        elements = await getSymbolSize(this, null, tag);
       }
 
       const service = SymbolServiceCodes.Read;
@@ -285,9 +194,10 @@ class Logix5000 extends CIPLayer {
                 value = {};
                 for await (const programTag of this.listTags(tag)) {
                   if (programTag.type.system === false) {
-                    if (programTag.type.dimensions === 1) {
-                      // CONTINUE HERE
-                    }
+                    // if (programTag.type.dimensions === 1) {
+                    //   // CONTINUE HERE
+                    //   console.log(programTag);
+                    // }
                     value[programTag.name] = await this.readTag(`${tagName}.${programTag.name}`);
                   } else {
                     value[programTag.name] = undefined;
@@ -954,20 +864,20 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
 
 async function parseReadTag(layer, tag, elements, data) {
   if (data.length === 0) {
-    const tagInfo = await getSymbolInfo(layer, null, tag, [
-      SymbolInstanceAttributeCodes.Type
-    ]);
+    // const tagInfo = await getSymbolInfo(layer, null, tag, [
+    //   SymbolInstanceAttributeCodes.Type
+    // ]);
 
     // console.log(`DATA LENGTH 0:`);
     // console.log(tagInfo);
 
-    const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
+    // const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
     
-    if (tagType && tagType.code === LDataTypeCodes.Program) {
-      for await (const programTag of layer.listTags(tag)) {
-        console.log(programTag);
-      }
-    }
+    // if (tagType && tagType.code === LDataTypeCodes.Program) {
+    //   for await (const programTag of layer.listTags(tag)) {
+    //     console.log(programTag);
+    //   }
+    // }
 
     return undefined;
   }
@@ -1092,7 +1002,7 @@ function encodeFullSymbolPath(scope, symbol) {
 }
 
 
-function parseListTagsResponse(reply, attributes, tags) {
+function parseListTagsResponse(reply, attributes, tags, useAttributeCode) {
   const data = reply.data;
   const length = data.length;
 
@@ -1105,29 +1015,56 @@ function parseListTagsResponse(reply, attributes, tags) {
     offset = Decode(DataTypes.UDINT, data, offset, val => tag.id = val);
     lastInstanceID = tag.id;
 
-    for (let i = 0; i < attributes.length; i++) {
-      const attribute = attributes[i];
-      const attributeDataType = SymbolInstanceAttributeDataTypes[attribute];
-      switch (attribute) {
-        case SymbolInstanceAttributeCodes.Name:
-          offset = Decode(attributeDataType, data, offset, val => tag.name = val);
-          break;
-        case SymbolInstanceAttributeCodes.Type:
-          offset = Decode(attributeDataType, data, offset, val => tag.type = parseTypeCode(val));
-          break;
-        case SymbolInstanceAttributeCodes.ArrayDimensionLengths: {
-          // offset = Decode(attributeDataType, data, offset, val => tag.type = parseTypeCode(val));
-          tag.dimensionLengths = [];
-          for (let j = 0; j < 3; j++) {
-            offset = Decode(DataTypes.UDINT, data, offset, val => tag.dimensionLengths.push(val));
+    if (useAttributeCode === true) {
+      for (let i = 0; i < attributes.length; i++) {
+        const attribute = attributes[i];
+        const attributeDataType = SymbolInstanceAttributeDataTypes[attribute];
+        switch (attribute) {
+          case SymbolInstanceAttributeCodes.Name:
+            offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
+            break;
+          case SymbolInstanceAttributeCodes.Type:
+            offset = Decode(attributeDataType, data, offset, val => tag[attribute] = parseTypeCode(val));
+            break;
+          case SymbolInstanceAttributeCodes.ArrayDimensionLengths: {
+            tag[attribute] = [];
+            for (let j = 0; j < 3; j++) {
+              offset = Decode(DataTypes.UDINT, data, offset, val => tag[attribute].push(val));
+            }
+            break;
           }
-          break;
+          case SymbolInstanceAttributeCodes.Bytes:
+            offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
+            break;
+          default:
+            throw new Error(`Unknown attribute: ${attributes[i]}`);
         }
-        case SymbolInstanceAttributeCodes.Bytes:
-          offset = Decode(attributeDataType, data, offset, val => tag.byteSize = val);
-          break;
-        default:
-          throw new Error(`Unknown attribute: ${attributes[i]}`);
+      }
+    } else {
+      for (let i = 0; i < attributes.length; i++) {
+        const attribute = attributes[i];
+        const attributeDataType = SymbolInstanceAttributeDataTypes[attribute];
+        switch (attribute) {
+          case SymbolInstanceAttributeCodes.Name:
+            offset = Decode(attributeDataType, data, offset, val => tag.name = val);
+            break;
+          case SymbolInstanceAttributeCodes.Type:
+            offset = Decode(attributeDataType, data, offset, val => tag.type = parseTypeCode(val));
+            break;
+          case SymbolInstanceAttributeCodes.ArrayDimensionLengths: {
+            // offset = Decode(attributeDataType, data, offset, val => tag.type = parseTypeCode(val));
+            tag.dimensionLengths = [];
+            for (let j = 0; j < 3; j++) {
+              offset = Decode(DataTypes.UDINT, data, offset, val => tag.dimensionLengths.push(val));
+            }
+            break;
+          }
+          case SymbolInstanceAttributeCodes.Bytes:
+            offset = Decode(attributeDataType, data, offset, val => tag.byteSize = val);
+            break;
+          default:
+            throw new Error(`Unknown attribute: ${attributes[i]}`);
+        }
       }
     }
 
@@ -1197,107 +1134,65 @@ function getError(reply) {
     return reply.status.description;
   }
 
-  // let extended;
-  // if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length >= 2) {
-  //   extended = reply.status.additional.readUInt16LE(0);
-  // }
-
   let error = GenericServiceStatusDescriptions[reply.status.code];
   if (typeof error === 'object') {
     if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length >= 2) {
       error = error[reply.status.additional.readUInt16LE(0)];
     }
   }
-  
-  // let extended;
-  // if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length >= 2) {
-  //   extended = reply.status.additional.readUInt16LE(0);
-  // }
-
-  // let error = GenericServiceStatusDescriptions[reply.status.code];
-  // if (typeof error === 'object' && extended != null && error[extended]) {
-  //   error = error[extended];
-  // }
 
   reply.status.description = error || 'Unknown Logix5000 error';
 
   return reply.status.description;
 }
 
-// function getError(reply) {
-//   if (reply.status.description) {
-//     return reply.status.description;
-//   }
 
-//   let error;
-//   let extended;
+async function getSymbolInfo(layer, scope, tagInput, attributes) {
+  const info = {};
 
-//   if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length >= 2) {
-//     extended = reply.status.additional.readUInt16LE(0);
-//   }
+  if (!Array.isArray(attributes)) {
+    return info;
+  }
 
-//   const code = reply.status.code;
-//   const service = getBits(reply.service.code, 0, 7);
-
-//   const errorObject = GenericServiceStatusDescriptions[service];
-
-//   console.log({
-//     error,
-//     extended,
-//     code,
-//     service,
-//     errorObject
-//   });
-
-//   if (errorObject) {
-//     if (typeof errorObject[code] === 'object') {
-//       if (extended != null) {
-//         error = errorObject[code][extended];
-//       }
-//     } else {
-//       error = errorObject[code];
-//     }
-//   }
-
-//   return error || 'Unknown Logix5000 error';
-// }
-
-
-/**
- * Right now I am making the assumption that a symbol that is a program can hold other symbols
- */
-
-async function getSymbolInfo(layer, scope, tagInput) {
-  // console.log('getSymbolInfo', scope, tagInput);
   const symbolInstanceID = await getSymbolInstanceID(layer, scope, tagInput);
   if (symbolInstanceID == null) {
-    return null;
+    return info;
   }
 
   const scopeKey = scope ? `${scope}::` : '';
-  const scopedSymbolID = `${scopeKey}${symbolInstanceID}`;
 
-  if (layer._tags.has(scopedSymbolID)) {
-    return layer._tags.get(scopedSymbolID);
+  function buildSymbolAttributeKey(symbolID, attribute) {
+    return `${scopeKey}${symbolID}::${attribute}`;
   }
 
-  const attributes = [
-    SymbolInstanceAttributeCodes.Name,
-    SymbolInstanceAttributeCodes.Type,
-    // SymbolInstanceAttributeCodes.ArrayDimensionLengths
-  ];
+  const newAttributes = [];
 
-  for await (const tags of listTags(layer, attributes, scope, symbolInstanceID, true)) {
-    for (let i = 0; i < tags.length; i++) {
-      const tag = tags[i];
-      layer._tags.set(`${scopeKey}${tag.id}`, tag);
+  attributes.forEach(attribute => {
+    const symbolAttributeKey = buildSymbolAttributeKey(symbolInstanceID, attribute);
+    if (layer._tags.has(symbolAttributeKey)) {
+      info[attribute] = layer._tags.get(symbolAttributeKey);
+    } else {
+      newAttributes.push(attribute);
     }
-    break;
+  });
+
+  if (newAttributes.length > 0) {
+    for await (const tags of listTags(layer, newAttributes, scope, symbolInstanceID, true, true)) {
+      for (let i = 0; i < tags.length; i++) {
+        const tag = tags[i];
+        newAttributes.forEach(attribute => {
+          layer._tags.set(buildSymbolAttributeKey(tag.id, attribute), tag[attribute]);
+
+          if (tag.id === symbolInstanceID) {
+            info[attribute] = tag[attribute];
+          }
+        });
+      }
+      break;
+    }
   }
 
-  if (layer._tags.has(scopedSymbolID)) {
-    return layer._tags.get(scopedSymbolID);
-  }
+  return info;
 }
 
 
@@ -1345,7 +1240,7 @@ async function getSymbolInstanceID(layer, scope, tag) {
 }
 
 
-async function* listTags(layer, attributes, scope, instance, shouldGroup) {
+async function* listTags(layer, attributes, scope, instance, shouldGroup, useAttributeCode) {
   let instanceID = instance != null ? instance : 0;
   
   const MIN_TIMEOUT = 700;
@@ -1376,7 +1271,7 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup) {
         timeout = MIN_TIMEOUT;
 
         const tags = [];
-        const lastInstanceID = parseListTagsResponse(reply, attributes, tags);
+        const lastInstanceID = parseListTagsResponse(reply, attributes, tags, useAttributeCode);
 
         if (shouldGroup) {
           yield tags;
@@ -1398,4 +1293,89 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup) {
       break;
     }
   }
+}
+
+
+async function getSymbolSize(layer, scope, tag) {
+  if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
+    try {
+      const symbolParts = tag.split('.');
+      if (symbolParts.length === 1) {
+        const [
+          typeInfo,
+          arrayDimensionLengthsInfo
+        ] = await layer.readSymbolAttributeList(scope, symbolParts[0], [
+          SymbolInstanceAttributeCodes.Type,
+          SymbolInstanceAttributeCodes.ArrayDimensionLengths
+        ]);
+
+        // TODO: Update this section when reading multidimensional arrays is figured out
+        if (typeInfo.value && typeInfo.value.dimensions === 1) {
+          if (Array.isArray(arrayDimensionLengthsInfo.value) && arrayDimensionLengthsInfo.value.length > 0) {
+            // console.log(`SIZE: ${tag}: RETURNING DIMENSION LENGTH FROM TYPE INFO: ${arrayDimensionLengthsInfo.value[0]}`);
+            return arrayDimensionLengthsInfo.value[0];
+          }
+        }
+      } else {
+        let symbolPartStartIdx = 1;
+        const tagInfo = await getSymbolInfo(layer, scope, symbolParts[0], [
+          SymbolInstanceAttributeCodes.Type
+        ]);
+
+        const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
+
+        if (tagType && tagType.code === LDataTypeCodes.Program) {
+          return getSymbolSize(layer, symbolParts[0], symbolParts.slice(1).join('.'));
+        }
+
+        let memberInfo;
+
+        if (tagType && tagType.template && tagType.template.id != null) {
+          let template;
+          let templateID = tagType.template.id;
+
+          for (let i = symbolPartStartIdx; i < symbolParts.length; i++) {
+            let symbolPart = symbolParts[i];
+            let symbolPartElementIndex = symbolPart.indexOf('[');
+            if (symbolPartElementIndex >= 0) {
+              symbolPart = symbolPart.substring(0, symbolPartElementIndex);
+            }
+
+            template = await layer.readTemplate(templateID);
+            templateID = null;
+            memberInfo = null;
+
+            if (template && Array.isArray(template.members)) {
+              for (let memberIdx = 0; memberIdx < template.members.length; memberIdx++) {
+                const member = template.members[memberIdx];
+
+                if (member.name === symbolPart) {
+                  memberInfo = member;
+                  if (member.type && member.type.template && member.type.template.id != null) {
+                    templateID = member.type.template.id;
+                  }
+                  break;
+                }
+              }
+            }
+            if (templateID == null) {
+              break;
+            }
+          }
+
+          // TODO: Update this section when reading multidimensional arrays is figured out
+          if (memberInfo && memberInfo.type && memberInfo.type.dimensions === 1) {
+            // console.log(`SIZE: ${tag}: RETURNING DIMENSION LENGTH FROM MEMBER: ${memberInfo.info}`);
+            return memberInfo.info;
+          }
+        }
+      }
+
+    } catch (err) {
+      // Ignore error
+      console.log(err);
+    }
+  }
+  // console.log(`SIZE: ${tag}: RETURNING DIMENSION LENGTH 1`);
+  return 1;
 }
