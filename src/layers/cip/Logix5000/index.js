@@ -410,6 +410,18 @@ class Logix5000 extends CIPLayer {
 
 
   async readSymbolAttributeList(scope, tag, attributes, callback) {
+    if (arguments.length === 0) {
+      tag = scope;
+      scope = null;
+    }
+
+    if (arguments.length === 1) {
+      if (typeof tag !== 'string') {
+        tag = scope;
+        scope = null;
+      }
+    }
+
     if (typeof attributes === 'function') {
       callback = attributes;
       attributes = undefined;
@@ -428,7 +440,6 @@ class Logix5000 extends CIPLayer {
       }
 
       const path = encodeFullSymbolPath(scope, symbolID);
-      // const path = encodeSymbolPath(symbolID);
       const data = encodeAttributes(attributes);
 
       send(this, service, path, data, (error, reply) => {
@@ -445,65 +456,26 @@ class Logix5000 extends CIPLayer {
             for (let i = 0; i < attributeCount; i++) {
               const code = data.readUInt16LE(offset); offset += 2;
               const status = data.readUInt16LE(offset); offset += 2;
-              let name, value;
-              switch (code) {
-                case SymbolInstanceAttributeCodes.Name:
-                  name = SymbolInstanceAttributeNames[code];
-                  offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => value = val);
-                  break;
-                case SymbolInstanceAttributeCodes.Type:
-                  name = SymbolInstanceAttributeNames[code];
-                  offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => value = parseTypeCode(val));
-                  break;
-                case 3:
-                  name = 'Unknown';
-                  value = data.slice(offset, offset + 4);
-                  offset += 4;
-                  break;
-                // case 4:
-                //   // Status is non-zero
-                case 5:
-                  name = 'Unknown';
-                  value = data.slice(offset, offset + 4);
-                  offset += 4;
-                  break;
-                case 6:
-                  name = 'Unknown';
-                  value = data.slice(offset, offset + 4);
-                  offset += 4;
-                  break;
-                case SymbolInstanceAttributeCodes.Bytes:
-                  name = SymbolInstanceAttributeNames[code];
-                  offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => value = val);
-                  break;
-                case SymbolInstanceAttributeCodes.ArrayDimensionLengths:
-                  name = SymbolInstanceAttributeNames[code];
-                  value = [];
-                  for (let j = 0; j < 3; j++) {
-                    offset = Decode(DataType.UDINT, data, offset, val => value.push(val));
-                  }
-                  break;
-                case 9:
-                  name = 'Unknown';
-                  value = data.slice(offset, offset + 1);
-                  offset += 1;
-                  break;
-                case 10:
-                  name = 'Unknown';
-                  value = data.slice(offset, offset + 1);
-                  offset += 1;
-                  break;
-                case 11:
-                  name = 'Unknown';
-                  value = data.slice(offset, offset + 1);
-                  offset += 1;
-                  break;
-                default:
-                  return resolver.reject(`Unknown attribute received: ${attributeCode}`);
+
+              if (status !== 0) {
+                return resolver.reject(`Status for attribute ${code} is ${status}`);
               }
+
+              const type = SymbolInstanceAttributeDataTypes[code];
+              if (!type) {
+                return resolver.reject(`Unknown attribute received: ${code}`);
+              }
+
+              let value;
+              offset = Decode(type, data, offset, val => value = val);
+
+              if (code === SymbolInstanceAttributeCodes.Type) {
+                value = parseTypeCode(value);
+              }
+
               attributeResults.push({
+                name: SymbolInstanceAttributeNames[code] || 'Unknown',
                 code,
-                name,
                 status,
                 value
               });

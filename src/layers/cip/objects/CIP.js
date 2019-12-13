@@ -142,6 +142,8 @@ const CommonServiceNames = InvertKeyValues(CommonServices);
 
 // CIP Vol1 Table C-6.1
 const DataTypeCodes = {
+  UNKNOWN: -1, // THIS CAN NEVER BE SENT EXTERNAL BECAUSE DATATYPE CODE IS ALREADY READ AS UNSIGNED
+
   BOOL: 0xC1,
   SINT: 0xC2,
   INT: 0xC3,
@@ -184,6 +186,9 @@ const DataTypeNames = InvertKeyValues(DataTypeCodes);
 
 
 const DataType = {
+  UNKNOWN(length) {
+    return { type: DataType.UNKNOWN, code: DataTypeCodes.UNKNOWN, length }
+  },
   BOOL(position) {
     return { type: DataType.BOOL, code: DataTypeCodes.BOOL, position }
   },
@@ -285,13 +290,13 @@ const DataType = {
       crc
     }
   },
-  ABBREV_ARRAY(items) {
+  ABBREV_ARRAY(itemType) {
     return {
       type: DataType.ABBREV_ARRAY,
       code: DataTypeCodes.ABBREV_ARRAY,
       constructed: true,
       abbreviated: true,
-      items
+      itemType
     }
   },
   STRUCT(members) {
@@ -303,15 +308,16 @@ const DataType = {
       members
     }
   },
-  ARRAY(bounds, items, boundTags) {
+  ARRAY(lowerBound, upperBound, itemType, boundTags) {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
       constructed: true,
       abbreviated: false,
-      boundTags,
-      bounds,
-      items
+      lowerBound,
+      upperBound,
+      itemType,
+      boundTags
     }
   },
 };
@@ -330,9 +336,9 @@ function __DecodeDataType(buffer, offset, cb) {
     }
     case DataTypeCodes.ABBREV_ARRAY: {
       /* const length = buffer.readUInt8(offset); */ offset += 1;
-      let items;
-      offset = __DecodeDataType(buffer, offset, i => items = i);
-      type = Datatype.ABBREV_ARRAY(items);
+      let itemType;
+      offset = __DecodeDataType(buffer, offset, items => itemType = items);
+      type = Datatype.ABBREV_ARRAY(itemType);
       break;
     }
     case DataTypeCodes.STRUCT: {
@@ -361,11 +367,10 @@ function __DecodeDataType(buffer, offset, cb) {
       offset += upperBoundLength;
 
       const boundTags = [lowerBoundTag, upperBoundTag];
-      const bounds = [lowerBound, upperBound];
 
-      let items;
-      offset = __DecodeDataType(buffer, offset, i => items = i);
-      type = DataType.ARRAY(bounds, items, boundTags);
+      let itemType;
+      offset = __DecodeDataType(buffer, offset, items => itemType = items);
+      type = DataType.ARRAY(lowerBound, upperBound, itemType, boundTags);
       break;
     }
     default:
@@ -481,10 +486,24 @@ function Decode(dataType, buffer, offset, cb) {
       /** Name of members is not known so use array to hold decoded member values */
       value = [];
       dataType.members.forEach(member => {
-        offset = Decode(member, data, offset, function(memberValue) {
+        offset = Decode(member, buffer, offset, function(memberValue) {
           value.push(memberValue);
         });
       });
+      break;
+    }
+    case DataTypeCodes.ARRAY: {
+      value = [];
+      for (let i = dataType.lowerBound; i <= dataType.upperBound; i++) {
+        offset = Decode(dataType.itemType, buffer, offset, function(item) {
+          value.push(item)
+        });
+      }
+      break;
+    }
+    case DataTypeCodes.UNKNOWN: {
+      value = buffer.slice(offset, offset + dataType.length);
+      offset += dataType.length;
       break;
     }
     default:
