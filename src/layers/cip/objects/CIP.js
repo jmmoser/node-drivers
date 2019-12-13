@@ -303,7 +303,7 @@ const DataType = {
       members
     }
   },
-  ARRAY(boundTags, bounds, items) {
+  ARRAY(bounds, items, boundTags) {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
@@ -317,19 +317,9 @@ const DataType = {
 };
 
 
-function DataTypeFromCode(code) {
-  return DataType[DataTypeNames[code]];
-}
-
-
-
 function __DecodeDataType(buffer, offset, cb) {
-  console.log('DECODING');
-  const code = buffer.readUInt8(offset); offset += 1;
-
-  // const type = DataTypeFromCode(code);
   let type;
-
+  const code = buffer.readUInt8(offset); offset += 1;
   switch (code) {
     case DataTypeCodes.ABBREV_STRUCT: {
       const length = buffer.readUInt8(offset); offset += 1;
@@ -375,7 +365,7 @@ function __DecodeDataType(buffer, offset, cb) {
 
       let items;
       offset = __DecodeDataType(buffer, offset, i => items = i);
-      type = DataType.ARRAY(boundTags, bounds, items);
+      type = DataType.ARRAY(bounds, items, boundTags);
       break;
     }
     default:
