@@ -533,9 +533,7 @@ class Logix5000 extends CIPLayer {
             }
 
             /** Attribute 2 */
-            appendAttribute(SymbolInstanceAttributeCodes.Type, val => {
-              return parseTypeCode(val);
-            });
+            appendAttribute(SymbolInstanceAttributeCodes.Type, parseTypeCode);
 
             /** Attribute 3 */
             appendAttribute(3);
