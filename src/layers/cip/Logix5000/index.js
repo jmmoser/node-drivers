@@ -192,15 +192,18 @@ class Logix5000 extends CIPLayer {
               const tagName = typeof tag.name === 'string' ? tag.name : (typeof tag === 'string' ? tag : null);
               if (tagName && tagType && tagType.code === LDataTypeCodes.Program) {
                 value = {};
-                for await (const programTag of this.listTags(tag)) {
-                  if (programTag.type.system === false) {
-                    // if (programTag.type.dimensions === 1) {
-                    //   // CONTINUE HERE
-                    //   console.log(programTag);
-                    // }
-                    value[programTag.name] = await this.readTag(`${tagName}.${programTag.name}`);
+
+                const listAttributes = [
+                  SymbolInstanceAttributeCodes.Name,
+                  SymbolInstanceAttributeCodes.Type
+                ];
+
+                for await (const programTag of listTags(this, listAttributes, tag, 0, false)) {
+                  const programTagName = programTag[SymbolInstanceAttributeCodes.Name];
+                  if (programTag[SymbolInstanceAttributeCodes.Type].system === false) {
+                    value[programTagName] = await this.readTag(`${tagName}.${programTagName}`);
                   } else {
-                    value[programTag.name] = undefined;
+                    value[programTagName] = undefined;
                   }
                 }
               }
@@ -536,7 +539,13 @@ class Logix5000 extends CIPLayer {
       SymbolInstanceAttributeCodes.Name,
       SymbolInstanceAttributeCodes.Type
     ];
-    return listTags(this, attributes, scope, 0);
+
+    return listTags(this, attributes, scope, 0, false, tagInfo => {
+      return {
+        name: tagInfo[SymbolInstanceAttributeCodes.Name],
+        type: tagInfo[SymbolInstanceAttributeCodes.Type]
+      };
+    });
   }
 
 
@@ -1002,9 +1011,11 @@ function encodeFullSymbolPath(scope, symbol) {
 }
 
 
-function parseListTagsResponse(reply, attributes, tags, useAttributeCode) {
+function parseListTagsResponse(reply, attributes, tags, modifier) {
   const data = reply.data;
   const length = data.length;
+
+  const hasModifier = typeof modifier === 'function';
 
   let offset = 0;
   let lastInstanceID = 0;
@@ -1015,60 +1026,36 @@ function parseListTagsResponse(reply, attributes, tags, useAttributeCode) {
     offset = Decode(DataTypes.UDINT, data, offset, val => tag.id = val);
     lastInstanceID = tag.id;
 
-    if (useAttributeCode === true) {
-      for (let i = 0; i < attributes.length; i++) {
-        const attribute = attributes[i];
-        const attributeDataType = SymbolInstanceAttributeDataTypes[attribute];
-        switch (attribute) {
-          case SymbolInstanceAttributeCodes.Name:
-            offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
-            break;
-          case SymbolInstanceAttributeCodes.Type:
-            offset = Decode(attributeDataType, data, offset, val => tag[attribute] = parseTypeCode(val));
-            break;
-          case SymbolInstanceAttributeCodes.ArrayDimensionLengths: {
-            tag[attribute] = [];
-            for (let j = 0; j < 3; j++) {
-              offset = Decode(DataTypes.UDINT, data, offset, val => tag[attribute].push(val));
-            }
-            break;
+    for (let i = 0; i < attributes.length; i++) {
+      const attribute = attributes[i];
+      const attributeDataType = SymbolInstanceAttributeDataTypes[attribute];
+      switch (attribute) {
+        case SymbolInstanceAttributeCodes.Name:
+          offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
+          break;
+        case SymbolInstanceAttributeCodes.Type:
+          offset = Decode(attributeDataType, data, offset, val => tag[attribute] = parseTypeCode(val));
+          break;
+        case SymbolInstanceAttributeCodes.ArrayDimensionLengths: {
+          tag[attribute] = [];
+          for (let j = 0; j < 3; j++) {
+            offset = Decode(DataTypes.UDINT, data, offset, val => tag[attribute].push(val));
           }
-          case SymbolInstanceAttributeCodes.Bytes:
-            offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
-            break;
-          default:
-            throw new Error(`Unknown attribute: ${attributes[i]}`);
+          break;
         }
-      }
-    } else {
-      for (let i = 0; i < attributes.length; i++) {
-        const attribute = attributes[i];
-        const attributeDataType = SymbolInstanceAttributeDataTypes[attribute];
-        switch (attribute) {
-          case SymbolInstanceAttributeCodes.Name:
-            offset = Decode(attributeDataType, data, offset, val => tag.name = val);
-            break;
-          case SymbolInstanceAttributeCodes.Type:
-            offset = Decode(attributeDataType, data, offset, val => tag.type = parseTypeCode(val));
-            break;
-          case SymbolInstanceAttributeCodes.ArrayDimensionLengths: {
-            // offset = Decode(attributeDataType, data, offset, val => tag.type = parseTypeCode(val));
-            tag.dimensionLengths = [];
-            for (let j = 0; j < 3; j++) {
-              offset = Decode(DataTypes.UDINT, data, offset, val => tag.dimensionLengths.push(val));
-            }
-            break;
-          }
-          case SymbolInstanceAttributeCodes.Bytes:
-            offset = Decode(attributeDataType, data, offset, val => tag.byteSize = val);
-            break;
-          default:
-            throw new Error(`Unknown attribute: ${attributes[i]}`);
-        }
+        case SymbolInstanceAttributeCodes.Bytes:
+          offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
+          break;
+        default:
+          throw new Error(`Unknown attribute: ${attributes[i]}`);
       }
     }
 
-    tags.push(tag);
+    if (hasModifier) {
+      tags.push(modifier(tag));
+    } else {
+      tags.push(tag);
+    }
   }
 
   return lastInstanceID;
@@ -1177,7 +1164,7 @@ async function getSymbolInfo(layer, scope, tagInput, attributes) {
   });
 
   if (newAttributes.length > 0) {
-    for await (const tags of listTags(layer, newAttributes, scope, symbolInstanceID, true, true)) {
+    for await (const tags of listTags(layer, newAttributes, scope, symbolInstanceID, true)) {
       for (let i = 0; i < tags.length; i++) {
         const tag = tags[i];
         newAttributes.forEach(attribute => {
@@ -1226,11 +1213,10 @@ async function getSymbolInstanceID(layer, scope, tag) {
 
   for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true)) {
     for (let i = 0; i < tags.length; i++) {
-      const { name, id } = tags[i];
-      // console.log(name, id);
-      const fullName = `${scopeKey}${name}`;
-      layer._tagNameToSymbolInstanceID.set(fullName, id);
-      layer._highestListedSymbolInstanceIDs.set(fullName, id);
+      const tag = tags[i];
+      const fullName = `${scopeKey}${tag[SymbolInstanceAttributeCodes.Name]}`;
+      layer._tagNameToSymbolInstanceID.set(fullName, tag.id);
+      layer._highestListedSymbolInstanceIDs.set(fullName, tag.id);
     }
 
     if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
@@ -1240,7 +1226,7 @@ async function getSymbolInstanceID(layer, scope, tag) {
 }
 
 
-async function* listTags(layer, attributes, scope, instance, shouldGroup, useAttributeCode) {
+async function* listTags(layer, attributes, scope, instance, shouldGroup, modifier) {
   let instanceID = instance != null ? instance : 0;
   
   const MIN_TIMEOUT = 700;
@@ -1271,7 +1257,7 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, useAtt
         timeout = MIN_TIMEOUT;
 
         const tags = [];
-        const lastInstanceID = parseListTagsResponse(reply, attributes, tags, useAttributeCode);
+        const lastInstanceID = parseListTagsResponse(reply, attributes, tags, modifier);
 
         if (shouldGroup) {
           yield tags;
