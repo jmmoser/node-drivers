@@ -480,11 +480,7 @@ class Logix5000 extends CIPLayer {
                   name = SymbolInstanceAttributeNames[code];
                   value = [];
                   for (let j = 0; j < 3; j++) {
-<<<<<<< HEAD
-                    offset = Decode(DataTypes.UDINT, data, offset, val => value.push(val));
-=======
-                    offset = Decode(DataType.DINT, data, offset, val => value.push(val));
->>>>>>> cipdatatypes
+                    offset = Decode(DataType.UDINT, data, offset, val => value.push(val));
                   }
                   break;
                 case 9:
@@ -606,13 +602,7 @@ class Logix5000 extends CIPLayer {
             attributeCode = SymbolInstanceAttributeCodes.ArrayDimensionLengths;
             const arrayDimensionLengths = [];
             for (let i = 0; i < 3; i++) {
-<<<<<<< HEAD
-              offset = Decode(DataTypes.UDINT, data, offset, val => arrayDimensionLengths.push(val));
-=======
-              offset = Decode(DataType.UDINT, data, offset, val => {
-                arrayDimensionLengths.push(val);
-              });
->>>>>>> cipdatatypes
+              offset = Decode(DataType.UDINT, data, offset, val => arrayDimensionLengths.push(val));
             }
             attributes.push({
               name: SymbolInstanceAttributeNames[attributeCode],
@@ -1356,6 +1346,7 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
         }
 
         instanceID = lastInstanceID + 1;
+        console.log(instanceID);
       } catch (err) {
         retry++;
       }
