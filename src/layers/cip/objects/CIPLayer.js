@@ -127,22 +127,35 @@ class CIPLayer extends Layer {
   }
 
 
-  exploreAttributes(path, callback) {
+  exploreAttributes(classCode, instanceID, maxAttribute, callback) {
+    if (typeof maxAttribute === 'function') {
+      callback = maxAttribute;
+      maxAttribute = null;
+    }
+
+    if (maxAttribute == null) {
+      maxAttribute = 20;
+    }
+
     return CallbackPromise(callback, async resolver => {
-      
-      const service = CIP.CommonServices.GetAttributeList;
+      const service = CIP.CommonServices.GetAttributeSingle;
 
       const attributes = [];
 
-      for (let i = 1; i < 30; i++) {
+      for (let i = 1; i < maxAttribute; i++) {
         try {
-          const reply = await this.request(service, path, encodeAttributes([i]));
+          const path = EPath.Encode(
+            classCode,
+            instanceID,
+            i
+          );
+          const reply = await this.request(service, path);
           attributes.push({
             code: i,
-            data: reply.data.slice(6)
+            data: reply.data
           });
         } catch (err) {
-          if (!err.info || !err.info.status || err.info.status.code !== 10) {
+          if (!err.info || !err.info.status || err.info.status.code !== 20) {
             return resolver.reject(err);
           } else {
             //
@@ -151,8 +164,34 @@ class CIPLayer extends Layer {
       }
 
       resolver.resolve(attributes);
-    })
+    });
   }
+
+  // exploreAttributes(path, callback) {
+  //   return CallbackPromise(callback, async resolver => {
+  //     const service = CIP.CommonServices.GetAttributeList;
+
+  //     const attributes = [];
+
+  //     for (let i = 1; i < 30; i++) {
+  //       try {
+  //         const reply = await this.request(service, path, encodeAttributes([i]));
+  //         attributes.push({
+  //           code: i,
+  //           data: reply.data.slice(6)
+  //         });
+  //       } catch (err) {
+  //         if (!err.info || !err.info.status || err.info.status.code !== 10) {
+  //           return resolver.reject(err);
+  //         } else {
+  //           //
+  //         }
+  //       }
+  //     }
+
+  //     resolver.resolve(attributes);
+  //   });
+  // }
 
 
   messageRouterClassAttributes(callback) {
@@ -161,7 +200,40 @@ class CIPLayer extends Layer {
 
       const path = EPath.Encode(
         CIP.Classes.Identity,
-        // null,
+        0,
+        // 0x04
+      );
+
+      CIPLayer.send(this, true, service, path, null, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          try {
+            console.log(reply);
+            // Identity.ParseInstanceAttributesAll(reply.data, 0, function (info) {
+            //   resolver.resolve(info);
+            // });
+            resolver.resolve(reply);
+            // MessageRouter.DecodeGetAttributesAll(reply.data, 0, function(info) {
+            //   resolver.resolve(info);
+            // });
+          } catch (err) {
+            resolver.reject(err, reply);
+          }
+        }
+      });
+    });
+  }
+
+
+
+  portTest(callback) {
+    return CallbackPromise(callback, resolver => {
+      const service = CIP.CommonServices.GetAttributesAll;
+
+      const path = EPath.Encode(
+        CIP.Classes.Port,
+        1,
         // 0x04
       );
 

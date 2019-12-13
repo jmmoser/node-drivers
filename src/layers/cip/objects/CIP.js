@@ -187,97 +187,99 @@ const DataTypeNames = InvertKeyValues(DataTypeCodes);
 
 const DataType = {
   UNKNOWN(length) {
-    return { type: DataType.UNKNOWN, code: DataTypeCodes.UNKNOWN, length }
+    return { type: DataType.UNKNOWN, code: DataTypeCodes.UNKNOWN, length };
   },
+
+  /** Elementary Types */
   BOOL(position) {
-    return { type: DataType.BOOL, code: DataTypeCodes.BOOL, position }
+    return { type: DataType.BOOL, code: DataTypeCodes.BOOL, position };
   },
   SINT() {
-    return { type: DataType.SINT, code: DataTypeCodes.SINT }
+    return { type: DataType.SINT, code: DataTypeCodes.SINT };
   },
   INT() {
-    return { type: DataType.INT, code: DataTypeCodes.INT }
+    return { type: DataType.INT, code: DataTypeCodes.INT };
   },
   DINT() {
-    return { type: DataType.DINT, code: DataTypeCodes.DINT }
+    return { type: DataType.DINT, code: DataTypeCodes.DINT };
   },
   LINT() {
-    return { type: DataType.LINT, code: DataTypeCodes.LINT }
+    return { type: DataType.LINT, code: DataTypeCodes.LINT };
   },
   USINT() {
-    return { type: DataType.USINT, code: DataTypeCodes.USINT }
+    return { type: DataType.USINT, code: DataTypeCodes.USINT };
   },
   UINT() {
-    return { type: DataType.UINT, code: DataTypeCodes.UINT }
+    return { type: DataType.UINT, code: DataTypeCodes.UINT };
   },
   UDINT() {
-    return { type: DataType.UDINT, code: DataTypeCodes.UDINT }
+    return { type: DataType.UDINT, code: DataTypeCodes.UDINT };
   },
   ULINT() {
-    return { type: DataType.ULINT, code: DataTypeCodes.ULINT }
+    return { type: DataType.ULINT, code: DataTypeCodes.ULINT };
   },
   REAL() {
-    return { type: DataType.REAL, code: DataTypeCodes.REAL }
+    return { type: DataType.REAL, code: DataTypeCodes.REAL };
   },
   LREAL() {
-    return { type: DataType.LREAL, code: DataTypeCodes.LREAL }
+    return { type: DataType.LREAL, code: DataTypeCodes.LREAL };
   },
   STIME() {
-    return { type: DataType.STIME, code: DataTypeCodes.STIME }
+    return { type: DataType.STIME, code: DataTypeCodes.STIME };
   },
   DATE() {
-    return { type: DataType.DATE, code: DataTypeCodes.DATE }
+    return { type: DataType.DATE, code: DataTypeCodes.DATE };
   },
   TIME_OF_DAY() {
-    return { type: DataType.TIME_OF_DAY, code: DataTypeCodes.TIME_OF_DAY }
+    return { type: DataType.TIME_OF_DAY, code: DataTypeCodes.TIME_OF_DAY };
   },
   DATE_AND_TIME() {
-    return { type: DataType.DATE_AND_TIME, code: DataTypeCodes.DATE_AND_TIME }
+    return { type: DataType.DATE_AND_TIME, code: DataTypeCodes.DATE_AND_TIME };
   },
   STRING() {
-    return { type: DataType.STRING, code: DataTypeCodes.STRING }
+    return { type: DataType.STRING, code: DataTypeCodes.STRING };
   },
   BYTE() {
-    return { type: DataType.BYTE, code: DataTypeCodes.BYTE }
+    return { type: DataType.BYTE, code: DataTypeCodes.BYTE };
   },
   WORD() {
-    return { type: DataType.WORD, code: DataTypeCodes.WORD }
+    return { type: DataType.WORD, code: DataTypeCodes.WORD };
   },
   DWORD() {
-    return { type: DataType.DWORD, code: DataTypeCodes.DWORD }
+    return { type: DataType.DWORD, code: DataTypeCodes.DWORD };
   },
   LWORD() {
-    return { type: DataType.LWORD, code: DataTypeCodes.LWORD }
+    return { type: DataType.LWORD, code: DataTypeCodes.LWORD };
   },
   STRING2() {
-    return { type: DataType.STRING2, code: DataTypeCodes.STRING2 }
+    return { type: DataType.STRING2, code: DataTypeCodes.STRING2 };
   },
   FTIME() {
-    return { type: DataType.FTIME, code: DataTypeCodes.FTIME }
+    return { type: DataType.FTIME, code: DataTypeCodes.FTIME };
   },
   LTIME() {
-    return { type: DataType.LTIME, code: DataTypeCodes.LTIME }
+    return { type: DataType.LTIME, code: DataTypeCodes.LTIME };
   },
   ITIME() {
-    return { type: DataType.ITIME, code: DataTypeCodes.ITIME }
+    return { type: DataType.ITIME, code: DataTypeCodes.ITIME };
   },
   STRINGN() {
-    return { type: DataType.STRINGN, code: DataTypeCodes.STRINGN }
+    return { type: DataType.STRINGN, code: DataTypeCodes.STRINGN };
   },
   SHORT_STRING() {
-    return { type: DataType.SHORT_STRING, code: DataTypeCodes.SHORT_STRING }
+    return { type: DataType.SHORT_STRING, code: DataTypeCodes.SHORT_STRING };
   },
   TIME() {
-    return { type: DataType.TIME, code: DataTypeCodes.TIME }
+    return { type: DataType.TIME, code: DataTypeCodes.TIME };
   },
-  EPATH() {
-    return { type: DataType.EPATH, code: DataTypeCodes.EPATH }
+  EPATH(padded) {
+    return { type: DataType.EPATH, code: DataTypeCodes.EPATH, padded };
   },
   ENGUNIT() {
-    return { type: DataType.ENGUNIT, code: DataTypeCodes.ENGUNIT }
+    return { type: DataType.ENGUNIT, code: DataTypeCodes.ENGUNIT };
   },
   STRINGI() {
-    return { type: DataType.STRINGI, code: DataTypeCodes.STRINGI }
+    return { type: DataType.STRINGI, code: DataTypeCodes.STRINGI };
   },
 
   /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
@@ -288,7 +290,7 @@ const DataType = {
       constructed: true,
       abbreviated: true,
       crc
-    }
+    };
   },
   ABBREV_ARRAY(itemType) {
     return {
@@ -297,7 +299,7 @@ const DataType = {
       constructed: true,
       abbreviated: true,
       itemType
-    }
+    };
   },
   STRUCT(members) {
     return {
@@ -306,7 +308,7 @@ const DataType = {
       constructed: true,
       abbreviated: false,
       members
-    }
+    };
   },
   ARRAY(lowerBound, upperBound, itemType, boundTags) {
     return {
@@ -318,7 +320,7 @@ const DataType = {
       upperBound,
       itemType,
       boundTags
-    }
+    };
   },
 };
 

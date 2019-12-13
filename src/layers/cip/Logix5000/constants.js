@@ -103,6 +103,18 @@ const SymbolInstanceAttributeCodes = {
 
 const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
 
+/**
+ * Possible remaining attributes:
+ * - External Access
+ *    Defines how an external application, such as an HMI, historian, or OPC data server, can access a tag. For arrays, this
+ *    feature applies to the top level only; for user-defined structure, this feature applies to individual members. Possible
+ *    values are:
+ *      - Read/Write: External applications can both read and modify the tag’s value
+ *      - Read Only: External applications can read the tag’s value, but not modify it
+ *      - None: External applications can neither read or write the tag’s value
+ * - Constant
+ *    Defines whether a tag value remains constant. Tags with this attribute set cannot be changed programmatically.)
+ */
 const SymbolInstanceAttributeDataTypes = {
   [SymbolInstanceAttributeCodes.Name]: DataType.STRING,
   [SymbolInstanceAttributeCodes.Type]: DataType.UINT,
