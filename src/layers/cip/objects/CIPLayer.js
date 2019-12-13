@@ -7,11 +7,14 @@ const Layer = require('./../../Layer');
 const Identity = require('./Identity');
 const MessageRouter = require('./MessageRouter');
 
+// let requestCount = 0;
+// let totalBytesOut = 0;
+// let totalBytesIn = 0;
 
 class CIPLayer extends Layer {
   request(service, path, data, callback) {
     return CallbackPromise(callback, resolver => {
-      CIPLayer.send(this, false, service, path, data, function (error, reply) {
+      CIPLayer.send(this, true, service, path, data, function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -124,6 +127,34 @@ class CIPLayer extends Layer {
   }
 
 
+  exploreAttributes(path, callback) {
+    return CallbackPromise(callback, async resolver => {
+      
+      const service = CIP.CommonServices.GetAttributeList;
+
+      const attributes = [];
+
+      for (let i = 1; i < 30; i++) {
+        try {
+          const reply = await this.request(service, path, encodeAttributes([i]));
+          attributes.push({
+            code: i,
+            data: reply.data.slice(6)
+          });
+        } catch (err) {
+          if (!err.info || !err.info.status || err.info.status.code !== 10) {
+            return resolver.reject(err);
+          } else {
+            //
+          }
+        }
+      }
+
+      resolver.resolve(attributes);
+    })
+  }
+
+
   messageRouterClassAttributes(callback) {
     return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
@@ -171,7 +202,12 @@ class CIPLayer extends Layer {
 
   static send(layer, connected, service, path, data, callback, timeout) {
     const request = MessageRouter.Request(service, path, data);
-    // console.log(request);
+
+    // console.log('OUT:', request);
+    // // console.log('OUT:', JSON.stringify(request));
+    // totalBytesOut += request.length;
+    // requestCount++;
+    // const tmpRequestCount = requestCount;
 
     const info = { connected };
 
@@ -179,10 +215,14 @@ class CIPLayer extends Layer {
       if (error) {
         callback(error);
       } else {
-        // console.log('');
-        // console.log(request);
         const reply = MessageRouter.Reply(message);
-        // console.log(reply);
+
+        // console.log('IN:', message);
+        // // console.log('IN:', JSON.stringify(message));
+        // // console.log(reply);
+        // totalBytesIn += message.length;
+        // // console.log(`REQUEST: ${requestCount}, ${totalBytesOut} ${totalBytesIn}`);
+
 
         if (reply.service.code !== service) {
           return callback('Response service does not match request service. This should never happen.', reply);
@@ -199,3 +239,14 @@ class CIPLayer extends Layer {
 }
 
 module.exports = CIPLayer;
+
+
+
+function encodeAttributes(attributes) {
+  const data = Buffer.allocUnsafe(2 + attributes.length * 2);
+  data.writeUInt16LE(attributes.length, 0);
+  for (let i = 0; i < attributes.length; i++) {
+    data.writeUInt16LE(attributes[i], 2 * (i + 1));
+  }
+  return data;
+}
