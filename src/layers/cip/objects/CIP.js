@@ -174,8 +174,8 @@ const DataTypeCodes = {
   STRINGI: 0xDE,
 
   /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
-  ABREV_STRUCT: 0xA0, /* Data is an abbreviated struct type, i.e. a CRC of the actual type descriptor */
-  ABREV_ARRAY: 0xA1, /* Data is an abbreviated array type. The limits are left off */
+  ABBREV_STRUCT: 0xA0, /* Data is an abbreviated struct type, i.e. a CRC of the actual type descriptor */
+  ABBREV_ARRAY: 0xA1, /* Data is an abbreviated array type. The limits are left off */
   STRUCT: 0xA2, /* Data is a struct type descriptor */
   ARRAY: 0xA3 /* Data is an array type descriptor */
 };
@@ -276,21 +276,22 @@ const DataType = {
   },
 
   /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
-  ABREV_STRUCT(crc) {
+  ABBREV_STRUCT(crc) {
     return {
-      type: DataType.ABREV_STRUCT,
-      code: DataTypeCodes.ABREV_STRUCT,
+      type: DataType.ABBREV_STRUCT,
+      code: DataTypeCodes.ABBREV_STRUCT,
       constructed: true,
       abbreviated: true,
       crc
     }
   },
-  ABREV_ARRAY() {
+  ABBREV_ARRAY(items) {
     return {
-      type: DataType.ABREV_ARRAY,
-      code: DataTypeCodes.ABREV_ARRAY,
+      type: DataType.ABBREV_ARRAY,
+      code: DataTypeCodes.ABBREV_ARRAY,
       constructed: true,
-      abbreviated: true
+      abbreviated: true,
+      items
     }
   },
   STRUCT(members) {
@@ -302,12 +303,15 @@ const DataType = {
       members
     }
   },
-  ARRAY() {
+  ARRAY(boundTags, bounds, items) {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
       constructed: true,
-      abbreviated: false
+      abbreviated: false,
+      boundTags,
+      bounds,
+      items
     }
   },
 };
@@ -320,49 +324,40 @@ function DataTypeFromCode(code) {
 
 
 function __DecodeDataType(buffer, offset, cb) {
+  console.log('DECODING');
   const code = buffer.readUInt8(offset); offset += 1;
-  
-  // const type = {
-  //   code,
-  //   name: DataTypeNames[code] || 'UNKNOWN'
-  // };
 
-  const type = DataTypeFromCode(code);
+  // const type = DataTypeFromCode(code);
+  let type;
 
   switch (code) {
-    case DataTypeCodes.ABREV_STRUCT: {
-      type.constructed = true;
-      type.abbreviated = true;
+    case DataTypeCodes.ABBREV_STRUCT: {
       const length = buffer.readUInt8(offset); offset += 1;
-      type.crc = decodeUnsignedInteger(buffer, offset, length);
+      const crc = decodeUnsignedInteger(buffer, offset, length);
       offset += length;
+      type = DataType.ABBREV_STRUCT(crc);
       break;
     }
-    case DataTypeCodes.ABREV_ARRAY: {
-      type.constructed = true;
-      type.abbreviated = true;
+    case DataTypeCodes.ABBREV_ARRAY: {
       /* const length = buffer.readUInt8(offset); */ offset += 1;
-      offset = __DecodeDataType(buffer, offset, function (items) {
-        type.items = items;
-      });
+      let items;
+      offset = __DecodeDataType(buffer, offset, i => items = i);
+      type = Datatype.ABBREV_ARRAY(items);
       break;
     }
     case DataTypeCodes.STRUCT: {
-      type.constructed = true;
-      type.abbreviated = false;
       const length = buffer.readUInt8(offset); offset += 1;
-      type.members = [];
+      const members = [];
       const lastOffset = offset + length;
       while (offset < lastOffset) {
         offset = __DecodeDataType(buffer, offset, function (member) {
-          type.members.push(member);
+          members.push(member);
         });
       }
+      type = DataType.STRUCT(members);
       break;
     }
     case DataTypeCodes.ARRAY: {
-      type.constructed = true;
-      type.abbreviated = false;
       /* const length = buffer.readUInt8(offset); */ offset += 1;
 
       const lowerBoundTag = buffer.readUInt8(offset); offset += 1;
@@ -375,15 +370,16 @@ function __DecodeDataType(buffer, offset, cb) {
       const upperBound = decodeUnsignedInteger(buffer, offset, upperBoundLength);
       offset += upperBoundLength;
 
-      type.boundTags = [lowerBoundTag, upperBoundTag];
-      type.bounds = [lowerBound, upperBound];
+      const boundTags = [lowerBoundTag, upperBoundTag];
+      const bounds = [lowerBound, upperBound];
 
-      offset = __DecodeDataType(buffer, offset, function (items) {
-        type.items = items;
-      });
+      let items;
+      offset = __DecodeDataType(buffer, offset, i => items = i);
+      type = DataType.ARRAY(boundTags, bounds, items);
       break;
     }
     default:
+      type = DataType[DataTypeNames[code]]();
       break;
   }
 
@@ -410,6 +406,8 @@ function DecodeDataType(buffer, offset, cb) {
 
 function Decode(dataType, buffer, offset, cb) {
   let value;
+
+  if (dataType instanceof Function) dataType = dataType();
 
   let dataTypeCode = dataType;
 

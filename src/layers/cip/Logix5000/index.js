@@ -519,120 +519,6 @@ class Logix5000 extends CIPLayer {
   }
 
 
-  // async readSymbolAttributeList(scope, tag, attributes, callback) {
-  //   if (typeof attributes === 'function') {
-  //     callback = attributes;
-  //     attributes = undefined;
-  //   }
-
-  //   if (!Array.isArray(attributes)) {
-  //     attributes = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11];
-  //   }
-
-  //   return CallbackPromise(callback, async resolver => {
-  //     try {
-  //       const service = CommonServices.GetAttributeList;
-
-  //       const symbolID = await getSymbolInstanceID(this, scope, tag);
-  //       if (symbolID == null) {
-  //         return resolver.reject(`Unable to determine symbol instance: ${scope ? `${scope}.` : ''}${tag}`);
-  //       }
-
-  //       const path = encodeFullSymbolPath(scope, symbolID);
-  //       // const path = encodeSymbolPath(symbolID);
-  //       const data = encodeAttributes(attributes);
-
-  //       send(this, service, path, data, (error, reply) => {
-  //         if (error) {
-  //           resolver.reject(error, reply);
-  //         } else {
-  //           try {
-  //             const data = reply.data;
-
-  //             let offset = 0;
-  //             const attributeCount = data.readUInt16LE(offset); offset += 2;
-  //             const attributeResults = [];
-
-  //             for (let i = 0; i < attributeCount; i++) {
-  //               const code = data.readUInt16LE(offset); offset += 2;
-  //               const status = data.readUInt16LE(offset); offset += 2;
-  //               let name, value;
-  //               switch (code) {
-  //                 case SymbolInstanceAttributeCodes.Name:
-  //                   name = SymbolInstanceAttributeNames[code];
-  //                   offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => value = val);
-  //                   break;
-  //                 case SymbolInstanceAttributeCodes.Type:
-  //                   name = SymbolInstanceAttributeNames[code];
-  //                   offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => value = parseTypeCode(val));
-  //                   break;
-  //                 case 3:
-  //                   name = 'Unknown';
-  //                   value = data.slice(offset, offset + 4);
-  //                   offset += 4;
-  //                   break;
-  //                 // case 4:
-  //                 //   // Status is non-zero
-  //                 case 5:
-  //                   name = 'Unknown';
-  //                   value = data.slice(offset, offset + 4);
-  //                   offset += 4;
-  //                   break;
-  //                 case 6:
-  //                   name = 'Unknown';
-  //                   value = data.slice(offset, offset + 4);
-  //                   offset += 4;
-  //                   break;
-  //                 case SymbolInstanceAttributeCodes.Bytes:
-  //                   name = SymbolInstanceAttributeNames[code];
-  //                   offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => value = val);
-  //                   break;
-  //                 case SymbolInstanceAttributeCodes.ArrayDimensionLengths:
-  //                   name = SymbolInstanceAttributeNames[code];
-  //                   value = [];
-  //                   for (let j = 0; j < 3; j++) {
-  //                     offset = Decode(DataType.UDINT, data, offset, val => value.push(val));
-  //                   }
-  //                   break;
-  //                 case 9:
-  //                   name = 'Unknown';
-  //                   value = data.slice(offset, offset + 1);
-  //                   offset += 1;
-  //                   break;
-  //                 case 10:
-  //                   name = 'Unknown';
-  //                   value = data.slice(offset, offset + 1);
-  //                   offset += 1;
-  //                   break;
-  //                 case 11:
-  //                   name = 'Unknown';
-  //                   value = data.slice(offset, offset + 1);
-  //                   offset += 1;
-  //                   break;
-  //                 default:
-  //                   return resolver.reject(`Unknown attribute received: ${attributeCode}`);
-  //               }
-  //               attributeResults.push({
-  //                 code,
-  //                 name,
-  //                 status,
-  //                 value
-  //               });
-  //             }
-
-  //             resolver.resolve(attributeResults);
-  //           } catch (err) {
-  //             resolver.reject(err, reply);
-  //           }
-  //         }
-  //       });
-  //     } catch (err) {
-  //       resolver.reject(err);
-  //     }
-  //   });
-  // }
-
-
   async readSymbolAttributesAll(scope, tag, callback) {
     return CallbackPromise(callback, async resolver => {
       const service = CommonServices.GetAttributesAll;
@@ -1432,7 +1318,6 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
     const path = encodeFullSymbolPath(scope, instanceID);
 
     let reply;
-    console.log(retry);
 
     if (retry <= MAX_RETRY) {
       try {
@@ -1462,7 +1347,6 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
         }
 
         instanceID = lastInstanceID + 1;
-        console.log(instanceID);
       } else {
         // console.log(`retrying: ${retry}, ${instanceID}`);
         timeout *= 2;
@@ -1470,7 +1354,6 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
       }
       
     } else {
-      console.log('finished');
       break;
     }
   }

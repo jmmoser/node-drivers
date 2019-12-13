@@ -703,15 +703,15 @@ class EPath {
       const tagname = items2[0];
       const tagnameLength = tagname.length;
 
-      buffer.writeUInt8(DATA_SEGMENT_SUBTYPE.ANSI_EXTENDED_SYMBOL, offset); offset += 1;
-      buffer.writeUInt8(tagnameLength, offset); offset += 1;
+      offset = buffer.writeUInt8(DATA_SEGMENT_SUBTYPE.ANSI_EXTENDED_SYMBOL, offset);
+      offset = buffer.writeUInt8(tagnameLength, offset);
 
       offset += buffer.write(tagname, offset, 'ascii');
 
       // offset += tagnameLength % 2 === 1 ? 1 : 0;
       if (tagnameLength % 2 === 1) {
         /** THIS MUST STAY IF USING Buffer.allocUnsafe() */
-        buffer.writeUInt8(0, offset); offset += 1;
+        offset = buffer.writeUInt8(0, offset);
       }
 
       if (items2.length > 1) {
@@ -722,19 +722,19 @@ class EPath {
         for (let j = 0; j < elements.length; j++) {
           const element = parseInt(elements[j], 10);
 
-          if (!isNaN(element)) {
+          if (!isNaN(element) || element >= 0 || element <= 0xFFFFFFFF) {
             if (element <= 0xFF) {
-              buffer.writeUInt8(0x28, offset); offset += 1;
-              buffer.writeUInt8(element, offset); offset += 1;
+              offset = buffer.writeUInt8(0x28, offset);
+              offset = buffer.writeUInt8(element, offset);
             } else if (element <= 0xFFFF) {
-              buffer.writeUInt16LE(0x29, offset); offset += 2;
-              buffer.writeUInt16LE(element, offset); offset += 2;
+              offset = buffer.writeUInt16LE(0x29, offset);
+              offset = buffer.writeUInt16LE(element, offset);
             } else {
-              buffer.writeUInt16LE(0x30, offset); offset += 2;
-              buffer.writeUInt32LE(element, offset); offset += 4;
+              offset = buffer.writeUInt16LE(0x30, offset);
+              offset = buffer.writeUInt32LE(element, offset);
             }
           } else {
-            throw new Error(`Element is not an integer: ${symbol}`);
+            throw new Error(`Element is not an integer between 0 and 4294967295: ${symbol}`);
           }
         }
       }

@@ -203,7 +203,7 @@ class CIPLayer extends Layer {
   static send(layer, connected, service, path, data, callback, timeout) {
     const request = MessageRouter.Request(service, path, data);
 
-    console.log('OUT:', request);
+    // console.log('OUT:', request);
     // // console.log('OUT:', JSON.stringify(request));
     // totalBytesOut += request.length;
     // requestCount++;
@@ -217,7 +217,7 @@ class CIPLayer extends Layer {
       } else {
         const reply = MessageRouter.Reply(message);
 
-        console.log('IN:', message);
+        // console.log('IN:', message);
         // // console.log('IN:', JSON.stringify(message));
         // // console.log(reply);
         // totalBytesIn += message.length;
