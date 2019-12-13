@@ -410,12 +410,12 @@ class Logix5000 extends CIPLayer {
 
 
   async readSymbolAttributeList(scope, tag, attributes, callback) {
-    if (arguments.length === 0) {
+    if (arguments.length === 1) {
       tag = scope;
       scope = null;
     }
 
-    if (arguments.length === 1) {
+    if (arguments.length === 2) {
       if (typeof tag !== 'string') {
         tag = scope;
         scope = null;
@@ -476,7 +476,6 @@ class Logix5000 extends CIPLayer {
               attributeResults.push({
                 name: SymbolInstanceAttributeNames[code] || 'Unknown',
                 code,
-                status,
                 value
               });
             }
@@ -492,6 +491,18 @@ class Logix5000 extends CIPLayer {
 
 
   async readSymbolAttributesAll(scope, tag, callback) {
+    if (arguments.length === 1) {
+      tag = scope;
+      scope = null;
+    }
+
+    if (arguments.length === 2) {
+      if (typeof tag !== 'string') {
+        tag = scope;
+        scope = null;
+      }
+    }
+
     return CallbackPromise(callback, async resolver => {
       const service = CommonServices.GetAttributesAll;
 
@@ -508,83 +519,49 @@ class Logix5000 extends CIPLayer {
         } else {
           try {
             const data = reply.data;
-
             let offset = 0;
-            let attributeCode;
-
             const attributes = [];
 
-            // console.log(data);
+            function appendAttribute(code, modifier) {
+              offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => {
+                attributes.push({
+                  name: SymbolInstanceAttributeNames[code] || 'Unknown',
+                  code,
+                  value: typeof modifier === 'function' ? modifier(val) : val
+                });
+              });
+            }
 
             /** Attribute 2 */
-            attributeCode = SymbolInstanceAttributeCodes.Type;
-            offset = Decode(SymbolInstanceAttributeDataTypes[attributeCode], data, offset, val => {
-              attributes.push({
-                name: SymbolInstanceAttributeNames[attributeCode],
-                code: attributeCode,
-                value: parseTypeCode(val)
-              });
+            appendAttribute(SymbolInstanceAttributeCodes.Type, val => {
+              return parseTypeCode(val);
             });
 
             /** Attribute 3 */
-            attributes.push({
-              name: 'Unknown',
-              code: 3,
-              value: data.slice(offset, offset + 4)
-            });
-            offset += 4;
+            appendAttribute(3);
 
             /** Attribute 1 */
-            attributeCode = SymbolInstanceAttributeCodes.Name;
-            offset = Decode(SymbolInstanceAttributeDataTypes[attributeCode], reply.data, 6, val => {
-              attributes.push({
-                name: SymbolInstanceAttributeNames[attributeCode],
-                code: attributeCode,
-                value: val
-              });
-            });
+            appendAttribute(SymbolInstanceAttributeCodes.Name);
 
             /** Attribute 5 */
-            attributes.push({
-              name: 'Unknown',
-              code: 5,
-              value: data.slice(offset, offset + 4)
-            });
-            offset += 4;
+            appendAttribute(5);
 
             /** Attribute 6 */
-            attributes.push({
-              name: 'Unknown',
-              code: 6,
-              value: data.slice(offset, offset + 4)
-            });
-            offset += 4;
+            appendAttribute(6);
 
             /** Attribute 7 */
-            attributeCode = SymbolInstanceAttributeCodes.Bytes;
-            offset = Decode(SymbolInstanceAttributeDataTypes[attributeCode], data, offset, val => {
-              attributes.push({
-                name: SymbolInstanceAttributeNames[attributeCode],
-                code: attributeCode,
-                value: val
-              });
-            });
+            appendAttribute(SymbolInstanceAttributeCodes.Bytes);
             
             /** Attribute 8 */
-            attributeCode = SymbolInstanceAttributeCodes.ArrayDimensionLengths;
-            const arrayDimensionLengths = [];
-            for (let i = 0; i < 3; i++) {
-              offset = Decode(DataType.UDINT, data, offset, val => arrayDimensionLengths.push(val));
-            }
-            attributes.push({
-              name: SymbolInstanceAttributeNames[attributeCode],
-              code: attributeCode,
-              value: arrayDimensionLengths
-            });
+            appendAttribute(SymbolInstanceAttributeCodes.ArrayDimensionLengths);
 
             // console.log(`OFFSET: ${offset} : ${data.length}`);
 
-            resolver.resolve(attributes);
+            resolver.resolve(attributes.sort(function(a, b) {
+              if (a.code < b.code) return -1;
+              else if (a.code > b.code) return 1;
+              return 0;
+            }));
           } catch (err) {
             resolver.reject(err, reply);
           }
