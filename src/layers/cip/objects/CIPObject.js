@@ -11,7 +11,7 @@ const EPath = require('./EPath');
 const {
   Decode,
   Encode,
-  DataTypes,
+  DataType,
   CommonServices
 } = require('./CIP');
 
@@ -38,20 +38,20 @@ class CIPClassAttribute extends CIPAttribute {}
 
 
 class CIPObjectReservedClassAttributes {
-  static Revision = new CIPClassAttribute(1, DataTypes.UINT);
-  static MaxInstance = new CIPClassAttribute(2, DataTypes.UINT);
-  static NumberOfInstances = new CIPClassAttribute(3, DataTypes.UINT);
+  static Revision = new CIPClassAttribute(1, DataType.UINT);
+  static MaxInstance = new CIPClassAttribute(2, DataType.UINT);
+  static NumberOfInstances = new CIPClassAttribute(3, DataType.UINT);
   static OptionalAttributeList = new CIPClassAttribute(
     4,
-    DataTypes.STRUCT,
+    DataType.STRUCT,
     (buffer, offset, callback) => {
       let numberOfAttributes;
-      offset = Decode(DataTypes.UINT, buffer, offset, value => numberOfAttributes = value);
+      offset = Decode(DataType.UINT, buffer, offset, value => numberOfAttributes = value);
 
       const attributes = [];
 
       for (let i = 0; i < numberOfAttributes; i++) {
-        offset = Decode(DataTypes.UINT, buffer, offset, value => attributes.push(value));
+        offset = Decode(DataType.UINT, buffer, offset, value => attributes.push(value));
       }
 
       callback(attributes);
@@ -59,23 +59,23 @@ class CIPObjectReservedClassAttributes {
     },
     (attributes) => {
       const buffers = [];
-      buffers.push(Encode(DataTypes.UINT, attributes.length));
+      buffers.push(Encode(DataType.UINT, attributes.length));
       for (let i = 0; i < attributes.length; i++) {
-        buffers.push(Encode(DataTypes.UINT, attributes[i]));
+        buffers.push(Encode(DataType.UINT, attributes[i]));
       }
       return Buffer.concat(buffers);
     }
   );
   static OptionalServiceList = new CIPClassAttribute(
     5,
-    DataTypes.STRUCT,
+    DataType.STRUCT,
     (buffer, offset, callback) => {
       let numberOfServices;
-      offset = Decode(DataTypes.UINT, buffer, offset, value => numberOfServices = value);
+      offset = Decode(DataType.UINT, buffer, offset, value => numberOfServices = value);
 
       const services = [];
       for (let i = 0; i < numberOfServices; i++) {
-        offset = Decode(DataTypes.UINT, buffer, offset, value => services.push(value));
+        offset = Decode(DataType.UINT, buffer, offset, value => services.push(value));
       }
 
       callback(services);
@@ -83,15 +83,15 @@ class CIPObjectReservedClassAttributes {
     },
     (services) => {
       const buffers = [];
-      buffers.push(Encode(DataTypes.UINT, services.length));
+      buffers.push(Encode(DataType.UINT, services.length));
       for (let i = 0; i < services.length; i++) {
-        buffers.push(Encode(DataTypes.UINT, services[i]));
+        buffers.push(Encode(DataType.UINT, services[i]));
       }
       return Buffer.concat(buffers);
     }
   );
-  static MaximumClassAttributeID = new CIPClassAttribute(6, DataTypes.UINT);
-  static MaximumInstanceAttributeID = new CIPClassAttribute(7, DataTypes.UINT);
+  static MaximumClassAttributeID = new CIPClassAttribute(6, DataType.UINT);
+  static MaximumInstanceAttributeID = new CIPClassAttribute(7, DataType.UINT);
 }
 
 

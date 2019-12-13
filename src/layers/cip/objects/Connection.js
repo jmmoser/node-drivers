@@ -263,55 +263,55 @@ const ClassServices = {
 const InstanceAttributes = {
   1: {
     name: 'State',
-    type: CIP.DataTypes.USINT
+    type: CIP.DataType.USINT
   },
   2: {
     name: 'Instance Type',
-    type: CIP.DataTypes.USINT
+    type: CIP.DataType.USINT
   },
   3: {
     name: 'TransportClass Trigger',
-    type: CIP.DataTypes.BYTE
+    type: CIP.DataType.BYTE
   },
   4: {
     name: 'DeviceNet Produced Conection ID',
-    type: CIP.DataTypes.UINT
+    type: CIP.DataType.UINT
   },
   5: {
     name: 'DeviceNet Consumed Connection ID',
-    type: CIP.DataTypes.UINT
+    type: CIP.DataType.UINT
   },
   6: {
     name: 'DeviceNet Initial Comm Characteristics',
-    type: CIP.DataTypes.BYTE
+    type: CIP.DataType.BYTE
   },
   7: {
     name: 'Produced Connection Size',
-    type: CIP.DataTypes.UINT
+    type: CIP.DataType.UINT
   },
   8: {
     name: 'Consumed Connection Size',
-    type: CIP.DataTypes.UINT
+    type: CIP.DataType.UINT
   },
   9: {
     name: 'Expected Packet Rate',
-    type: CIP.DataTypes.UINT
+    type: CIP.DataType.UINT
   },
   10: {
     name: 'CIP Produced Connection ID',
-    type: CIP.DataTypes.UDINT
+    type: CIP.DataType.UDINT
   },
   11: {
     name: 'CIP Consumed Connection ID',
-    type: CIP.DataTypes.UDINT
+    type: CIP.DataType.UDINT
   },
   12: {
     name: 'Watchdog Timeout Action',
-    type: CIP.DataTypes.USINT
+    type: CIP.DataType.USINT
   },
   13: {
     name: 'Produced Connection Path Length',
-    type: CIP.DataTypes.UINT
+    type: CIP.DataType.UINT
   },
   14: {
     name: 'Produced Connection Path',
@@ -319,7 +319,7 @@ const InstanceAttributes = {
   },
   15: {
     name: 'Consumed Connection Path Length',
-    type: CIP.DataTypes.UINT
+    type: CIP.DataType.UINT
   },
   16: {
     name: 'Consumed Connection Path',
@@ -327,11 +327,11 @@ const InstanceAttributes = {
   },
   17: {
     name: 'Production Inhibit Time',
-    type: CIP.DataTypes.UINT
+    type: CIP.DataType.UINT
   },
   18: {
     name: 'Connection Timeout Multiplier',
-    type: CIP.DataTypes.USINT
+    type: CIP.DataType.USINT
   },
   19: {
     name: 'Connection Binding List',
