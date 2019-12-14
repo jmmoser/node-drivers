@@ -599,7 +599,7 @@ function describeSegments(segments) {
       case SEGMENT_TYPE.DATA_TYPE_ELEMENTARY:
         break;
       default:
-        //
+      //
     }
   }
   return description;
@@ -679,7 +679,7 @@ function LogicalClassSegment(classID) {
 
 class EPath {
 
-  
+
 
   /**
    * CIP Vol 1 Appendix C-1.4.5.2
