@@ -17,9 +17,10 @@ class PCCCLayer extends Layer {
     this._transaction = 0;
   }
 
+
   wordRangeRead(address, words, callback) {
-    if (callback == null && typeof items === 'function') {
-      callback = items;
+    if (callback == null && typeof words === 'function') {
+      callback = words;
       words = undefined;
     }
 
@@ -40,6 +41,7 @@ class PCCCLayer extends Layer {
       }, transaction));
     });
   }
+
 
   typedRead(address, items, callback) {
     if (callback == null && typeof items === 'function') {
@@ -137,6 +139,7 @@ class PCCCLayer extends Layer {
       }, transaction));
     });
   }
+  
 
   echo(data, callback) {
     return CallbackPromise(callback, resolver => {
