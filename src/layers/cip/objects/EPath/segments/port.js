@@ -15,9 +15,17 @@ const {
 
 class PortSegment {
   static Decode(buffer, offset, cb) {
+    const segmentCode = buffer.readUInt8(offset); offset += 1;
+
     if (getBits(buffer.readUInt8(offset), 5, 8) !== 0) {
-      
+
     }
-    const static
+    const extendedLinkAddress = getBit()
+
+    if (cb instanceof Function) {
+      cb(value);
+    }
+
+    return offset;
   }
 }

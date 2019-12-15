@@ -380,7 +380,7 @@ function __DecodeDataType(buffer, offset, cb) {
       break;
   }
 
-  if (typeof cb === 'function') {
+  if (typeof cb === 'string') {
     cb(type);
   }
 
@@ -512,7 +512,7 @@ function Decode(dataType, buffer, offset, cb) {
       throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
 
-  if (typeof cb === 'function') {
+  if (cb instanceof Function) {
     cb(value);
   }
 
