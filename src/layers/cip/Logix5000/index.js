@@ -1244,14 +1244,13 @@ async function getSymbolInstanceID(layer, scope, tag) {
     case 'string':
       tagName = tag;
       // tagName = tag.split('.')[0];
-      // console.log(new Error());
       break;
     case 'number':
       return tag;
     case 'object':
       return tag.id;
     default:
-      throw new Error('Tag must be a tag name, symbol instance number, or a tag object. Received: ${');
+      throw new Error(`Tag must be a tag name, symbol instance number, or a tag object. Received: ${tag}`);
   }
 
   const scopeKey = scope ? `${scope}::` : '';
@@ -1260,7 +1259,7 @@ async function getSymbolInstanceID(layer, scope, tag) {
   if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
     return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
   }
-  
+
   let instanceID = -1;
 
   const highestListedSymbolInstanceIDScope = scope || DEFAULT_SCOPE;
@@ -1273,7 +1272,7 @@ async function getSymbolInstanceID(layer, scope, tag) {
       const tag = tags[i];
       const fullName = `${scopeKey}${tag[SymbolInstanceAttributeCodes.Name]}`;
       layer._tagNameToSymbolInstanceID.set(fullName, tag.id);
-      layer._highestListedSymbolInstanceIDs.set(fullName, tag.id);
+      layer._highestListedSymbolInstanceIDs.set(highestListedSymbolInstanceIDScope, tag.id);
     }
 
     if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
@@ -1281,6 +1280,50 @@ async function getSymbolInstanceID(layer, scope, tag) {
     }
   }
 }
+
+
+// async function getSymbolInstanceID(layer, scope, tag) {
+//   let tagName;
+//   switch (typeof tag) {
+//     case 'string':
+//       tagName = tag;
+//       // tagName = tag.split('.')[0];
+//       break;
+//     case 'number':
+//       return tag;
+//     case 'object':
+//       return tag.id;
+//     default:
+//       throw new Error(`Tag must be a tag name, symbol instance number, or a tag object. Received: ${tag}`);
+//   }
+
+//   const scopeKey = scope ? `${scope}::` : '';
+//   const tagNameToSymbolInstanceIDKey = `${scopeKey}${tagName}`;
+
+//   if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
+//     return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
+//   }
+  
+//   let instanceID = -1;
+
+//   const highestListedSymbolInstanceIDScope = scope || DEFAULT_SCOPE;
+//   if (layer._highestListedSymbolInstanceIDs.has(highestListedSymbolInstanceIDScope)) {
+//     instanceID = layer._highestListedSymbolInstanceIDs.get(highestListedSymbolInstanceIDScope);
+//   }
+
+//   for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true)) {
+//     for (let i = 0; i < tags.length; i++) {
+//       const tag = tags[i];
+//       const fullName = `${scopeKey}${tag[SymbolInstanceAttributeCodes.Name]}`;
+//       layer._tagNameToSymbolInstanceID.set(fullName, tag.id);
+//       layer._highestListedSymbolInstanceIDs.set(fullName, tag.id);
+//     }
+
+//     if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
+//       return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
+//     }
+//   }
+// }
 
 
 async function* listTags(layer, attributes, scope, instance, shouldGroup, modifier) {
@@ -1342,65 +1385,6 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
     }
   }
 }
-
-// async function* listTags(layer, attributes, scope, instance, shouldGroup, modifier) {
-//   let instanceID = instance != null ? instance : 0;
-  
-//   const MIN_TIMEOUT = 700;
-//   const MAX_TIMEOUT = 5000;
-//   const MAX_RETRY = 5;
-
-//   let timeout = MIN_TIMEOUT;
-
-//   const service = SymbolServiceCodes.GetInstanceAttributeList;
-//   const data = encodeAttributes(attributes);
-
-//   let retry = 0;
-
-//   while (true) {
-//     const path = encodeFullSymbolPath(scope, instanceID);
-
-//     let reply;
-    
-//     if (retry <= MAX_RETRY) {
-//       try {
-//         if (retry > 0) {
-//           console.log(`retrying: ${retry}, ${instanceID}`);
-//           timeout *= 2;
-//           timeout = timeout > MAX_TIMEOUT ? MAX_TIMEOUT : timeout;
-//         }
-
-//         const reply = await sendPromise(layer, service, path, data, timeout);
-
-//         retry = 0;
-//         timeout = MIN_TIMEOUT;
-
-//         const tags = [];
-//         const lastInstanceID = parseListTagsResponse(reply, attributes, tags, modifier);
-
-//         if (shouldGroup) {
-//           yield tags;
-//         } else {
-//           for (let i = 0; i < tags.length; i++) {
-//             yield tags[i];
-//           }
-//         }
-
-//         if (reply.status.code === 0 || tags.length <= 0) {
-//           break;
-//         }
-
-//         instanceID = lastInstanceID + 1;
-//         console.log(instanceID);
-//       } catch (err) {
-//         retry++;
-//         console.log(err);
-//       }
-//     } else {
-//       break;
-//     }
-//   }
-// }
 
 
 async function getSymbolSize(layer, scope, tag) {
