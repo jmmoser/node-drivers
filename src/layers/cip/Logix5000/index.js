@@ -1254,7 +1254,12 @@ async function getSymbolInstanceID(layer, scope, tag) {
   }
 
   const scopeKey = scope ? `${scope}::` : '';
-  const tagNameToSymbolInstanceIDKey = `${scopeKey}${tagName}`;
+
+  function createScopedSymbolName(name) {
+    return `${scopeKey}${name}`;
+  }
+
+  const tagNameToSymbolInstanceIDKey = createScopedSymbolName(tagName);
 
   if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
     return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
@@ -1270,8 +1275,7 @@ async function getSymbolInstanceID(layer, scope, tag) {
   for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true)) {
     for (let i = 0; i < tags.length; i++) {
       const tag = tags[i];
-      const fullName = `${scopeKey}${tag[SymbolInstanceAttributeCodes.Name]}`;
-      layer._tagNameToSymbolInstanceID.set(fullName, tag.id);
+      layer._tagNameToSymbolInstanceID.set(createScopedSymbolName(tag[SymbolInstanceAttributeCodes.Name]), tag.id);
       layer._highestListedSymbolInstanceIDs.set(highestListedSymbolInstanceIDScope, tag.id);
     }
 
