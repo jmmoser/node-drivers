@@ -69,7 +69,7 @@ class Identity extends CIPObject {
   }
 
 
-  static ParseInstanceAttributesAll(buffer, offset, cb) {
+  static DecodeInstanceAttributesAll(buffer, offset, cb) {
     const attributes = [
       InstanceAttributeCodes.VendorID,
       InstanceAttributeCodes.DeviceType,

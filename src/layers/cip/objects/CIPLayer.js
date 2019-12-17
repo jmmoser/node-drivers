@@ -38,7 +38,7 @@ class CIPLayer extends Layer {
           resolver.reject(error, reply);
         } else {
           try {
-            Identity.ParseInstanceAttributesAll(reply.data, 0, value => resolver.resolve(value));
+            Identity.DecodeInstanceAttributesAll(reply.data, 0, value => resolver.resolve(value));
           } catch (err) {
             resolver.reject(err, reply);
           }

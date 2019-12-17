@@ -270,7 +270,7 @@ EIPReply[Command.ListIdentity] = function(packet) {
       socket.zero = buffer.slice(offset, offset + 8); offset += 8;
       item.socket = socket;
 
-      offset = CIPIdentity.ParseInstanceAttributesAll(buffer, offset, value => item.attributes = value);
+      offset = CIPIdentity.DecodeInstanceAttributesAll(buffer, offset, value => item.attributes = value);
       // offset = CIPIdentity.DecodeInstanceAttribute(CIPIdentity.InstanceAttribute.State, buffer, offset, val => item.attributes[CIPIdentity.InstanceAttribute.State] = val);
       offset = CIPIdentity.DecodeInstanceAttribute(CIPIdentity.InstanceAttribute.State, buffer, offset, val => item.attributes.push(val));
     }
