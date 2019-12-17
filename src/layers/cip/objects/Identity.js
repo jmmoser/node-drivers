@@ -2,84 +2,136 @@
 
 const { Decode, DataType } = require('./CIP');
 const CIPObject = require('./CIPObject');
-const { getBit, getBits } = require('../../../utils');
+const { getBit, getBits, InvertKeyValues } = require('../../../utils');
 
-// Class Code 0x01
+
+/** Class Code 0x01 */
 class Identity extends CIPObject {
   constructor() {
     super(CIP.Classes.Identity);
   }
-  // GetAttributeSingle() {
-  //   // 0x0E
-  // }
 
-  // Reset() {
-  //   // 0x05
-  // }
+  static DecodeInstanceAttribute(attribute, data, offset, cb) {
+    const dataType = InstanceAttributeDataTypes[attribute];
+    if (!dataType) {
+      throw new Error(`Unknown instance attribute: ${attribute}`);
+    }
 
-  
+    let value;
+    offset = Decode(dataType, data, offset, val => value = val);
+    const raw = value;
 
-  // SetAttributeSingle() {
-  //   // 0x10
-  // }
+    switch (attribute) {
+      case InstanceAttributeCodes.Revision: {
+        if (Array.isArray(value) && value.length >= 2) {
+          value = {
+            major: value[0],
+            minor: value[1]
+          };
+        }
+        break;
+      }
+      case InstanceAttributeCodes.Status: {
+        /** CIP Vol 1, Table 5-2.3 */
+        value = {
+          code: value,
+          owned: getBit(value, 0),
+          configured: getBit(value, 3),
+          extendedDeviceStatus: ExtendedDeviceStatusDescriptions[getBits(value, 4, 8)] || 'Vendor/Product specific',
+          minorRecoverableFault: getBit(value, 8),
+          minorUnrecoverableFault: getBit(value, 9),
+          majorRecoverableFault: getBit(value, 10),
+          majorUnrecoverableFault: getBit(value, 11)
+        };
+        break;
+      }
+      case InstanceAttributeCodes.State: {
+        value = {
+          code: value,
+          description: InstanceStateDescriptions[value] || 'Unknown'
+        }
+        break;
+      }
+      default:
+        break;
+    }
+
+    if (typeof cb === 'function') {
+      cb({
+        code: attribute,
+        name: InstanceAttributeNames[attribute] || 'Unknown',
+        value,
+        raw
+      });
+    }
+
+    return offset;
+  }
+
 
   static ParseInstanceAttributesAll(buffer, offset, cb) {
-    const item = {};
+    const attributes = [
+      InstanceAttributeCodes.VendorID,
+      InstanceAttributeCodes.DeviceType,
+      InstanceAttributeCodes.ProductCode,
+      InstanceAttributeCodes.Revision,
+      InstanceAttributeCodes.Status,
+      InstanceAttributeCodes.SerialNumber,
+      InstanceAttributeCodes.ProductName
+    ].reduce((accum, attribute) => {
+      offset = this.DecodeInstanceAttribute(attribute, buffer, offset, val => accum.push(val));
+      return accum;
+    }, []);
 
-    item.vendorID = buffer.readUInt16LE(offset); offset += 2;
-    item.deviceType = buffer.readUInt16LE(offset); offset += 2;
-    item.productCode = buffer.readUInt16LE(offset); offset += 2;
+    // const attributes = [
+    //   InstanceAttributeCodes.VendorID,
+    //   InstanceAttributeCodes.DeviceType,
+    //   InstanceAttributeCodes.ProductCode,
+    //   InstanceAttributeCodes.Revision,
+    //   InstanceAttributeCodes.Status,
+    //   InstanceAttributeCodes.SerialNumber,
+    //   InstanceAttributeCodes.ProductName
+    // ].reduce((accum, attribute) => {
+    //   offset = this.DecodeInstanceAttribute(attribute, buffer, offset, val => accum[attribute] = val);
+    //   return accum;
+    // }, {});
 
-    item.revision = {};
-    item.revision.major = buffer.readUInt8(offset); offset += 1;
-    item.revision.minor = buffer.readUInt8(offset); offset += 1;
+    // const attributes = {};
+    // offset = this.DecodeInstanceAttribute(InstanceAttributeCodes.VendorID, buffer, offset, val => attributes.vendorID = val);
+    // offset = this.DecodeInstanceAttribute(InstanceAttributeCodes.DeviceType, buffer, offset, val => attributes.deviceType = val);
+    // offset = this.DecodeInstanceAttribute(InstanceAttributeCodes.ProductCode, buffer, offset, val => attributes.productCode = val);
+    // offset = this.DecodeInstanceAttribute(InstanceAttributeCodes.Revision, buffer, offset, val => attributes.revision = val);
+    // offset = this.DecodeInstanceAttribute(InstanceAttributeCodes.Status, buffer, offset, val => attributes.status = val);
+    // offset = this.DecodeInstanceAttribute(InstanceAttributeCodes.SerialNumber, buffer, offset, val => attributes.serialNumber = val);
+    // offset = this.DecodeInstanceAttribute(InstanceAttributeCodes.ProductName, buffer, offset, val => attributes.productName = val);
 
-    offset = this.ParseInstanceAttributeStatus(buffer, offset, value => item.status = value);
-
-    item.serialNumber = buffer.readUInt32LE(offset); offset += 4;
-
-    offset = Decode(DataType.SHORT_STRING, buffer, offset, value => item.productName = value);
-
-    cb(item);
-    
-    return offset;
-  }
-
-  // CIP Vol1 Table 5-2.3
-  static ParseInstanceAttributeStatus(buffer, offset, cb) {
-    const code = buffer.readUInt16LE(offset); offset += 2;
-
-    const status = {
-      code,
-      owned: getBit(code, 0),
-      configured: getBit(code, 3),
-      extendedDeviceStatus: ExtendedDeviceStatusDescription(code), // bits 4 - 7
-      minorRecoverableFault: getBit(code, 8),
-      minorUnrecoverableFault: getBit(code, 9),
-      majorRecoverableFault: getBit(code, 10),
-      majorUnrecoverableFault: getBit(code, 11)
-    };
-
-    cb(status);
-
-    return offset;
-  }
-
-  static ParseInstanceAttributeState(buffer, offset, cb) {
-    const code = buffer.readUInt8(offset); offset += 1;
-    const state = {
-      code,
-      description: InstanceStateDescriptions[code] || 'unknown'
-    };
-
-    cb(null, state);
+    if (typeof cb === 'function') {
+      cb(attributes);
+    }
 
     return offset;
   }
+
+
+  // static ParseInstanceAttributeState(buffer, offset, cb) {
+  //   const code = buffer.readUInt8(offset); offset += 1;
+  //   const state = {
+  //     code,
+  //     description: InstanceStateDescriptions[code] || 'unknown'
+  //   };
+
+  //   if (typeof cb === 'function') {
+  //     cb(state);
+  //   }
+
+  //   return offset;
+  // }
+
 
   static get Services() {
     return ClassServices;
   }
+
 
   static DecodeGetAttributesAll(data, offset, cb) {
     const info = {};
@@ -87,7 +139,7 @@ class Identity extends CIPObject {
     const length = data.length;
 
     if (offset < length - 1) {
-      offset = Decode(DataType.UINT, data, offset, val => info.vendor = val);
+      offset = Decode(DataType.UINT, data, offset, val => info.vendorID = val);
     }
 
     if (offset < length - 1) {
@@ -107,15 +159,15 @@ class Identity extends CIPObject {
         if (offset < length - 1) {
           offset = Decode(DataType.UINT, data, offset, val => info.optionalAttributes.push(val));
         } else {
-          console.log('breaking optional attributes');
+          // console.log('breaking optional attributes');
           break;
         }
       }
 
-      console.log({
-        numberOfOptionalAttributes,
-        length: info.optionalAttributes.length
-      })
+      // console.log({
+      //   numberOfOptionalAttributes,
+      //   length: info.optionalAttributes.length
+      // });
     }
 
     if (offset < length - 1) {
@@ -131,15 +183,15 @@ class Identity extends CIPObject {
             hex: `0x${val.toString('16')}`
           }));
         } else {
-          console.log('breaking optional services');
+          // console.log('breaking optional services');
           break;
         }
       }
 
-      console.log({
-        numberOfOptionalServices,
-        length: info.optionalServices.length
-      })
+      // console.log({
+      //   numberOfOptionalServices,
+      //   length: info.optionalServices.length
+      // });
     }
 
     if (offset < length - 1) {
@@ -152,7 +204,9 @@ class Identity extends CIPObject {
 
     info.extra = data.slice(offset);
 
-    cb(info);
+    if (typeof cb === 'function') {
+      cb(info);
+    }
 
     // console.log(data.readUInt16LE(length - 4));
     // console.log(data.readUInt16LE(length - 2));
@@ -162,7 +216,6 @@ class Identity extends CIPObject {
   }
 }
 
-module.exports = Identity;
 
 const ClassServices = {
   GetAttributesAll: 0x01,
@@ -175,8 +228,9 @@ const ClassServices = {
 // CIP Vol1 5-2
 Identity.Code = 0x01;
 
+
 // CIP Vol1 Table 5-2.2
-const InstanceAttributes = {
+const InstanceAttributeCodes = {
   VendorID: 1,
   DeviceType: 2,
   ProductCode: 3,
@@ -197,30 +251,32 @@ const InstanceAttributes = {
   ModbusIdentityInfo: 18
 };
 
-// const InstanceAttributeNames = InvertKeyValues(InstanceAttributes);
+Identity.InstanceAttribute = InstanceAttributeCodes;
+
+const InstanceAttributeNames = InvertKeyValues(InstanceAttributeCodes);
 
 
-// // CIP Vol1 Table 5-2.2
-// const InstanceAttributeInfo = {
-//   1: { name: 'VendorID', type: 'UINT' },
-//   2: { name: 'Device Type', type: 'UINT' },
-//   3: { name: 'Product Code', type: 'UINT' },
-//   4: { name: 'Revision', type: 'STRUCT' },
-//   5: { name: 'Status', type: 'WORD', },
-//   6: { name: 'Serial Number', type: 'UDINT' },
-//   7: { name: 'Product Name', type: 'SHORT_STRING' },
-//   8: { name: 'State', type: 'USINT'},
-//   9: { name: 'Configuration Consistency Value', type: 'UINT' },
-//   10: { name: 'Heartbeat Interval', type: 'USINT' },
-//   11: { name: 'Active Language', type: 'STRUCT' },
-//   12: { name: 'Supported Language List', type: 'ARRAY STRUCT'},
-//   13: { name: 'International Product Name', type: 'STRINGI' },
-//   14: { name: 'Semaphore', type: 'STRUCT' },
-//   15: { name: 'Assigned_Name', type: 'STRINGI' },
-//   16: { name: 'Assigned_Description', type: 'STRINGI' },
-//   17: { name: 'Geographic_Location', type: 'STRINGI' },
-//   // 18: { name: 'Modbus Identity Info', type: 'STRUCT', parser: ModbusIdentityInfoParser }
-// };
+const InstanceAttributeDataTypes = {
+  [InstanceAttributeCodes.VendorID]: DataType.UINT,
+  [InstanceAttributeCodes.DeviceType]: DataType.UINT,
+  [InstanceAttributeCodes.ProductCode]: DataType.UINT,
+  [InstanceAttributeCodes.Revision]: DataType.STRUCT([DataType.USINT, DataType.USINT]),
+  [InstanceAttributeCodes.Status]: DataType.WORD,
+  [InstanceAttributeCodes.SerialNumber]: DataType.UDINT,
+  [InstanceAttributeCodes.ProductName]: DataType.SHORT_STRING,
+  [InstanceAttributeCodes.State]: DataType.USINT,
+  [InstanceAttributeCodes.ConfigurationConsistencyValue]: DataType.UINT,
+  [InstanceAttributeCodes.HeartbeatInterval]: DataType.USINT,
+  [InstanceAttributeCodes.ActiveLanguage]: DataType.STRUCT([DataType.USINT, DataType.USINT, DataType.USINT]),
+  [InstanceAttributeCodes.SupportedLanguageList]: DataType.ABBREV_ARRAY(DataType.STRUCT([DataType.USINT, DataType.USINT, DataType.USINT])),
+  [InstanceAttributeCodes.InternationalProductName]: DataType.STRINGI,
+  [InstanceAttributeCodes.Semaphore]: DataType.STRUCT([DataType.UINT, DataType.UDINT, DataType.ITIME]),
+  [InstanceAttributeCodes.AssignedName]: DataType.STRINGI,
+  [InstanceAttributeCodes.AssignedDescription]: DataType.STRINGI,
+  [InstanceAttributeCodes.GeographicLocation]: DataType.STRING,
+  // [InstanceAttributeCodes.ModbusIdentityInfo]: /** See CIP Vol 7, Chapter 5 */
+};
+
 
 // CIP Vol1 Table 5-2.2, Attribute ID 8, Semantics of Values
 const InstanceStateDescriptions = {
@@ -235,29 +291,6 @@ const InstanceStateDescriptions = {
 
 Identity.InstanceStateDescriptions = InstanceStateDescriptions;
 
-// CIP Vol1 Table 5-2.3
-// function ParseInstanceStatus(buffer, offset, cb) {
-//   const code = buffer.readUInt16LE(offset); offset += 2;
-
-//   const status = {
-//     code,
-//     owned: getBit(code, 0),
-//     configured: getBit(code, 3),
-//     extendedDeviceStatus: ExtendedDeviceStatusDescription(code), // bits 4 - 7
-//     minorRecoverableFault: getBit(code, 8),
-//     minorUnrecoverableFault: getBit(code, 9),
-//     majorRecoverableFault: getBit(code, 10),
-//     majorUnrecoverableFault: getBit(code, 11)
-//   };
-
-//   if (typeof cb === 'function') {
-//     cb(status)
-//   }
-
-//   return offset;
-// }
-
-// Identity.ParseInstanceStatus = ParseInstanceStatus;
 
 // CIP Vol1 Table 5-2.4
 const ExtendedDeviceStatusDescriptions = {
@@ -267,15 +300,9 @@ const ExtendedDeviceStatusDescriptions = {
   0b0011: 'No I/O connections established',
   0b0100: 'Non-volatile configuration bad',
   0b0101: 'Major fault - either bit 10 or bit 11 is true (1)',
-  0b0110: 'At least on I/O connection in run mode',
+  0b0110: 'At least one I/O connection in run mode',
   0b0111: 'At least one I/O connection established, all in idle mode'
 };
-
-function ExtendedDeviceStatusDescription(status) {
-  const eds = getBits(status, 4, 8);
-  const desc = ExtendedDeviceStatusDescriptions[eds];
-  return desc ? desc : 'Vendor/Product specific';
-}
 
 
 // // CIP Vol7 Table 5-2.1, Attribute 18
@@ -291,3 +318,6 @@ function ExtendedDeviceStatusDescription(status) {
 //     UserAppName [SHORT_STRING]
 //   */
 // }
+
+
+module.exports = Identity;

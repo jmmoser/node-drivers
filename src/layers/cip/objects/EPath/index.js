@@ -1,6 +1,6 @@
 'use strict';
 
-const { getBit, getBits } = require('../../../utils');
+const { getBit, getBits } = require('../../../../utils');
 
 const SEGMENT_TYPE = {
   PORT: 0x00,
@@ -213,17 +213,6 @@ const DATA_SEGMENT_SUBTYPE_DESCRIPTIONS = {
 
 
 
-
-
-
-
-function __ASSERT(expression, errorDescription) {
-  if (!expression) {
-    throw new Error(errorDescription);
-  }
-}
-
-
 function __getDescription(descriptions, code, unknown) {
   let description = descriptions[code];
   if (!description) description = unknown || 'Unknown';
@@ -231,13 +220,13 @@ function __getDescription(descriptions, code, unknown) {
 }
 
 
-function getSegmentType(path, offset) {
+function getSegmentType(buffer, offset) {
   const SEGMENT_TYPE_MASK = 0xE0;
-  return path.readUInt8(offset) & SEGMENT_TYPE_MASK;
+  return buffer.readUInt8(offset) & SEGMENT_TYPE_MASK;
 }
 
-function setSegmentType(path, offset, type) {
-  path[offset] |= type;
+function setSegmentType(buffer, offset, type) {
+  return buffer.writeUInt8(buffer.readUInt8(offset) | type, offset);
 }
 
 function getSegmentTypeDescription(segmentType) {
@@ -259,14 +248,13 @@ function getPortSegmentPortIdentifier(path, offset) {
   return path.readUInt8(offset) & PORT_IDENTIFIER_MASK;
 }
 
-function setPortSegmentPortIdentifier(path, offset, identifier) {
-  path.writeUInt8(path.readUInt8(offset) | identifier, offset);
-  // path[offset] |= identifier;
+function setPortSegmentPortIdentifier(buffer, offset, identifier) {
+  return buffer.writeUInt8(buffer.readUInt8(offset) | identifier, offset);
 }
 
 
-function getPortSegmentLinkAddressSize(path, offset) {
-  return path.readUInt8(offset + 1);
+function getPortSegmentLinkAddressSize(buffer, offset) {
+  return buffer.readUInt8(offset + 1);
 }
 
 function getPortSegmentExtendedPortNumber(buffer, offset) {
@@ -276,20 +264,20 @@ function getPortSegmentExtendedPortNumber(buffer, offset) {
   return buffer.readUInt16LE(offset + position);
 }
 
-function setPortSegmentExtendedPortIdentifier(path, offset, identifier) {
-  setPathPortSegmentPortIdentifier(path, offset, identifier);
-  let position = getPortSegmentExtendedLinkAddressSizeBit(path, offset) === true ? 2 : 1;
-  // path[offset + position] = identifier & 0x00FF;
-  // path[offset + position + 1] = identifier & 0xFF00 >> 8;
-  path.writeUInt16LE(offset + position, identifier);
+function setPortSegmentExtendedPortIdentifier(buffer, offset, identifier) {
+  setPathPortSegmentPortIdentifier(buffer, offset, identifier);
+  const position = getPortSegmentExtendedLinkAddressSizeBit(buffer, offset) === true ? 2 : 1;
+  // buffer[offset + position] = identifier & 0x00FF;
+  // buffer[offset + position + 1] = identifier & 0xFF00 >> 8;
+  return buffer.writeUInt16LE(offset + position, identifier);
 }
 
 
 
 
-function getLogicalSegmentLogicalType(path, offset) {
+function getLogicalSegmentLogicalType(buffer, offset) {
   const LOGICAL_TYPE_MASK = 0x1C;
-  return path.readUInt8(offset) & LOGICAL_TYPE_MASK;
+  return buffer.readUInt8(offset) & LOGICAL_TYPE_MASK;
 }
 // function getLogicalSegmentLogicalTypeDescription(type) {
 //   return __getDescription(LOGICAL_SEGMENT_TYPE_DESCRIPTIONS, type);

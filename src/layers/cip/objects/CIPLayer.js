@@ -12,9 +12,9 @@ const MessageRouter = require('./MessageRouter');
 // let totalBytesIn = 0;
 
 class CIPLayer extends Layer {
-  request(service, path, data, callback) {
+  request(connected, service, path, data, callback) {
     return CallbackPromise(callback, resolver => {
-      CIPLayer.send(this, true, service, path, data, function (error, reply) {
+      CIPLayer.send(this, connected, service, path, data, function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -149,7 +149,7 @@ class CIPLayer extends Layer {
             instanceID,
             i
           );
-          const reply = await this.request(service, path);
+          const reply = await this.request(true, service, path);
           attributes.push({
             code: i,
             data: reply.data
@@ -166,32 +166,6 @@ class CIPLayer extends Layer {
       resolver.resolve(attributes);
     });
   }
-
-  // exploreAttributes(path, callback) {
-  //   return CallbackPromise(callback, async resolver => {
-  //     const service = CIP.CommonServices.GetAttributeList;
-
-  //     const attributes = [];
-
-  //     for (let i = 1; i < 30; i++) {
-  //       try {
-  //         const reply = await this.request(service, path, encodeAttributes([i]));
-  //         attributes.push({
-  //           code: i,
-  //           data: reply.data.slice(6)
-  //         });
-  //       } catch (err) {
-  //         if (!err.info || !err.info.status || err.info.status.code !== 10) {
-  //           return resolver.reject(err);
-  //         } else {
-  //           //
-  //         }
-  //       }
-  //     }
-
-  //     resolver.resolve(attributes);
-  //   });
-  // }
 
 
   messageRouterClassAttributes(callback) {
@@ -311,14 +285,3 @@ class CIPLayer extends Layer {
 }
 
 module.exports = CIPLayer;
-
-
-
-function encodeAttributes(attributes) {
-  const data = Buffer.allocUnsafe(2 + attributes.length * 2);
-  data.writeUInt16LE(attributes.length, 0);
-  for (let i = 0; i < attributes.length; i++) {
-    data.writeUInt16LE(attributes[i], 2 * (i + 1));
-  }
-  return data;
-}

@@ -3,7 +3,7 @@
   - [X] EIP passes down port 44818 to TCP layer
   - [X] modbus passes down port 502 to TCP layer
 - [ ] Logix5000
-  - [ ] add readTagInternal which uses scope
+  - [X] fix reading symbol structures
   - [X] getTagSymbolInstanceID and _highestListedSymbolInstanceID need to be scoped (global scope vs program scope)
   - [X] When Program data type is read, read all symbols contained
   - [ ] Optimize
@@ -16,14 +16,15 @@
   - [ ] Figure out how to read multidimensional arrays
 - [ ] CIP
   - [X] DecodeDataType with structs/arrays
-  - [ ] Hook up DecodeDataType to Decode
+  - [X] Hook up DecodeDataType to Decode
   - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
   - [ ] add encoding for STRINGI
   - [ ] add decoding for STRINGI
   - [ ] add encoding for STRINGN
   - [X] add decoding for STRINGN
-  - [ ] CIP add custructed DataTypes (Array[Int])
-    - [ ] Add encoding and decoding for constructed data types
+  - [X] CIP add custructed DataTypes (Array[Int])
+    - [X] Add decoding for constructed data types
+    - [ ] Add encoding for constructed data types
   - [ ] Improve data type encoding
     - [ ] add DataTypeSize calculation
     - [ ] encode into existing buffer, dont create new buffers

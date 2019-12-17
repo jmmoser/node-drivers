@@ -32,7 +32,7 @@ const InstanceAttributeDataTypes = {
   [InstanceAttributeCodes.NodeAddress]: DataType.EPATH(true),
   [InstanceAttributeCodes.NodeRange]: DataType.STRUCT([DataType.UINT, DataType.UINT]),
   [InstanceAttributeCodes.Key]: DataType.EPATH(false)
-}
+};
 
 /** CIP Vol 3 Chapter 3-7.3 */
 const PortTypeDescriptions = {
@@ -50,10 +50,6 @@ const PortTypeDescriptions = {
 
 
 class Port {
-  // static InstanceAttributeCodes() {
-  //   return InstanceAttributeCodes;
-  // }
-
   static InstanceAttributeName(attribute) {
     return InstanceAttributeNames[attribute] || 'Unknown';
   }
@@ -83,9 +79,15 @@ class Port {
 
     let value;
     offset = Decode(dataType, data, offset, val => value = val);
+    const raw = value;
 
     if (typeof cb === 'function') {
-      cb(value);
+      cb({
+        code: attribute,
+        name: InstanceAttributeNames[attribute] || 'Unknown',
+        value,
+        raw
+      });
     }
     return offset;
   }

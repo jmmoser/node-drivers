@@ -380,7 +380,7 @@ function __DecodeDataType(buffer, offset, cb) {
       break;
   }
 
-  if (typeof cb === 'string') {
+  if (typeof cb === 'function') {
     cb(type);
   }
 
