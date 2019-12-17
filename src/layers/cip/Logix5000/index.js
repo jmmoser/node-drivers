@@ -39,7 +39,6 @@ const {
   ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,
-  // SymbolServiceErrorDescriptions,
   SymbolInstanceAttributeCodes,
   SymbolInstanceAttributeNames,
   SymbolInstanceAttributeDataTypes,
@@ -62,7 +61,6 @@ class Logix5000 extends CIPLayer {
     //   optimize: false
     // }, options);
 
-    // this._highestListedSymbolInstanceID = -1;
     this._highestListedSymbolInstanceIDs = new Map();
     this._tagNameToSymbolInstanceID = new Map();
     this._templateInstanceAttributes = new Map();
@@ -871,7 +869,6 @@ async function parseReadTag(layer, scope, tag, elements, data) {
     ]);
 
     const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
-    // const tagType = await getTagType(layer, scope, tag);
     // console.log(tagType);
 
     let templateType = tagType;
@@ -925,62 +922,6 @@ async function parseReadTag(layer, scope, tag, elements, data) {
   return values;
 }
 
-// async function parseReadTag(layer, scope, tag, elements, data) {
-//   if (data.length === 0) {
-//     return undefined;
-//   }
-
-//   let typeInfo;
-//   let offset = DecodeDataType(data, 0, val => typeInfo = val);
-//   // console.log(typeInfo);
-
-//   if (!typeInfo) {
-//     throw new Error(`Unable to decode data type from read tag response data`);
-//   }
-
-//   const values = [];
-
-//   if (!typeInfo.constructed || typeInfo.abbreviated === false) {
-//     for (let i = 0; i < elements; i++) {
-//       offset = Decode(typeInfo, data, offset, value => values.push(value));
-//     }
-//   } else {
-//     console.log(typeInfo);
-    
-//     const tagInfo = await getSymbolInfo(layer, scope, tag, [
-//       SymbolInstanceAttributeCodes.Type
-//     ]);
-
-//     const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
-//     // const tagType = await getTagType(layer, scope, tag);
-//     console.log(tagType);
-
-//     if (!tagType) {
-//       console.log(tagInfo, scope, tag);
-//       throw new Error(`Invalid tag: ${tag}`);
-//     }
-
-//     switch (tagType.code) {
-//       case LDataTypeCodes.Map:
-//       case LDataTypeCodes.Cxn:
-//       case LDataTypeCodes.Program:
-//       case LDataTypeCodes.Routine:
-//       case LDataTypeCodes.Task:
-//         throw new Error(`Unable to directly read type ${LDatatypeNames[tagType.code].toUpperCase()}: ${tag}`);
-//       default:
-//         break;
-//     }
-
-//     values.push(await parseReadTagMemberStructure(layer, tagType, data, offset));
-//   }
-
-//   if (elements === 1) {
-//     return values[0];
-//   }
-
-//   return values;
-// }
-
 
 function sendPromise(self, service, path, data, timeout) {
   return new Promise((resolve, reject) => {
@@ -1004,7 +945,6 @@ function send(self, service, path, data, callback, timeout) {
     if (reply && SymbolServiceNames[reply.service.code]) {
       reply.service.name = SymbolServiceNames[reply.service.code];
     }
-
 
     callback(error, reply);
   }, timeout);
