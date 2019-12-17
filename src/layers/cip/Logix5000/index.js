@@ -1174,6 +1174,16 @@ function getError(reply) {
 }
 
 
+function scopedGenerator() {
+  const separator = '::';
+  const args = [...arguments].filter(arg => !!arg);
+  const preface = args.length > 0 ? args.join(separator) + separator : '';
+  return function() {
+    return preface + [...arguments].join(separator);
+  }
+}
+
+
 /**
  * Allows getting the type of any tag/member
  * ((scope -> symbol) -> member)
@@ -1201,16 +1211,13 @@ async function getSymbolInfo(layer, scope, tagInput, attributes) {
     return info;
   }
 
-  const scopeKey = scope ? `${scope}::` : '';
-
-  function buildSymbolAttributeKey(symbolID, attribute) {
-    return `${scopeKey}${symbolID}::${attribute}`;
-  }
+  const buildSymbolAttributeKey = scopedGenerator(scope);
 
   const newAttributes = [];
 
   attributes.forEach(attribute => {
     const symbolAttributeKey = buildSymbolAttributeKey(symbolInstanceID, attribute);
+    // console.log(symbolAttributeKey);
     if (layer._tags.has(symbolAttributeKey)) {
       info[attribute] = layer._tags.get(symbolAttributeKey);
     } else {
@@ -1253,13 +1260,10 @@ async function getSymbolInstanceID(layer, scope, tag) {
       throw new Error(`Tag must be a tag name, symbol instance number, or a tag object. Received: ${tag}`);
   }
 
-  const scopeKey = scope ? `${scope}::` : '';
-
-  function createScopedSymbolName(name) {
-    return `${scopeKey}${name}`;
-  }
+  const createScopedSymbolName = scopedGenerator(scope);
 
   const tagNameToSymbolInstanceIDKey = createScopedSymbolName(tagName);
+  // console.log(tagNameToSymbolInstanceIDKey);
 
   if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
     return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
