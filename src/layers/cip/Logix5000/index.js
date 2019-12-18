@@ -147,27 +147,6 @@ class Logix5000 extends CIPLayer {
   //   //   });
   //   // }
   // }
-  
-
-  // async test() {
-  //   return this.exploreAttributes(EPath.Encode(0x72, 0x03));
-  // }
-
-  // async test2() {
-  //   return this.request(0x4C, EPath.Encode(0x72, 0x00), Buffer.from([
-  //     0x77, 0x6b, 0x08, 0x00, 0x01, 0x00
-  //   ]));
-  // }
-
-  // async test3(tag) {
-  //   const service = SymbolServiceCodes.GetInstanceAttributeList;
-  //   const path = encodeFullSymbolPath(null, tag);
-  //   const data = encodeAttributes([
-  //     SymbolInstanceAttributeCodes.Name,
-  //     SymbolInstanceAttributeCodes.Type
-  //   ]);
-  //   return sendPromise(this, service, path, data);
-  // }
 
 
   readTag(tag, elements, callback) {
@@ -370,7 +349,6 @@ class Logix5000 extends CIPLayer {
 
       const symbolID = await getSymbolInstanceID(this, scope, tag);
       if (symbolID == null) {
-        console.log('readSymbolAttributeList');
         return resolver.reject(`Unable to determine symbol instance: ${scope ? `${scope}.` : ''}${tag}`);
       }
 
@@ -599,8 +577,6 @@ class Logix5000 extends CIPLayer {
           offset = parseTemplateMemberName(data, offset, name => member.name = name);
           if (member.type.code === DataTypeCodes.SINT && member.name.indexOf('ZZZZZZZZZZ') === 0) {
             /** Member is a host member for holding boolean members */
-            // console.log(`HOST: ${member.name}`);
-            // console.log(member);
             member.host = true;
           }
         }
