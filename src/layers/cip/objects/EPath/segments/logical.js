@@ -55,13 +55,7 @@ const LogicalTypeServiceIDFormatCodes = {
 
 
 class LogicalSegment {
-  static Decode(buffer, offset, padded, cb) {
-    const segmentCode = buffer.readUInt8(offset); offset += 1;
-
-    if (getBits(segmentCode, 5, 8) !== 1) {
-      throw new Error(`Not a logical segment: ${segmentCode}`);
-    }
-
+  static Decode(segmentCode, buffer, offset, padded, cb) {
     const type = getBits(segmentCode, 2, 5);
     const format = getBits(segmentCode, 0, 2);
 
@@ -104,10 +98,6 @@ class LogicalSegment {
 
     if (typeof cb === 'function') {
       cb({
-        // type,
-        // format,
-        // typeName: LogicalTypeNames[type],
-        // formatName,
         type: {
           code: type,
           name: LogicalTypeNames[type]

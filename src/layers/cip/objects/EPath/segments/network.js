@@ -27,13 +27,7 @@ const NetworkSegmentTypeNames = InvertKeyValues(NetworkSegmentTypeCodes);
 
 
 class NetworkSegment {
-  static Decode(buffer, offset, padded, cb) {
-    const segmentCode = buffer.readUInt8(offset); offset += 1;
-
-    if (getBits(segmentCode, 5, 8) !== 2) {
-      throw new Error(`Not a network segment: ${segmentCode}`);
-    }
-
+  static Decode(segmentCode, buffer, offset, padded, cb) {
 
 
     if (typeof cb === 'function') {

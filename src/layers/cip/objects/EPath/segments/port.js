@@ -31,13 +31,7 @@ const {
 } = require('../../../../../utils');
 
 class PortSegment {
-  static Decode(buffer, offset, padded, cb) {
-    const segmentCode = buffer.readUInt8(offset); offset += 1;
-
-    if (getBits(segmentCode, 5, 8) !== 0) {
-      throw new Error(`Not a port segment: ${segmentCode}`);
-    }
-
+  static Decode(segmentCode, buffer, offset, padded, cb) {
     let linkAddressSize;
     if (getBit(segmentCode, 4)) {
       linkAddressSize = buffer.readUInt8(offset); offset += 1;
@@ -53,7 +47,7 @@ class PortSegment {
       number = tempNumber;
     }
 
-    const address = buffer.slice(offset, offset + linkAddressSize);
+    const address = buffer.slice(offset, offset + linkAddressSize); offset += linkAddressSize;
 
     if (linkAddressSize > 1 && linkAddressSize % 2 !== 0) {
       offset += 1; /** Pad byte */

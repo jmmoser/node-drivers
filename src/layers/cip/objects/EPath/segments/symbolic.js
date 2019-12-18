@@ -32,13 +32,7 @@ const ExtendedStringFormatCodes = {
 
 
 class SymbolicSegment {
-  static Decode(buffer, offset, padded, cb) {
-    const segmentCode = buffer.readUInt8(offset); offset += 1;
-
-    if (getBits(segmentCode, 5, 8) !== 3) {
-      throw new Error(`Not a symbolic segment: ${segmentCode}`);
-    }
-
+  static Decode(segmentCode, buffer, offset, padded, cb) {
     const symbolSize = getBits(segmentCode, 0, 5);
 
     let value;

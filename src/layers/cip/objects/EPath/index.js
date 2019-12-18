@@ -1,6 +1,7 @@
 'use strict';
 
 const { getBit, getBits } = require('../../../../utils');
+const Segments = require('./segments');
 
 const SEGMENT_TYPE = {
   PORT: 0x00,
@@ -776,8 +777,41 @@ class EPath {
     return buffer;
   }
 
-  static Decode(buffer, offset, padded, cb) {
-    return Decode(buffer, offset, padded, cb);
+  static Decode(buffer, offset, length, padded, cb) {
+    const startingOffset = offset;
+    const segments = [];
+    while (offset - startingOffset < length) {
+      const segmentCode = buffer.readUInt8(offset); offset += 1;
+      const segmentType = getBits(segmentCode, 5, 8);
+      
+      switch (segmentType) {
+        case 0:
+          offset = Segments.Port.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
+          break;
+        case 1:
+          offset = Segments.Logical.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
+          break;
+        case 2:
+          offset = Segments.Network.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
+          break;
+        case 3:
+          offset = Segments.Symbolic.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
+          break;
+        case 4:
+          offset = Segments.Data.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
+          break;
+        default:
+          throw new Error(`Unexpected segment: ${segmentType}`);
+      }
+    }
+
+    if (typeof cb === 'function') {
+      cb(segments);
+    }
+
+    return offset;
+    
+    // return Decode(buffer, offset, padded, cb);
   }
 
   static DescribeSegments(segments) {
