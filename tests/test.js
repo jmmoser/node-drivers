@@ -53,56 +53,193 @@ const EPath = require('./../src/layers/cip/objects/EPath');
 //   console.log(PCCCPacket.ParseTypedReadData(readBuffer, 0));
 // })();
 
+
+// (() => {
+//   const PortSegment = require('../src/layers/cip/objects/epath/segments/port');
+  
+//   (() => {
+//     const buffer = Buffer.from([0x02, 0x06]);
+//     PortSegment.Decode(buffer, 0, true, console.log);
+//   })();
+
+//   (() => {
+//     const buffer = Buffer.from([0x0F, 0x12, 0x00, 0x01]);
+//     PortSegment.Decode(buffer, 0, true, console.log);
+//   })();
+
+//   (() => {
+//     const buffer = Buffer.from([
+//       0x15, 0x0F, 0x31, 0x33, 0x30, 0x2E,
+//       0x31, 0x35, 0x31, 0x2E, 0x31, 0x33,
+//       0x37, 0x2E, 0x31, 0x30, 0x35, 0x00
+//     ]);
+//     PortSegment.Decode(buffer, 0, true, console.log);
+//   })();
+// })();
+
+
+// (() => {
+//   const LogicalSegment = require('../src/layers/cip/objects/epath/segments/logical');
+  
+//   (() => {
+//     /** Packed EPATH with 8 bit Class */
+//     const buffer = Buffer.from([
+//       0x20, 0x05, 0x24, 0x02, 0x30, 0x01
+//     ]);
+
+//     let offset = 0;
+//     while (offset < buffer.length - 1) {
+//       offset = LogicalSegment.Decode(buffer, offset, false, console.log);
+//     }
+//   })();
+
+//   (() => {
+//     /** Packed EPATH with 16 bit Class */
+//     const buffer = Buffer.from([
+//       0x21, 0x05, 0x00, 0x24, 0x02, 0x30, 0x01
+//     ]);
+
+//     let offset = 0;
+//     while (offset < buffer.length - 1) {
+//       offset = LogicalSegment.Decode(buffer, offset, false, console.log);
+//     }
+//   })();
+
+//   (() => {
+//     /** Padded EPATH with 16 bit Class */
+//     const buffer = Buffer.from([
+//       0x21, 0x00, 0x05, 0x00, 0x24, 0x02, 0x30, 0x01
+//     ]);
+
+//     let offset = 0;
+//     while (offset < buffer.length - 1) {
+//       offset = LogicalSegment.Decode(buffer, offset, true, console.log);
+//     }
+//     console.log(offset, buffer.length);
+//   })();
+
+//   (() => {
+//     /** Electronic Key Segment */
+//     const buffer = Buffer.from([
+//       0x34,
+//       0x04,
+//       0x01, 0x00,
+//       0x02, 0x00,
+//       0x03, 0x00,
+//       0x04,
+//       0x05
+//     ]);
+//     LogicalSegment.Decode(buffer, 0, true, console.log);
+//   })();
+// })();
+
 (() => {
-  const CIP = require('../src/layers/cip/objects/CIP');
-
+  const SymbolicSegment = require('../src/layers/cip/objects/epath/segments/symbolic');
   (() => {
+    /** LS101 */
     const buffer = Buffer.from([
-      0xA2, 0x07, 0xC7, 0xA2, 0x03, 0xC7, 0xC2, 0xC3, 0xC3
+      0x65, 0x4c, 0x53, 0x31, 0x30, 0x31
     ]);
-    const offset = CIP.DecodeDataType(buffer, 0, function (type) {
-      console.log(JSON.stringify(type, null, 2));
-    });
-
-    console.log(buffer.length, offset);
+    const offset = SymbolicSegment.Decode(buffer, 0, false, console.log);
+    console.log(offset === buffer.length);
   })();
 
   (() => {
+    /** Line_23 */
     const buffer = Buffer.from([
-      0xA0, 0x02, 0xC7, 0x26
+      0x67, 0x4c, 0x69, 0x6e, 0x65, 0x5f, 0x32, 0x33
     ]);
-    const offset = CIP.DecodeDataType(buffer, 0, function (type) {
-      console.log(JSON.stringify(type, null, 2));
-    });
-
-    console.log(buffer.length, offset);
-  })();
-
-  (() => {
-    const buffer = Buffer.from([
-      0xA3, 0x13, 0x80, 0x01, 0x00, 0x81, 0x01, 0x13,
-      0xA3, 0x0B, 0x80, 0x01, 0x00, 0x81, 0x01, 0xFF,
-      0xA2, 0x03, 0xC7, 0xC2, 0xC3
-    ]);
-    const offset = CIP.DecodeDataType(buffer, 0, function (type) {
-      console.log(JSON.stringify(type, null, 2));
-    });
-
-    console.log(buffer.length, offset);
-  })();
-
-  (() => {
-    const buffer = Buffer.from([
-      0xA1, 0x06, 0xA1, 0x04, 0xA0, 0x02, 0x59, 0x51
-    ]);
-    const offset = CIP.DecodeDataType(buffer, 0, function (type) {
-      console.log(JSON.stringify(type, null, 2));
-    });
-
-    console.log(buffer.length, offset);
+    const offset = SymbolicSegment.Decode(buffer, 0, false, console.log);
+    console.log(offset === buffer.length);
   })();
   
+  (() => {
+    /** Wire_off */
+    const buffer = Buffer.from([
+      0x68, 0x57, 0x69, 0x72, 0x65, 0x5f, 0x6f, 0x66, 0x66
+    ]);
+    const offset = SymbolicSegment.Decode(buffer, 0, false, console.log);
+    console.log(offset === buffer.length);
+  })();
+
+  (() => {
+    /** Japanese symbol 1234, 2345 */
+    const buffer = Buffer.from([
+      0x60, 0x22, 0x12, 0x34, 0x23, 0x45
+    ]);
+    const offset = SymbolicSegment.Decode(buffer, 0, false, console.log);
+    console.log(offset === buffer.length);
+  })();
+
+  (() => {
+    /** 16 bit Numeric Symbol */
+    const buffer = Buffer.from([
+      0x60, 0xC7, 0x12, 0x34
+    ]);
+    const offset = SymbolicSegment.Decode(buffer, 0, false, console.log);
+    console.log(offset === buffer.length);
+  })();
+
+  (() => {
+    /** 32 bit numeric symbol */
+    const buffer = Buffer.from([
+      0x60, 0xC8, 0x12, 0x34, 0x56, 0x78
+    ]);
+    const offset = SymbolicSegment.Decode(buffer, 0, false, console.log);
+    console.log(offset === buffer.length);
+  })();
 })();
+
+
+// (() => {
+//   const CIP = require('../src/layers/cip/objects/CIP');
+
+//   (() => {
+//     const buffer = Buffer.from([
+//       0xA2, 0x07, 0xC7, 0xA2, 0x03, 0xC7, 0xC2, 0xC3, 0xC3
+//     ]);
+//     const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+//       console.log(JSON.stringify(type, null, 2));
+//     });
+
+//     console.log(buffer.length, offset);
+//   })();
+
+//   (() => {
+//     const buffer = Buffer.from([
+//       0xA0, 0x02, 0xC7, 0x26
+//     ]);
+//     const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+//       console.log(JSON.stringify(type, null, 2));
+//     });
+
+//     console.log(buffer.length, offset);
+//   })();
+
+//   (() => {
+//     const buffer = Buffer.from([
+//       0xA3, 0x13, 0x80, 0x01, 0x00, 0x81, 0x01, 0x13,
+//       0xA3, 0x0B, 0x80, 0x01, 0x00, 0x81, 0x01, 0xFF,
+//       0xA2, 0x03, 0xC7, 0xC2, 0xC3
+//     ]);
+//     const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+//       console.log(JSON.stringify(type, null, 2));
+//     });
+
+//     console.log(buffer.length, offset);
+//   })();
+
+//   (() => {
+//     const buffer = Buffer.from([
+//       0xA1, 0x06, 0xA1, 0x04, 0xA0, 0x02, 0x59, 0x51
+//     ]);
+//     const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+//       console.log(JSON.stringify(type, null, 2));
+//     });
+
+//     console.log(buffer.length, offset);
+//   })();
+// })();
 
 
 

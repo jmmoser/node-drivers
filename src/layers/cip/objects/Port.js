@@ -36,8 +36,8 @@ const InstanceAttributeDataTypes = {
 
 /** CIP Vol 3 Chapter 3-7.3 */
 const PortTypeDescriptions = {
-  0: 'connection terminates in this device',
-  1: 'reserved for compatibility with existing protocols',
+  0: 'Connection terminates in this device',
+  1: 'Reserved for compatibility with existing protocols',
   2: 'ControlNet',
   3: 'ControlNet redundant',
   4: 'EtherNet/IP',
@@ -45,7 +45,7 @@ const PortTypeDescriptions = {
   200: 'CompoNet',
   201: 'Modbus/TCP',
   202: 'Modbus/SL',
-  65535: 'unconfigured port'
+  65535: 'Unconfigured port'
 };
 
 
