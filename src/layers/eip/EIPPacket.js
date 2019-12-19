@@ -255,8 +255,7 @@ function ReadCPFPacket(packet, cb) {
 }
 
 const SocketFamilyNames = {
-  2: 'AF_INET',
-  19: 'AF_INET6'
+  2: 'AF_INET'
 };
 
 EIPReply[Command.ListIdentity] = function(packet) {
