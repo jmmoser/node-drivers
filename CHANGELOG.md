@@ -9,6 +9,7 @@
 - CIP added decoding for data types LREAL, LWORD, and LTIME, STRINGN, STRUCT (formal encoding), EPATH
 - CIP added encoding for data types USINT, BYTE, LWORD, LREAL, STRING, SHORT_STRING, STRING2
 - CIP Connection Slot can now be a number, a string, or a buffer
+- CIP Identity added Device Type Names
 
 ## 2.0.0-beta.3 (2019-12-7)
 - `Logix5000.readTag()` now reads the entire array if the tag is a 1-dimensional array

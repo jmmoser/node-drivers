@@ -254,13 +254,22 @@ function ReadCPFPacket(packet, cb) {
   }
 }
 
+const SocketFamilyNames = {
+  2: 'AF_INET',
+  19: 'AF_INET6'
+};
+
 EIPReply[Command.ListIdentity] = function(packet) {
   ReadCPFPacket(packet, function(item, length, offset, buffer) {
     if (item.type === CPFItemID.ListIdentity) {
       item.encapsulationProtocolVersion = buffer.readUInt16LE(offset); offset += 2;
 
       const socket = {};
-      socket.family = buffer.readInt16BE(offset); offset += 2;
+      const familyCode = buffer.readInt16BE(offset); offset += 2;
+      socket.family = {
+        code: familyCode,
+        name: SocketFamilyNames[familyCode] || 'Unknown'
+      };
       socket.port = buffer.readUInt16BE(offset); offset += 2;
       const addr = [];
       for (let i = 0; i < 4; i++) {

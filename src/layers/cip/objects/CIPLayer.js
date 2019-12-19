@@ -184,36 +184,29 @@ class CIPLayer extends Layer {
   }
 
 
-  messageRouterClassAttributes(callback) {
-    return CallbackPromise(callback, resolver => {
-      const service = CIP.CommonServices.GetAttributesAll;
+  // messageRouterClassAttributes(callback) {
+  //   return CallbackPromise(callback, resolver => {
+  //     const service = CIP.CommonServices.GetAttributesAll;
 
-      const path = EPath.Encode(
-        CIP.Classes.Identity,
-        0,
-        // 0x04
-      );
+  //     const path = EPath.Encode(
+  //       CIP.Classes.Identity,
+  //       0
+  //     );
 
-      CIPLayer.send(this, true, service, path, null, (error, reply) => {
-        if (error) {
-          resolver.reject(error, reply);
-        } else {
-          try {
-            console.log(reply);
-            // Identity.ParseInstanceAttributesAll(reply.data, 0, function (info) {
-            //   resolver.resolve(info);
-            // });
-            resolver.resolve(reply);
-            // MessageRouter.DecodeGetAttributesAll(reply.data, 0, function(info) {
-            //   resolver.resolve(info);
-            // });
-          } catch (err) {
-            resolver.reject(err, reply);
-          }
-        }
-      });
-    });
-  }
+  //     CIPLayer.send(this, true, service, path, null, (error, reply) => {
+  //       if (error) {
+  //         resolver.reject(error, reply);
+  //       } else {
+  //         try {
+  //           console.log(reply);
+  //           resolver.resolve(reply);
+  //         } catch (err) {
+  //           resolver.reject(err, reply);
+  //         }
+  //       }
+  //     });
+  //   });
+  // }
 
 
 
@@ -233,13 +226,7 @@ class CIPLayer extends Layer {
         } else {
           try {
             console.log(reply);
-            // Identity.ParseInstanceAttributesAll(reply.data, 0, function (info) {
-            //   resolver.resolve(info);
-            // });
             resolver.resolve(reply);
-            // MessageRouter.DecodeGetAttributesAll(reply.data, 0, function(info) {
-            //   resolver.resolve(info);
-            // });
           } catch (err) {
             resolver.reject(err, reply);
           }

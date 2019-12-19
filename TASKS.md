@@ -3,6 +3,7 @@
   - [X] EIP passes down port 44818 to TCP layer
   - [X] modbus passes down port 502 to TCP layer
 - [ ] Logix5000
+  - [ ] use UCMM to get identity and verify device type is programmable logic controller
   - [X] fix reading symbol structures
   - [X] getTagSymbolInstanceID and _highestListedSymbolInstanceID need to be scoped (global scope vs program scope)
   - [X] When Program data type is read, read all symbols contained

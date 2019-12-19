@@ -131,7 +131,7 @@ class MessageRouter {
   }
 
 
-  static DecodeGetAttributesAll(data, offset, cb) {
+  static DecodeGetClassAttributesAll(data, offset, cb) {
     const info = {};
     info.data = data;
     const length = data.length;
