@@ -6,6 +6,8 @@ const {
   InvertKeyValues
 } = require('../../../utils');
 
+const EPath = require('./EPath');
+
 /** 
  * Ref. CIP Vol 1 Table 5.1
  * and https://github.com/Res260/wireshark/blob/b7107f5fcb9bcc20be33b6263f90d1b20cc1591d/epan/dissectors/packet-cip.c
@@ -122,7 +124,7 @@ const CommonServices = {
   Stop: 0x07,
   Create: 0x08,
   Delete: 0x09,
-  MultipleServicePacket: 0x0A,
+  MultipleServicePacket: 0x0A, /** CIP Vol 1, A-4.10.2 */
   ApplyAttributes: 0x0D,
   GetAttributeSingle: 0x0E,
   SetAttributeSingle: 0x10,
@@ -142,7 +144,9 @@ const CommonServiceNames = InvertKeyValues(CommonServices);
 
 // CIP Vol1 Table C-6.1
 const DataTypeCodes = {
-  UNKNOWN: -1, // THIS CAN NEVER BE SENT EXTERNAL BECAUSE DATATYPE CODE IS ALREADY READ AS UNSIGNED
+  /** DATATYPES FROM EXTERNAL SOURCES CANNOT BE NEGATIVE BECAUSE CODE IS READ AS UNSIGNED */
+  SMEMBER: -2,
+  UNKNOWN: -1, 
 
   BOOL: 0xC1,
   SINT: 0xC2,
@@ -272,8 +276,13 @@ const DataType = {
   TIME() {
     return { type: DataType.TIME, code: DataTypeCodes.TIME };
   },
-  EPATH(padded) {
-    return { type: DataType.EPATH, code: DataTypeCodes.EPATH, padded };
+  // EPATH(padded) {
+  //   return function(length) {
+  //     return { type: DataType.EPATH, code: DataTypeCodes.EPATH, padded, length };
+  //   }
+  // },
+  EPATH(padded, length) {
+    return { type: DataType.EPATH, code: DataTypeCodes.EPATH, padded, length };
   },
   ENGUNIT() {
     return { type: DataType.ENGUNIT, code: DataTypeCodes.ENGUNIT };
@@ -301,13 +310,17 @@ const DataType = {
       itemType
     };
   },
-  STRUCT(members) {
+  /**
+   * contextCallback(dataType, iteration, members)
+   *  - is called before each member is decoded */
+  STRUCT(members, contextCallback) {
     return {
       type: DataType.STRUCT,
       code: DataTypeCodes.STRUCT,
       constructed: true,
       abbreviated: false,
-      members
+      members,
+      contextCallback
     };
   },
   ARRAY(lowerBound, upperBound, itemType, boundTags) {
@@ -322,6 +335,10 @@ const DataType = {
       boundTags
     };
   },
+
+  SMEMBER(member, filter) {
+    return { type: DataType.SMEMBER, code: DataTypeCodes.SMEMBER, member, filter }
+  }
 };
 
 
@@ -401,10 +418,14 @@ function DecodeDataType(buffer, offset, cb) {
 }
 
 
-function Decode(dataType, buffer, offset, cb) {
+function Decode(dataType, buffer, offset, cb, ctx) {
   let value;
 
   if (dataType instanceof Function) dataType = dataType();
+
+  if (ctx && ctx.dataTypeCallback) {
+    dataType = ctx.dataTypeCallback(dataType) || dataType;
+  }
 
   let dataTypeCode = dataType;
 
@@ -484,13 +505,32 @@ function Decode(dataType, buffer, offset, cb) {
     case DataTypeCodes.LREAL:
       value = buffer.readDoubleLE(offset);
       break;
+    case DataTypeCodes.SMEMBER:
+      offset = Decode(dataType.member, buffer, offset, val => value = val);
+      break;
     case DataTypeCodes.STRUCT: {
       /** Name of members is not known so use array to hold decoded member values */
       value = [];
-      dataType.members.forEach(member => {
-        offset = Decode(member, buffer, offset, function(memberValue) {
+      const hasContextCallback = typeof dataType.contextCallback === 'function';
+      dataType.members.forEach((member, idx) => {
+        let ctx;
+        if (hasContextCallback) {
+          // dataType.contextCallback(member, dataType, idx, value);
+          ctx = {
+            dataTypeCallback: function(dt) {
+              return dataType.contextCallback(dt, value, idx, dataType);
+            }
+          };
+        }
+        offset = Decode(member, buffer, offset, function (memberValue) {
           value.push(memberValue);
-        });
+        }, ctx);
+        // offset = Decode(member, buffer, offset, function(memberValue) {
+        //   value.push(memberValue);
+        // });
+      });
+      value = value.filter((val, idx) => {
+        return !(dataType.members[idx].code === DataTypeCodes.SMEMBER && dataType.members[idx].filter === true);
       });
       break;
     }
@@ -503,6 +543,9 @@ function Decode(dataType, buffer, offset, cb) {
       }
       break;
     }
+    case DataTypeCodes.EPATH:
+      offset = EPath.Decode(buffer, offset, dataType.length, dataType.padded, val => value = val);
+      break;
     case DataTypeCodes.UNKNOWN: {
       value = buffer.slice(offset, offset + dataType.length);
       offset += dataType.length;

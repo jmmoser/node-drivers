@@ -5,8 +5,9 @@
 - Logix5000 can read program symbols, returns an object with all scoped symbols
 - Logix5000 can now determine size of single-dimension arrays and reads the entire array if elements is not specified
 - UDP layer now receives default port 44818 from upper EIP layer if user or previous layer does not specify port
-- CIP added decoding for data types LREAL, LWORD, and LTIME, STRINGN, STRUCT (formal encoding)
+- CIP added decoding for data types LREAL, LWORD, and LTIME, STRINGN, STRUCT (formal encoding), EPATH
 - CIP added encoding for data types USINT, BYTE, LWORD, LREAL, STRING, SHORT_STRING, STRING2
+- CIP Connection Slot can now be a number, a string, or a buffer
 
 ## 2.0.0-beta.3 (2019-12-7)
 - `Logix5000.readTag()` now reads the entire array if the tag is a 1-dimensional array

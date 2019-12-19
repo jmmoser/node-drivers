@@ -25,7 +25,14 @@ const InstanceAttributeNames = InvertKeyValues(InstanceAttributeCodes);
 const InstanceAttributeDataTypes = {
   [InstanceAttributeCodes.Type]: DataType.UINT,
   [InstanceAttributeCodes.Number]: DataType.UINT,
-  [InstanceAttributeCodes.Link]: DataType.STRUCT([DataType.UINT, DataType.EPATH(true)]),
+  [InstanceAttributeCodes.Link]: DataType.STRUCT([DataType.SMEMBER(DataType.UINT, true), DataType.EPATH(true)], function (dataType, members, idx) {
+    if (idx === 1) {
+      // console.log(members);
+      // console.log(`Setting epath length: ${2 * members[0]}`);
+      // dataType.length = 2 * members[0];
+      return DataType.EPATH(true, 2 * members[0]);
+    }
+  }),
   [InstanceAttributeCodes.Name]: DataType.SHORT_STRING,
   [InstanceAttributeCodes.TypeName]: DataType.SHORT_STRING,
   [InstanceAttributeCodes.Description]: DataType.SHORT_STRING,
@@ -55,23 +62,12 @@ class Port {
   }
 
   static InstanceTypeDescription(type) {
+    /** type can be a number or the value from DecodeInstanceAttribute */
+    type = type != null ? type.code || type : -1;
     return PortTypeDescriptions[type] || 'Unknown';
   }
 
   static DecodeInstanceAttribute(attribute, data, offset, cb) {
-    if (attribute === InstanceAttributeCodes.NodeAddress) {
-      /**
-       * A device which does not have a node number on the port can indicate
-       * a zero length node address within the Port Segment (0x10 0x00).
-       */
-      if (data.readUInt16LE(offset) === 1) {
-        if (typeof cb === 'function') {
-          cb(value);
-        }
-        return offset + 2;
-      }
-    }
-
     const dataType = InstanceAttributeDataTypes[attribute];
     if (!dataType) {
       throw new Error(`Unknown instance attribute: ${attribute}`);

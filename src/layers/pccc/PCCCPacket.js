@@ -3,7 +3,8 @@
 const {
   getBit,
   getBits,
-  encodeUnsignedInteger
+  encodeUnsignedInteger,
+  sizeToEncodeUnsignedInteger
 } = require('../../utils');
 
 
@@ -264,22 +265,11 @@ function logicalASCIIAddress(address, buffer, offset = 0) {
 }
 
 
-function numberOfBytesToSerializeInteger(i) {
-  if (i < 0x10000) {
-    if (i < 0x100) return 1;
-    else return 2;
-  } else {
-    if (i < 0x100000000/*L*/) return 4;
-    else return 8;
-  }
-}
-
-
 function dataTypeAttributeAdditionalEncodingLength(value) {
   if (value < 7) {
     return 0;
   } else {
-    return numberOfBytesToSerializeInteger(value);
+    return sizeToEncodeUnsignedInteger(value);
   }
 }
 

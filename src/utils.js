@@ -10,6 +10,17 @@ function getBit(k, n) {
 }
 
 
+function sizeToEncodeUnsignedInteger(i) {
+  if (i < 0x10000) {
+    if (i < 0x100) return 1;
+    else return 2;
+  } else {
+    if (i < 0x100000000/*L*/) return 4;
+    else return 8;
+  }
+}
+
+
 function encodeUnsignedInteger(data, offset, value, size) {
   switch (size) {
     case 1:
@@ -225,6 +236,7 @@ function CallbackPromise(callback, func, timeout) {
 module.exports = {
   getBits,
   getBit,
+  sizeToEncodeUnsignedInteger,
   encodeUnsignedInteger,
   decodeUnsignedInteger,
   once,

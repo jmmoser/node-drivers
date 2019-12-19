@@ -34,7 +34,7 @@ const SymbolServiceCodes = {
   WriteTag: 0x4D,
   WriteTagFragmented: 0x53,
   ReadModifyWriteTag: 0x4E,
-  MultipleServicePacket: 0x0A,
+  // MultipleServicePacket: 0x0A, // Common service defined by CIP
 
   GetInstanceAttributeList: 0x55
 };

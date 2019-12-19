@@ -139,7 +139,7 @@ function mergeOptionsWithDefaults(self, options) {
   self.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
   self.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
   self.Port = options.Port || 1;
-  self.ProcessorSlot = options.ProcessorSlot || 0;
+  self.Slot = options.Slot || 0;
 }
 
 function handleForwardOpen(self, message, info, context) {
@@ -181,7 +181,6 @@ function handleForwardClose(self, message, info, context) {
   if (message.status.code === 0) {
     const reply = ConnectionManager.ForwardCloseReply(message.data);
     self._connectionState = 0;
-    // console.log('CIP CLOSED!');
     if (self._disconnectCallback) {
       self._disconnectCallback(reply);
       clearTimeout(self._disconnectTimeout);

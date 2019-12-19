@@ -30,54 +30,65 @@ const EPath = require('../src/layers/cip/objects/EPath');
 // })();
 
 
+
 // (() => {
-//   const PCCCPacket = require('../src/layers/pccc/PCCCPacket');
-//   // console.log(PCCCPacket.WordRangeReadRequest(1, 'F8:1'));
-//   // const writeRequest = PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]);
-//   // const writeRequest = PCCCPacket.TypedWriteRequest(3, 'F8:1', 1000.0);
-//   const writeRequest = PCCCPacket.TypedWriteRequest(3, 'N7:10', [1000.0, 0, 5.5]);
-//   // console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]));
-//   // console.log(PCCCPacket.TypedWriteRequest(3, 'F8:1', [1000.0, 0, -5.5]));
-//   // console.log(require('../src/utils').getBit(0x94, 7));
-//   // console.log(require('../src/utils').getBits(0x94, 4, 7));
+//   /** Port Segments */
+//   (() => {
+//     const buffer = Buffer.from([0x02, 0x06]);
+//     const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
+//     console.log(offset === buffer.length);
+//   })();
 
-//   // const readBuffer = Buffer.from([
-//   //   0x92, 0x09, 0x94, 0x08, 0x00, 0x00, 0x7a, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb0, 0xc0
-//   // ]);
+//   (() => {
+//     const buffer = Buffer.from([0x0F, 0x12, 0x00, 0x01]);
+//     const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
+//     console.log(offset === buffer.length);
+//   })();
 
-//   console.log(writeRequest);
-
-//   const readBuffer = writeRequest.slice(17);
-//   console.log(readBuffer);
-
-//   console.log(PCCCPacket.ParseTypedReadData(readBuffer, 0));
+//   (() => {
+//     const buffer = Buffer.from([
+//       0x15, 0x0F, 0x31, 0x33, 0x30, 0x2E,
+//       0x31, 0x35, 0x31, 0x2E, 0x31, 0x33,
+//       0x37, 0x2E, 0x31, 0x30, 0x35, 0x00
+//     ]);
+//     const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
+//     console.log(offset === buffer.length);
+//   })();
 // })();
 
 
-(() => {
-  /** Port Segments */
-  (() => {
-    const buffer = Buffer.from([0x02, 0x06]);
-    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-    console.log(offset === buffer.length);
-  })();
+// (() => {
+//   const PortSegment = require('../src/layers/cip/objects/EPath/segments/port');
+//   console.log(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
+//   console.log(PortSegment.EncodeSize(18, Buffer.from([0x01])) === 4);
+//   console.log(PortSegment.EncodeSize(5, Buffer.from([
+//     0x31, 0x33, 0x30, 0x2E,
+//     0x31, 0x35, 0x31, 0x2E,
+//     0x31, 0x33, 0x37, 0x2E,
+//     0x31, 0x30, 0x35
+//   ])) === 18);
 
-  (() => {
-    const buffer = Buffer.from([0x0F, 0x12, 0x00, 0x01]);
-    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-    console.log(offset === buffer.length);
-  })();
+//   (() => {
+//     const buffer = Buffer.alloc(2);
+//     console.log(PortSegment.Encode(buffer, 0, 2, Buffer.from([0x06])), buffer);
+//   })();
 
-  (() => {
-    const buffer = Buffer.from([
-      0x15, 0x0F, 0x31, 0x33, 0x30, 0x2E,
-      0x31, 0x35, 0x31, 0x2E, 0x31, 0x33,
-      0x37, 0x2E, 0x31, 0x30, 0x35, 0x00
-    ]);
-    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-    console.log(offset === buffer.length);
-  })();
-})();
+//   (() => {
+//     const buffer = Buffer.alloc(4);
+//     console.log(PortSegment.Encode(buffer, 0, 18, Buffer.from([0x01])), buffer);
+//   })();
+
+//   (() => {
+//     const buffer = Buffer.alloc(18);
+//     console.log(PortSegment.Encode(buffer, 0, 5, Buffer.from([
+//       0x31, 0x33, 0x30, 0x2E,
+//       0x31, 0x35, 0x31, 0x2E,
+//       0x31, 0x33, 0x37, 0x2E,
+//       0x31, 0x30, 0x35
+//     ])), buffer);
+//   })();
+// })();
+
 
 
 // (() => {
@@ -124,6 +135,7 @@ const EPath = require('../src/layers/cip/objects/EPath');
 //     console.log(offset === buffer.length);
 //   })();
 // })();
+
 
 // (() => {
 //   /** Symbolic Segments */

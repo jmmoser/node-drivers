@@ -778,6 +778,11 @@ class EPath {
   }
 
   static Decode(buffer, offset, length, padded, cb) {
+    const lengthIsUnknown = length == null;
+    if (lengthIsUnknown) {
+      /** Allow length to be unknown? Assume a single segment */
+      length = 1;
+    }
     const startingOffset = offset;
     const segments = [];
     while (offset - startingOffset < length) {
@@ -806,7 +811,15 @@ class EPath {
     }
 
     if (typeof cb === 'function') {
-      cb(segments);
+      if (segments.length === 0) {
+        console.log(arguments);
+        console.log(new Error())
+      }
+      if (lengthIsUnknown && segments.length === 1) {
+        cb(segments[0]);
+      } else {
+        cb(segments);
+      }
     }
 
     return offset;
@@ -820,5 +833,6 @@ class EPath {
 }
 
 
+EPath.Segments = Segments;
 
 module.exports = EPath;
