@@ -102,7 +102,8 @@ class PCCCPacket {
      * For example, if the previous command read the maximum 244 bytes, the next
      * offset should be 122.
      */
-    offset = data.writeUInt16LE(0, offset); 
+    offset = data.writeUInt16LE(0, offset);
+    
     /**
      * TOTAL TRANSACTION
      * Indicates the total amount of PLC-3 data table words (low byte first)
@@ -126,7 +127,7 @@ class PCCCPacket {
       throw new Error(`Maximum size of a single word range read transaction is 244. Received: ${size}`);
     }
     offset = data.writeUInt8(size, offset); 
-    console.log(new PCCCPacket(0x0F, 0, transaction, data).toBuffer().length);
+    // console.log(new PCCCPacket(0x0F, 0, transaction, data).toBuffer().length);
     return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
   }
 

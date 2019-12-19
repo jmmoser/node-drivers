@@ -97,6 +97,21 @@ const TemplateInstanceAttributeDataTypes = {
 };
 
 
+const TemplateClassAttributeCodes = {
+  Unknown1: 1,
+  Unknown2: 2,
+  Unknown3: 3,
+  Unknown8: 8
+};
+
+const TemplateClassAttributeDataTypes = {
+  [TemplateClassAttributeCodes.Unknown1]: DataType.UNKNOWN(2),
+  [TemplateClassAttributeCodes.Unknown2]: DataType.UNKNOWN(4),
+  [TemplateClassAttributeCodes.Unknown3]: DataType.UNKNOWN(4),
+  [TemplateClassAttributeCodes.Unknown8]: DataType.UNKNOWN(4),
+};
+
+
 
 const GenericServiceStatusDescriptions = {
   0x04: 'A syntax error was detected decoding the Request Path',
@@ -129,6 +144,8 @@ module.exports = {
   SymbolInstanceAttributeDataTypes,
   // SymbolServiceErrorDescriptions,
   TemplateServiceCodes,
+  TemplateClassAttributeCodes,
+  TemplateClassAttributeDataTypes,
   TemplateInstanceAttributeCodes,
   TemplateInstanceAttributeDataTypes,
   // TemplateServiceErrorDescriptions,

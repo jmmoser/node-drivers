@@ -138,33 +138,49 @@ class CIPLayer extends Layer {
     }
 
     return CallbackPromise(callback, async resolver => {
-      const service = CIP.CommonServices.GetAttributeSingle;
+      const service = CIP.CommonServices.GetAttributesAll;
+      const path = EPath.Encode(
+        classCode,
+        instanceID
+      );
+      const reply = await this.request(true, service, path);
 
-      const attributes = [];
-
-      for (let i = 1; i < maxAttribute; i++) {
-        try {
-          const path = EPath.Encode(
-            classCode,
-            instanceID,
-            i
-          );
-          const reply = await this.request(true, service, path);
-          attributes.push({
-            code: i,
-            data: reply.data
-          });
-        } catch (err) {
-          if (!err.info || !err.info.status || err.info.status.code !== 20) {
-            return resolver.reject(err);
-          } else {
-            //
-          }
-        }
-      }
-
-      resolver.resolve(attributes);
+      resolver.resolve(reply.data);
     });
+
+    // return CallbackPromise(callback, async resolver => {
+    //   const service = CIP.CommonServices.GetAttributeSingle;
+
+    //   const attributes = [];
+
+    //   for (let i = 1; i < maxAttribute; i++) {
+    //     try {
+    //       const path = EPath.Encode(
+    //         classCode,
+    //         instanceID
+    //       );
+    //       const reply = await this.request(true, service, path, Buffer.from([i]));
+    //       // const path = EPath.Encode(
+    //       //   classCode,
+    //       //   instanceID,
+    //       //   i
+    //       // );
+    //       // const reply = await this.request(true, service, path);
+    //       attributes.push({
+    //         code: i,
+    //         data: reply.data
+    //       });
+    //     } catch (err) {
+    //       if (!err.info || !err.info.status || err.info.status.code !== 20) {
+    //         return resolver.reject(err);
+    //       } else {
+    //         //
+    //       }
+    //     }
+    //   }
+
+    //   resolver.resolve(attributes);
+    // });
   }
 
 
@@ -262,6 +278,7 @@ class CIPLayer extends Layer {
         callback(error);
       } else {
         const reply = MessageRouter.Reply(message);
+        reply.request = request;
 
         // console.log('IN:', message);
         // // console.log('IN:', JSON.stringify(message));

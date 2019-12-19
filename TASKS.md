@@ -15,7 +15,10 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays
 - [ ] CIP
+  - [ ] ConnectionManager implement LargeForwardOpen
   - [ ] Improve ConnectionManager functions to use EPATH
+    - [X] Port Segment
+    - [ ] Message Router Logical Segments
   - [ ] Allow explicit unconnected sends even with connection
   - [X] DecodeDataType with structs/arrays
   - [X] Hook up DecodeDataType to Decode
@@ -24,7 +27,7 @@
   - [ ] add decoding for STRINGI
   - [ ] add encoding for STRINGN
   - [X] add decoding for STRINGN
-  - [X] CIP add custructed DataTypes (Array[Int])
+  - [ ] CIP add custructed DataTypes (Array[Int])
     - [X] Add decoding for constructed data types
     - [ ] Add encoding for constructed data types
   - [ ] Improve data type encoding

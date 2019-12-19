@@ -91,50 +91,58 @@ const EPath = require('../src/layers/cip/objects/EPath');
 
 
 
-// (() => {
-//   /** Logical Segments */
-//   (() => {
-//     /** Packed EPATH with 8 bit Class */
-//     const buffer = Buffer.from([
-//       0x20, 0x05, 0x24, 0x02, 0x30, 0x01
-//     ]);
-//     const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-//     console.log(offset === buffer.length);
-//   })();
+(() => {
+  /** Logical Segments */
+  (() => {
+    /** Packed EPATH with 8 bit Class */
+    const buffer = Buffer.from([
+      0x20, 0x05, 0x24, 0x02, 0x30, 0x01
+    ]);
+    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
+    console.log(offset === buffer.length);
+  })();
 
-//   (() => {
-//     /** Packed EPATH with 16 bit Class */
-//     const buffer = Buffer.from([
-//       0x21, 0x05, 0x00, 0x24, 0x02, 0x30, 0x01
-//     ]);
-//     const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-//     console.log(offset === buffer.length);
-//   })();
+  (() => {
+    /** Packed EPATH with 16 bit Class */
+    const buffer = Buffer.from([
+      0x21, 0x05, 0x00, 0x24, 0x02, 0x30, 0x01
+    ]);
+    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
+    console.log(offset === buffer.length);
+  })();
 
-//   (() => {
-//     /** Padded EPATH with 16 bit Class */
-//     const buffer = Buffer.from([
-//       0x21, 0x00, 0x05, 0x00, 0x24, 0x02, 0x30, 0x01
-//     ]);
-//     const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-//     console.log(offset === buffer.length);
-//   })();
+  (() => {
+    /** Padded EPATH with 16 bit Class */
+    const buffer = Buffer.from([
+      0x21, 0x00, 0x05, 0x00, 0x24, 0x02, 0x30, 0x01
+    ]);
+    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
+    console.log(offset === buffer.length);
+  })();
 
-//   (() => {
-//     /** Electronic Key Segment */
-//     const buffer = Buffer.from([
-//       0x34,
-//       0x04,
-//       0x01, 0x00,
-//       0x02, 0x00,
-//       0x03, 0x00,
-//       0x04,
-//       0x05
-//     ]);
-//     const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-//     console.log(offset === buffer.length);
-//   })();
-// })();
+  (() => {
+    /** Electronic Key Segment */
+    const buffer = Buffer.from([
+      0x34,
+      0x04,
+      0x01, 0x00,
+      0x02, 0x00,
+      0x03, 0x00,
+      0x04,
+      0x05
+    ]);
+    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
+    console.log(offset === buffer.length);
+  })();
+
+  (() => {
+    const buffer = Buffer.from([
+      0x20, 0x6c, 0x25, 0x00, 0x52, 0x08, 0x30, 0x01
+    ]);
+    const offset = EPath.Decode(buffer, 0, buffer.length, true, console.log);
+    console.log(offset === buffer.length);
+  })();
+})();
 
 
 // (() => {

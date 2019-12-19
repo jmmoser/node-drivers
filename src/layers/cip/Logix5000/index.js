@@ -43,6 +43,8 @@ const {
   SymbolInstanceAttributeNames,
   SymbolInstanceAttributeDataTypes,
   TemplateServiceCodes,
+  TemplateClassAttributeCodes,
+  TemplateClassAttributeDataTypes,
   TemplateInstanceAttributeCodes,
   TemplateInstanceAttributeDataTypes,
   GenericServiceStatusDescriptions
@@ -497,15 +499,10 @@ class Logix5000 extends CIPLayer {
   }
 
 
-  readTemplate(templateID, forceRefresh, callback) {
-    if (typeof forceRefresh === 'function' && callback == null) {
-      callback = forceRefresh;
-      forceRefresh = false;
-    }
-
+  readTemplate(templateID, callback) {
     return CallbackPromise(callback, async resolver => {
       try {
-        if (forceRefresh !== true && this._templates.has(templateID)) {
+        if (this._templates.has(templateID)) {
           return resolver.resolve(this._templates.get(templateID));
         }
 
@@ -599,15 +596,54 @@ class Logix5000 extends CIPLayer {
   }
 
 
-  readTemplateInstanceAttributes(templateID, forceRefresh, callback) {
-    if (typeof forceRefresh === 'function' && callback == null) {
-      callback = forceRefresh;
-      forceRefresh = false;
-    }
+  readTemplateClassAttributes(callback) {
+    return CallbackPromise(callback, async resolver => {
+      const service = CommonServices.GetAttributeList;
 
+      const path = EPath.Encode(
+        ClassCodes.Template,
+        0
+      );
+
+      const reply = await sendPromise(this, service, path, encodeAttributes([
+        1, 2, 3, 8, /** 9 timed out?? */
+      ]));
+
+      const { data } = reply;
+
+      let offset = 0;
+      const attributeCount = data.readUInt16LE(offset); offset += 2;
+      const attributes = {};
+
+      for (let i = 0; i < attributeCount; i++) {
+        let attribute, status;
+        offset = Decode(DataType.UINT, data, offset, val => attribute = val);
+        offset = Decode(DataType.UINT, data, offset, val => status = val);
+
+        const attributeDataType = TemplateClassAttributeDataTypes[attribute];
+
+        if (attributeDataType == null) {
+          throw new Error(`Unknown template attribute received: ${attribute}`);
+        }
+
+        if (status === 0) {
+          offset = Decode(attributeDataType, data, offset, val => {
+            attributes[attribute] = val;
+          });
+        } else {
+          throw new Error(`Attribute ${attribute} has error status: ${GenericServiceStatusDescriptions[status] || 'Unknown'}`);
+        }
+      }
+
+      resolver.resolve(attributes);
+    });
+  }
+
+
+  readTemplateInstanceAttributes(templateID, callback) {
     return CallbackPromise(callback, resolver => {
       try {
-        if (forceRefresh !== true && this._templateInstanceAttributes.has(templateID)) {
+        if (this._templateInstanceAttributes.has(templateID)) {
           return resolver.resolve(this._templateInstanceAttributes.get(templateID));
         }
 
@@ -1273,7 +1309,7 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
       try {
         reply = await sendPromise(layer, service, path, data, timeout);
       } catch (err) {
-        console.log(instanceID, path, data)
+        // console.log(instanceID, path, data)
         retry++;
         console.log(err);
       }
