@@ -16,6 +16,7 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays
 - [ ] CIP
+  - [ ] Consider making CIPLayer intelligent, uses upper layer to determine if it is forwarding PCCC, Modbus, etc.
   - [ ] Add I/O Connections
   - [ ] Connection object add reading attributes (attribute 2 is instance type)
   - [ ] Read CIP Vol 1 Chapter 10 regarding briding and routing
