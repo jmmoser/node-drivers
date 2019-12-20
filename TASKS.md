@@ -48,3 +48,19 @@
 - [ ] PCCC
   - [ ] Word range read request must be an even number of bytes??
   - [ ] Abstract word range read request where total bytes to read is greater than 228
+- [ ] Modbus
+  - [ ] improve readHoldingRegisters address/number support
+    - [ ] addressing using string, '40001' or '400001'
+    - [ ] addressing using string with data type '40001S'
+    - [ ] Data types
+      - [ ] Boolean (1-bit with position)
+      - [ ] Word (unsigned 16-bit)
+      - [ ] Short (signed 16-bit)
+      - [ ] DWord (unsigned 32-bit)
+      - [ ] Long (signed 32-bit)
+      - [ ] Binary-coded decimal, BCD (two-byte packed)
+      - [ ] Long binary-coded decimal, LBCD (four-byte packed)
+      - [ ] float (32-bit floating point)
+      - [ ] double (64-bit floating point)
+      - [ ] ascii string Lo-Hi (null-terminated)
+      - [ ] ascii string Hi-Lo (null-terminated)

@@ -8,10 +8,10 @@ const Functions = {
   ReadHoldingRegisters: 0x03,
   ReadInputRegisters: 0x04,
   WriteSingleCoil: 0x05,
-  WriteSingleRegister: 0x06,
+  WriteSingleHoldingRegister: 0x06,
   ReadExceptionStatus: 0x07,
   WriteMultipleCoils: 0x0F,
-  WriteMultipleRegisters: 0x10,
+  WriteMultipleHoldingRegisters: 0x10,
   ReportSlaveID: 0x11,
   MaskWriteRegister: 0x16,
   WriteAndReadRegisters: 0x17

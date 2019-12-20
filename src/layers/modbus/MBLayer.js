@@ -12,9 +12,12 @@ const {
   ReadHoldingRegisters,
   WriteSingleCoil,
   WriteMultipleCoils,
-  WriteSingleRegister,
-  // WriteMultipleRegisters
+  WriteSingleHoldingRegister,
+  WriteMultipleHoldingRegisters
 } = MB.Functions;
+
+// /** this needs to be improved */
+// const HoldingRegisterAddressRegex = /^0?4\d{4,5}/;
 
 const DefaultOptions = {
   'tcp': {
@@ -68,40 +71,39 @@ class MBLayer extends Layer {
     }
   }
 
-  readDiscreteInputs(address, count, callback) {
-    return readRequest(this, ReadDiscreteInputs, address, count, callback);
+  readDiscreteInputs(inputAddressing, count, callback) {
+    return readRequest(this, ReadDiscreteInputs, inputAddressing, count, callback);
   }
 
-  readCoils(address, count, callback) {
-    return readRequest(this, ReadCoils, address, count, callback);
+  readCoils(inputAddressing, count, callback) {
+    return readRequest(this, ReadCoils, inputAddressing, count, callback);
   }
 
-  readInputRegisters(address, count, callback) {
-    return readRequest(this, ReadInputRegisters, address, count, callback);
+  readInputRegisters(inputAddressing, count, callback) {
+    return readRequest(this, ReadInputRegisters, inputAddressing, count, callback);
   }
 
-  readHoldingRegisters(address, count, callback) {
-    return readRequest(this, ReadHoldingRegisters, address, count, callback);
+  readHoldingRegisters(inputAddressing, count, callback) {
+    return readRequest(this, ReadHoldingRegisters, inputAddressing, count, callback);
   }
 
-  writeSingleCoil(address, value, callback) {
-    return writeRequest(this, WriteSingleCoil, address, [value ? 0x00FF : 0x0000], callback);
+  writeSingleCoil(inputAddressing, value, callback) {
+    return writeRequest(this, WriteSingleCoil, inputAddressing, [value ? 0x00FF : 0x0000], callback);
   }
 
-  writeMultipleCoils(address, values, callback) {
+  writeMultipleCoils(inputAddressing, values, callback) {
     for (let i = 0; i < values.length; i++) {
       values[i] = values[i] ? 0x00FF : 0x0000;
     }
-    return writeRequest(this, WriteMultipleCoils, address, values, callback);
+    return writeRequest(this, WriteMultipleCoils, inputAddressing, values, callback);
   }
 
-  writeSingleRegister(address, values, callback) {
-    return writeRequest(this, WriteSingleRegister, address, values, callback);
+  writeSingleHoldingRegister(inputAddressing, values, callback) {
+    return writeRequest(this, WriteSingleHoldingRegister, inputAddressing, values, callback);
   }
 
-  writeMultipleRegisters(address, values, callback) {
+  writeMultipleHoldingRegisters(inputAddressing, values, callback) {
     return CallbackPromise(callback, resolver => {
-      // const fn = Functions.WriteMultipleRegisters;
       resolver.reject('Not supported yet');
     });
   }
@@ -155,11 +157,11 @@ class MBLayer extends Layer {
 module.exports = MBLayer;
 
 
-function readRequest(self, fn, address, count, callback) {
+function readRequest(self, fn, input, count, callback) {
   return CallbackPromise(callback, resolver => {
-    const data = self._frameClass.ReadRequest(address, count);
+    const addressing = parseAddressingInput(fn, input);
+    const data = self._frameClass.ReadRequest(addressing.input, count);
     self._send(fn, data, {}, resolver);
-    // send(self, fn, data, resolver);
   });
 }
 
@@ -167,32 +169,8 @@ function writeRequest(self, fn, address, values, callback) {
   return CallbackPromise(callback, resolver => {
     const data = self._frameClass.WriteRequest(address, values);
     self._send(fn, data, {}, resolver);
-    // send(self, fn, data, resolver);
   });
 }
-
-
-// function readRequest(startingAddress, count) {
-//   const buffer = Buffer.allocUnsafe(4);
-//   buffer.writeUInt16BE(startingAddress, 0);
-//   buffer.writeUInt16BE(count, 2);
-//   return buffer;
-// }
-
-// function writeRequest(startingAddress, values) {
-//   const buffer = Buffer.alloc(3 + 2 * values.length);
-//   buffer.writeUInt8(functionCode, 0);
-//   buffer.writeUInt16BE(startingAddress, 1);
-//   for (let i = 0; i < values.length; i++) {
-//     values[i].copy(buffer, 2 * i + 3, 0, 2);
-//   }
-//   return buffer;
-// }
-
-// function incrementTransactionCounter(self) {
-//   self._transactionCounter = (self._transactionCounter + 1) % 0x10000;
-//   return self._transactionCounter;
-// }
 
 
 function send(self, fn, data, resolver, timeout) {
@@ -215,28 +193,13 @@ function send(self, fn, data, resolver, timeout) {
   self.send(frame.toBuffer(), null, false, callback);
 }
 
-
-// function send(self, unitID, data, resolver, timeout) {
-//   const transactionID = incrementTransactionCounter(self);
-
-//   const packet = new MBTCPPacket();
-//   packet.transactionID = transactionID;
-//   packet.unitID = unitID;
-//   packet.data = data;
-
-//   const callback = resolver == null ? null : self.contextCallback(
-//     once(err => {
-//       if (err) {
-//         /** e.g. handle timeout error and return null*/
-//         resolver.reject(err);
-//         return null;
-//       } else {
-//         return resolver;
-//       }
-//     }),
-//     transactionID,
-//     timeout
-//   );
-
-//   self.send(packet.toBuffer(), null, false, callback);
-// }
+/**
+ * holding register numbers start with 4 and span from 40001 to 49999.
+ */
+// TODO
+function parseAddressingInput(fn, input) {
+  return {
+    address: parseInt(input, 10),
+    // type: 
+  };
+}

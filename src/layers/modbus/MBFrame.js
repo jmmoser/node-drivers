@@ -148,10 +148,10 @@ class TCP {
         }
         return values;
       }
-      case Functions.WriteSingleRegister: {
+      case Functions.WriteSingleHoldingRegister: {
         return buffer.slice(offset + 2, offset + 4);
       }
-      case Functions.WriteMultipleRegisters: {
+      case Functions.WriteMultipleHoldingRegisters: {
         return buffer.readUInt16BE(offset + 2);
       }
       default:

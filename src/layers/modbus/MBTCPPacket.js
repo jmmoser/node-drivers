@@ -6,10 +6,10 @@
 //   ReadHoldingRegisters: 0x03,
 //   ReadInputRegisters: 0x04,
 //   WriteSingleCoil: 0x05,
-//   WriteSingleRegister: 0x06,
+//   WriteSingleHoldingRegister: 0x06,
 //   ReadExceptionStatus: 0x07,
 //   WriteMultipleCoils: 0x0F,
-//   WriteMultipleRegisters: 0x10,
+//   WriteMultipleHoldingRegisters: 0x10,
 //   ReportSlaveID: 0x11,
 //   MaskWriteRegister: 0x16,
 //   WriteAndReadRegisters: 0x17
@@ -154,11 +154,11 @@
 
 // ReplyFunctions[MBFunctions.ReadInputRegisters] = ReplyFunctions[MBFunctions.ReadHoldingRegisters];
 
-// ReplyFunctions[MBFunctions.WriteSingleRegister] = function(buffer, offset, length) {
+// ReplyFunctions[MBFunctions.WriteSingleHoldingRegister] = function(buffer, offset, length) {
 //   return buffer.slice(offset + 3, 5);
 // };
 
-// ReplyFunctions[MBFunctions.WriteMultipleRegisters] = function(buffer, offset, length) {
+// ReplyFunctions[MBFunctions.WriteMultipleHoldingRegisters] = function(buffer, offset, length) {
 //   return {
 //     count: buffer.readUInt16BE(offset + 3)
 //   };

@@ -11,8 +11,8 @@
 //   ReadHoldingRegisters,
 //   WriteSingleCoil,
 //   WriteMultipleCoils,
-//   WriteSingleRegister,
-//   WriteMultipleRegisters
+//   WriteSingleHoldingRegister,
+//   WriteMultipleHoldingRegisters
 // } = MBTCPPacket.Functions;
 
 // class MBTCPLayer extends Layer {
@@ -69,16 +69,15 @@
 //     });
 //   }
 
-//   writeSingleRegister(unitID, address, value, callback) {
+//   writeSingleHoldingRegister(unitID, address, value, callback) {
 //     return CallbackPromise(callback, resolver => {
-//       const data = writeRequest(WriteSingleRegister, address, [value]);
+//       const data = writeRequest(WriteSingleHoldingRegister, address, [value]);
 //       send(this, unitID, data, resolver);
 //     });
 //   }
 
-//   writeMultipleRegisters(unitID, address, values, callback) {
+//   writeMultipleHoldingRegisters(unitID, address, values, callback) {
 //     return CallbackPromise(callback, resolver => {
-//       // const fn = Functions.WriteMultipleRegisters;
 //       resolver.reject('Not supported yet');
 //     });
 //   }
