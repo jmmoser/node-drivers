@@ -96,41 +96,43 @@ class CIPObjectReservedClassAttributes {
 
 
 
-// class CIPServiceRequest {
-//   constructor(code, pathFunc, dataFunc, decoder) {
-//     this.code = code;
-//     this.pathFunc = pathFunc;
-//     this.dataFunc = dataFunc;
-//     this.decoder = decoder;
-//   }
+// // class CIPServiceRequest {
+// //   constructor(code, pathFunc, dataFunc, decoder) {
+// //     this.code = code;
+// //     this.pathFunc = pathFunc;
+// //     this.dataFunc = dataFunc;
+// //     this.decoder = decoder;
+// //   }
 
-//   encode(classCode, data, ) {
+// //   encode(classCode, data, ) {
 
+// //   }
+// // }
+
+// function CIPServiceRequest(code) {
+//   return function() {
+    
 //   }
 // }
 
-function CIPServiceRequest(code) {
-  return function() {
-    
-  }
-}
 
-
-class CIPCommonServices {
-  static GetAttributesAll = new CIPServiceRequest(
-    0x01,
-    (instance) => {
-      return EPath.Encode(this.code, instance)
-    }
-  );
-}
+// class CIPCommonServices {
+//   static GetAttributesAll = new CIPServiceRequest(
+//     0x01,
+//     (instance) => {
+//       return EPath.Encode(this.code, instance)
+//     }
+//   );
+// }
 
 
 class CIPObject {
   static ReservedClassAttributes = CIPObjectReservedClassAttributes;
 
-  constructor(code) {
+  constructor(code, classAttributes, instanceAttributes) {
     this.code = code;
+    this.classAttributes = classAttributes;
+    this.instanceAttributes = instanceAttributes;
   }
 
   getAttributesAllRequest(instance = 0x01) {
@@ -141,19 +143,35 @@ class CIPObject {
   }
 
   /** MessageRouter */
-  request(service, path, data) {
+  request(service, path, data, route) {
     let offset = 0;
+    let totalLength = 1;
 
+    const pathIsBuffer = Buffer.isBuffer(path);
     const dataIsBuffer = Buffer.isBuffer(data);
-    const dataLength = dataIsBuffer ? data.length : 0;
+    const routeIsBuffer = Buffer.isBuffer(route);
 
-    const buffer = Buffer.alloc(2 + path.length + dataLength);
+    if (pathIsBuffer) {
+      totalLength += path.length + 1;
+    }
+    if (dataIsBuffer) {
+      totalLength += data.length;
+    }
+    if (routeIsBuffer) {
+      totalLength += route.length;
+    }
+
+    const buffer = Buffer.alloc(totalLength);
     offset = buffer.writeUInt8(service, offset);
-    offset = buffer.writeUInt8(path.length / 2, offset);
-    offset += path.copy(buffer, offset);
-
+    if (pathIsBuffer) {
+      offset = buffer.writeUInt8(path.length / 2, offset);
+      offset += path.copy(buffer, offset);
+    }
     if (dataIsBuffer) {
       offset += data.copy(buffer, offset);
+    }
+    if (routeIsBuffer) {
+      offset += route.copy(buffer, offset);
     }
 
     return buffer;

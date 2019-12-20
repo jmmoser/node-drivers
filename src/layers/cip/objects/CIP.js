@@ -145,6 +145,7 @@ const CommonServiceNames = InvertKeyValues(CommonServices);
 // CIP Vol1 Table C-6.1
 const DataTypeCodes = {
   /** DATATYPES FROM EXTERNAL SOURCES CANNOT BE NEGATIVE BECAUSE CODE IS READ AS UNSIGNED */
+  PLACEHOLDER: -3, /** used when previously decoded data determines datatype */
   SMEMBER: -2,
   UNKNOWN: -1, 
 
@@ -311,33 +312,36 @@ const DataType = {
     };
   },
   /**
-   * contextCallback(dataType, iteration, members)
+   * decodeCallback(decodedMembers, memberDataType, structDataType)
    *  - is called before each member is decoded */
-  STRUCT(members, contextCallback) {
+  STRUCT(members, decodeCallback) {
     return {
       type: DataType.STRUCT,
       code: DataTypeCodes.STRUCT,
       constructed: true,
       abbreviated: false,
       members,
-      contextCallback
+      decodeCallback
     };
   },
-  ARRAY(lowerBound, upperBound, itemType, boundTags) {
+  ARRAY(itemType, lowerBound, upperBound, boundTags) {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
       constructed: true,
       abbreviated: false,
+      itemType,
       lowerBound,
       upperBound,
-      itemType,
       boundTags
     };
   },
 
   SMEMBER(member, filter) {
     return { type: DataType.SMEMBER, code: DataTypeCodes.SMEMBER, member, filter }
+  },
+  PLACEHOLDER() {
+    return { type: DataType.PLACEHOLDER, code: DataTypeCodes.PLACEHOLDER }
   }
 };
 
@@ -389,7 +393,7 @@ function __DecodeDataType(buffer, offset, cb) {
 
       let itemType;
       offset = __DecodeDataType(buffer, offset, items => itemType = items);
-      type = DataType.ARRAY(lowerBound, upperBound, itemType, boundTags);
+      type = DataType.ARRAY(itemType, lowerBound, upperBound, boundTags);
       break;
     }
     default:
@@ -424,6 +428,7 @@ function Decode(dataType, buffer, offset, cb, ctx) {
   if (dataType instanceof Function) dataType = dataType();
 
   if (ctx && ctx.dataTypeCallback) {
+    /** Used to modify the datatype, especially with placeholders */
     dataType = ctx.dataTypeCallback(dataType) || dataType;
   }
 
@@ -511,28 +516,46 @@ function Decode(dataType, buffer, offset, cb, ctx) {
     case DataTypeCodes.STRUCT: {
       /** Name of members is not known so use array to hold decoded member values */
       value = [];
-      const hasContextCallback = typeof dataType.contextCallback === 'function';
-      dataType.members.forEach((member, idx) => {
-        let ctx;
-        if (hasContextCallback) {
-          // dataType.contextCallback(member, dataType, idx, value);
-          ctx = {
-            dataTypeCallback: function(dt) {
-              return dataType.contextCallback(dt, value, idx, dataType);
-            }
-          };
-        }
+
+      const ctx = {};
+      if (typeof dataType.decodeCallback === 'function') {
+        ctx.dataTypeCallback = function (dt) {
+          return dataType.decodeCallback(value, dt, dataType);
+        };
+      }
+
+      dataType.members.forEach(member => {
         offset = Decode(member, buffer, offset, function (memberValue) {
           value.push(memberValue);
         }, ctx);
-        // offset = Decode(member, buffer, offset, function(memberValue) {
-        //   value.push(memberValue);
-        // });
       });
+
       value = value.filter((val, idx) => {
         return !(dataType.members[idx].code === DataTypeCodes.SMEMBER && dataType.members[idx].filter === true);
       });
+      
       break;
+
+      // /** Name of members is not known so use array to hold decoded member values */
+      // value = [];
+      // const hasDecodeCallback = typeof dataType.decodeCallback === 'function';
+      // dataType.members.forEach((member, idx) => {
+      //   let ctx;
+      //   if (hasDecodeCallback) {
+      //     ctx = {
+      //       dataTypeCallback: function(dt) {
+      //         return dataType.decodeCallback(value, dt, dataType);
+      //       }
+      //     };
+      //   }
+      //   offset = Decode(member, buffer, offset, function (memberValue) {
+      //     value.push(memberValue);
+      //   }, ctx);
+      // });
+      // value = value.filter((val, idx) => {
+      //   return !(dataType.members[idx].code === DataTypeCodes.SMEMBER && dataType.members[idx].filter === true);
+      // });
+      // break;
     }
     case DataTypeCodes.ARRAY: {
       value = [];
@@ -551,6 +574,8 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       offset += dataType.length;
       break;
     }
+    case DataTypeCodes.PLACEHOLDER:
+      throw new Error(`Placeholder datatype should have been replaced before decoding`);
     default:
       throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }

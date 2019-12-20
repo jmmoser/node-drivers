@@ -827,6 +827,27 @@ class EPath {
     // return Decode(buffer, offset, padded, cb);
   }
 
+
+  static EncodeSegmentsSize(padded, segments) {
+    return encodeSegmentsSize(padded, segments);
+  }
+
+  static EncodeSegments(padded, segments) {
+    let size = 0;
+    for (let i = 0; i < segments.length; i++) {
+      size += segments.encodeSize(padded);
+    }
+    const buffer = Buffer.alloc(size);
+
+    // const buffer = encodeBuffer(padded, segments);
+    encodeSegmentsTo(buffer, 0, padded, segments);
+    return buffer;
+  }
+
+  static EncodeSegmentsTo(buffer, offset, padded, segments) {
+    return encodeSegmentsTo(buffer, offset, padded, segments);
+  }
+
   static DescribeSegments(segments) {
     return describeSegments(segments);
   }
@@ -836,3 +857,30 @@ class EPath {
 EPath.Segments = Segments;
 
 module.exports = EPath;
+
+
+
+function encodeBuffer(padded, segments) {
+  let size = 0;
+  for (let i = 0; i < segments.length; i++) {
+    size += segments.encodeSize(padded);
+  }
+  return Buffer.alloc(size);
+}
+
+
+function encodeSegmentsSize(padded, segments) {
+  let size = 0;
+  for (let i = 0; i < segments.length; i++) {
+    size += segments.encodeSize(padded);
+  }
+  return size;
+}
+
+
+function encodeSegmentsTo(buffer, offset, padded, segments) {
+  for (let i = 0; i < segments.length; i++) {
+    offset = segments[i].encodeTo(buffer, offset, padded);
+  }
+  return offset;
+}

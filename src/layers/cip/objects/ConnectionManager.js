@@ -5,35 +5,15 @@
 const CIP = require('./CIP');
 const EPath = require('./EPath');
 const MessageRouter = require('./MessageRouter');
-const { 
-  sizeToEncodeUnsignedInteger,
-  encodeUnsignedInteger
- } = require('../../../utils');
 
 let ConnectionSerialNumberCounter = 0x0001;
 let OtoTNetworkConnectionIDCounter = 0x20000002;
 let TtoONetworkConnectionIDCounter = 0x20000001;
 
-function incrementNetworkConnectionCounters() {
+function incrementConnectionCounters() {
   ConnectionSerialNumberCounter++;
   OtoTNetworkConnectionIDCounter++;
   TtoONetworkConnectionIDCounter++;
-}
-
-
-function serializePortAddress(address) {
-  if (Buffer.isBuffer(address)) {
-    return address;
-  } else if (Number.isInteger(address)) {
-    const addressSize = sizeToEncodeUnsignedInteger(address);
-    const buffer = Buffer.alloc(addressSize);
-    encodeUnsignedInteger(buffer, 0, address, addressSize);
-    return buffer;
-  } else if (typeof address === 'string') {
-    return Buffer.from(address, 'ascii');
-  } else {
-    throw new Error(`Unexpected port address, unable to serialize: ${address}`);
-  }
 }
 
 
@@ -65,27 +45,18 @@ class ConnectionManager {
   }
 
 
-  static ForwardOpen(connection) {
-    incrementNetworkConnectionCounters();
-
-    connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
-
-    // let portAddress;
-    // if (Buffer.isBuffer(connection.Slot)) {
-    //   portAddress = connection.Slot;
-    // } else if (Number.isInteger(connection.Slot)) {
-    //   const addressSize = sizeToEncodeUnsignedInteger(connection.Slot);
-    //   portAddress = Buffer.alloc(addressSize);
-    //   encodeUnsignedInteger(portAddress, 0, connection.Slot, addressSize);
-    // } else if (typeof connection.Slot === 'string') {
-    //   portAddress = Buffer.from(connection.Slot, 'ascii');
-    // }
+  static ForwardOpen(connection, incrementCounters) {
+    if (incrementCounters) {
+      incrementConnectionCounters();
+      connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
+    }
+    
 
     let offset = 0;
     // const data = Buffer.allocUnsafe(42);
     
-    const portAddress = serializePortAddress(connection.Slot);
-    const portSegmentSize = EPath.Segments.Port.EncodeSize(connection.Port, portAddress);
+    // const portAddress = serializePortAddress(connection.Slot);
+    const portSegmentSize = EPath.Segments.Port.EncodeSize(connection.Port, connection.Slot);
     const data = Buffer.allocUnsafe(40 + portSegmentSize);
 
     offset = data.writeUInt8(0x0A, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
@@ -108,7 +79,14 @@ class ConnectionManager {
     offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
 
     offset = data.writeUInt8(2 + portSegmentSize / 2, offset); // Connection path size
-    offset = EPath.Segments.Port.Encode(data, offset, connection.Port, portAddress);
+    offset = EPath.Segments.Port.EncodeTo(data, offset, connection.Port, connection.Slot);
+
+    /** 
+     * A connection established to the Message Router object of the target results in
+     * an Explicit Messaging type connection.  Connections established to any other
+     * application object result in an I/O type connection.  See the Connection Object
+     * attribute 2 (Instance Type)
+     */
     offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit logical address
     offset = data.writeUInt8(CIP.Classes.MessageRouter, offset); // class ID (MessageRouter)
     offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit logical address
@@ -142,8 +120,8 @@ class ConnectionManager {
   static ForwardClose(connection) {
     let offset = 0;
 
-    const portAddress = serializePortAddress(connection.Slot);
-    const portSegmentSize = EPath.Segments.Port.EncodeSize(connection.Port, portAddress);
+    // const portAddress = serializePortAddress(connection.Slot);
+    const portSegmentSize = EPath.Segments.Port.EncodeSize(connection.Port, connection.Slot);
     const data = Buffer.allocUnsafe(16 + portSegmentSize);
 
     offset = data.writeUInt8(0x01, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
@@ -156,7 +134,7 @@ class ConnectionManager {
     offset = data.writeUInt8(2 + portSegmentSize / 2, offset); // connection path size, 16-bit words
     offset = data.writeUInt8(0, offset); /** Reserved */
     // Padded EPATH
-    offset = EPath.Segments.Port.Encode(data, offset, connection.Port, portAddress);
+    offset = EPath.Segments.Port.EncodeTo(data, offset, connection.Port, connection.Slot);
     offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit address
     offset = data.writeUInt8(CIP.Classes.MessageRouter, offset); // class ID (MessageRouter)
     offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit address

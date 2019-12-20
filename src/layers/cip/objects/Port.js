@@ -1,3 +1,5 @@
+'use strict';
+
 const {
   InvertKeyValues
 } = require('../../../utils');
@@ -25,11 +27,10 @@ const InstanceAttributeNames = InvertKeyValues(InstanceAttributeCodes);
 const InstanceAttributeDataTypes = {
   [InstanceAttributeCodes.Type]: DataType.UINT,
   [InstanceAttributeCodes.Number]: DataType.UINT,
-  [InstanceAttributeCodes.Link]: DataType.STRUCT([DataType.SMEMBER(DataType.UINT, true), DataType.EPATH(true)], function (dataType, members, idx) {
-    if (idx === 1) {
-      // console.log(members);
+  [InstanceAttributeCodes.Link]: DataType.STRUCT([DataType.SMEMBER(DataType.UINT, true), DataType.PLACEHOLDER], function (members) {
+    // console.log(members);
+    if (members.length === 1) {
       // console.log(`Setting epath length: ${2 * members[0]}`);
-      // dataType.length = 2 * members[0];
       return DataType.EPATH(true, 2 * members[0]);
     }
   }),
@@ -42,9 +43,9 @@ const InstanceAttributeDataTypes = {
 };
 
 /** CIP Vol 3 Chapter 3-7.3 */
-const PortTypeDescriptions = {
+const PortTypeNames = {
   0: 'Connection terminates in this device',
-  1: 'Reserved for compatibility with existing protocols',
+  1: 'Reserved for compatibility with existing protocols (Backplane)',
   2: 'ControlNet',
   3: 'ControlNet redundant',
   4: 'EtherNet/IP',
@@ -57,16 +58,6 @@ const PortTypeDescriptions = {
 
 
 class Port {
-  static InstanceAttributeName(attribute) {
-    return InstanceAttributeNames[attribute] || 'Unknown';
-  }
-
-  static InstanceTypeDescription(type) {
-    /** type can be a number or the value from DecodeInstanceAttribute */
-    type = type != null ? type.code || type : -1;
-    return PortTypeDescriptions[type] || 'Unknown';
-  }
-
   static DecodeInstanceAttribute(attribute, data, offset, cb) {
     const dataType = InstanceAttributeDataTypes[attribute];
     if (!dataType) {
@@ -75,14 +66,32 @@ class Port {
 
     let value;
     offset = Decode(dataType, data, offset, val => value = val);
-    const raw = value;
+    // const raw = value;
+
+    switch (attribute) {
+      case InstanceAttributeCodes.Type: {
+        value = {
+          code: value,
+          name: PortTypeNames[value] || 'Unknown'
+        };
+        break;
+      }
+      case InstanceAttributeCodes.Link: {
+        if (Array.isArray(value) && value.length === 1) {
+          value = value[0];
+        }
+        break;
+      }
+      default:
+        break;
+    }
 
     if (typeof cb === 'function') {
       cb({
         code: attribute,
         name: InstanceAttributeNames[attribute] || 'Unknown',
         value,
-        raw
+        // raw
       });
     }
     return offset;

@@ -67,7 +67,7 @@ const SymbolInstanceAttributeDataTypes = {
   [SymbolInstanceAttributeCodes.Name]: DataType.STRING,
   [SymbolInstanceAttributeCodes.Type]: DataType.UINT,
   [SymbolInstanceAttributeCodes.Bytes]: DataType.UINT,
-  [SymbolInstanceAttributeCodes.ArrayDimensionLengths]: DataType.ARRAY(0, 2, DataType.UDINT),
+  [SymbolInstanceAttributeCodes.ArrayDimensionLengths]: DataType.ARRAY(DataType.UDINT, 0, 2),
   3: DataType.UNKNOWN(4),
   5: DataType.UNKNOWN(4),
   6: DataType.UNKNOWN(4),

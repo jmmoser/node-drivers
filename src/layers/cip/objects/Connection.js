@@ -1,7 +1,8 @@
 'use strict';
 
-const { CallbackPromise } = require('../../../utils');
-const CIP = require('./CIP');
+const { CallbackPromise, InvertKeyValues } = require('../../../utils');
+const { DataType, CommonServices } = require('./CIP');
+const EPath = require('./EPath');
 const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
@@ -22,6 +23,7 @@ class Connection extends Layer {
     this._sequenceToContext = new Map();
   }
 
+
   connect(callback) {
     this._connectCallback = callback;
     if (this._connectionState === 1) return;
@@ -33,8 +35,14 @@ class Connection extends Layer {
     }
 
     this._connectionState = 1;
-    this.send(ConnectionManager.ForwardOpen(this), null, false);
+    this.send(ConnectionManager.ForwardOpen(this, true), null, false);
   }
+
+
+  // handleDefaultOptions(defaultOptions, upperLayer) {
+
+  // }
+
 
   disconnect(callback) {
     return CallbackPromise(callback, resolver => {
@@ -58,6 +66,7 @@ class Connection extends Layer {
       this.send(ConnectionManager.ForwardClose(this), null, false);
     });
   }
+
 
   sendNextMessage() {
     if (this._connectionState === 0) {
@@ -97,6 +106,7 @@ class Connection extends Layer {
     }
   }
 
+
   handleData(data, info, context) {
     const message = MessageRouter.Reply(data);
 
@@ -112,10 +122,48 @@ class Connection extends Layer {
     }
   }
 
+
   handleDestroy(error) {
     cleanup(this);
-    // this._connectionState === 0;
-    // this._sequenceToContext.clear();
+  }
+
+
+  static DecodeInstanceAttribute(attribute, data, offset, cb) {
+    const dataType = InstanceAttributeDataTypes[attribute];
+    if (!dataType) {
+      throw new Error(`Unknown instance attribute: ${attribute}`);
+    }
+
+    let value;
+    offset = Decode(dataType, data, offset, val => value = val);
+
+    switch (attribute) {
+      case InstanceAttributeCodes.State: {
+        value = {
+          code: value,
+          name: InstanceStateNames[value] || 'Unknown'
+        };
+        break;
+      }
+      case InstanceAttributeCodes.Type: {
+        value = {
+          code: value,
+          name: InstanceTypeNames[value] || 'Unkown'
+        }
+      }
+      default:
+        break;
+    }
+
+    if (typeof cb === 'function') {
+      cb({
+        code: attribute,
+        name: InstanceAttributeNames[attribute] || 'Unknown',
+        value
+      });
+    }
+
+    return offset;
   }
 }
 
@@ -138,9 +186,22 @@ function mergeOptionsWithDefaults(self, options) {
   self.TtoORPI = options.TtoORPI || 0x00204001;
   self.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
   self.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-  self.Port = options.Port || 1;
-  self.Slot = options.Slot || 0;
+  self.Port = options.Port || 1,
+  self.Slot = options.Slot || 0
+
+  // self.options = Object.assign({
+  //   VendorID: 0x1339,
+  //   OriginatorSerialNumber: 42,
+  //   ConnectionTimeoutMultiplier: 0x01,
+  //   O2TRequestedPacketInterval: 0x00201234,
+  //   O2TNetworkConnectionParameters: 0x43F4,
+  //   T2ORequestedPacketInterval: 0x00204001,
+  //   T2ONetworkConnectionParameters: 0x43F4,
+  //   TransportClassTrigger: 0xA3, // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+  //   Route: Buffer.concat([EPath.Segments.Port.Encode(1, 0), Buffer.from([0x20, 0x02, 0x24, 0x01])])
+  // }, options);
 }
+
 
 function handleForwardOpen(self, message, info, context) {
   if (self._connectionState === 1) {
@@ -176,18 +237,24 @@ function handleForwardOpen(self, message, info, context) {
   self._connectCallback = null;
 }
 
+
 function handleForwardClose(self, message, info, context) {
   stopResend(self);
   if (message.status.code === 0) {
     const reply = ConnectionManager.ForwardCloseReply(message.data);
     self._connectionState = 0;
+    // console.log('CIP Connection closed');
     if (self._disconnectCallback) {
       self._disconnectCallback(reply);
       clearTimeout(self._disconnectTimeout);
       self._disconnectCallback = null;
     }
+  } else {
+    console.log('CIP connection unsuccessful close');
+    console.log(message);
   }
 }
+
 
 function handleMessage(self, data, info, context) {
   /** call layerForContext here just to make sure it is cleared from the underlying Map */
@@ -226,6 +293,7 @@ function incrementSequenceCount(self) {
   return self._sequenceCount;
 }
 
+
 function startResend(self, lastMessage) {
   stopResend(self);
 
@@ -233,6 +301,7 @@ function startResend(self, lastMessage) {
     self.send(lastMessage, self.sendInfo, false, null);
   }, Math.floor(self._connectionTimeout * 3 / 4) * 1000);
 }
+
 
 function stopResend(self) {
   if (self.__resendInterval != null) {
@@ -242,104 +311,78 @@ function stopResend(self) {
 }
 
 
-// Connection.Code = 0x05;
-
 // CIP Vol1 Table 3-4.2
 const ClassServices = {
-  Create: 0x08,
-  Delete: 0x09,
-  Reset: 0x05,
-  FindNextObjectInstance: 0x11,
-  GetAttributeSingle: 0x0E,
-
+  /** Common */
+  Create: CommonServices.Create,
+  Delete: CommonServices.Delete,
+  Reset: CommonServices.Reset,
+  FindNextObjectInstance: CommonServices.FindNextObjectInstance,
+  GetAttributeSingle: CommonServices.GetAttributeSingle,
+  /** Class Specific */
   ConnectionBind: 0x4B,
   ProducingApplicationLookup: 0x4C,
   SafetyClose: 0x4E,
   SafetyOpen: 0x54
 };
 
-// CIP Vol1 Table 3-4.9
-const InstanceAttributes = {
-  1: {
-    name: 'State',
-    type: CIP.DataType.USINT
-  },
-  2: {
-    name: 'Instance Type',
-    type: CIP.DataType.USINT
-  },
-  3: {
-    name: 'TransportClass Trigger',
-    type: CIP.DataType.BYTE
-  },
-  4: {
-    name: 'DeviceNet Produced Conection ID',
-    type: CIP.DataType.UINT
-  },
-  5: {
-    name: 'DeviceNet Consumed Connection ID',
-    type: CIP.DataType.UINT
-  },
-  6: {
-    name: 'DeviceNet Initial Comm Characteristics',
-    type: CIP.DataType.BYTE
-  },
-  7: {
-    name: 'Produced Connection Size',
-    type: CIP.DataType.UINT
-  },
-  8: {
-    name: 'Consumed Connection Size',
-    type: CIP.DataType.UINT
-  },
-  9: {
-    name: 'Expected Packet Rate',
-    type: CIP.DataType.UINT
-  },
-  10: {
-    name: 'CIP Produced Connection ID',
-    type: CIP.DataType.UDINT
-  },
-  11: {
-    name: 'CIP Consumed Connection ID',
-    type: CIP.DataType.UDINT
-  },
-  12: {
-    name: 'Watchdog Timeout Action',
-    type: CIP.DataType.USINT
-  },
-  13: {
-    name: 'Produced Connection Path Length',
-    type: CIP.DataType.UINT
-  },
-  14: {
-    name: 'Produced Connection Path',
-    type: 'EPATH'
-  },
-  15: {
-    name: 'Consumed Connection Path Length',
-    type: CIP.DataType.UINT
-  },
-  16: {
-    name: 'Consumed Connection Path',
-    type: 'EPATH'
-  },
-  17: {
-    name: 'Production Inhibit Time',
-    type: CIP.DataType.UINT
-  },
-  18: {
-    name: 'Connection Timeout Multiplier',
-    type: CIP.DataType.USINT
-  },
-  19: {
-    name: 'Connection Binding List',
-    type: 'UINT[]'
-  }
-}
+
+// CIP Vol 1, Table 3-4.9
+const InstanceAttributeCodes = {
+  State: 1,
+  Type: 2,
+  TransportClassTrigger: 3,
+  DeviceNetProducedConnectionID: 4,
+  DeviceNetConsumedConnectionID: 5,
+  DeviceNetInitialCommCharacteristics: 6,
+  ProducedConnectionSize: 7,
+  ConsumedConnectionSize: 8,
+  ExpectedPacketRate: 9,
+  CIPProducedConnectionID: 10,
+  CIPConsumedConnectionID: 11,
+  WatchdogTimeoutAction: 12,
+  ProducedConnectionPathLength: 13,
+  ProducedConnectionPath: 14,
+  ConsumedConnectionPathLength: 15,
+  ConsumedConnectionPath: 16,
+  ProductionInhibitTime: 17,
+  ConnectionTimeoutMultiplier: 18,
+  ConnectionBindingList: 19
+};
+
+
+const InstanceAttributeNames = InvertKeyValues(InstanceAttributeCodes);
+
+
+const InstanceAttributeDataTypes = {
+  [InstanceAttributeCodes.State]: DataType.USINT,
+  [InstanceAttributeCodes.Type]: DataType.USINT,
+  [InstanceAttributeCodes.TransportClassTrigger]: DataType.BYTE,
+  [InstanceAttributeCodes.DeviceNetProducedConnectionID]: DataType.UINT,
+  [InstanceAttributeCodes.DeviceNetConsumedConnectionID]: DataType.UINT,
+  [InstanceAttributeCodes.DeviceNetInitialCommCharacteristics]: DataType.BYTE,
+  [InstanceAttributeCodes.ProducedConnectionSize]: DataType.UINT,
+  [InstanceAttributeCodes.ConsumedConnectionSize]: DataType.UINT,
+  [InstanceAttributeCodes.ExpectedPacketRate]: DataType.UINT,
+  [InstanceAttributeCodes.CIPProducedConnectionID]: DataType.UDINT,
+  [InstanceAttributeCodes.CIPConsumedConnectionID]: DataType.UDINT,
+  [InstanceAttributeCodes.WatchdogTimeoutAction]: DataType.USINT,
+  [InstanceAttributeCodes.ProducedConnectionPathLength]: DataType.UINT,
+  [InstanceAttributeCodes.ProducedConnectionPath]: DataType.EPATH(false),
+  [InstanceAttributeCodes.ConsumedConnectionPathLength]: DataType.UINT,
+  [InstanceAttributeCodes.ConsumedConnectionPath]: DataType.EPATH(false),
+  [InstanceAttributeCodes.ProductionInhibitTime]: DataType.UINT,
+  [InstanceAttributeCodes.ConnectionTimeoutMultiplier]: DataType.USINT,
+  [InstanceAttributeCodes.ConnectionBindingList]: DataType.STRUCT([DataType.SMEMBER(DataType.UINT, true), DataType.PLACEHOLDER], function (members) {
+    if (members.length === 1) {
+      return DataType.ARRAY(DataType.UINT, 0, members[0]);
+    }
+  })
+};
+
 
 // CIP Vol1 Table 3-4.10
-const StateAttributes = {
+const InstanceStateNames = {
   0: 'Non-existent',
   1: 'Configuring',
   2: 'Waiting for connection ID',
@@ -349,12 +392,14 @@ const StateAttributes = {
   6: 'Closing'
 };
 
+
 // CIP Vol1 Table 3-4.11
-const InstanceTypeAttributes = {
-  0: 'Explicit messaging',
+const InstanceTypeNames = {
+  0: 'Explicit Messaging',
   1: 'I/O',
-  2: 'CIP bridged'
+  2: 'CIP Bridged'
 };
+
 
 // CIP Vol1 Table 3-4.5
 const ConnectionBindServiceStatusCodeDescriptions = {

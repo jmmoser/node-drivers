@@ -29,100 +29,56 @@
 
 const {
   getBit,
-  getBits
+  getBits,
+  sizeToEncodeUnsignedInteger,
+  encodeUnsignedInteger
 } = require('../../../../../utils');
 
 class PortSegment {
   constructor(number, address) {
+    address = serializeAddress(address);
+
+    validate(number, address);
+
     this.number = number;
     this.address = address;
-
-    if (!Number.isInteger(number) || number < 0 || number > 0xFFFF) {
-      throw new Error(`Port segment port number must be an integer between 0 and ${0xFFFF}`);
-    }
-
-    if (!Buffer.isBuffer(address)) {
-      throw new Error(`Port segment address should be a buffer. Received: ${typeof address}`);
-    }
-
-    if (address.length > 0xFF) {
-      throw new Error(`Port segment address length cannot be longer than ${0xFF} bytes. Recieved: ${address.length}`);
-    }
   }
 
 
   encodeSize() {
-    return PortSegment.EncodeSize(
-      this.number,
-      this.address
-    );
+    return encodeSize(this.number, this.address);
   }
 
 
-  encode(buffer, offset) {
-    return PortSegment.Encode(buffer, offset, this.number, this.address);
+  encode() {
+    const buffer = encodeBuffer(this.number, this.address);
+    encodeTo(buffer, 0, this.number, this.address);
+    return buffer;
+  }
+
+
+  encodeTo(buffer, offset) {
+    return encodeTo(buffer, offset, this.number, this.address);
+  }
+
+
+  static Validate(number, address) {
+    return validate(number, serializeAddress(address));
   }
 
 
   static EncodeSize(number, address) {
-    let size = 1;
-    if (number >= 15) {
-      size += 2;
-    }
-
-    const addressLength = address.length;
-
-    size += addressLength;
-
-    if (addressLength > 1) {
-      // size += addressLength % 2;
-      size += 1;
-      size += size % 2;
-    }
-
-    return size;
+    return (new PortSegment(number, address)).encodeSize();
   }
 
 
-  static Encode(buffer, offset, number, address) {
-    const startingOffset = offset;
+  static Encode(number, address) {
+    return (new PortSegment(number, address)).encode();
+  }
 
-    let code = 0;
-    if (number >= 15) {
-      code |= 15;
-    } else {
-      code |= number;
-    }
 
-    const addressLength = address.length;
-
-    if (addressLength > 1) {
-      code |= 0b00010000;
-    }
-
-    offset = buffer.writeUInt8(code, offset);
-
-    if (addressLength > 1) {
-      offset = buffer.writeUInt8(addressLength, offset);
-    }
-
-    if (number >= 15) {
-      offset = buffer.writeUInt16LE(number, offset);
-    }
-
-    const addressLengthCopied = address.copy(buffer, offset);
-
-    if (addressLengthCopied < addressLength) {
-      throw new Error(`Buffer is not large enough`);
-    }
-
-    offset += addressLength;
-
-    if (addressLength > 1) {
-      offset += (offset - startingOffset) % 2; /** Handle pad byte */
-    }
-
-    return offset;
+  static EncodeTo(buffer, offset, number, address) {
+    return (new PortSegment(number, address)).encodeTo(buffer, offset);
   }
 
 
@@ -163,3 +119,97 @@ class PortSegment {
 }
 
 module.exports = PortSegment;
+
+
+function serializeAddress(address) {
+  if (Buffer.isBuffer(address)) {
+    return address;
+  } else if (Number.isInteger(address) && address >= 0) {
+    const addressSize = sizeToEncodeUnsignedInteger(address);
+    const buffer = Buffer.alloc(addressSize);
+    encodeUnsignedInteger(buffer, 0, address, addressSize);
+    return buffer;
+  } else if (typeof address === 'string') {
+    return Buffer.from(address, 'ascii');
+  } else {
+    throw new Error(`Unexpected port address, unable to serialize: ${address}`);
+  }
+}
+
+
+function validate(number, address) {
+  if (!Number.isInteger(number) || number < 0 || number > 65535) {
+    console.log(new Error());
+    throw new Error(`Port segment port number must be an integer between 0 and 65535. Received: ${number}`);
+  }
+
+  if (!Buffer.isBuffer(address) || address.length < 1 || address.length > 255) {
+    throw new Error(`Port segment address should be a buffer with length ranging from 1 to 255. Received: ${address}`);
+  }
+}
+
+
+function encodeSize(number, address) {
+  let size = 1;
+  if (number >= 15) {
+    size += 2;
+  }
+
+  const addressLength = address.length;
+
+  size += addressLength;
+
+  if (addressLength > 1) {
+    size += 1;
+    size += size % 2;
+  }
+
+  return size;
+}
+
+
+function encodeBuffer(number, address) {
+  return Buffer.alloc(encodeSize(number, address));
+}
+
+
+function encodeTo(buffer, offset, number, address) {
+  const startingOffset = offset;
+
+  let code = 0;
+  if (number >= 15) {
+    code |= 15;
+  } else {
+    code |= number;
+  }
+
+  const addressLength = address.length;
+
+  if (addressLength > 1) {
+    code |= 0b00010000;
+  }
+
+  offset = buffer.writeUInt8(code, offset);
+
+  if (addressLength > 1) {
+    offset = buffer.writeUInt8(addressLength, offset);
+  }
+
+  if (number >= 15) {
+    offset = buffer.writeUInt16LE(number, offset);
+  }
+
+  const addressLengthCopied = address.copy(buffer, offset);
+
+  if (addressLengthCopied < addressLength) {
+    throw new Error(`Buffer is not large enough`);
+  }
+
+  offset += addressLength;
+
+  if (addressLength > 1) {
+    offset += (offset - startingOffset) % 2; /** Handle pad byte */
+  }
+
+  return offset;
+}

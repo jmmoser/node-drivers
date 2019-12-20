@@ -1,6 +1,14 @@
+'use strict';
 
 // const MessageRouter = require('./../src/layers/cip/objects/MessageRouter');
 const EPath = require('../src/layers/cip/objects/EPath');
+
+
+function assert(condition, message) {
+  if (!condition) {
+    throw Error(message);
+  }
+}
 
 // console.log(EPath.EncodeANSIExtSymbol('TotalCount').compare(Buffer.from([
 //   0x91, 0x0A, 0x54, 0x6F, 0x74, 0x61, 0x6C, 0x43,
@@ -57,37 +65,90 @@ const EPath = require('../src/layers/cip/objects/EPath');
 // })();
 
 
-// (() => {
-//   const PortSegment = require('../src/layers/cip/objects/EPath/segments/port');
-//   console.log(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
-//   console.log(PortSegment.EncodeSize(18, Buffer.from([0x01])) === 4);
-//   console.log(PortSegment.EncodeSize(5, Buffer.from([
-//     0x31, 0x33, 0x30, 0x2E,
-//     0x31, 0x35, 0x31, 0x2E,
-//     0x31, 0x33, 0x37, 0x2E,
-//     0x31, 0x30, 0x35
-//   ])) === 18);
+(() => {
+  const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
 
-//   (() => {
-//     const buffer = Buffer.alloc(2);
-//     console.log(PortSegment.Encode(buffer, 0, 2, Buffer.from([0x06])), buffer);
-//   })();
+  const options = {
+    VendorID: 0x1339,
+    OriginatorSerialNumber: 42,
+    ConnectionTimeoutMultiplier: 0x01,
+    OtoTRPI: 0x00201234,
+    OtoTNetworkConnectionParameters: 0x43F4,
+    TtoORPI: 0x00204001,
+    TtoONetworkConnectionParameters: 0x43F4,
+    TransportClassTrigger: 0xA3, // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+    Port: 1,
+    Slot: 0
+  };
 
-//   (() => {
-//     const buffer = Buffer.alloc(4);
-//     console.log(PortSegment.Encode(buffer, 0, 18, Buffer.from([0x01])), buffer);
-//   })();
+  assert(ConnectionManager.ForwardOpen(options, false).equals(Buffer.from([
+    0x54, 0x02, 0x20, 0x06, 0x24, 0x01, 0x0a, 0x0e,
+    0x02, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00, 0x20,
+    0x01, 0x00, 0x39, 0x13, 0x2a, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x00, 0x00, 0x34, 0x12, 0x20, 0x00,
+    0xf4, 0x43, 0x01, 0x40, 0x20, 0x00, 0xf4, 0x43,
+    0xa3, 0x03, 0x01, 0x00, 0x20, 0x02, 0x24, 0x01
+  ])));
+})();
 
-//   (() => {
-//     const buffer = Buffer.alloc(18);
-//     console.log(PortSegment.Encode(buffer, 0, 5, Buffer.from([
-//       0x31, 0x33, 0x30, 0x2E,
-//       0x31, 0x35, 0x31, 0x2E,
-//       0x31, 0x33, 0x37, 0x2E,
-//       0x31, 0x30, 0x35
-//     ])), buffer);
-//   })();
-// })();
+
+(() => {
+  const PortSegment = require('../src/layers/cip/objects/EPath/segments/port');
+
+  assert(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
+  assert(PortSegment.EncodeSize(2, 6) === 2);
+  assert(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
+  assert(PortSegment.EncodeSize(2, 6) === 2);
+  assert(PortSegment.EncodeSize(18, Buffer.from([0x01])) === 4);
+  assert(PortSegment.EncodeSize(5, Buffer.from([
+    0x31, 0x33, 0x30, 0x2E,
+    0x31, 0x35, 0x31, 0x2E,
+    0x31, 0x33, 0x37, 0x2E,
+    0x31, 0x30, 0x35
+  ])) === 18);
+
+  (() => {
+    const number = 0;
+    const address = Buffer.from([0x06]);
+    const expectedLength = 2;
+    const buffer = Buffer.alloc(expectedLength);
+    assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
+    assert(buffer.equals(PortSegment.Encode(number, address)));
+  })();
+
+  (() => {
+    const number = 0;
+    const address = 6
+    const expectedLength = 2;
+    const buffer = Buffer.alloc(expectedLength);
+    assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
+    assert(buffer.equals(PortSegment.Encode(number, address)));
+  })();
+
+  (() => {
+    const number = 18;
+    const address = 1;
+    const expectedLength = 4;
+    const buffer = Buffer.alloc(expectedLength);
+    assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
+    assert(buffer.equals(PortSegment.Encode(number, address)));
+  })();
+
+  (() => {
+    const number = 5;
+    const address = Buffer.from([
+      0x31, 0x33, 0x30, 0x2E,
+      0x31, 0x35, 0x31, 0x2E,
+      0x31, 0x33, 0x37, 0x2E,
+      0x31, 0x30, 0x35
+    ]);
+    const expectedLength = 18;
+
+    const buffer = Buffer.alloc(expectedLength);
+    assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
+    assert(buffer.equals(PortSegment.Encode(number, address)));
+  })();
+})();
 
 
 
@@ -98,8 +159,13 @@ const EPath = require('../src/layers/cip/objects/EPath');
     const buffer = Buffer.from([
       0x20, 0x05, 0x24, 0x02, 0x30, 0x01
     ]);
-    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-    console.log(offset === buffer.length);
+    const offset = EPath.Decode(buffer, 0, buffer.length, false, segments => {
+      assert(segments.length === 3);
+      assert(segments[0].type.code === 0 && segments[0].format.code === 0 && segments[0].value === 0x05);
+      assert(segments[1].type.code === 1 && segments[1].format.code === 0 && segments[1].value === 0x02);
+      assert(segments[2].type.code === 4 && segments[2].format.code === 0 && segments[2].value === 0x01);
+    });
+    assert(offset === buffer.length);
   })();
 
   (() => {
@@ -107,8 +173,13 @@ const EPath = require('../src/layers/cip/objects/EPath');
     const buffer = Buffer.from([
       0x21, 0x05, 0x00, 0x24, 0x02, 0x30, 0x01
     ]);
-    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-    console.log(offset === buffer.length);
+    const offset = EPath.Decode(buffer, 0, buffer.length, false, segments => {
+      assert(segments.length === 3);
+      assert(segments[0].type.code === 0 && segments[0].format.code === 1 && segments[0].value === 0x05);
+      assert(segments[1].type.code === 1 && segments[1].format.code === 0 && segments[1].value === 0x02);
+      assert(segments[2].type.code === 4 && segments[2].format.code === 0 && segments[2].value === 0x01);
+    });
+    assert(offset === buffer.length);
   })();
 
   (() => {
@@ -116,8 +187,13 @@ const EPath = require('../src/layers/cip/objects/EPath');
     const buffer = Buffer.from([
       0x21, 0x00, 0x05, 0x00, 0x24, 0x02, 0x30, 0x01
     ]);
-    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-    console.log(offset === buffer.length);
+    const offset = EPath.Decode(buffer, 0, buffer.length, true, segments => {
+      assert(segments.length === 3);
+      assert(segments[0].type.code === 0 && segments[0].format.code === 1 && segments[0].value === 0x05);
+      assert(segments[1].type.code === 1 && segments[1].format.code === 0 && segments[1].value === 0x02);
+      assert(segments[2].type.code === 4 && segments[2].format.code === 0 && segments[2].value === 0x01);
+    });
+    assert(offset === buffer.length);
   })();
 
   (() => {
@@ -131,16 +207,39 @@ const EPath = require('../src/layers/cip/objects/EPath');
       0x04,
       0x05
     ]);
-    const offset = EPath.Decode(buffer, 0, buffer.length, false, console.log);
-    console.log(offset === buffer.length);
+    const offset = EPath.Decode(buffer, 0, buffer.length, false, segments => {
+      assert(segments.length === 1);
+      assert(segments[0].type.code === 5);
+      assert(segments[0].format.code === 0);
+      assert(segments[0].value.format === 4);
+      assert(segments[0].value.vendorID === 1);
+      assert(segments[0].value.deviceType === 2);
+      assert(segments[0].value.productCode === 3);
+      assert(segments[0].value.compatibility === 0);
+      assert(segments[0].value.revision.major === 4);
+      assert(segments[0].value.revision.minor === 5);
+    });
+    assert(offset === buffer.length);
   })();
 
   (() => {
     const buffer = Buffer.from([
-      0x20, 0x6c, 0x25, 0x00, 0x52, 0x08, 0x30, 0x01
+      0x20, 0x6C, 0x25, 0x00, 0x52, 0x08, 0x30, 0x01
     ]);
-    const offset = EPath.Decode(buffer, 0, buffer.length, true, console.log);
-    console.log(offset === buffer.length);
+    const offset = EPath.Decode(buffer, 0, buffer.length, true, segments => {
+      assert(segments.length === 3);
+      assert(segments[0].type.code === 0 && segments[0].value === 0x6C);
+      assert(segments[1].type.code === 1 && segments[1].value === 0x0852);
+      assert(segments[2].type.code === 4 && segments[2].value === 0x01);
+    });
+    assert(offset === buffer.length);
+  })();
+
+  const LogicalSegment = require('../src/layers/cip/objects/EPath/segments/logical');
+
+  (() => {
+    console.log((LogicalSegment.ClassID(5)));
+    // console.log(LogicalSegment.EncodeSize(true, LogicalSegment.Types.ClassID, LogicalSegment.Formats.LogicalAddress8Bit)
   })();
 })();
 
@@ -368,3 +467,6 @@ const EPath = require('../src/layers/cip/objects/EPath');
 //   const CIPObject = require('../src/layers/cip/objects/CIPObject');
 //   console.log(CIPObject.ReservedClassAttributes);
 // })();
+
+
+console.log('success');
