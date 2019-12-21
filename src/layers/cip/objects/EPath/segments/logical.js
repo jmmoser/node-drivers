@@ -250,7 +250,8 @@ function validate(type, format, value) {
     case TypeCodes.AttributeID:
     case TypeCodes.ConnectionPoint:
     case TypeCodes.ServiceID:
-      if (!Number.isInteger(value) || value < 0) {
+      if (value != null && (!Number.isInteger(value) || value < 0)) {
+        console.log(value);
         throw new Error(`Logical Segment of type ${TypeNames[type]}`);
       }
       break;
@@ -259,7 +260,7 @@ function validate(type, format, value) {
     default:
       throw new Error(`Invalid Logical Segment type ${type}`);
   }
-  
+
   if (format === FormatCodes.Address32Bit) {
     if (!(type === TypeCodes.InstanceID || type === TypeCodes.ConnectionPoint)) {
       throw new Error(`The 32-bit logical address format is only allowed for the logical Instance ID and Connection Point types. It is not allowed for any other Logical Type (reserved for future use).`);
