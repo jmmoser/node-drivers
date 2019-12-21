@@ -81,7 +81,7 @@ function assert(condition, message) {
     Slot: 0
   };
 
-  assert(ConnectionManager.ForwardOpen(options, false).equals(Buffer.from([
+  assert(ConnectionManager.ForwardOpen(options, false, false).equals(Buffer.from([
     0x54, 0x02, 0x20, 0x06, 0x24, 0x01, 0x0a, 0x0e,
     0x02, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00, 0x20,
     0x01, 0x00, 0x39, 0x13, 0x2a, 0x00, 0x00, 0x00,
@@ -385,7 +385,9 @@ function assert(condition, message) {
   ]).equals(Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01])));
 
 
-  console.log(EPath.Decode(EPath.Segments.Logical.SpecialNormalElectronicKey(1, 2, 3, 4, 5, 0).encode(true), 0, null, true, console.log));
+  // console.log(EPath.Decode(Buffer.from([0x02, 0x09, 0x04, 0x06]), 0, true, false, console.log));
+  console.log(EPath.Decode(Buffer.from([0x2C, 0x01]), 0, true, false, console.log));
+  // console.log(EPath.Decode(EPath.Segments.Logical.SpecialNormalElectronicKey(1, 2, 3, 4, 5, 0).encode(true), 0, null, true, console.log));
 
   // console.log(EPath.EncodeSegments(true, [
   //   new EPath.Segments.Port(1, 0),

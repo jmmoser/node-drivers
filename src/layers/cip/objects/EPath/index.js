@@ -748,6 +748,10 @@ class EPath {
   }
 
   static Decode(buffer, offset, length, padded, cb) {
+    if (length === true) {
+      length = buffer.length - offset;
+    }
+
     const lengthIsUnknown = length == null;
     if (lengthIsUnknown) {
       /** Allow length to be unknown? Assume a single segment */
@@ -836,15 +840,21 @@ module.exports = EPath;
 
 
 function encodeSize(padded, segments) {
+  if (!Array.isArray(segments)) {
+    throw new Error(`Segments must be an array. Received: ${typeof segments}`);
+  }
   let size = 0;
   for (let i = 0; i < segments.length; i++) {
-    size += segments.encodeSize(padded);
+    size += segments[i].encodeSize(padded);
   }
   return size;
 }
 
 
 function encodeSegmentsTo(buffer, offset, padded, segments) {
+  if (!Array.isArray(segments)) {
+    throw new Error(`Segments must be an array. Received: ${typeof segments}`);
+  }
   for (let i = 0; i < segments.length; i++) {
     offset = segments[i].encodeTo(buffer, offset, padded);
   }

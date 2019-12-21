@@ -14,7 +14,7 @@
   - [X] clean up code
   - [X] readSymbolAttributesAll add Bytes and ArrayDimensions
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
-  - [ ] Figure out how to read multidimensional arrays
+  - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
 - [ ] CIP
   - [ ] Consider making CIPLayer intelligent, uses upper layer to determine if it is forwarding PCCC, Modbus, etc.
   - [ ] Add I/O Connections

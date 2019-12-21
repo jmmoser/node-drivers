@@ -164,39 +164,6 @@ class LogicalSegment {
     return offset;
   }
 
-  // static ClassID(value, format) {
-  //   return new LogicalSegment(TypeCodes.ClassID, format, value);
-  // }
-
-  // static InstanceID(value, format) {
-  //   return new LogicalSegment(TypeCodes.InstanceID, format, value);
-  // }
-
-  // static AttributeID(value, format) {
-  //   return new LogicalSegment(TypeCodes.AttributeID, format, value);
-  // }
-
-  // static MemberID(value, format) {
-  //   return new LogicalSegment(TypeCodes.MemberID, format, value);
-  // }
-
-  // static ConnectionPoint(value, format) {
-  //   return new LogicalSegment(TypeCodes.ConnectionPoint, format, value);
-  // }
-
-  // static ServiceID(value, format) {
-  //   /** only format code 0 is currently supported by CIP, constructor still calls getFormatFromID for validation */
-  //   return new LogicalSegment(TypeCodes.ServiceID, format, value);
-  // }
-
-  // static Special(value, format) {
-  //   if (format == null) {
-  //     format = SpecialFormatCodes.ElectronicKey;
-  //   }
-  //   return new LogicalSegment(TypeCodes.Special, format, value);
-  // }
-
-
   /** Helper function for the only kind of Special Logical Segment */
   static SpecialNormalElectronicKey(vendorID, deviceType, productCode, majorRevision, minorRevision, compatibility) {
     return new LogicalSegment(TypeCodes.Special, SpecialFormatCodes.ElectronicKey, {

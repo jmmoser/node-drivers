@@ -6,8 +6,8 @@
 - Logix5000 can now determine size of single-dimension arrays and reads the entire array if elements is not specified
 - Logix5000 added readTemplateClassAttributes
 - UDP layer now receives default port 44818 from upper EIP layer if user or previous layer does not specify port
-- CIP added decoding for data types LREAL, LWORD, and LTIME, STRINGN, STRUCT (formal encoding), EPATH
-- CIP added encoding for data types USINT, BYTE, LWORD, LREAL, STRING, SHORT_STRING, STRING2
+- CIP added decoding for data types LREAL, LWORD, and LTIME, STRINGN, STRUCT (formal encoding), EPATH, ARRAY
+- CIP added encoding for data types USINT, BYTE, LWORD, LREAL, STRING, SHORT_STRING, STRING2, EPATH, ARRAY, ABBREV_ARRAY
 - CIP Connection Slot can now be a number, a string, or a buffer
 - CIP Identity added Device Type Names
 - CIP Connection added decoding for instance attributes

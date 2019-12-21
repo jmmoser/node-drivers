@@ -45,7 +45,7 @@ class ConnectionManager {
   }
 
 
-  static ForwardOpen(connection, incrementCounters) {
+  static ForwardOpen(connection, large, incrementCounters) {
     if (incrementCounters) {
       incrementConnectionCounters();
       connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
@@ -70,9 +70,20 @@ class ConnectionManager {
     offset = data.writeUInt8(0, offset); /** Reserved */
 
     offset = data.writeUInt32LE(connection.OtoTRPI, offset); // Originator to Target requested packet interval (rate), in microseconds
-    offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
+    if (large) {
+      offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
+    } else {
+      offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
+    }
+    
     offset = data.writeUInt32LE(connection.TtoORPI, offset); // Target to Originator requested packet interval (rate), in microseconds
-    offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
+    
+    if (large) {
+      offset = data.writeUInt32LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
+    } else {
+      offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
+    }
+
     offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
 
     offset = data.writeUInt8(2 + portSegmentSize / 2, offset); // Connection path size
@@ -89,7 +100,10 @@ class ConnectionManager {
     offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit logical address
     offset = data.writeUInt8(0x01, offset); // instance ID
 
-    return buildRequest(Services.ForwardOpen, data);
+    return buildRequest(
+      large ? Services.LargeForwardOpen : Services.ForwardOpen,
+      data
+    );
   }
 
 

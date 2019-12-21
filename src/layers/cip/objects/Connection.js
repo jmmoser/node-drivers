@@ -35,7 +35,7 @@ class Connection extends Layer {
     }
 
     this._connectionState = 1;
-    this.send(ConnectionManager.ForwardOpen(this, true), null, false);
+    this.send(ConnectionManager.ForwardOpen(this, false, true), null, false);
   }
 
 

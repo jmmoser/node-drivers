@@ -1,5 +1,3 @@
-'use strict';
-
 const EPath = require('../src/layers/cip/objects/EPath');
 const Logical = EPath.Segments.Logical;
 

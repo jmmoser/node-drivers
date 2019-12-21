@@ -15,7 +15,7 @@ const {
   InvertKeyValues
 } = require('../../../../../utils');
 
-const NetworkSegmentTypeCodes = Object.freeze({
+const SubtypeCodes = Object.freeze({
   Schedule: 1,
   FixedTag: 2,
   ProductionInhibitTime: 3,
@@ -23,15 +23,36 @@ const NetworkSegmentTypeCodes = Object.freeze({
   Extended: 31
 });
 
-const NetworkSegmentTypeNames = Object.freeze(InvertKeyValues(NetworkSegmentTypeCodes));
+const SubtypeNames = Object.freeze(InvertKeyValues(SubtypeCodes));
 
 
 class NetworkSegment {
+  constructor(subtype, value) {
+    this.subtype = subtype;
+    this.value = value;
+  }
+
   static Decode(segmentCode, buffer, offset, padded, cb) {
-    
+    const subtype = getBits(segmentCode, 0, 5);
+
+    let value;
+    switch (subtype) {
+      case SubtypeCodes.Schedule:
+      case SubtypeCodes.FixedTag:
+      case SubtypeCodes.ProductionInhibitTime:
+        value = buffer.readUInt8(offset); offset += 1;
+        break;
+      case SubtypeCodes.Safety:
+      case SubtypeCodes.Extended:
+        /** variable */
+        throw new Error(`Network segment subtype ${SubtypeNames[subtype]} not currently supported. TODO`);
+        break;
+      default:
+        throw new Error(`Reserved Network segment subtype ${subtype}`);
+    }
 
     if (typeof cb === 'function') {
-      cb(new NetworkSegment());
+      cb(new NetworkSegment(subtype, value));
     }
 
     return offset;

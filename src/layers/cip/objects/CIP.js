@@ -450,6 +450,10 @@ function Decode(dataType, buffer, offset, cb, ctx) {
     case DataTypeCodes.ITIME:
       value = buffer.readInt16LE(offset); offset += 2;
       break;
+    case DataTypeCodes.UINT:
+    case DataTypeCodes.WORD:
+      value = buffer.readUInt16LE(offset); offset += 2;
+      break;
     case DataTypeCodes.DINT:
     case DataTypeCodes.TIME:
     case DataTypeCodes.FTIME:
@@ -467,10 +471,6 @@ function Decode(dataType, buffer, offset, cb, ctx) {
         value = getBit(value, dataType.info);
       }
       value = value > 0;
-      break;
-    case DataTypeCodes.UINT:
-    case DataTypeCodes.WORD:
-      value = buffer.readUInt16LE(offset); offset += 2;
       break;
     case DataTypeCodes.UDINT:
     case DataTypeCodes.DWORD:
@@ -508,7 +508,7 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       value = buffer.readBigUInt64LE(offset); offset += 8;
       break;
     case DataTypeCodes.LREAL:
-      value = buffer.readDoubleLE(offset);
+      value = buffer.readDoubleLE(offset); offset += 8;
       break;
     case DataTypeCodes.SMEMBER:
       offset = Decode(dataType.member, buffer, offset, val => value = val);
@@ -535,27 +535,6 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       });
       
       break;
-
-      // /** Name of members is not known so use array to hold decoded member values */
-      // value = [];
-      // const hasDecodeCallback = typeof dataType.decodeCallback === 'function';
-      // dataType.members.forEach((member, idx) => {
-      //   let ctx;
-      //   if (hasDecodeCallback) {
-      //     ctx = {
-      //       dataTypeCallback: function(dt) {
-      //         return dataType.decodeCallback(value, dt, dataType);
-      //       }
-      //     };
-      //   }
-      //   offset = Decode(member, buffer, offset, function (memberValue) {
-      //     value.push(memberValue);
-      //   }, ctx);
-      // });
-      // value = value.filter((val, idx) => {
-      //   return !(dataType.members[idx].code === DataTypeCodes.SMEMBER && dataType.members[idx].filter === true);
-      // });
-      // break;
     }
     case DataTypeCodes.ARRAY: {
       value = [];
@@ -589,88 +568,238 @@ function Decode(dataType, buffer, offset, cb, ctx) {
 
 
 function Encode(dataType, value) {
-  if (dataType instanceof Function) dataType = dataType();
+  const buffer = Buffer.alloc(EncodeSize(dataType, value));
+  EncodeTo(buffer, 0, dataType, value);
+  return buffer;
+}
 
-  let data;
+
+// function Encode(dataType, value) {
+//   if (dataType instanceof Function) dataType = dataType();
+
+//   let data;
+
+//   const dataTypeCode = dataType.code != null ? dataType.code : dataType;
+
+//   switch (dataTypeCode) {
+//     case DataTypeCodes.SINT:
+//       data = Buffer.allocUnsafe(1);
+//       data.writeInt8(value, 0);
+//       break;
+//     case DataTypeCodes.USINT:
+//     case DataTypeCodes.BYTE:
+//       data = Buffer.allocUnsafe(1);
+//       data.writeUInt8(value, 0);
+//       break;
+//     case DataTypeCodes.INT:
+//     case DataTypeCodes.ITIME:
+//       data = Buffer.allocUnsafe(2);
+//       data.writeInt16LE(value, 0);
+//       break;
+//     case DataTypeCodes.DINT:
+//     case DataTypeCodes.TIME:
+//     case DataTypeCodes.FTIME:
+//       data = Buffer.allocUnsafe(4);
+//       data.writeInt32LE(value, 0);
+//       break;
+//     case DataTypeCodes.REAL:
+//       data = Buffer.allocUnsafe(4);
+//       data.writeFloatLE(value, 0);
+//       break;
+//     case DataTypeCodes.UINT:
+//     case DataTypeCodes.WORD:
+//       data = Buffer.allocUnsafe(2);
+//       data.writeUInt16LE(value, 0);
+//       break;
+//     case DataTypeCodes.UDINT:
+//     case DataTypeCodes.DWORD:
+//     case DataTypeCodes.DATE:
+//       data = Buffer.allocUnsafe(4);
+//       data.writeUInt32LE(value, 0);
+//       break;
+//     case DataTypeCodes.STRING: {
+//       const stringBuffer = Buffer.from(value, 'ascii');
+//       data = Buffer.allocUnsafe(2 + stringBuffer.length);
+//       data.writeUInt16LE(stringBuffer.length, 0);
+//       stringBuffer.copy(data, 2);
+//       break;
+//     }
+//     case DataTypeCodes.SHORT_STRING: {
+//       const stringBuffer = Buffer.from(value, 'ascii');
+//       data = Buffer.allocUnsafe(1 + stringBuffer.length);
+//       data.writeUInt8(stringBuffer.length, 0);
+//       stringBuffer.copy(data, 1);
+//       break;
+//     }
+//     case DataTypeCodes.STRING2: {
+//       const stringBuffer = Buffer.from(value, 'utf16le');
+//       data = Buffer.allocUnsafe(2 + stringBuffer.length);
+//       data.writeUInt16LE(stringBuffer.length, 0);
+//       stringBuffer.copy(data, 2);
+//       break;
+//     }
+//     case DataTypeCodes.LTIME:
+//     case DataTypeCodes.LINT:
+//       data = Buffer.allocUnsafe(8);
+//       data.writeBigInt64LE(value, 0);
+//       break;
+//     case DataTypeCodes.LWORD:
+//     case DataTypeCodes.ULINT:
+//       data = Buffer.allocUnsafe(8);
+//       data.writeBigUInt64LE(value, 0);
+//       break;
+//     case DataTypeCodes.LREAL:
+//       data = Buffer.allocUnsafe(8);
+//       data.writeDoubleLE(value, 0);
+//       break;
+//     default:
+//       throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
+//   }
+
+//   return data;
+// }
+
+
+function EncodeSize(dataType, value) {
+  if (dataType instanceof Function) dataType = dataType();
 
   const dataTypeCode = dataType.code != null ? dataType.code : dataType;
 
   switch (dataTypeCode) {
     case DataTypeCodes.SINT:
-      data = Buffer.allocUnsafe(1);
-      data.writeInt8(value, 0);
+    case DataTypeCodes.USINT:
+    case DataTypeCodes.BYTE:
+      return 1;
+    case DataTypeCodes.INT:
+    case DataTypeCodes.ITIME:
+    case DataTypeCodes.UINT:
+    case DataTypeCodes.WORD:
+      return 2;
+    case DataTypeCodes.DINT:
+    case DataTypeCodes.TIME:
+    case DataTypeCodes.FTIME:
+    case DataTypeCodes.REAL:
+    case DataTypeCodes.UDINT:
+    case DataTypeCodes.DWORD:
+    case DataTypeCodes.DATE:
+      return 4;
+    case DataTypeCodes.STRING:
+      return 2 + Buffer.from(value, 'ascii').length;
+    case DataTypeCodes.SHORT_STRING:
+      return 1 + Buffer.from(value, 'ascii').length;
+    case DataTypeCodes.STRING2:
+      return 2 + Buffer.from(value, 'utf16le').length;
+    case DataTypeCodes.LTIME:
+    case DataTypeCodes.LINT:
+    case DataTypeCodes.LWORD:
+    case DataTypeCodes.ULINT:
+    case DataTypeCodes.LREAL:
+      return 8;
+    case DataTypeCodes.EPATH:
+      return EPath.EncodeSize(dataType.padded, value);
+    case DataTypeCodes.ARRAY:
+    case DataTypeCodes.ABBREV_ARRAY:
+      if (!Array.isArray(value)) {
+        throw new Error(`Value must be an array to determine encoding size. Received ${typeof value}`);
+      }
+      if (value.length === 0) {
+        return 0;
+      }
+      return value.length * EncodeSize(dataType.itemType, value[0]);
+    default:
+      throw new Error(`Encoding size for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
+  }
+}
+
+
+function EncodeTo(buffer, offset, dataType, value) {
+  if (dataType instanceof Function) dataType = dataType();
+
+  const dataTypeCode = dataType.code != null ? dataType.code : dataType;
+
+  switch (dataTypeCode) {
+    case DataTypeCodes.SINT:
+      offset = buffer.writeInt8(value, offset);
       break;
     case DataTypeCodes.USINT:
     case DataTypeCodes.BYTE:
-      data = Buffer.allocUnsafe(1);
-      data.writeUInt8(value, 0);
+      offset = buffer.writeUInt8(value, offset);
       break;
     case DataTypeCodes.INT:
     case DataTypeCodes.ITIME:
-      data = Buffer.allocUnsafe(2);
-      data.writeInt16LE(value, 0);
+      offset = buffer.writeInt16LE(value, offset);
+      break;
+    case DataTypeCodes.UINT:
+    case DataTypeCodes.WORD:
+      offset = buffer.writeUInt16LE(value, offset);
       break;
     case DataTypeCodes.DINT:
     case DataTypeCodes.TIME:
     case DataTypeCodes.FTIME:
-      data = Buffer.allocUnsafe(4);
-      data.writeInt32LE(value, 0);
-      break;
-    case DataTypeCodes.REAL:
-      data = Buffer.allocUnsafe(4);
-      data.writeFloatLE(value, 0);
-      break;
-    case DataTypeCodes.UINT:
-    case DataTypeCodes.WORD:
-      data = Buffer.allocUnsafe(2);
-      data.writeUInt16LE(value, 0);
+      offset = buffer.writeInt32LE(value, offset);
       break;
     case DataTypeCodes.UDINT:
     case DataTypeCodes.DWORD:
     case DataTypeCodes.DATE:
-      data = Buffer.allocUnsafe(4);
-      data.writeUInt32LE(value, 0);
+      offset = buffer.writeUInt32LE(value, offset);
+      break;
+    case DataTypeCodes.REAL:
+      offset = buffer.writeFloatLE(value, offset);
       break;
     case DataTypeCodes.STRING: {
       const stringBuffer = Buffer.from(value, 'ascii');
-      data = Buffer.allocUnsafe(2 + stringBuffer.length);
-      data.writeUInt16LE(stringBuffer.length, 0);
-      stringBuffer.copy(data, 2);
+      offset = buffer.writeUInt16LE(stringBuffer.length, offset);
+      offset += stringBuffer.copy(buffer, offset);
       break;
     }
     case DataTypeCodes.SHORT_STRING: {
       const stringBuffer = Buffer.from(value, 'ascii');
-      data = Buffer.allocUnsafe(1 + stringBuffer.length);
-      data.writeUInt8(stringBuffer.length, 0);
-      stringBuffer.copy(data, 1);
+      offset = buffer.writeUInt8(stringBuffer.length, offset);
+      offset += stringBuffer.copy(buffer, offset);
       break;
     }
     case DataTypeCodes.STRING2: {
       const stringBuffer = Buffer.from(value, 'utf16le');
-      data = Buffer.allocUnsafe(2 + stringBuffer.length);
-      data.writeUInt16LE(stringBuffer.length, 0);
-      stringBuffer.copy(data, 2);
+      /** Use [...value].length instead of value.length??? */
+      offset = buffer.writeUInt16LE(value.length, offset);
+      offset += stringBuffer.copy(buffer, offset);
       break;
     }
-    case DataTypeCodes.LTIME:
     case DataTypeCodes.LINT:
-      data = Buffer.allocUnsafe(8);
-      data.writeBigInt64LE(value, 0);
+    case DataTypeCodes.LTIME:
+      offset = buffer.writeBigInt64LE(BigInt(value), offset);
       break;
     case DataTypeCodes.LWORD:
     case DataTypeCodes.ULINT:
-      data = Buffer.allocUnsafe(8);
-      data.writeBigUInt64LE(value, 0);
+      offset = buffer.writeBigUInt64LE(BigInt(value), offset);
       break;
     case DataTypeCodes.LREAL:
-      data = Buffer.allocUnsafe(8);
-      data.writeDoubleLE(value, 0);
+      offset = buffer.writeDoubleLE(value, offset);
+      break;
+    case DataTypeCodes.EPATH:
+      offset = EPath.EncodeSegmentsTo(buffer, offset, dataType.padded, value);
+      break;
+    case DataTypeCodes.ARRAY:
+    case DataTypeCodes.ABBREV_ARRAY: {
+      if (!Array.isArray(value)) {
+        throw new Error(`Value must be an array to encode an array. Received: ${typeof value}`);
+      }
+      for (let i = 0; i < value.length; i++) {
+        offset = EncodeTo(buffer, offset, dataType.itemType, value[i]);
+      }
+      break;
+    }
+    case DataTypeCodes.BOOL:
+      throw new Error(`Boolean encoding isn't currently supported, use BYTE instead`);
     default:
       throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
 
-  return data;
+  return offset;
 }
+
+
+
 
 
 const NeedCodes = Object.freeze({
@@ -859,5 +988,7 @@ module.exports = {
   GeneralStatusCodeDescriptions,
   Decode,
   Encode,
+  EncodeTo,
+  EncodeSize,
   DecodeDataType
 };
