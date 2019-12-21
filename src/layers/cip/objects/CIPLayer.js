@@ -28,10 +28,10 @@ class CIPLayer extends Layer {
     return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
       
-      const path = EPath.Encode(
-        CIP.Classes.Identity,
-        0x01
-      );
+      const path = EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
+        new EPath.Segments.Logical.InstanceID(0x01)
+      ]);
 
       CIPLayer.send(this, false, service, path, null, function (error, reply) {
         if (error) {
@@ -52,11 +52,11 @@ class CIPLayer extends Layer {
     return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributeSingle;
 
-      const path = EPath.Encode(
-        CIP.Classes.MessageRouter,
-        0x01,
-        0x01
-      );
+      const path = EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
+        new EPath.Segments.Logical.InstanceID(0x01),
+        new EPath.Segments.Logical.AttributeID(0x01)
+      ]);
 
       CIPLayer.send(this, true, service, path, null, (error, reply) => {
         if (error) {
@@ -79,10 +79,10 @@ class CIPLayer extends Layer {
     return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
 
-      const path = EPath.Encode(
-        CIP.Classes.MessageRouter,
-        0x01
-      );
+      const path = EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
+        new EPath.Segments.Logical.InstanceID(0x01)
+      ]);
 
       CIPLayer.send(this, true, service, path, null, (error, reply) => {
         if (error) {
@@ -139,9 +139,9 @@ class CIPLayer extends Layer {
 
     // return CallbackPromise(callback, async resolver => {
     //   const service = CIP.CommonServices.GetAttributesAll;
-    //   const path = EPath.Encode(
-    //     classCode,
-    //     instanceID
+    //   const path = EPath.EncodeSegments(
+    //     new EPath.Segments.Logical.ClassID(classCode),
+    //     new EPath.Segments.Logical.InstanceID(instanceID),
     //   );
     //   const reply = await this.request(true, service, path);
 
@@ -155,16 +155,11 @@ class CIPLayer extends Layer {
 
       for (let i = 1; i < maxAttribute; i++) {
         try {
-          // const path = EPath.Encode(
-          //   classCode,
-          //   instanceID
-          // );
-          // const reply = await this.request(true, service, path, Buffer.from([i]));
-          const path = EPath.Encode(
-            classCode,
-            instanceID,
-            i
-          );
+          const path = EPath.EncodeSegments(true, [
+            new EPath.Segments.Logical.ClassID(classCode),
+            new EPath.Segments.Logical.InstanceID(instanceID),
+            new EPath.Segments.Logical.AttributeID(i)
+          ]);
           const reply = await this.request(true, service, path);
           attributes.push({
             code: i,
@@ -184,29 +179,29 @@ class CIPLayer extends Layer {
   }
 
 
-  // messageRouterClassAttributes(callback) {
-  //   return CallbackPromise(callback, resolver => {
-  //     const service = CIP.CommonServices.GetAttributesAll;
+  messageRouterClassAttributes(callback) {
+    return CallbackPromise(callback, resolver => {
+      const service = CIP.CommonServices.GetAttributesAll;
 
-  //     const path = EPath.Encode(
-  //       CIP.Classes.Identity,
-  //       0
-  //     );
+      const path = EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
+        new EPath.Segments.Logical.InstanceID(0)
+      ]);
 
-  //     CIPLayer.send(this, true, service, path, null, (error, reply) => {
-  //       if (error) {
-  //         resolver.reject(error, reply);
-  //       } else {
-  //         try {
-  //           console.log(reply);
-  //           resolver.resolve(reply);
-  //         } catch (err) {
-  //           resolver.reject(err, reply);
-  //         }
-  //       }
-  //     });
-  //   });
-  // }
+      CIPLayer.send(this, true, service, path, null, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          try {
+            console.log(reply);
+            resolver.resolve(reply);
+          } catch (err) {
+            resolver.reject(err, reply);
+          }
+        }
+      });
+    });
+  }
 
 
   handleData(data, info, context) {

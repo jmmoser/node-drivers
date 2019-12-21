@@ -70,11 +70,10 @@ class PCCC extends CIPLayer {
   }
 }
 
-
-const PCCC_EPATH = EPath.Encode(
-  CIP.Classes.PCCC,
-  0x01
-);
+const PCCC_EPATH = EPath.EncodeSegments(true, [
+  new EPath.Segments.Logical.ClassID(CIP.Classes.PCCC),
+  new EPath.Segments.Logical.InstanceID(0x01)
+]);
 
 /** Use driver specific error handling if exists */
 function send(self, service, data) {

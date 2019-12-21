@@ -123,10 +123,10 @@ class Modbus extends CIPLayer {
 module.exports = Modbus;
 
 
-const MODBUS_EPATH = EPath.Encode(
-  Classes.Modbus, // Class ID = Modbus
-  0x01  // Instance ID = 1
-);
+const MODBUS_EPATH = EPath.EncodeSegments(true, [
+  new EPath.Segments.Logical.ClassID(Classes.Modbus),
+  new EPath.Segments.Logical.InstanceID(0x01)
+]);
 
 
 function createData(address, count) {

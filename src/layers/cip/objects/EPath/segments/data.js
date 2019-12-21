@@ -90,9 +90,14 @@ DataSegment.ANSIExtendedSymbol = class ANSIExtendedSymbolDataSegment extends Dat
     if (typeof symbol !== 'string' || symbol.length === 0) {
       throw new Error(`ANSI Extended Symbol Data Segment value must be a non-empty string. Received '${symbol}'`);
     }
-    const buffer = Buffer.allocUnsafe(1 + symbol.length);
-    buffer.writeUInt8(symbol.length, 0);
-    buffer.write(symbol, 1, 'ascii');
+    const pad = symbol.length % 2;
+    const buffer = Buffer.allocUnsafe(1 + symbol.length + pad);
+    let offset = 0;
+    offset = buffer.writeUInt8(symbol.length, offset);
+    offset += buffer.write(symbol, offset, 'ascii');
+    if (pad > 0) {
+      offset = buffer.writeUInt8(0, offset);
+    }
     super(SubtypeCodes.ANSIExtendedSymbol, buffer);
   }
 }

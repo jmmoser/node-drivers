@@ -243,11 +243,10 @@ class ConnectionManager {
 
 module.exports = ConnectionManager;
 
-
-const ConnectionManager_EPath = EPath.Encode(
-  CIP.Classes.ConnectionManager,
-  0x01
-);
+const ConnectionManager_EPath = EPath.EncodeSegments(true, [
+  new EPath.Segments.Logical.ClassID(CIP.Classes.ConnectionManager),
+  new EPath.Segments.Logical.InstanceID(0x01)
+]);
 
 
 function buildRequest(code, data) {

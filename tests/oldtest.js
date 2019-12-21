@@ -366,7 +366,10 @@ function assert(condition, message) {
 
 //   const request = MessageRouter.Request(
 //     CIP.CommonServices.GetAttributesAll,
-//     EPath.Encode(CIP.Classes.Identity, 0x01)
+//     EPath.EncodeSegments(true, [
+//       new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
+//       new EPath.Segments.Logical.InstanceID(0x01)
+//     ])
 //   );
 
 //   const routePath = Buffer.from([
@@ -440,43 +443,6 @@ function assert(condition, message) {
 // console.log('2')
 
 
-// (function() {
-//   console.log(EPath.Encode(0x02, 0x01, 0x01));
-
-//   console.log(Buffer.from([
-//     0x20, // Logical Segment - Class ID
-//     0x02, // Message Router class
-//     0x24, // Logical Segment - Instance ID 
-//     0x01, // Instance ID
-//     0x30, // Logical Segment - Attribute ID
-//     0x01  // Attribute 1
-//   ]));
-// })();
-
-
-// (function () {
-//   console.log(EPath.Encode(0x67, 0x01));
-
-//   console.log(Buffer.from([
-//     0x20, // Logical Segment - Class ID
-//     0x67, // PCCC object
-//     0x24, // Logical Segment - Instance ID
-//     0x01
-//   ]));
-// })();
-
-// (function () {
-//   console.log(EPath.Encode(0x67, 0xFF82));
-
-//   console.log(Buffer.from([
-//     0x20, // Logical Segment - Class ID
-//     0x67, // PCCC object
-//     0x25, // Logical Segment - Instance ID
-//     0x00, // pad byte
-//     0x82, // Instance ID least significant byte (LE)
-//     0xFF  // Instance ID most significant byte byte (LE)
-//   ]));
-// })();
 
 
 

@@ -701,81 +701,82 @@ class EPath {
   }
 
 
-  static Encode(classID, instanceID, attributeID) {
-    const segments = [];
-    let code, length, totalLength = 0;
+  // static Encode(classID, instanceID, attributeID) {
+  //   const segments = [];
+  //   let code, length, totalLength = 0;
 
-    if (classID != null) {
-      if (classID < 256) {
-        length = 1;
-        code = 0x20;
-      } else {
-        length = 2;
-        code = 0x21;
-      }
-      totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
-      segments.push({
-        type: 'CLASS',
-        value: classID,
-        code,
-        length
-      });
-    }
+  //   if (classID != null) {
+  //     if (classID < 256) {
+  //       length = 1;
+  //       code = 0x20;
+  //     } else {
+  //       length = 2;
+  //       code = 0x21;
+  //     }
+  //     totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
+  //     segments.push({
+  //       type: 'CLASS',
+  //       value: classID,
+  //       code,
+  //       length
+  //     });
+  //   }
 
-    if (instanceID != null) {
-      if (instanceID < 256) {
-        length = 1;
-        code = 0x24;
-      } else {
-        length = 2;
-        code = 0x25;
-      }
-      totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
-      segments.push({
-        type: 'INSTANCE',
-        value: instanceID,
-        code,
-        length
-      });
-    }
+  //   if (instanceID != null) {
+  //     if (instanceID < 256) {
+  //       length = 1;
+  //       code = 0x24;
+  //     } else {
+  //       length = 2;
+  //       code = 0x25;
+  //     }
+  //     totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
+  //     segments.push({
+  //       type: 'INSTANCE',
+  //       value: instanceID,
+  //       code,
+  //       length
+  //     });
+  //   }
 
-    if (attributeID != null) {
-      if (attributeID < 256) {
-        length = 1;
-        code = 0x30;
-      } else {
-        length = 2;
-        code = 0x31;
-      }
-      totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
-      segments.push({
-        type: 'ATTRIBUTE',
-        value: attributeID,
-        code,
-        length
-      });
-    }
+  //   if (attributeID != null) {
+  //     if (attributeID < 256) {
+  //       length = 1;
+  //       code = 0x30;
+  //     } else {
+  //       length = 2;
+  //       code = 0x31;
+  //     }
+  //     totalLength += (length + 1) + (length + 1) % 2; /** include pad byte if segment has an odd length */
+  //     segments.push({
+  //       type: 'ATTRIBUTE',
+  //       value: attributeID,
+  //       code,
+  //       length
+  //     });
+  //   }
 
-    const buffer = Buffer.allocUnsafe(totalLength);
-    let offset = 0;
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-      switch (segment.length) {
-        case 1:
-          offset = buffer.writeUInt8(segment.code, offset);
-          offset = buffer.writeUInt8(segment.value, offset);
-          break;
-        case 2:
-          offset = buffer.writeUInt16LE(segment.code, offset);
-          offset = buffer.writeUInt16LE(segment.value, offset);
-          break;
-        default:
-          throw new Error(`Unexpected segment length ${segment.length}`);
-      }
-    }
+  //   const buffer = Buffer.allocUnsafe(totalLength);
+  //   let offset = 0;
+  //   for (let i = 0; i < segments.length; i++) {
+  //     const segment = segments[i];
+  //     switch (segment.length) {
+  //       case 1:
+  //         offset = buffer.writeUInt8(segment.code, offset);
+  //         offset = buffer.writeUInt8(segment.value, offset);
+  //         break;
+  //       case 2:
+  //         offset = buffer.writeUInt16LE(segment.code, offset);
+  //         offset = buffer.writeUInt16LE(segment.value, offset);
+  //         break;
+  //       default:
+  //         throw new Error(`Unexpected segment length ${segment.length}`);
+  //     }
+  //   }
 
-    return buffer;
-  }
+  //   return buffer;
+  // }
+  
 
   static Decode(buffer, offset, length, padded, cb) {
     if (length === true) {

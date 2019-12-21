@@ -117,15 +117,6 @@ const {
 // }
 
 
-// class CIPCommonServices {
-//   static GetAttributesAll = new CIPServiceRequest(
-//     0x01,
-//     (instance) => {
-//       return EPath.Encode(this.code, instance)
-//     }
-//   );
-// }
-
 
 class CIPObject {
   // static ReservedClassAttributes = CIPObjectReservedClassAttributes;
@@ -139,7 +130,10 @@ class CIPObject {
   getAttributesAllRequest(instance = 0x01) {
     return this.request(
       CommonServices.GetAttributesAll,
-      EPath.Encode(this.code, instance)
+      EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(this.code),
+        new EPath.Segments.Logical.InstanceID(instance)
+      ])
     );
   }
 

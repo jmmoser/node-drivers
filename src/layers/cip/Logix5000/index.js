@@ -507,10 +507,11 @@ class Logix5000 extends CIPLayer {
         }
 
         const service = TemplateServiceCodes.Read;
-        const path = EPath.Encode(
-          ClassCodes.Template,
-          templateID
-        );
+
+        const path = EPath.EncodeSegments(true, [
+          new EPath.Segments.Logical.ClassID(ClassCodes.Template),
+          new EPath.Segments.Logical.InstanceID(templateID)
+        ]);
 
         let attributes;
         if (this._templateInstanceAttributes.has(templateID)) {
@@ -600,10 +601,10 @@ class Logix5000 extends CIPLayer {
     return CallbackPromise(callback, async resolver => {
       const service = CommonServices.GetAttributeList;
 
-      const path = EPath.Encode(
-        ClassCodes.Template,
-        0
-      );
+      const path = EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(ClassCodes.Template),
+        new EPath.Segments.Logical.InstanceID(0)
+      ]);
 
       const reply = await sendPromise(this, service, path, encodeAttributes([
         1, 2, 3, 8, /** 9 timed out?? */
@@ -649,10 +650,10 @@ class Logix5000 extends CIPLayer {
 
         const service = CommonServices.GetAttributeList;
 
-        const path = EPath.Encode(
-          ClassCodes.Template,
-          templateID
-        );
+        const path = EPath.EncodeSegments(true, [
+          new EPath.Segments.Logical.ClassID(ClassCodes.Template),
+          new EPath.Segments.Logical.InstanceID(templateID)
+        ]);
 
         const data = encodeAttributes([
           TemplateInstanceAttributeCodes.StructureHandle,
@@ -714,10 +715,10 @@ class Logix5000 extends CIPLayer {
     return CallbackPromise(callback, resolver => {
       const service = CommonServices.GetAttributeList;
 
-      const path = EPath.Encode(
-        0xAC,
-        0x01
-      );
+      const path = EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(0xAC),
+        new EPath.Segments.Logical.InstanceID(0x01)
+      ]);
 
       const data = encodeAttributes([1, 2, 3, 4, 10]);
 
@@ -976,12 +977,14 @@ function encodeAttributes(attributes) {
 function encodeSymbolPath(tag) {
   switch (typeof tag) {
     case 'string':
-      return EPath.EncodeANSIExtSymbol(tag);
+      return EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(tag));
     case 'number':
-      return EPath.Encode(ClassCodes.Symbol, tag);
+      return EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(ClassCodes.Symbol),
+        new EPath.Segments.Logical.InstanceID(tag)
+      ]);
     case 'object':
-      return EPath.EncodeANSIExtSymbol(tag.name);
-      // return EPath.Encode(ClassCodes.Symbol, tag.id);
+      return EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(tag));
     default:
       throw new Error('Tag must be a tag name, symbol instance number, or a tag object');
   }
