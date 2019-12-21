@@ -15,26 +15,23 @@ const {
   InvertKeyValues
 } = require('../../../../../utils');
 
-const NetworkSegmentTypeCodes = {
+const NetworkSegmentTypeCodes = Object.freeze({
   Schedule: 1,
   FixedTag: 2,
   ProductionInhibitTime: 3,
   Safety: 16,
   Extended: 31
-};
+});
 
-const NetworkSegmentTypeNames = InvertKeyValues(NetworkSegmentTypeCodes);
+const NetworkSegmentTypeNames = Object.freeze(InvertKeyValues(NetworkSegmentTypeCodes));
 
 
 class NetworkSegment {
   static Decode(segmentCode, buffer, offset, padded, cb) {
-
+    
 
     if (typeof cb === 'function') {
-      cb({
-        // number,
-        // address
-      });
+      cb(new NetworkSegment());
     }
 
     return offset;

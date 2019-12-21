@@ -34,6 +34,7 @@ const {
   encodeUnsignedInteger
 } = require('../../../../../utils');
 
+
 class PortSegment {
   constructor(number, address) {
     address = serializeAddress(address);
@@ -119,7 +120,6 @@ class PortSegment {
 }
 
 module.exports = PortSegment;
-
 
 function serializeAddress(address) {
   if (Buffer.isBuffer(address)) {

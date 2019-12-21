@@ -5,3 +5,6 @@ playground*
 
 examples/
 documents/
+coverage/
+tests/
+TASKS*

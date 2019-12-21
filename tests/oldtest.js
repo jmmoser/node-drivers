@@ -234,13 +234,6 @@ function assert(condition, message) {
     });
     assert(offset === buffer.length);
   })();
-
-  const LogicalSegment = require('../src/layers/cip/objects/EPath/segments/logical');
-
-  (() => {
-    console.log((LogicalSegment.ClassID(5)));
-    // console.log(LogicalSegment.EncodeSize(true, LogicalSegment.Types.ClassID, LogicalSegment.Formats.LogicalAddress8Bit)
-  })();
 })();
 
 
@@ -372,6 +365,35 @@ function assert(condition, message) {
 
 //   console.log(ConnectionManager.UnconnectedSend(request, routePath));
 // })();
+
+
+(() => {
+  const CIP = require('../src/layers/cip/objects/CIP');
+  const EPath = require('../src/layers/cip/objects/EPath');
+  // const MessageRouter = require('../src/layers/cip/objects/MessageRouter');
+  // const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
+
+  assert(EPath.EncodeSegments(true, [
+    new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
+    new EPath.Segments.Logical.InstanceID(1),
+  ]).equals(Buffer.from([0x20, 0x02, 0x24, 0x01])));
+
+  assert(EPath.EncodeSegments(true, [
+    new EPath.Segments.Port(1, 0),
+    new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
+    new EPath.Segments.Logical.InstanceID(1),
+  ]).equals(Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01])));
+
+
+  console.log(EPath.Decode(EPath.Segments.Logical.SpecialNormalElectronicKey(1, 2, 3, 4, 5, 0).encode(true), 0, null, true, console.log));
+
+  // console.log(EPath.EncodeSegments(true, [
+  //   new EPath.Segments.Port(1, 0),
+  //   EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
+  //   EPath.Segments.Logical.InstanceID(1),
+  // ]));
+})();
+
 
 
 

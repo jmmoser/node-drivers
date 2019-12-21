@@ -673,17 +673,85 @@ function Encode(dataType, value) {
 }
 
 
+const NeedCodes = Object.freeze({
+  Optional: 0b1,
+  Conditional: 0b10
+});
 
-// CIP Vol1 Edition 3.3 Table 4-4.2
-const ReservedClassAttributes = {
-  Revision: 1,
-  MaxInstance: 2,
-  NumberOfInstances: 3,
-  OptionalAttributeList: 4,
-  OptionalServiceList: 5,
-  MaximumIDNumberClassAttributes: 6,
-  MaximumIDNumberInstanceAttributes: 7
-};
+const AccessCodes = Object.freeze({
+  Get: 0b1,
+  Set: 0b10
+});
+
+
+class Attribute {
+  constructor(id, need, access, name, dataType) {
+    this.id = id;
+    this.need = need;
+    this.access = access;
+    this.name = name;
+    this.dataType = dataType;
+  }
+}
+
+// function Attribute(id, need, access, name, dataType) {
+//   return {
+//     id,
+//     needType,
+//     accessRule,
+//     name,
+//     dataType
+//   };
+// }
+
+/** CIP Vol 1, Table 4-4.2 */
+const ReservedClassAttributes = Object.freeze({
+  Revision: new Attribute(1, NeedCodes.Conditional, AccessCodes.Get, 'Revision', DataType.UINT),
+  MaxInstance: new Attribute(2, NeedCodes.Optional, AccessCodes.Get, 'Max Instance', DataType.UINT),
+  NumberOfInstances: new Attribute(3, NeedCodes.Optional, AccessCodes.Get, 'Number of Instances', DataType.UINT),
+  OptionalAttributeList: new Attribute(
+    4,
+    NeedCodes.Optional,
+    AccessCodes.Get,
+    'Optional Attribute List',
+    DataType.STRUCT([
+      DataType.SMEMBER(DataType.UINT, true),
+      DataType.PLACEHOLDER,
+    ], function(members) {
+      if (members.length === 1) {
+        return DataType.ARRAY(DataType.UINT, 0, members[0] - 1);
+      }
+    })
+  ),
+  OptionalServiceList: new Attribute(
+    5,
+    NeedCodes.Optional,
+    AccessCodes.Get,
+    'Optional Service List',
+    DataType.STRUCT([
+      DataType.SMEMBER(DataType.UINT, true),
+      DataType.PLACEHOLDER,
+    ], function (members) {
+      if (members.length === 1) {
+        return DataType.ARRAY(DataType.UINT, 0, members[0] - 1);
+      }
+    })
+  ),
+  MaximumIDNumberClassAttributes: new Attribute(
+    6,
+    NeedCodes.Conditional,
+    AccessCodes.Get,
+    'Maximum ID Number Class Attributes',
+    DataType.UINT
+  ),
+  MaximumIDNumberInstanceAttributes: new Attribute(
+    7,
+    NeedCodes.Conditional,
+    AccessCodes.Get,
+    'Maximum ID Number Instance Attributes',
+    DataType.UINT
+  )
+});
 
 
 // CIP-V1-1.0 Appendix B-1. General status codes

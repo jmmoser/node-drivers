@@ -35,23 +35,23 @@ const TypeNames = Object.freeze(InvertKeyValues(TypeCodes));
 
 
 const FormatCodes = Object.freeze({
-  LogicalAddress8Bit: 0,
-  LogicalAddress16Bit: 1,
-  LogicalAddress32Bit: 2,
+  Address8Bit: 0,
+  Address16Bit: 1,
+  Address32Bit: 2,
   Reserved: 3
 });
 
 const FormatNames = Object.freeze(InvertKeyValues(FormatCodes));
 
 const LogicalFormatSizes = Object.freeze({
-  [FormatCodes.LogicalAddress8Bit]: 1,
-  [FormatCodes.LogicalAddress16Bit]: 2,
-  [FormatCodes.LogicalAddress32Bit]: 4
+  [FormatCodes.Address8Bit]: 1,
+  [FormatCodes.Address16Bit]: 2,
+  [FormatCodes.Address32Bit]: 4
 });
 
-const ServiceIDFormatCodes = Object.freeze({
-  LogicalAddress8Bit: 0
-});
+// const ServiceIDFormatCodes = Object.freeze({
+//   Address8Bit: 0
+// });
 
 const SpecialFormatCodes = Object.freeze({
   ElectronicKey: 0
@@ -63,17 +63,19 @@ const ElectronicKeyFormatCodes = Object.freeze({
 
 
 class LogicalSegment {
-  constructor(type, format, value, extra) {
+  constructor(type, format, value) {
     if (format == null) {
       format = getFormatFromID(value);
     }
 
     let formatName;
-    if (type === TypeCodes.Special && format === 0) {
+    if (type === TypeCodes.Special && format === SpecialFormatCodes.ElectronicKey) {
       formatName = 'ElectronicKey';
     } else {
       formatName = FormatNames[format] || 'Unknown';
     }
+
+    validate(type, format, value);
 
     this.type = {
       code: type,
@@ -84,10 +86,6 @@ class LogicalSegment {
       name: formatName
     };
     this.value = value;
-
-    if (extra) {
-      this.extra = extra;
-    }
   }
 
   encodeSize(padded) {
@@ -96,7 +94,7 @@ class LogicalSegment {
 
   encode(padded) {
     const buffer = Buffer.alloc(this.encodeSize(padded));
-    this.encodeTo(buffer, offset, padded);
+    this.encodeTo(buffer, 0, padded);
     return buffer;
   }
 
@@ -122,19 +120,21 @@ class LogicalSegment {
     const type = getBits(segmentCode, 2, 5);
     const format = getBits(segmentCode, 0, 2);
 
-    if (format === FormatCodes.LogicalAddress32Bit) {
-      if (type !== TypeCodes.InstanceID || type !== TypeCodes.ConnectionPoint) {
-        throw new Error(`The 32-bit logical address format is only allowed for the logical Instance ID and Connection Point types. It is not allowed for any other Logical Type (reserved for future use).`);
-      }
-    }
+    validate(type, format);
 
-    if (type === TypeCodes.ServiceID && format !== 0) {
-      throw new Error(`Service ID Logical Type with format ${format} is reserved for future use`);
-    }
+    // if (format === FormatCodes.Address32Bit) {
+    //   if (type !== TypeCodes.InstanceID || type !== TypeCodes.ConnectionPoint) {
+    //     throw new Error(`The 32-bit logical address format is only allowed for the logical Instance ID and Connection Point types. It is not allowed for any other Logical Type (reserved for future use).`);
+    //   }
+    // }
 
-    if (type === TypeCodes.Special && format !== 0) {
-      throw new Error(`Special Logical Type with format ${format} is reserved for future use`);
-    }
+    // if (type === TypeCodes.ServiceID && format !== 0) {
+    //   throw new Error(`Service ID Logical Type with format ${format} is reserved for future use`);
+    // }
+
+    // if (type === TypeCodes.Special && format !== 0) {
+    //   throw new Error(`Special Logical Type with format ${format} is reserved for future use`);
+    // }
 
     let value;
     if (type === TypeCodes.Special) {
@@ -164,37 +164,37 @@ class LogicalSegment {
     return offset;
   }
 
-  static ClassID(value, format) {
-    return new LogicalSegment(TypeCodes.ClassID, format, value);
-  }
+  // static ClassID(value, format) {
+  //   return new LogicalSegment(TypeCodes.ClassID, format, value);
+  // }
 
-  static InstanceID(value, format) {
-    return new LogicalSegment(TypeCodes.InstanceID, format, value);
-  }
+  // static InstanceID(value, format) {
+  //   return new LogicalSegment(TypeCodes.InstanceID, format, value);
+  // }
 
-  static AttributeID(value, format) {
-    return new LogicalSegment(TypeCodes.AttributeID, format, value);
-  }
+  // static AttributeID(value, format) {
+  //   return new LogicalSegment(TypeCodes.AttributeID, format, value);
+  // }
 
-  static MemberID(value, format) {
-    return new LogicalSegment(TypeCodes.MemberID, format, value);
-  }
+  // static MemberID(value, format) {
+  //   return new LogicalSegment(TypeCodes.MemberID, format, value);
+  // }
 
-  static ConnectionPoint(value, format) {
-    return new LogicalSegment(TypeCodes.ConnectionPoint, format, value);
-  }
+  // static ConnectionPoint(value, format) {
+  //   return new LogicalSegment(TypeCodes.ConnectionPoint, format, value);
+  // }
 
-  static ServiceID(value, format) {
-    /** only format code 0 is currently supported by CIP, constructor still calls getFormatFromID for validation */
-    return new LogicalSegment(TypeCodes.ServiceID, format, value);
-  }
+  // static ServiceID(value, format) {
+  //   /** only format code 0 is currently supported by CIP, constructor still calls getFormatFromID for validation */
+  //   return new LogicalSegment(TypeCodes.ServiceID, format, value);
+  // }
 
-  static Special(value, format) {
-    if (format == null) {
-      format = SpecialFormatCodes.ElectronicKey;
-    }
-    return new LogicalSegment(TypeCodes.Special, format, value);
-  }
+  // static Special(value, format) {
+  //   if (format == null) {
+  //     format = SpecialFormatCodes.ElectronicKey;
+  //   }
+  //   return new LogicalSegment(TypeCodes.Special, format, value);
+  // }
 
 
   /** Helper function for the only kind of Special Logical Segment */
@@ -226,17 +226,89 @@ class LogicalSegment {
 }
 
 
+LogicalSegment.ClassID = class ClassID extends LogicalSegment {
+  constructor(value, format) {
+    super(TypeCodes.ClassID, format, value);
+  }
+}
+
+LogicalSegment.InstanceID = class InstanceID extends LogicalSegment {
+  constructor(value, format) {
+    super(TypeCodes.InstanceID, format, value);
+  }
+}
+
+LogicalSegment.AttributeID = class AttributeID extends LogicalSegment {
+  constructor(value, format) {
+    super(TypeCodes.AttributeID, format, value);
+  }
+}
+
+LogicalSegment.MemberID = class MemberID extends LogicalSegment {
+  constructor(value, format) {
+    super(TypeCodes.MemberID, format, value);
+  }
+}
+
+LogicalSegment.ConnectionPoint = class ConnectionPoint extends LogicalSegment {
+  constructor(value, format) {
+    super(TypeCodes.ConnectionPoint, format, value);
+  }
+}
+
+LogicalSegment.ServiceID = class ServiceID extends LogicalSegment {
+  constructor(value, format) {
+    super(TypeCodes.ServiceID, format, value);
+  }
+}
+
+LogicalSegment.Special = class Special extends LogicalSegment {
+  constructor(value, format) {
+    if (format == null) {
+      format = SpecialFormatCodes.ElectronicKey;
+    }
+    super(TypeCodes.Special, format, value);
+  }
+}
+
+
 module.exports = LogicalSegment;
+
+
+function validate(type, format, value) {
+  if (format === FormatCodes.Address32Bit) {
+    if (!(type === TypeCodes.InstanceID || type === TypeCodes.ConnectionPoint)) {
+      throw new Error(`The 32-bit logical address format is only allowed for the logical Instance ID and Connection Point types. It is not allowed for any other Logical Type (reserved for future use).`);
+    }
+  }
+
+  if (type === TypeCodes.ServiceID && format !== FormatCodes.Address8Bit) {
+    throw new Error(`Logical type Service ID with format ${format} is reserved for future use`);
+  }
+
+  if (type === TypeCodes.Special) {
+    if (format !== FormatCodes.Address8Bit) {
+      throw new Error(`Logical type Special with format ${format} is reserved for future use`);
+    }
+
+    if (value != null) {
+      if (typeof value !== 'object' || value.format !== ElectronicKeyFormatCodes.Normal) {
+        throw new Error(`Logical type Special value must be a valid Electronic Key object`);
+      }
+    } 
+  }
+}
+
 
 
 function getFormatFromID(id) {
   switch (sizeToEncodeUnsignedInteger(id)) {
     case 1:
-      return FormatCodes.LogicalAddress8Bit;
+      return FormatCodes.Address8Bit;
     case 2:
-      return FormatCodes.LogicalAddress16Bit;
+      return FormatCodes.Address16Bit;
     case 4:
-      return FormatCodes.LogicalAddress32Bit;
+      return FormatCodes.Address32Bit;
     default:
       throw new Error(`Unable to determin logical segment format for id: ${id}`);
   }
@@ -287,18 +359,19 @@ function encodeSize(padded, type, format, value) {
     case TypeCodes.ConnectionPoint:
     case TypeCodes.ServiceID: {
       switch (format) {
-        case FormatCodes.LogicalAddress8Bit:
+        case FormatCodes.Address8Bit:
           size += 1;
           break;
-        case FormatCodes.LogicalAddress16Bit:
+        case FormatCodes.Address16Bit:
           size += 2 + (padded ? 1 : 0);
           break;
-        case FormatCodes.LogicalAddress32Bit:
+        case FormatCodes.Address32Bit:
           size += 4 + (padded ? 1 : 0);
           break;
         default:
           throw new Error(`Logical segment unknown ${TypeNames[type]} format ${format}`);
       }
+      break;
     }
     case TypeCodes.Special: {
       switch (format) {
@@ -310,7 +383,7 @@ function encodeSize(padded, type, format, value) {
           }
           break;
         default:
-          break;
+          throw new Error(`Invalid Special Logical segment format ${format}`);
       }
       break;
     }
@@ -322,9 +395,9 @@ function encodeSize(padded, type, format, value) {
 }
 
 
-function encodeBuffer(padded, type, format, value) {
-  return Buffer.alloc(encodeSize(padded, type, format, value));
-}
+// function encodeBuffer(padded, type, format, value) {
+//   return Buffer.alloc(encodeSize(padded, type, format, value));
+// }
 
 
 
@@ -339,16 +412,16 @@ function encodeTo(buffer, offset, padded, type, format, value) {
     case TypeCodes.ConnectionPoint:
     case TypeCodes.ServiceID: {
       switch (format) {
-        case FormatCodes.LogicalAddress8Bit:
+        case FormatCodes.Address8Bit:
           offset = buffer.writeUInt8(value, offset);
           break;
-        case FormatCodes.LogicalAddress16Bit:
+        case FormatCodes.Address16Bit:
           if (padded) {
             offset = buffer.writeUInt8(0, offset);
           }
           offset = buffer.writeUInt16LE(value, offset);
           break;
-        case FormatCodes.LogicalAddress32Bit:
+        case FormatCodes.Address32Bit:
           if (padded) {
             offset = buffer.writeUInt8(0, offset);
           }
@@ -357,6 +430,7 @@ function encodeTo(buffer, offset, padded, type, format, value) {
         default:
           throw new Error(`Logical segment unknown ${TypeNames[type]} format ${format}`);
       }
+      break;
     }
     case TypeCodes.Special: {
       switch (format) {
@@ -383,4 +457,6 @@ function encodeTo(buffer, offset, padded, type, format, value) {
     default:
       throw new Error(`Unknown Logical Segment type ${type}`);
   }
+
+  return offset;
 }

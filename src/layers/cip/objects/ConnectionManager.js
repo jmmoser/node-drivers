@@ -53,9 +53,6 @@ class ConnectionManager {
     
 
     let offset = 0;
-    // const data = Buffer.allocUnsafe(42);
-    
-    // const portAddress = serializePortAddress(connection.Slot);
     const portSegmentSize = EPath.Segments.Port.EncodeSize(connection.Port, connection.Slot);
     const data = Buffer.allocUnsafe(40 + portSegmentSize);
 
@@ -119,8 +116,6 @@ class ConnectionManager {
   /** CIP Vol 1 3-5.5.3 */
   static ForwardClose(connection) {
     let offset = 0;
-
-    // const portAddress = serializePortAddress(connection.Slot);
     const portSegmentSize = EPath.Segments.Port.EncodeSize(connection.Port, connection.Slot);
     const data = Buffer.allocUnsafe(16 + portSegmentSize);
 
@@ -139,6 +134,9 @@ class ConnectionManager {
     offset = data.writeUInt8(CIP.Classes.MessageRouter, offset); // class ID (MessageRouter)
     offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit address
     offset = data.writeUInt8(0x01, offset); // instance ID
+
+    // EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter);
+    // EPath.Segments.Logical.InstanceID(1);
 
     return buildRequest(Services.ForwardClose, data);
   }

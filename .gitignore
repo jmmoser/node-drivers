@@ -2,3 +2,5 @@ node_modules/
 internal.js
 
 playground*
+
+coverage/

@@ -10,7 +10,22 @@ const {
 } = require('./CIP');
 
 
-const InstanceAttributeCodes = {
+const ClassAttributeCodes = Object.freeze({
+  // 1
+  InstanceInfo: 9
+});
+
+const ClassAttributeDataTypes = Object.freeze({
+  [ClassAttributeCodes.InstanceInfo]: DataType.ABBREV_ARRAY(
+    DataType.STRUCT([
+      DataType.UINT, // Port Type
+      DataType.UINT // Port Number
+    ])
+  )
+});
+
+
+const InstanceAttributeCodes = Object.freeze({
   Type: 1,
   Number: 2,
   Link: 3,
@@ -20,11 +35,11 @@ const InstanceAttributeCodes = {
   NodeAddress: 7,
   NodeRange: 8,
   Key: 9
-};
+});
 
-const InstanceAttributeNames = InvertKeyValues(InstanceAttributeCodes);
+const InstanceAttributeNames = Object.freeze(InvertKeyValues(InstanceAttributeCodes));
 
-const InstanceAttributeDataTypes = {
+const InstanceAttributeDataTypes = Object.freeze({
   [InstanceAttributeCodes.Type]: DataType.UINT,
   [InstanceAttributeCodes.Number]: DataType.UINT,
   [InstanceAttributeCodes.Link]: DataType.STRUCT([DataType.SMEMBER(DataType.UINT, true), DataType.PLACEHOLDER], function (members) {
@@ -40,10 +55,18 @@ const InstanceAttributeDataTypes = {
   [InstanceAttributeCodes.NodeAddress]: DataType.EPATH(true),
   [InstanceAttributeCodes.NodeRange]: DataType.STRUCT([DataType.UINT, DataType.UINT]),
   [InstanceAttributeCodes.Key]: DataType.EPATH(false)
-};
+});
+
+const InstanceGetAttributesAllOrder = Object.freeze([
+  InstanceAttributeCodes.Type,
+  InstanceAttributeCodes.Number,
+  InstanceAttributeCodes.Link,
+  InstanceAttributeCodes.Name,
+  InstanceAttributeCodes.NodeAddress
+]);
 
 /** CIP Vol 3 Chapter 3-7.3 */
-const PortTypeNames = {
+const PortTypeNames = Object.freeze({
   0: 'Connection terminates in this device',
   1: 'Reserved for compatibility with existing protocols (Backplane)',
   2: 'ControlNet',
@@ -54,10 +77,14 @@ const PortTypeNames = {
   201: 'Modbus/TCP',
   202: 'Modbus/SL',
   65535: 'Unconfigured port'
-};
+});
 
 
 class Port {
+  static DecodeAttribute(forClass, attribute, attributes, data, offset, cb) {
+    const 
+  }
+
   static DecodeInstanceAttribute(attribute, data, offset, cb) {
     const dataType = InstanceAttributeDataTypes[attribute];
     if (!dataType) {
@@ -93,6 +120,17 @@ class Port {
         value,
         // raw
       });
+    }
+    return offset;
+  }
+
+  static DecodeInstanceGetAttributesAll(buffer, offset, cb) {
+    const attributes = []
+    InstanceGetAttributesAllOrder.forEach((attributeCode) => {
+      offset = this.DecodeInstanceAttribute(attributeCode, buffer, offset, val => attributes.push(val));
+    });
+    if (typeof cb === 'function') {
+      cb(attributes);
     }
     return offset;
   }

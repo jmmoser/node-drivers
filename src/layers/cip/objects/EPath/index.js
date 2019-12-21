@@ -535,32 +535,32 @@ function readDataTypeElementarySegment(buffer, offset, segment) {
 }
 
 
-function describeSegments(segments) {
-  let description = '';
-  for (let i = 0; i < segments.length; i++) {
-    let segment = segments[i];
-    switch (segment.type) {
-      case SEGMENT_TYPE.PORT:
-        description += describePortSegment(segment);
-        break;
-      case SEGMENT_TYPE.LOGICAL:
-        break;
-      case SEGMENT_TYPE.NETWORK:
-        break;
-      case SEGMENT_TYPE.SYMBOLIC:
-        break;
-      case SEGMENT_TYPE.DATA:
-        break;
-      case SEGMENT_TYPE.DATA_TYPE_CONSTRUCTED:
-        break;
-      case SEGMENT_TYPE.DATA_TYPE_ELEMENTARY:
-        break;
-      default:
-      //
-    }
-  }
-  return description;
-}
+// function describeSegments(segments) {
+//   let description = '';
+//   for (let i = 0; i < segments.length; i++) {
+//     let segment = segments[i];
+//     switch (segment.type) {
+//       case SEGMENT_TYPE.PORT:
+//         description += describePortSegment(segment);
+//         break;
+//       case SEGMENT_TYPE.LOGICAL:
+//         break;
+//       case SEGMENT_TYPE.NETWORK:
+//         break;
+//       case SEGMENT_TYPE.SYMBOLIC:
+//         break;
+//       case SEGMENT_TYPE.DATA:
+//         break;
+//       case SEGMENT_TYPE.DATA_TYPE_CONSTRUCTED:
+//         break;
+//       case SEGMENT_TYPE.DATA_TYPE_ELEMENTARY:
+//         break;
+//       default:
+//       //
+//     }
+//   }
+//   return description;
+// }
 
 const validASCIICharacterSet = /[a-zA-Z0-9\.\@]/;
 
@@ -597,45 +597,15 @@ function describePortSegment(segment) {
 
 
 
-
-function LogicalClassSegment(classID) {
-  return {
-    type: SEGMENT_TYPE.LOGICAL,
-    info: {
-      type: LOGICAL_SEGMENT_TYPE.CLASS_ID,
-      value: classID
-    }
-  }
-}
-
-
-// const Segments = {
-//   Logical: {
-//     Class: function(classID) {
-//       return {
-//         type: SEGMENT_TYPE.LOGICAL,
-//         info: {
-//           type: LOGICAL_SEGMENT_TYPE.CLASS_ID,
-//           value: classID
-//         }
-//       }
-//     },
-//     Instance: function(instanceID) {
-//       return {
-//         type: SEGMENT_TYPE.LOGICAL,
-//         info: {
-//           type: LOGICAL_SEGMENT_TYPE.INSTANCE_ID,
-//           value: instanceID
-//         }
-//       }
-//     }
-//   }
-// };
-
-
-
 class EPath {
+  constructor(padded, segments) {
+    this.padded = padded;
+    this.segments = segments;
+  }
 
+  encodeSize() {
+    return encodeSize(this.padded, this.segments);
+  }
 
 
   /**
@@ -828,14 +798,14 @@ class EPath {
   }
 
 
-  static EncodeSegmentsSize(padded, segments) {
-    return encodeSegmentsSize(padded, segments);
+  static EncodeSize(padded, segments) {
+    return encodeSize(padded, segments);
   }
 
   static EncodeSegments(padded, segments) {
     let size = 0;
     for (let i = 0; i < segments.length; i++) {
-      size += segments.encodeSize(padded);
+      size += segments[i].encodeSize(padded);
     }
     const buffer = Buffer.alloc(size);
 
@@ -847,10 +817,6 @@ class EPath {
   static EncodeSegmentsTo(buffer, offset, padded, segments) {
     return encodeSegmentsTo(buffer, offset, padded, segments);
   }
-
-  static DescribeSegments(segments) {
-    return describeSegments(segments);
-  }
 }
 
 
@@ -860,16 +826,16 @@ module.exports = EPath;
 
 
 
-function encodeBuffer(padded, segments) {
-  let size = 0;
-  for (let i = 0; i < segments.length; i++) {
-    size += segments.encodeSize(padded);
-  }
-  return Buffer.alloc(size);
-}
+// function encodeBuffer(padded, segments) {
+//   let size = 0;
+//   for (let i = 0; i < segments.length; i++) {
+//     size += segments.encodeSize(padded);
+//   }
+//   return Buffer.alloc(size);
+// }
 
 
-function encodeSegmentsSize(padded, segments) {
+function encodeSize(padded, segments) {
   let size = 0;
   for (let i = 0; i < segments.length; i++) {
     size += segments.encodeSize(padded);
