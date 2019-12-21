@@ -243,6 +243,23 @@ module.exports = LogicalSegment;
 
 
 function validate(type, format, value) {
+  switch (type) {
+    case TypeCodes.ClassID:
+    case TypeCodes.InstanceID:
+    case TypeCodes.MemberID:
+    case TypeCodes.AttributeID:
+    case TypeCodes.ConnectionPoint:
+    case TypeCodes.ServiceID:
+      if (!Number.isInteger(value) || value < 0) {
+        throw new Error(`Logical Segment of type ${TypeNames[type]}`);
+      }
+      break;
+    case TypeCodes.Special:
+      break;
+    default:
+      throw new Error(`Invalid Logical Segment type ${type}`);
+  }
+  
   if (format === FormatCodes.Address32Bit) {
     if (!(type === TypeCodes.InstanceID || type === TypeCodes.ConnectionPoint)) {
       throw new Error(`The 32-bit logical address format is only allowed for the logical Instance ID and Connection Point types. It is not allowed for any other Logical Type (reserved for future use).`);

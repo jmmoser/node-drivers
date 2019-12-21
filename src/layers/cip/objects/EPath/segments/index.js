@@ -5,5 +5,6 @@ module.exports = {
   Logical: require('./logical'),
   Network: require('./network'),
   Symbolic: require('./symbolic'),
-  Data: require('./data')
+  Data: require('./data'),
+  DataType: require('./datatype')
 };

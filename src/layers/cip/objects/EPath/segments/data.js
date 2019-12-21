@@ -24,9 +24,47 @@ const {
   InvertKeyValues
 } = require('../../../../../utils');
 
+const SubtypeCodes = {
+  Simple: 0,
+  ANSIExtendedSymbol: 17
+};
+
 
 class DataSegment {
+  constructor(subtype, value) {
+    validate(subtype, value);
+
+    this.subtype = subtype;
+    this.value = value;
+  }
+
+  encodeSize(padded) {
+    return encodeSize(this.subtype, this.value);
+  }
+
+  encode(padded) {
+    const buffer = Buffer.alloc(this.encodeSize(padded));
+    this.encodeTo(buffer, 0, padded);
+    return buffer;
+  }
+
+  encodeTo(buffer, offset, padded) {
+    return encodeTo(buffer, offset, padded, this.subtype, this.value);
+  }
+
   static Decode(segmentCode, buffer, offset, padded, cb) {
+    const subtype = getBits(segmentCode, 0, 5);
+
+    switch (subtype) {
+      case SubtypeCodes.Simple:
+
+        break;
+      case SubtypeCodes.ANSIExtendedSymbol:
+
+        break;
+      default:
+        throw new Error(`Data segment subtype ${subtype} reserved for future use`);
+    }
 
 
     if (typeof cb === 'function') {
@@ -40,4 +78,42 @@ class DataSegment {
   }
 }
 
+
+DataSegment.Simple = class SimpleDataSegment extends DataSegment {
+  constructor(buffer) {
+    super(SubtypeCodes.Simple, buffer);
+  }
+}
+
+DataSegment.ANSIExtendedSymbol = class ANSIExtendedSymbolDataSegment extends DataSegment {
+  constructor(symbol) {
+    if (typeof symbol !== 'string' || symbol.length === 0) {
+      throw new Error(`ANSI Extended Symbol Data Segment value must be a non-empty string. Received '${symbol}'`);
+    }
+    const buffer = Buffer.allocUnsafe(1 + symbol.length);
+    buffer.writeUInt8(symbol.length, 0);
+    buffer.write(symbol, 1, 'ascii');
+    super(SubtypeCodes.ANSIExtendedSymbol, buffer);
+  }
+}
+
 module.exports = DataSegment;
+
+
+function validate(subtype, value) {
+  if (value != null && !Buffer.isBuffer(value)) {
+    throw new Error(`Data segment value must be a buffer`);
+  }
+}
+
+
+function encodeSize(subtype, value) {
+  return 1 + value.length;
+}
+
+
+function encodeTo(buffer, offset, padded, subtype, value) {
+  offset = buffer.writeUInt8(0b10000000 | (subtype & 0b11111), offset);
+  offset += value.copy(buffer, offset);
+  return offset;
+}

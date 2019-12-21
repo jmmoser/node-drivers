@@ -611,12 +611,42 @@ class EPath {
   /**
    * CIP Vol 1 Appendix C-1.4.5.2
    * 
-   * tagname
-   * tagname.member
-   * tagname[element]
-   * tagname[element].member
-   * tagname[idx1,idx2]
+   * symbol
+   * symbol.symbol
+   * symbol[member]
+   * symbol[member].symbol
+   * symbol[member,member]
    */
+
+  static ConvertSymbolToSegments(fullSymbol) {
+    const segments = [];
+    const symbols = fullSymbol.split('.');
+
+    for (let i = 0; i < symbols.length; i++) {
+      const symbol = symbols[i];
+      const symbolAndMembers = symbol.split('[');
+      const symbolName = symbolAndMembers[0];
+
+      segments.push(new Segments.Data.ANSIExtendedSymbol(symbolName));
+
+      if (symbolAndMembers.length > 1) {
+        const membersStringWithBracket = symbolAndMembers[1];
+        if (membersStringWithBracket.indexOf(']') !== membersStringWithBracket.length - 1) {
+          throw new Error(`Invalid symbol name`);
+        }
+
+        const members = membersStringWithBracket.substring(0, membersStringWithBracket.length - 1).split(',');
+
+        for (let j = 0; j < members.length; j++) {
+          segments.push(new Segments.Logical.MemberID(parseInt(members[j], 10)));
+        }
+      }
+    }
+
+    return segments;
+  }
+
+  
   static EncodeANSIExtSymbol(symbol) {
     let offset = 0;
     const buffer = Buffer.allocUnsafe(512);
@@ -779,6 +809,10 @@ class EPath {
         case 4:
           offset = Segments.Data.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
           break;
+        case 5:
+        case 6:
+          offset = Segments.DataType.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
+          break;
         default:
           throw new Error(`Unexpected segment: ${segmentType}`);
       }
@@ -797,8 +831,6 @@ class EPath {
     }
 
     return offset;
-    
-    // return Decode(buffer, offset, padded, cb);
   }
 
 
@@ -812,8 +844,6 @@ class EPath {
       size += segments[i].encodeSize(padded);
     }
     const buffer = Buffer.alloc(size);
-
-    // const buffer = encodeBuffer(padded, segments);
     encodeSegmentsTo(buffer, 0, padded, segments);
     return buffer;
   }

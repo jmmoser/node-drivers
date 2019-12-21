@@ -1,5 +1,6 @@
 const {
   DataType,
+  DataTypeCodes,
   Encode,
   EncodeTo,
   Decode
@@ -90,7 +91,7 @@ describe('Encoding', () => {
   test('SHORT_STRING', () => {
     expect(Encode(DataType.SHORT_STRING, 'abc')).toEqual(Buffer.from([0x03, 0x61, 0x62, 0x63]));
   });
-  test('STRING2', () => {
+  test('STRING2 ascii only', () => {
     expect(Encode(DataType.STRING2, 'abc')).toEqual(Buffer.from([0x03, 0x00, 0x61, 0x00, 0x62, 0x00, 0x63, 0x00]));
   });
   test('USINT[]', () => {
@@ -225,6 +226,41 @@ describe('Decoding', () => {
       expect(val).toBeCloseTo(5.5);
     })).toBe(8);
   });
+  test('STRING', () => {
+    expect(Decode(DataType.STRING, Buffer.from([0x03, 0x00, 0x61, 0x62, 0x63]), 0, val => {
+      expect(val).toBe('abc');
+    })).toBe(5);
+  });
+  test('SHORT_STRING', () => {
+    expect(Decode(DataType.SHORT_STRING, Buffer.from([0x03, 0x61, 0x62, 0x63]), 0, val => {
+      expect(val).toBe('abc');
+    })).toBe(4);
+  });
+  test('STRING2 ascii only', () => {
+    expect(Decode(DataType.STRING2, Buffer.from([0x03, 0x00, 0x61, 0x00, 0x62, 0x00, 0x63, 0x00]), 0, val => {
+      expect(val).toBe('abc');
+    })).toBe(8);
+  });
+  test('STRINGI', () => {
+    const buffer = Buffer.from(
+      [0x01, 0x65, 0x6e, 0x67, 0xDA, 0x01, 0x00, 0x03, 0x61, 0x62, 0x63]
+    );
+    expect(
+      Decode(DataType.STRINGI, buffer, 0, val => {
+        expect(val).toEqual([
+          1,
+          [
+            [
+              'eng',
+              new EPath.Segments.DataType.Elementary(DataTypeCodes.SHORT_STRING),
+              1,
+              'abc'
+            ]
+          ]
+        ]);
+      })
+    ).toBe(buffer.length);
+  })
   test('ARRAY USINT[]', () => {
     expect(Decode(DataType.ARRAY(DataType.USINT, 0, 1), Buffer.from([0x01, 0x02]), 0, val => {
       expect(val).toEqual([1, 2]);

@@ -145,6 +145,7 @@ const CommonServiceNames = InvertKeyValues(CommonServices);
 // CIP Vol1 Table C-6.1
 const DataTypeCodes = {
   /** DATATYPES FROM EXTERNAL SOURCES CANNOT BE NEGATIVE BECAUSE CODE IS READ AS UNSIGNED */
+  TRANSFORM: -4,
   PLACEHOLDER: -3, /** used when previously decoded data determines datatype */
   SMEMBER: -2,
   UNKNOWN: -1, 
@@ -289,7 +290,46 @@ const DataType = {
     return { type: DataType.ENGUNIT, code: DataTypeCodes.ENGUNIT };
   },
   STRINGI() {
-    return { type: DataType.STRINGI, code: DataTypeCodes.STRINGI };
+    /** See CIP Vol 1, Appendix C-4.1 for abstract syntax notation */
+    return {
+      type: DataType.STRINGI,
+      code: DataTypeCodes.STRINGI,
+      itype: DataType.STRUCT([
+        DataType.USINT, // Number of internationalized character strings
+        DataType.PLACEHOLDER((length) => DataType.ARRAY(
+          DataType.STRUCT([
+            DataType.TRANSFORM(
+              DataType.ARRAY(DataType.USINT, 0, 2), // First three characters of the ISO 639-2/T language
+              val => Buffer.from(val).toString('ascii')
+            ),
+            DataType.EPATH(false), // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
+            DataType.UINT, // Character set which the character string is based on,
+            DataType.PLACEHOLDER(code => { // Actual International character string
+              switch (code) {
+                case DataTypeCodes.STRING:
+                  return DataType.STRING;
+                case DataTypeCodes.STRING2:
+                  return DataType.STRING2;
+                case DataTypeCodes.STRINGN:
+                  return DataType.STRINGN;
+                case DataTypeCodes.SHORT_STRING:
+                  return DataType.SHORT_STRING;
+                default:
+                  throw new Error(`Invalid internationalized string data type ${code}`);
+              }
+            })
+          ], function (members, dt) {
+            if (members.length === 3) {
+              return dt.resolve(members[1].value.code);
+            }
+          }), 0, length - 1)
+        ),
+      ], function decodeCallback(members, dt) {
+        if (members.length === 1) {
+          return dt.resolve(members[0]); // provides the length for the array
+        }
+      })
+    };
   },
 
   /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
@@ -340,8 +380,15 @@ const DataType = {
   SMEMBER(member, filter) {
     return { type: DataType.SMEMBER, code: DataTypeCodes.SMEMBER, member, filter }
   },
-  PLACEHOLDER() {
-    return { type: DataType.PLACEHOLDER, code: DataTypeCodes.PLACEHOLDER }
+  PLACEHOLDER(resolve) {
+    return {
+      type: DataType.PLACEHOLDER,
+      code: DataTypeCodes.PLACEHOLDER,
+      resolve
+    }
+  },
+  TRANSFORM(dataType, transform) {
+    return { type: DataType.TRANSFORM, code: DataTypeCodes.TRANSFORM, dataType, transform };
   }
 };
 
@@ -430,12 +477,19 @@ function Decode(dataType, buffer, offset, cb, ctx) {
   if (ctx && ctx.dataTypeCallback) {
     /** Used to modify the datatype, especially with placeholders */
     dataType = ctx.dataTypeCallback(dataType) || dataType;
+
+    /** dataTypeCallback may return a type function */
+    if (dataType instanceof Function) dataType = dataType(); 
   }
 
   let dataTypeCode = dataType;
 
   if (typeof dataType === 'object') {
     dataTypeCode = dataType.code;
+
+    if (dataType.itype) {
+      return Decode(dataType.itype, buffer, offset, cb, ctx);
+    }
   }
 
   switch (dataTypeCode) {
@@ -551,6 +605,10 @@ function Decode(dataType, buffer, offset, cb, ctx) {
     case DataTypeCodes.UNKNOWN: {
       value = buffer.slice(offset, offset + dataType.length);
       offset += dataType.length;
+      break;
+    }
+    case DataTypeCodes.TRANSFORM: {
+      offset = Decode(dataType.dataType, buffer, offset, val => value = dataType.transform(val));
       break;
     }
     case DataTypeCodes.PLACEHOLDER:

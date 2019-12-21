@@ -29,7 +29,7 @@
   - [X] Hook up DecodeDataType to Decode
   - [X] Add encoding and decoding for 8 byte integer (LINT) and 8 byte unsigned integer (ULINT)
   - [ ] add encoding for STRINGI
-  - [ ] add decoding for STRINGI
+  - [X] add decoding for STRINGI
   - [ ] add encoding for STRINGN
   - [X] add decoding for STRINGN
   - [ ] CIP add custructed DataTypes (Array[Int])

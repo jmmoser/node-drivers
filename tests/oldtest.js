@@ -295,55 +295,66 @@ function assert(condition, message) {
 // })();
 
 
-// (() => {
-//   const CIP = require('../src/layers/cip/objects/CIP');
+(() => {
+  const EPath = require('../src/layers/cip/objects/EPath');
 
-//   (() => {
-//     const buffer = Buffer.from([
-//       0xA2, 0x07, 0xC7, 0xA2, 0x03, 0xC7, 0xC2, 0xC3, 0xC3
-//     ]);
-//     const offset = CIP.DecodeDataType(buffer, 0, function (type) {
-//       console.log(JSON.stringify(type, null, 2));
-//     });
+  const symbol = 'n1.n2[1,2]';
+  console.log(EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(symbol)));
+  console.log(EPath.EncodeANSIExtSymbol(symbol));
 
-//     console.log(buffer.length, offset);
-//   })();
+  // const CIP = require('../src/layers/cip/objects/CIP');
+  // const buffer = Buffer.from(
+  //   [0x01, 0x65, 0x6e, 0x67, 0xDA, 0x01, 0x00, 0x03, 0x61, 0x62, 0x63]
+  // );
+  // console.log(CIP.Decode(CIP.DataType.STRINGI, buffer, 0, console.log));
 
-//   (() => {
-//     const buffer = Buffer.from([
-//       0xA0, 0x02, 0xC7, 0x26
-//     ]);
-//     const offset = CIP.DecodeDataType(buffer, 0, function (type) {
-//       console.log(JSON.stringify(type, null, 2));
-//     });
 
-//     console.log(buffer.length, offset);
-//   })();
+  // (() => {
+  //   const buffer = Buffer.from([
+  //     0xA2, 0x07, 0xC7, 0xA2, 0x03, 0xC7, 0xC2, 0xC3, 0xC3
+  //   ]);
+  //   const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+  //     console.log(JSON.stringify(type, null, 2));
+  //   });
 
-//   (() => {
-//     const buffer = Buffer.from([
-//       0xA3, 0x13, 0x80, 0x01, 0x00, 0x81, 0x01, 0x13,
-//       0xA3, 0x0B, 0x80, 0x01, 0x00, 0x81, 0x01, 0xFF,
-//       0xA2, 0x03, 0xC7, 0xC2, 0xC3
-//     ]);
-//     const offset = CIP.DecodeDataType(buffer, 0, function (type) {
-//       console.log(JSON.stringify(type, null, 2));
-//     });
+  //   console.log(buffer.length, offset);
+  // })();
 
-//     console.log(buffer.length, offset);
-//   })();
+  // (() => {
+  //   const buffer = Buffer.from([
+  //     0xA0, 0x02, 0xC7, 0x26
+  //   ]);
+  //   const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+  //     console.log(JSON.stringify(type, null, 2));
+  //   });
 
-//   (() => {
-//     const buffer = Buffer.from([
-//       0xA1, 0x06, 0xA1, 0x04, 0xA0, 0x02, 0x59, 0x51
-//     ]);
-//     const offset = CIP.DecodeDataType(buffer, 0, function (type) {
-//       console.log(JSON.stringify(type, null, 2));
-//     });
+  //   console.log(buffer.length, offset);
+  // })();
 
-//     console.log(buffer.length, offset);
-//   })();
-// })();
+  // (() => {
+  //   const buffer = Buffer.from([
+  //     0xA3, 0x13, 0x80, 0x01, 0x00, 0x81, 0x01, 0x13,
+  //     0xA3, 0x0B, 0x80, 0x01, 0x00, 0x81, 0x01, 0xFF,
+  //     0xA2, 0x03, 0xC7, 0xC2, 0xC3
+  //   ]);
+  //   const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+  //     console.log(JSON.stringify(type, null, 2));
+  //   });
+
+  //   console.log(buffer.length, offset);
+  // })();
+
+  // (() => {
+  //   const buffer = Buffer.from([
+  //     0xA1, 0x06, 0xA1, 0x04, 0xA0, 0x02, 0x59, 0x51
+  //   ]);
+  //   const offset = CIP.DecodeDataType(buffer, 0, function (type) {
+  //     console.log(JSON.stringify(type, null, 2));
+  //   });
+
+  //   console.log(buffer.length, offset);
+  // })();
+})();
 
 
 
