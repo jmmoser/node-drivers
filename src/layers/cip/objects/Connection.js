@@ -7,10 +7,43 @@ const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
 
-const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen;
-const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose;
-// const FORWARD_OPEN_SERVICE = ConnectionManager.Services.ForwardOpen | (1 << 7);
-// const FORWARD_CLOSE_SERVICE = ConnectionManager.Services.ForwardClose | (1 << 7);
+const FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.ForwardOpen;
+const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
+const FORWARD_CLOSE_SERVICE = ConnectionManager.ServiceCodes.ForwardClose;
+// // const FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.ForwardOpen | (1 << 7);
+// // const FORWARD_CLOSE_SERVICE = ConnectionManager.ServiceCodes.ForwardClose | (1 << 7);
+
+const MaximumLargeConnectionSize = 0xFFFF;
+const MaximumNormalConnectionSize = 0b111111111; /** 511 */
+
+const ConnectionManagerContextType = 'ConnectionManager';
+function createConnectionManagerContext(request) {
+  return {
+    type: ConnectionManagerContextType,
+    request
+  };
+}
+
+const TypeCodes = {
+  Null: 0,
+  Multicast: 1,
+  PointToPoint: 2
+};
+
+const PriorityCodes = {
+  Low: 0,
+  High: 1,
+  Scheduled: 2,
+  Urgent: 3
+};
+
+const SizeTypeCodes = {
+  Fixed: 0,
+  Variable: 1
+};
+
+// let totalData = 0;
+// let totalPackets = 0;
 
 class Connection extends Layer {
   constructor(lowerLayer, options) {
@@ -21,6 +54,8 @@ class Connection extends Layer {
     this._connectionState = 0;
     this._sequenceCount = 0;
     this._sequenceToContext = new Map();
+
+    this.connect();
   }
 
 
@@ -36,46 +71,77 @@ class Connection extends Layer {
 
     this._connectionState = 1;
 
-    this.send(ConnectionManager.ForwardOpen(this, false, true), null, false);
+    const request = ConnectionManager.ForwardOpenRequest(this, true);
+    this.send(request, null, false, createConnectionManagerContext(request));
   }
 
   
-  readAttributes() {
+  async readAttributes() {
+    if (this._connectionState === 0) {
+      // return {};
+      this.connect();
+    }
+
     if (this._connectionState !== 2) {
-      return {};
+      return;
     }
 
     const attributes = [
       InstanceAttributeCodes.State,
-      InstanceAttributeCodes.Type,
-      InstanceAttributeCodes.TransportClassTrigger,
-      InstanceAttributeCodes.ProducedConnectionSize,
-      InstanceAttributeCodes.ConsumedConnectionSize,
-      InstanceAttributeCodes.ExpectedPacketRate,
-      InstanceAttributeCodes.WatchdogTimeoutAction,
-      InstanceAttributeCodes.ProducedConnectionPathLength,
-      InstanceAttributeCodes.ProducedConnectionPath,
-      InstanceAttributeCodes.ConsumedConnectionPathLength,
-      InstanceAttributeCodes.ConsumedConnectionPath
+      // InstanceAttributeCodes.Type,
+      // InstanceAttributeCodes.TransportClassTrigger,
+      // InstanceAttributeCodes.ProducedConnectionSize,
+      // InstanceAttributeCodes.ConsumedConnectionSize,
+      // InstanceAttributeCodes.ExpectedPacketRate,
+      // InstanceAttributeCodes.WatchdogTimeoutAction,
+      // InstanceAttributeCodes.ProducedConnectionPathLength,
+      // InstanceAttributeCodes.ProducedConnectionPath,
+      // InstanceAttributeCodes.ConsumedConnectionPathLength,
+      // InstanceAttributeCodes.ConsumedConnectionPath
     ];
 
-    const service = CommonServices.GetAttributeList;
+    // const service = CommonServices.GetAttributeList;
 
-    const data = Encode(DataType.STRUCT([
-      DataType.UINT,
-      DataType.ARRAY(DataType.UINT, 0, attributes.length - 1)
-    ]), [
-      attributes.length,
-      attributes
-    ]);
+    // const data = Encode(DataType.STRUCT([
+    //   DataType.UINT,
+    //   DataType.ARRAY(DataType.UINT, 0, attributes.length - 1)
+    // ]), [
+    //   attributes.length,
+    //   attributes
+    // ]);
+    // console.log(data);
 
-    console.log(data);
+    for (let i = 0; i < attributes.length; i++) {
+      const attribute = attributes[i];
+
+      const service = CommonServices.GetAttributeSingle;
+
+      const path = EPath.EncodeSegments(true, [
+        new EPath.Segments.Logical.ClassID(Classes.Connection),
+        new EPath.Segments.Logical.InstanceID(this._OtoTConnectionID),
+        // new EPath.Segments.Logical.InstanceID(this._TtoOConnectionID),
+        // new EPath.Segments.Logical.AttributeID(attribute)
+      ]);
+      // const path = Buffer.from([]);
+      const data = Encode(DataType.USINT, attribute);
+      // const data = null;
+      const request = MessageRouter.Request(service, path, data);
+      // console.log(request);
+      await new Promise(resolve => {
+        sendConnected(this, this, request, this.contextCallback(function(err, res) {
+          if (res && res.service.code !== service) {
+            console.log('!@#$!@#$^123984123$!@#$!@#$(*!@#$& INCORRECT SERVICE');
+          }
+          if (err) {
+            console.log(err);
+          } else {
+            console.log(res);
+          }
+          resolve();
+        }));
+      });
+    }
   }
-
-
-  // handleDefaultOptions(defaultOptions, upperLayer) {
-
-  // }
 
 
   disconnect(callback) {
@@ -97,7 +163,9 @@ class Connection extends Layer {
       }, 10000);
 
       this._connectionState = -1;
-      this.send(ConnectionManager.ForwardClose(this), null, false);
+
+      const request = ConnectionManager.ForwardCloseRequest(this);
+      this.send(request, null, false, createConnectionManagerContext(request));
     });
   }
 
@@ -122,19 +190,7 @@ class Connection extends Layer {
           throw new Error('CIP Connection Error: Connected messages must include a context');
         }
 
-        const sequenceCount = incrementSequenceCount(this);
-        this._sequenceToContext.set(sequenceCount, request.context);
-
-        const message = request.message;
-
-        const buffer = Buffer.allocUnsafe(message.length + 2);
-        buffer.writeUInt16LE(sequenceCount, 0);
-        message.copy(buffer, 2);
-
-        this.send(buffer, this.sendInfo, false, this.layerContext(request.layer));
-
-        startResend(this, Buffer.from(buffer));
-
+        sendConnected(this, request.layer, request.message, request.context);
         setImmediate(() => this.sendNextMessage());
       }
     }
@@ -142,10 +198,20 @@ class Connection extends Layer {
 
 
   handleData(data, info, context) {
+    // totalData += data.length;
+    // totalPackets += 1;
+    // console.log(`${totalPackets}: ${totalData}`);
+
     const message = MessageRouter.Reply(data);
+
+    if (context != null && context.type === ConnectionManagerContextType) {
+      message.request = context.request;
+      ConnectionManager.TranslateResponse(message);
+    }
 
     switch (message.service.code) {
       case FORWARD_OPEN_SERVICE:
+      case LARGE_FORWARD_OPEN_SERVICE:
         handleForwardOpen(this, message, info, context);
         break;
       case FORWARD_CLOSE_SERVICE:
@@ -204,21 +270,89 @@ class Connection extends Layer {
 module.exports = Connection;
 
 
+function sendConnected(connection, layer, message, context) {
+  const sequenceCount = incrementSequenceCount(connection);
+  connection._sequenceToContext.set(sequenceCount, context);
+  connection.layerContext(layer, sequenceCount);
+
+  // console.log('SENDCONNECTED');
+  // console.log({
+  //   sequenceCount,
+  //   context
+  // });
+  // console.log('');
+
+  const buffer = Buffer.allocUnsafe(message.length + 2);
+  buffer.writeUInt16LE(sequenceCount, 0);
+  message.copy(buffer, 2);
+
+  // connection.send(buffer, connection.sendInfo, false, connection.layerContext(layer));
+  connection.send(buffer, connection.sendInfo, false);
+
+  startResend(connection, buffer);
+}
+
+
 function cleanup(layer) {
   layer._connectionState === 0;
   layer._sequenceToContext.clear();
 }
 
 
+function buildNetworkConnectionParametersCode(options) {
+  let code = 0;
+  const large = options.maximumSize > MaximumNormalConnectionSize;
+
+  if (large === true) {
+    code |= (options.redundantOwner & 1) << 31;
+    code |= (options.type & 3) << 29;
+    /** Bit 28 reserved */
+    code |= (options.priority & 3) << 26;
+    code |= (options.sizeType & 1) << 25;
+    /** Bits 16 through 24 reserved */
+    code |= (options.maximumSize & MaximumLargeConnectionSize);
+  } else {
+    code |= (options.redundantOwner & 1) << 15;
+    code |= (options.type & 3) << 13;
+    /** Bit 12 reserved */
+    code |= (options.priority & 3) << 10;
+    code |= (options.sizeType & 1) << 9;
+    code |= (options.maximumSize & MaximumNormalConnectionSize);
+  }
+  return code;
+}
+
+
 function mergeOptionsWithDefaults(self, options) {
   if (!options) options = {};
+
+  // self.networkConnectionParameters = options.networkConnectionParameters || {
+  //   redundantOwner: 0,
+  //   type: TypeCodes.PointToPoint,
+  //   priority: PriorityCodes.Low,
+  //   sizeType: SizeTypeCodes.Variable,
+  //   maximumSize: 500
+  // };
+
+  self.networkConnectionParameters = Object.assign({
+    redundantOwner: 0,
+    type: TypeCodes.PointToPoint,
+    priority: PriorityCodes.Low,
+    sizeType: SizeTypeCodes.Variable,
+    maximumSize: 500
+  }, options.networkConnectionParameters);
+
+  // console.log(self.networkConnectionParameters);
+
+  self.large = self.networkConnectionParameters.maximumSize > MaximumNormalConnectionSize;
+
   self.VendorID = options.VendorID || 0x1339;
   self.OriginatorSerialNumber = options.OriginatorSerialNumber || 42;
   self.ConnectionTimeoutMultiplier = options.ConnectionTimeoutMultiplier || 0x01;
-  self.OtoTRPI = options.OtoTRPI || 0x00201234;
-  self.OtoTNetworkConnectionParameters = options.OtoTNetworkConnectionParameters || 0x43F4;
-  self.TtoORPI = options.TtoORPI || 0x00204001;
-  self.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
+  self.OtoTRPI = options.OtoTRPI || 2000000;
+  self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
+  self.TtoORPI = options.TtoORPI || 2000000;
+  self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
   self.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
   self.route = options.route;
 
@@ -231,7 +365,7 @@ function mergeOptionsWithDefaults(self, options) {
   //   t2oRequestedPacketInterval: 0x00204001,
   //   t2oNetworkConnectionParameters: 0x43F4,
   //   transportClassTrigger: 0xA3, // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-  //   route: Buffer.concat([EPath.Segments.Port.Encode(1, 0), Buffer.from([0x20, 0x02, 0x24, 0x01])])
+  //   route: options.route
   // }, options);
 }
 
@@ -251,18 +385,31 @@ function handleForwardOpen(self, message, info, context) {
       const rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
       self._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
 
+      // console.log(reply);
+      // console.log(message);
       // EIP specific information
       self.sendInfo = {
         connectionID: self._OtoTConnectionID,
         responseID: self._TtoOConnectionID
       };
 
+      // self.readAttributes();
+
       self.sendNextMessage();
     } else {
       self._connectionState = 0;
-      console.log('');
-      console.log('CIP Connection Error: Status is not successful or service is not correct:');
-      console.log(message);
+
+      if (message.service.code === LARGE_FORWARD_OPEN_SERVICE && message.status.code === 8) {
+        self.networkConnectionParameters.maximumSize = 500;
+        self.large = false;
+        self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
+        self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
+        console.log('Large forward open not supported. Attempting normal forward open');
+        self.connect();
+      } else {
+        console.log('CIP Connection Error: Status is not successful or service is not correct:');
+        console.log(message);
+      }
     }
   }
 
@@ -273,8 +420,10 @@ function handleForwardOpen(self, message, info, context) {
 
 function handleForwardClose(self, message, info, context) {
   stopResend(self);
+
   if (message.status.code === 0) {
     const reply = ConnectionManager.ForwardCloseReply(message.data);
+    
     self._connectionState = 0;
     // console.log('CIP Connection closed');
     if (self._disconnectCallback) {
@@ -289,9 +438,20 @@ function handleForwardClose(self, message, info, context) {
 }
 
 
+
 function handleMessage(self, data, info, context) {
   /** call layerForContext here just to make sure it is cleared from the underlying Map */
-  const layer = self.layerForContext(context);
+  // const layer = self.layerForContext(context);
+
+  // console.log('');
+  // console.log('||-------------HANDLING DATA------------||');
+  // console.log({
+  //   data,
+  //   context,
+  //   info,
+  //   context
+  //   // layer: layer ? layer.name : null
+  // });
 
   if (self._connectionState === 2) {
     const sequenceCount = data.readUInt16LE(0);
@@ -301,24 +461,103 @@ function handleMessage(self, data, info, context) {
       return;
     }
 
-    context = self._sequenceToContext.get(sequenceCount);
+    const layer = self.layerForContext(sequenceCount);
+    const actualContext = self._sequenceToContext.get(sequenceCount);
     self._sequenceToContext.delete(sequenceCount);
     data = data.slice(2);
 
-    // console.log({
-    //   context,
-    //   data,
-    //   sequenceCount
-    // });
-  }
+    if (layer) {
+      if (layer === self) {
+        const callback = self.callbackForContext(actualContext);
+        if (callback != null) {
+          // callback(null, MessageRouter.Reply(data), info);
 
-  if (layer) {
-    self.forwardTo(layer, data, info, context);
+          const reply = MessageRouter.Reply(data);
+
+          // console.log(reply);
+          // console.log('calling callback');
+
+          // if (reply.service.code !== service) {
+          //   return callback('Response service does not match request service. This should never happen.', reply);
+          // }
+
+          callback(
+            reply.status.error ? reply.status.description || 'CIP Error' : null,
+            reply
+          );
+
+        } else {
+          console.log('CIP.Connection: Unhandled data received.', data);
+        }
+      } else {
+        // console.log(`FORWARDING: ${layer.name}`, data);
+        self.forwardTo(layer, data, info, actualContext);
+      }
+    } else {
+      // /** This should never happen */
+      console.log('THIS SHOULD NOT HAPPEN');
+      self.forward(data, info, actualContext);
+    }
   } else {
-    /** This should never happen */
-    self.forward(data, info, context);
+    console.log('CIP Connection not connected, unhandled message: ', data);
   }
 }
+
+
+// function handleMessage(self, data, info, context) {
+//   /** call layerForContext here just to make sure it is cleared from the underlying Map */
+//   const layer = self.layerForContext(context);
+  
+//   console.log('');
+//   console.log('||-------------HANDLING DATA------------||');
+//   console.log(data);
+//   console.log({
+//     context,
+//     layer: layer ? layer.name : null
+//   });
+
+//   if (self._connectionState === 2) {
+//     const sequenceCount = data.readUInt16LE(0);
+
+//     if (self._sequenceToContext.has(sequenceCount) === false) {
+//       /* This happens when the last message is resent to prevent CIP connection timeout disconnect */
+//       return;
+//     }
+
+//     context = self._sequenceToContext.get(sequenceCount);
+//     self._sequenceToContext.delete(sequenceCount);
+//     data = data.slice(2);
+
+
+    
+//     if (layer) {
+//       console.log('RECEIVED FOR LAYER', {
+//         context,
+//         sequenceCount,
+//         layerName: layer.name
+//       });
+//       self.forwardTo(layer, data, info, context);
+//     } else {
+//       // /** This should never happen */
+//       // self.forward(data, info, context);
+
+//       console.log('RECEIVED FOR CONNECTION', {
+//         context,
+//         sequenceCount
+//       });
+
+//       const callback = self.callbackForContext(context);
+//       if (callback != null) {
+//         callback(null, data, info);
+//       } else {
+//         console.log('CIP.Connection Warning: Unhandled data received.');
+//         console.log(data);
+//       }
+//     }
+//   } else {
+//     console.log('CIP Connection unhandled message: ', data);
+//   }
+// }
 
 
 function incrementSequenceCount(self) {

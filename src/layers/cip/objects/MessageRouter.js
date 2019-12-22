@@ -34,7 +34,6 @@ class MessageRouter {
     let offset = 0;
     const res = {};
     res.buffer = buffer;
-    // res.buffer = Buffer.from(buffer);
     // res.service = buffer.readUInt8(offset); offset += 1;
     const service = buffer.readUInt8(offset) & 0x7F; offset += 1;
     
@@ -54,11 +53,9 @@ class MessageRouter {
     res.status.description = GeneralStatusCodeDescriptions[statusCode] || '';
     res.status.error = statusCode !== 0 && statusCode !== 6;
 
-    const additionalStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
-    if (additionalStatusSize > 0) {
-      res.status.additional = buffer.slice(offset, offset + 2 * additionalStatusSize);
-      offset += 2 * additionalStatusSize;
-    }
+    const extendedStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
+    res.status.extended = buffer.slice(offset, offset + 2 * extendedStatusSize);
+    offset += 2 * extendedStatusSize;
 
     res.data = buffer.slice(offset);
     return res;

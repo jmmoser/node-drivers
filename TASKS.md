@@ -16,11 +16,15 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
 - [ ] CIP
+  - [ ] Only send packets up to the packet rate
+  - [X] Improve Connection network connection parameters handling
+  - [ ] ConnnectionManager handle duplicate connection send null forward open
+  - [ ] Connection get instance attributes
   - [ ] Consider making CIPLayer intelligent, uses upper layer to determine if it is forwarding PCCC, Modbus, etc.
   - [ ] Add I/O Connections
   - [ ] Connection object add reading attributes (attribute 2 is instance type)
   - [ ] Read CIP Vol 1 Chapter 10 regarding briding and routing
-  - [ ] ConnectionManager implement LargeForwardOpen
+  - [X] ConnectionManager/Connection implement LargeForwardOpen
   - [ ] Improve ConnectionManager functions to use EPATH
     - [X] Port Segment
     - [ ] Message Router Logical Segments

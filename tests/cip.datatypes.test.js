@@ -317,4 +317,55 @@ describe('Decoding EPATH', () => {
       ]);
     })).toBe(6);
   });
-})
+});
+
+
+describe('Constructed', () => {
+  test('Attribute List Encoding', () => {
+    const attributes = [1, 2, 3];
+    const data = Encode(DataType.STRUCT([
+      DataType.UINT,
+      DataType.ABBREV_ARRAY(DataType.UINT)
+    ]), [
+      attributes.length,
+      attributes
+    ]);
+
+    expect(data).toEqual(Buffer.from([0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00]));
+  });
+
+  test('CIP Connection Network Parameters', () => {
+    const redundantOwner = 0; // 0 or 1
+    /**
+     * 0 = Null
+     * 1 = Multicast
+     * 2 = Point to point
+     * 3 = Reserved
+     */
+    const connectionType = 2;
+    /**
+     * 0 = Low Priority
+     * 1 = High Priority
+     * 2 = Scheduled
+     * 3 = Urgent
+     */
+    const priority = 0;
+    /**
+     * 0 = Fixed size connection
+     * 1 = Variable size connection
+     */
+    const variableSize = 1;
+
+    const connectionSize = 500;
+
+    let code = 0;
+
+    code |= (redundantOwner & 1) << 15;
+    code |= (connectionType & 3) << 13;
+    code |= (priority & 3) << 10;
+    code |= (variableSize & 1) << 9;
+    code |= (connectionSize & 0b111111111);
+
+    expect(code).toBe(0x43F4);
+  });
+});

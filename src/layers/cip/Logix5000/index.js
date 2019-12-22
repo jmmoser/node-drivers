@@ -61,6 +61,10 @@ class Logix5000 extends CIPLayer {
       slot: 0,
       optimize: false
     }, options);
+
+    options.networkConnectionParameters = Object.assign({
+      maximumSize: 500
+    }, options.networkConnectionParameters);
     
     if (!(lowerLayer instanceof ConnectionLayer)) {
       /** Inject Connection as lower layer */
@@ -1141,8 +1145,8 @@ function getError(reply) {
 
   let error = GenericServiceStatusDescriptions[reply.status.code];
   if (typeof error === 'object') {
-    if (Buffer.isBuffer(reply.status.additional) && reply.status.additional.length >= 2) {
-      error = error[reply.status.additional.readUInt16LE(0)];
+    if (Buffer.isBuffer(reply.status.extended) && reply.status.extended.length >= 2) {
+      error = error[reply.status.extended.readUInt16LE(0)];
     }
   }
 
@@ -1268,54 +1272,11 @@ async function getSymbolInstanceID(layer, scope, tag) {
 }
 
 
-// async function getSymbolInstanceID(layer, scope, tag) {
-//   let tagName;
-//   switch (typeof tag) {
-//     case 'string':
-//       tagName = tag;
-//       // tagName = tag.split('.')[0];
-//       break;
-//     case 'number':
-//       return tag;
-//     case 'object':
-//       return tag.id;
-//     default:
-//       throw new Error(`Tag must be a tag name, symbol instance number, or a tag object. Received: ${tag}`);
-//   }
-
-//   const scopeKey = scope ? `${scope}::` : '';
-//   const tagNameToSymbolInstanceIDKey = `${scopeKey}${tagName}`;
-
-//   if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
-//     return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
-//   }
-  
-//   let instanceID = -1;
-
-//   const highestListedSymbolInstanceIDScope = scope || DEFAULT_SCOPE;
-//   if (layer._highestListedSymbolInstanceIDs.has(highestListedSymbolInstanceIDScope)) {
-//     instanceID = layer._highestListedSymbolInstanceIDs.get(highestListedSymbolInstanceIDScope);
-//   }
-
-//   for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true)) {
-//     for (let i = 0; i < tags.length; i++) {
-//       const tag = tags[i];
-//       const fullName = `${scopeKey}${tag[SymbolInstanceAttributeCodes.Name]}`;
-//       layer._tagNameToSymbolInstanceID.set(fullName, tag.id);
-//       layer._highestListedSymbolInstanceIDs.set(fullName, tag.id);
-//     }
-
-//     if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
-//       return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
-//     }
-//   }
-// }
-
-
 async function* listTags(layer, attributes, scope, instance, shouldGroup, modifier) {
   let instanceID = instance != null ? instance : 0;
 
-  const MIN_TIMEOUT = 700;
+  // const MIN_TIMEOUT = 700;
+  const MIN_TIMEOUT = 1000;
   const MAX_TIMEOUT = 5000;
   const MAX_RETRY = 5;
 

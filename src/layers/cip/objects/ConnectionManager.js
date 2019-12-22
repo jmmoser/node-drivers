@@ -2,6 +2,7 @@
 
 // EIP-CIP-V1 3.5, page 3-53
 
+const { InvertKeyValues } = require('../../../utils');
 const CIP = require('./CIP');
 const EPath = require('./EPath');
 const MessageRouter = require('./MessageRouter');
@@ -41,11 +42,11 @@ class ConnectionManager {
     offset = data.writeUInt8(0, offset); /** Reserved */
     offset += route.copy(data, offset);
 
-    return buildRequest(Services.UnconnectedSend, data);
+    return buildRequest(ServiceCodes.UnconnectedSend, data);
   }
 
 
-  static ForwardOpen(connection, large, incrementCounters) {
+  static ForwardOpenRequest(connection, incrementCounters) {
     if (incrementCounters) {
       incrementConnectionCounters();
       connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
@@ -68,7 +69,7 @@ class ConnectionManager {
     offset = data.writeUInt8(0, offset); /** Reserved */
 
     offset = data.writeUInt32LE(connection.OtoTRPI, offset); // Originator to Target requested packet interval (rate), in microseconds
-    if (large) {
+    if (connection.large) {
       offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
     } else {
       offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
@@ -76,7 +77,7 @@ class ConnectionManager {
     
     offset = data.writeUInt32LE(connection.TtoORPI, offset); // Target to Originator requested packet interval (rate), in microseconds
     
-    if (large) {
+    if (connection.large) {
       offset = data.writeUInt32LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
     } else {
       offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
@@ -87,7 +88,7 @@ class ConnectionManager {
     offset += connection.route.copy(data, offset);
 
     return buildRequest(
-      large ? Services.LargeForwardOpen : Services.ForwardOpen,
+      connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
       data
     );
   }
@@ -104,19 +105,18 @@ class ConnectionManager {
     res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
     res.OtoTActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
     res.TtoOActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
-    const appReplySize = 2 * buffer.readUInt8(offset); offset += 1;
+    const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
     offset += 1; // reserved
-    if (appReplySize > 0) {
-      res.Data = buffer.slice(offset, offset + appReplySize); offset += appReplySize;
-    }
+    res.data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
 
-    console.log(res);
+    // console.log('Connection Manager ForwardOpenReply:');
+    // console.log(res);
     return res;
   }
 
 
   /** CIP Vol 1 3-5.5.3 */
-  static ForwardClose(connection) {
+  static ForwardCloseRequest(connection) {
     let offset = 0;
     const data = Buffer.allocUnsafe(12 + connection.route.length);
 
@@ -129,25 +129,24 @@ class ConnectionManager {
 
     offset = data.writeUInt8(connection.route.length / 2, offset); // connection path size, 16-bit words
     offset = data.writeUInt8(0, offset); /** Reserved */
-    // Padded EPATH
     offset += connection.route.copy(data, offset);
 
-    return buildRequest(Services.ForwardClose, data);
+    return buildRequest(ServiceCodes.ForwardClose, data);
   }
   
 
   static ForwardCloseReply(buffer) {
     let offset = 0;
-    const response = {};
+    const res = {};
 
-    response.SerialNumber = buffer.readUInt16LE(offset); offset += 2;
-    response.VendorID = buffer.readUInt16LE(offset); offset += 2;
-    response.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-    let applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
-    offset += 1;
-    if (applicationReplySize > 0) response.Data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
+    res.SerialNumber = buffer.readUInt16LE(offset); offset += 2;
+    res.VendorID = buffer.readUInt16LE(offset); offset += 2;
+    res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
+    const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
+    offset += 1; /** Reserved */
+    res.data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
 
-    return response;
+    return res;
   }
 
 
@@ -158,7 +157,7 @@ class ConnectionManager {
     data.writeUInt16LE(connectionNumber, 0);
 
     return buildRequest(
-      Services.GetConnectionData,
+      ServiceCodes.GetConnectionData,
       data
     );
   }
@@ -200,7 +199,7 @@ class ConnectionManager {
     offset = data.writeUInt16LE(originatorVendorID, offset);
     offset = data.writeUInt32LE(originatorSerialNumber, offset);
 
-    return buildRequest(Services.SearchConnectionData, data);
+    return buildRequest(ServiceCodes.SearchConnectionData, data);
   }
 
   /** CIP Vol1 3-5.5.6 */
@@ -209,12 +208,35 @@ class ConnectionManager {
   }
 
 
+  static TranslateResponse(response) {
+    if (ServiceCodeSet.has(response.service.code)) {
+      response.service.name = ServiceNames[response.service.code] || response.service.name;
+      if (response.status.code !== 0) {
+        const err = StatusDescriptions[response.status.code];
+        switch (typeof err) {
+          case 'string':
+            response.status.description = err;
+            break;
+          case 'object':
+            if (response.status.extended.length >= 2) {
+              const extendedCode = response.status.extended.readUInt16LE(0);
+              response.status.description = err[extendedCode] || response.status.description;
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    }
+  }
+
+
   // static GetConnectionOwner() {
   //   let offset = 0;
   //   const data = Buffer.alloc(64);
 
   //   return buildRequest(
-  //     Services.GetConnectionOwner,
+  //     ServiceCodes.GetConnectionOwner,
   //     data.slice(0, offset)
   //   );
   // }
@@ -239,7 +261,7 @@ function buildRequest(code, data) {
 
 
 /** EIP-CIP-V1 3-5.5, page 3.56 */
-const Services = {
+const ServiceCodes = {
   ForwardClose: 0x4E, // Closes a connection
   UnconnectedSend: 0x52, // Unconnected send service.  Only originating devices and devices that route between links need to implement.
   ForwardOpen: 0x54, // Opens a connection
@@ -249,10 +271,14 @@ const Services = {
   LargeForwardOpen: 0x5B // Opens a connection, maximum data size is 65535 bytes
 };
 
-ConnectionManager.Services = Services;
+const ServiceCodeSet = new Set(Object.values(ServiceCodes));
+
+const ServiceNames = InvertKeyValues(ServiceCodes);
+
+ConnectionManager.ServiceCodes = ServiceCodes;
 
 /** CIP Vol 1 Table 3-5.29 */
-ConnectionManager.StatusDescriptions = {
+const StatusDescriptions = {
   0x01: {
     0x0100: 'Connection in use or duplicate forward open', // see 3-5.5.2
     // 0x0101: 'Reserved',

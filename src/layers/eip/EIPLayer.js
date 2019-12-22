@@ -304,103 +304,6 @@ class EIPLayer extends Layer {
     });
   }
 
-  // /** Only connect if needed, can send unconnected messages if not connected?? */
-  // sendNextMessage() {
-  //   // console.log(`EIP layer queue size: ${this.requestQueueSize()}`);
-
-  //   /**
-  //    * If not connected and has unconnected request, send unconnected request
-  //    * 
-  //    * If not connected and has connected request, connect
-  //    * 
-  //    * If not connected and has both unconnected and connected requests, connect
-  //    * 
-  //    * 
-  //    * If has request and in any connection state except connected
-  //    *  - if has at least one connected request, connect
-  //    *  - if all reauests are unconnected, send unconnected
-  //    */
-
-
-  //   // this.iterateRequestQueue((request, consume) => {
-  //   //   if (request.info && request.info.connectionID) {
-  //   //     if (this._connectionState === 0) {
-  //   //       this.connect();
-  //   //     } else if (this._connectionState === 2) {
-  //   //       // fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
-  //   //       if (request.context != null && info.responseID != null) {
-  //   //         /** There might be an opportunity to improve this, previous request's contexts are overwritten */
-  //   //         this._connectedContexts.set(info.responseID, request.context);
-  //   //       }
-  //   //       this.send(SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message), null, false);
-  //   //     }
-  //   //   } else {
-  //   //     incrementContext(this);
-  //   //     // fullMessage = SendRRDataRequest(this._sessionHandle, this._context, message);
-
-  //   //     if (request.context != null) {
-  //   //       this._unconnectedContexts.set(this._context.toString('hex'), request.context);
-  //   //     }
-
-  //   //     this.send(SendRRDataRequest(this._sessionHandle, this._context, message), null, false);
-  //   //   }
-  //   //   return true;
-  //   // });
-
-    
-  //   if (this.hasRequest()) {
-  //     let shouldConnect = false;
-  //     this.iterateRequestQueue(request => {
-  //       if (request.info && request.info.connectionID) {
-  //         shouldConnect = true;
-  //         return false;
-  //       } else {
-  //         return true;
-  //       }
-  //     });
-
-  //     if (shouldConnect && this._connectionState !== 2) {
-  //       if (this._connectionState === 0) {
-  //         this.connect();
-  //       }
-  //     } else {
-  //       const request = this.getNextRequest();
-
-  //       if (request) {
-  //         const { message, info } = request;
-  //         console.log(info);
-
-  //         let fullMessage = null;
-
-  //         if (info && info.connectionID != null) {
-  //           fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
-  //           if (request.context != null && info.responseID != null) {
-  //             // console.log('');
-  //             // console.log(`setting: ${info.responseID} : ${request.context}`);
-  //             // console.log(this._connectedContexts);
-  //             /** There might be an opportunity to improve this, previous request's contexts are overwritten */
-  //             this._connectedContexts.set(info.responseID, request.context);
-  //             // console.log(this._connectedContexts);
-  //             // console.log('');
-  //           }
-  //         } else {
-  //           incrementContext(this);
-  //           fullMessage = SendRRDataRequest(this._sessionHandle, this._context, message);
-
-  //           if (request.context != null) {
-  //             this._unconnectedContexts.set(this._context.toString('hex'), request.context);
-  //           }
-  //         }
-
-  //         this.send(fullMessage, null, false);
-
-  //         setImmediate(() => this.sendNextMessage());
-  //       }
-  //     }
-  //   }
-  // }
-
-
 
   sendNextMessage() {
     // console.log(`EIP layer queue size: ${this.requestQueueSize()}`);
@@ -420,11 +323,12 @@ class EIPLayer extends Layer {
             if (request.context != null && info.responseID != null) {
               // console.log('');
               // console.log(`setting: ${info.responseID} : ${request.context}`);
+              // console.log(`EIP SETTING CONNECTED CONTEXT: ${request.context}`);
               // console.log(this._connectedContexts);
               /** There might be an opportunity to improve this, previous request's contexts are overwritten */
-              this._connectedContexts.set(info.responseID, request.context);
-              // console.log(this._connectedContexts);
-              // console.log('');
+              
+              // this._connectedContexts.set(info.responseID, request.context);
+              this._connectedContexts.set(info.responseID, request.layer);
             }
           } else {
             incrementContext(this);

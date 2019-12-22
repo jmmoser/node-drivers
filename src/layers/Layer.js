@@ -180,6 +180,7 @@ class Layer extends EventEmitter {
         // context = incrementContext(this);
         context = this.contextGenerator(this);
       }
+      // console.log(`setting callbackForContext: ${this.name}: ${context}`);
       this.__contextToCallback.set(context, callback);
 
       if (timeout != null && timeout > 0) {
@@ -201,6 +202,7 @@ class Layer extends EventEmitter {
     // console.log(`attempting callback for context: ${context}`);
     // console.log(this.__contextToCallback);
     if (this.__contextToCallback.has(context)) {
+      // console.log(`getting callbackForContext: ${this.name}: ${context}`);
       const callback = this.__contextToCallback.get(context);
       this.__contextToCallback.delete(context);
       
@@ -219,6 +221,8 @@ class Layer extends EventEmitter {
         // context = incrementContext(this);
         context = this.contextGenerator(this);
       }
+      // console.log(`setting layerContext: ${this.name}(context: ${context})->${layer.name}`);
+      // console.log(new Error());
       this.__contextToLayer.set(context, layer);
     }
     return context;
@@ -228,6 +232,7 @@ class Layer extends EventEmitter {
     let layer = null;
     if (this.__contextToLayer.has(context)) {
       layer = this.__contextToLayer.get(context);
+      // console.log(`getting layerContext: ${this.name}(context: ${context})->${layer.name}`);
       this.__contextToLayer.delete(context);
     }
     return layer;
