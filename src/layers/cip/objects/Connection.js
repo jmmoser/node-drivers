@@ -1,7 +1,7 @@
 'use strict';
 
 const { CallbackPromise, InvertKeyValues } = require('../../../utils');
-const { DataType, CommonServices } = require('./CIP');
+const { DataType, CommonServices, Classes, Encode } = require('./CIP');
 const EPath = require('./EPath');
 const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
@@ -35,7 +35,41 @@ class Connection extends Layer {
     }
 
     this._connectionState = 1;
+
     this.send(ConnectionManager.ForwardOpen(this, false, true), null, false);
+  }
+
+  
+  readAttributes() {
+    if (this._connectionState !== 2) {
+      return {};
+    }
+
+    const attributes = [
+      InstanceAttributeCodes.State,
+      InstanceAttributeCodes.Type,
+      InstanceAttributeCodes.TransportClassTrigger,
+      InstanceAttributeCodes.ProducedConnectionSize,
+      InstanceAttributeCodes.ConsumedConnectionSize,
+      InstanceAttributeCodes.ExpectedPacketRate,
+      InstanceAttributeCodes.WatchdogTimeoutAction,
+      InstanceAttributeCodes.ProducedConnectionPathLength,
+      InstanceAttributeCodes.ProducedConnectionPath,
+      InstanceAttributeCodes.ConsumedConnectionPathLength,
+      InstanceAttributeCodes.ConsumedConnectionPath
+    ];
+
+    const service = CommonServices.GetAttributeList;
+
+    const data = Encode(DataType.STRUCT([
+      DataType.UINT,
+      DataType.ARRAY(DataType.UINT, 0, attributes.length - 1)
+    ]), [
+      attributes.length,
+      attributes
+    ]);
+
+    console.log(data);
   }
 
 
@@ -186,19 +220,18 @@ function mergeOptionsWithDefaults(self, options) {
   self.TtoORPI = options.TtoORPI || 0x00204001;
   self.TtoONetworkConnectionParameters = options.TtoONetworkConnectionParameters || 0x43F4;
   self.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-  self.Port = options.Port || 1,
-  self.Slot = options.Slot || 0
+  self.route = options.route;
 
   // self.options = Object.assign({
-  //   VendorID: 0x1339,
-  //   OriginatorSerialNumber: 42,
-  //   ConnectionTimeoutMultiplier: 0x01,
-  //   O2TRequestedPacketInterval: 0x00201234,
-  //   O2TNetworkConnectionParameters: 0x43F4,
-  //   T2ORequestedPacketInterval: 0x00204001,
-  //   T2ONetworkConnectionParameters: 0x43F4,
-  //   TransportClassTrigger: 0xA3, // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-  //   Route: Buffer.concat([EPath.Segments.Port.Encode(1, 0), Buffer.from([0x20, 0x02, 0x24, 0x01])])
+  //   vendorID: 0x1339,
+  //   originatorSerialNumber: 42,
+  //   connectionTimeoutMultiplier: 0x01,
+  //   o2tRequestedPacketInterval: 0x00201234,
+  //   o2tNetworkConnectionParameters: 0x43F4,
+  //   t2oRequestedPacketInterval: 0x00204001,
+  //   t2oNetworkConnectionParameters: 0x43F4,
+  //   transportClassTrigger: 0xA3, // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+  //   route: Buffer.concat([EPath.Segments.Port.Encode(1, 0), Buffer.from([0x20, 0x02, 0x24, 0x01])])
   // }, options);
 }
 

@@ -756,6 +756,7 @@ function EncodeSize(dataType, value) {
     case DataTypeCodes.EPATH:
       return EPath.EncodeSize(dataType.padded, value);
     case DataTypeCodes.ARRAY:
+      return ((dataType.upperBound - dataType.lowerBound) + 1) * EncodeSize(dataType.itemType, value[0]);
     case DataTypeCodes.ABBREV_ARRAY:
       if (!Array.isArray(value)) {
         throw new Error(`Value must be an array to determine encoding size. Received ${typeof value}`);
@@ -764,6 +765,12 @@ function EncodeSize(dataType, value) {
         return 0;
       }
       return value.length * EncodeSize(dataType.itemType, value[0]);
+    case DataTypeCodes.STRUCT:
+      let size = 0;
+      for (let i = 0; i < dataType.members.length; i++) {
+        size += EncodeSize(dataType.members[i], value[i]);
+      }
+      return size;
     default:
       throw new Error(`Encoding size for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
@@ -847,6 +854,14 @@ function EncodeTo(buffer, offset, dataType, value) {
       }
       break;
     }
+    case DataTypeCodes.STRUCT:
+      if (!Array.isArray(value) || value.length !== dataType.members.length) {
+        throw new Error(`Value must be an array to encode an array. Received: ${typeof value}`);
+      }
+      for (let i = 0; i < dataType.members.length; i++) {
+        offset = EncodeTo(buffer, offset, dataType.members[i], value[i]);
+      }
+      return offset;
     case DataTypeCodes.BOOL:
       throw new Error(`Boolean encoding isn't currently supported, use BYTE instead`);
     default:

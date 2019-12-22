@@ -77,8 +77,11 @@ function assert(condition, message) {
     TtoORPI: 0x00204001,
     TtoONetworkConnectionParameters: 0x43F4,
     TransportClassTrigger: 0xA3, // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-    Port: 1,
-    Slot: 0
+    route: EPath.EncodeSegments(true, [
+      new EPath.Segments.Port(1, 0),
+      new EPath.Segments.Logical.ClassID(2),
+      new EPath.Segments.Logical.InstanceID(1)
+    ])
   };
 
   assert(ConnectionManager.ForwardOpen(options, false, false).equals(Buffer.from([
@@ -400,7 +403,7 @@ function assert(condition, message) {
 
 
   // console.log(EPath.Decode(Buffer.from([0x02, 0x09, 0x04, 0x06]), 0, true, false, console.log));
-  console.log(EPath.Decode(Buffer.from([0x2C, 0x01]), 0, true, false, console.log));
+  // console.log(EPath.Decode(Buffer.from([0x2C, 0x01]), 0, true, false, console.log));
   // console.log(EPath.Decode(EPath.Segments.Logical.SpecialNormalElectronicKey(1, 2, 3, 4, 5, 0).encode(true), 0, null, true, console.log));
 
   // console.log(EPath.EncodeSegments(true, [
@@ -408,6 +411,22 @@ function assert(condition, message) {
   //   EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
   //   EPath.Segments.Logical.InstanceID(1),
   // ]));
+
+  const attributes = [
+    1,
+    2,
+    3
+  ];
+  const data = CIP.Encode(CIP.DataType.STRUCT([
+    CIP.DataType.UINT,
+    // CIP.DataType.ARRAY(CIP.DataType.UINT, 0, attributes.length - 1)
+    CIP.DataType.ABBREV_ARRAY(CIP.DataType.UINT)
+  ]), [
+    attributes.length,
+    attributes
+  ]);
+
+  console.log(data);
 })();
 
 

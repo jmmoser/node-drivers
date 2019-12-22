@@ -34,7 +34,7 @@
   - [X] add decoding for STRINGN
   - [ ] CIP add custructed DataTypes (Array[Int])
     - [X] Add decoding for constructed data types
-    - [ ] Add encoding for constructed data types
+    - [X] Add encoding for constructed data types
   - [ ] Improve data type encoding
     - [ ] add DataTypeSize calculation
     - [ ] encode into existing buffer, dont create new buffers

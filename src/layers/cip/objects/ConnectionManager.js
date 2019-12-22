@@ -18,7 +18,7 @@ function incrementConnectionCounters() {
 
 
 class ConnectionManager {
-  static UnconnectedSend(message, routePath, options) {
+  static UnconnectedSend(message, route, options) {
     options = Object.assign({
       priority: 0,
       timeTick: 7,
@@ -28,7 +28,7 @@ class ConnectionManager {
     const messageLength = message.length;
 
     let offset = 0;
-    const data = Buffer.allocUnsafe(6 + messageLength + (messageLength % 2) + routePath.length);
+    const data = Buffer.allocUnsafe(6 + messageLength + (messageLength % 2) + route.length);
 
     offset = data.writeUInt8((options.priority << 4 | options.timeTick), offset);
     offset = data.writeUInt8(options.timeoutTicks, offset);
@@ -37,9 +37,9 @@ class ConnectionManager {
     if (messageLength % 2 === 1) {
       offset = data.writeUInt8(0, offset); /** Pad byte if message length is odd */
     }
-    offset = data.writeUInt8(routePath.length / 2, offset);
+    offset = data.writeUInt8(route.length / 2, offset);
     offset = data.writeUInt8(0, offset); /** Reserved */
-    offset += routePath.copy(data, offset);
+    offset += route.copy(data, offset);
 
     return buildRequest(Services.UnconnectedSend, data);
   }
@@ -51,10 +51,8 @@ class ConnectionManager {
       connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
     }
     
-
     let offset = 0;
-    const portSegmentSize = EPath.Segments.Port.EncodeSize(connection.Port, connection.Slot);
-    const data = Buffer.allocUnsafe(40 + portSegmentSize);
+    const data = Buffer.alloc(36 + connection.route.length);
 
     offset = data.writeUInt8(0x0A, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
     offset = data.writeUInt8(0x0E, offset); // Time-out, ticks
@@ -85,20 +83,8 @@ class ConnectionManager {
     }
 
     offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-
-    offset = data.writeUInt8(2 + portSegmentSize / 2, offset); // Connection path size
-    offset = EPath.Segments.Port.EncodeTo(data, offset, connection.Port, connection.Slot);
-
-    /** 
-     * A connection established to the Message Router object of the target results in
-     * an Explicit Messaging type connection.  Connections established to any other
-     * application object result in an I/O type connection.  See the Connection Object
-     * attribute 2 (Instance Type)
-     */
-    offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit logical address
-    offset = data.writeUInt8(CIP.Classes.MessageRouter, offset); // class ID (MessageRouter)
-    offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit logical address
-    offset = data.writeUInt8(0x01, offset); // instance ID
+    offset = data.writeUInt8(connection.route.length / 2, offset); // Connection path size
+    offset += connection.route.copy(data, offset);
 
     return buildRequest(
       large ? Services.LargeForwardOpen : Services.ForwardOpen,
@@ -123,6 +109,8 @@ class ConnectionManager {
     if (appReplySize > 0) {
       res.Data = buffer.slice(offset, offset + appReplySize); offset += appReplySize;
     }
+
+    console.log(res);
     return res;
   }
 
@@ -130,8 +118,7 @@ class ConnectionManager {
   /** CIP Vol 1 3-5.5.3 */
   static ForwardClose(connection) {
     let offset = 0;
-    const portSegmentSize = EPath.Segments.Port.EncodeSize(connection.Port, connection.Slot);
-    const data = Buffer.allocUnsafe(16 + portSegmentSize);
+    const data = Buffer.allocUnsafe(12 + connection.route.length);
 
     offset = data.writeUInt8(0x01, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
     offset = data.writeUInt8(0x0E, offset); // Timeout, ticks
@@ -140,17 +127,10 @@ class ConnectionManager {
     offset = data.writeUInt16LE(connection.VendorID, offset);
     offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
 
-    offset = data.writeUInt8(2 + portSegmentSize / 2, offset); // connection path size, 16-bit words
+    offset = data.writeUInt8(connection.route.length / 2, offset); // connection path size, 16-bit words
     offset = data.writeUInt8(0, offset); /** Reserved */
     // Padded EPATH
-    offset = EPath.Segments.Port.EncodeTo(data, offset, connection.Port, connection.Slot);
-    offset = data.writeUInt8(0x20, offset); // logical segment, class ID, 8-bit address
-    offset = data.writeUInt8(CIP.Classes.MessageRouter, offset); // class ID (MessageRouter)
-    offset = data.writeUInt8(0x24, offset); // logical segment, instance ID, 8-bit address
-    offset = data.writeUInt8(0x01, offset); // instance ID
-
-    // EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter);
-    // EPath.Segments.Logical.InstanceID(1);
+    offset += connection.route.copy(data, offset);
 
     return buildRequest(Services.ForwardClose, data);
   }

@@ -18,9 +18,12 @@ const {
   DataTypeCodes,
   DataTypeNames,
   Encode,
+  EncodeSize,
+  EncodeTo,
   Decode,
   DecodeDataType,
-  CommonServices
+  CommonServices,
+  Classes
 } = require('../objects/CIP');
 
 const {
@@ -53,15 +56,26 @@ const {
 
 class Logix5000 extends CIPLayer {
   constructor(lowerLayer, options) {
+    options = Object.assign({
+      port: 1,
+      slot: 0,
+      optimize: false
+    }, options);
+    
     if (!(lowerLayer instanceof ConnectionLayer)) {
       /** Inject Connection as lower layer */
-      lowerLayer = new ConnectionLayer(lowerLayer, options);
+      lowerLayer = new ConnectionLayer(lowerLayer, {
+        ...options,
+        route: EPath.EncodeSegments(true, [
+          new EPath.Segments.Port(options.port, options.slot),
+          new EPath.Segments.Logical.ClassID(Classes.MessageRouter),
+          new EPath.Segments.Logical.InstanceID(0x01)
+        ])
+      });
     }
     super('cip.logix5000', lowerLayer);
-    
-    // options = Object.assign({
-    //   optimize: false
-    // }, options);
+
+    this.options = options;
 
     this._highestListedSymbolInstanceIDs = new Map();
     this._tagNameToSymbolInstanceID = new Map();
@@ -248,20 +262,22 @@ class Logix5000 extends CIPLayer {
         return resolver.reject(`Writing to structure tags is not currently supported`);
       }
 
-      const dataType = tagType.code;
-      const valueData = Encode(dataType, value);
-
-      if (!Buffer.isBuffer(valueData)) {
-        return resolver.reject(`Unable to encode data type: ${getDataTypeName(dataType)}`);
-      }
-
       const service = SymbolServiceCodes.WriteTag;
       const path = encodeSymbolPath(tag);
 
-      const data = Buffer.allocUnsafe(4 + valueData.length);
+      const dataType = tagType.code;
+      const valueDataLength = EncodeSize(dataType, value);
+
+      const data = Buffer.allocUnsafe(4 + valueDataLength);
+
       data.writeUInt16LE(dataType, 0);
       data.writeUInt16LE(1, 2);
-      valueData.copy(data, 4);
+      EncodeTo(data, 4, dataType, value);
+
+      // const data = Buffer.allocUnsafe(4 + valueData.length);
+      // data.writeUInt16LE(dataType, 0);
+      // data.writeUInt16LE(1, 2);
+      // valueData.copy(data, 4);
 
       send(this, service, path, data, (error, reply) => {
         if (error) {
@@ -384,8 +400,15 @@ class Logix5000 extends CIPLayer {
               let value;
               offset = Decode(type, data, offset, val => value = val);
 
-              if (code === SymbolInstanceAttributeCodes.Type) {
-                value = parseTypeCode(value);
+              // if (code === SymbolInstanceAttributeCodes.Type) {
+              //   value = parseTypeCode(value);
+              // }
+              switch (code) {
+                case SymbolInstanceAttributeCodes.Type:
+                  value = parseTypeCode(value);
+                  break;
+                default:
+                  break;
               }
 
               attributeResults.push({
@@ -1364,10 +1387,16 @@ async function getSymbolSize(layer, scope, tag) {
         ]);
 
         // TODO: Update this section when reading multidimensional arrays is figured out
-        if (typeInfo.value && typeInfo.value.dimensions === 1) {
+        if (typeInfo.value && typeInfo.value.dimensions > 0) {
           if (Array.isArray(arrayDimensionLengthsInfo.value) && arrayDimensionLengthsInfo.value.length > 0) {
-            // console.log(`SIZE: ${tag}: RETURNING DIMENSION LENGTH FROM TYPE INFO: ${arrayDimensionLengthsInfo.value[0]}`);
-            return arrayDimensionLengthsInfo.value[0];
+            let totalLength = 1;
+            for (let i = 0; i < arrayDimensionLengthsInfo.value.length; i++) {
+              const arrayDimensionLength = arrayDimensionLengthsInfo.value[i];
+              if (arrayDimensionLength > 0) {
+                totalLength *= arrayDimensionLength;
+              }
+            }
+            return totalLength;
           }
         }
       } else {
