@@ -306,7 +306,6 @@ class EIPLayer extends Layer {
 
 
   sendNextMessage() {
-    // console.log(`EIP layer queue size: ${this.requestQueueSize()}`);
     if (this.hasRequest()) {
       if (this._connectionState === 0) {
         this.connect();
@@ -321,12 +320,6 @@ class EIPLayer extends Layer {
           if (info && info.connectionID != null) {
             fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
             if (request.context != null && info.responseID != null) {
-              // console.log('');
-              // console.log(`setting: ${info.responseID} : ${request.context}`);
-              // console.log(`EIP SETTING CONNECTED CONTEXT: ${request.context}`);
-              // console.log(this._connectedContexts);
-              /** There might be an opportunity to improve this, previous request's contexts are overwritten */
-              
               // this._connectedContexts.set(info.responseID, request.context);
               this._connectedContexts.set(info.responseID, request.layer);
             }

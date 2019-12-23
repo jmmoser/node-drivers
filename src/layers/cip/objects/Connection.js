@@ -24,26 +24,24 @@ function createConnectionManagerContext(request) {
   };
 }
 
-const TypeCodes = {
+const TypeCodes = Object.freeze({
   Null: 0,
   Multicast: 1,
   PointToPoint: 2
-};
+});
 
-const PriorityCodes = {
+const PriorityCodes = Object.freeze({
   Low: 0,
   High: 1,
   Scheduled: 2,
   Urgent: 3
-};
+});
 
-const SizeTypeCodes = {
+const SizeTypeCodes = Object.freeze({
   Fixed: 0,
   Variable: 1
-};
+});
 
-// let totalData = 0;
-// let totalPackets = 0;
 
 class Connection extends Layer {
   constructor(lowerLayer, options) {
@@ -126,7 +124,7 @@ class Connection extends Layer {
       const data = Encode(DataType.USINT, attribute);
       // const data = null;
       const request = MessageRouter.Request(service, path, data);
-      // console.log(request);
+
       await new Promise(resolve => {
         sendConnected(this, this, request, this.contextCallback(function(err, res) {
           if (res && res.service.code !== service) {
@@ -275,18 +273,10 @@ function sendConnected(connection, layer, message, context) {
   connection._sequenceToContext.set(sequenceCount, context);
   connection.layerContext(layer, sequenceCount);
 
-  // console.log('SENDCONNECTED');
-  // console.log({
-  //   sequenceCount,
-  //   context
-  // });
-  // console.log('');
-
   const buffer = Buffer.allocUnsafe(message.length + 2);
   buffer.writeUInt16LE(sequenceCount, 0);
   message.copy(buffer, 2);
 
-  // connection.send(buffer, connection.sendInfo, false, connection.layerContext(layer));
   connection.send(buffer, connection.sendInfo, false);
 
   startResend(connection, buffer);
@@ -385,8 +375,6 @@ function handleForwardOpen(self, message, info, context) {
       const rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
       self._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
 
-      // console.log(reply);
-      // console.log(message);
       // EIP specific information
       self.sendInfo = {
         connectionID: self._OtoTConnectionID,
@@ -440,19 +428,6 @@ function handleForwardClose(self, message, info, context) {
 
 
 function handleMessage(self, data, info, context) {
-  /** call layerForContext here just to make sure it is cleared from the underlying Map */
-  // const layer = self.layerForContext(context);
-
-  // console.log('');
-  // console.log('||-------------HANDLING DATA------------||');
-  // console.log({
-  //   data,
-  //   context,
-  //   info,
-  //   context
-  //   // layer: layer ? layer.name : null
-  // });
-
   if (self._connectionState === 2) {
     const sequenceCount = data.readUInt16LE(0);
 
@@ -502,62 +477,6 @@ function handleMessage(self, data, info, context) {
     console.log('CIP Connection not connected, unhandled message: ', data);
   }
 }
-
-
-// function handleMessage(self, data, info, context) {
-//   /** call layerForContext here just to make sure it is cleared from the underlying Map */
-//   const layer = self.layerForContext(context);
-  
-//   console.log('');
-//   console.log('||-------------HANDLING DATA------------||');
-//   console.log(data);
-//   console.log({
-//     context,
-//     layer: layer ? layer.name : null
-//   });
-
-//   if (self._connectionState === 2) {
-//     const sequenceCount = data.readUInt16LE(0);
-
-//     if (self._sequenceToContext.has(sequenceCount) === false) {
-//       /* This happens when the last message is resent to prevent CIP connection timeout disconnect */
-//       return;
-//     }
-
-//     context = self._sequenceToContext.get(sequenceCount);
-//     self._sequenceToContext.delete(sequenceCount);
-//     data = data.slice(2);
-
-
-    
-//     if (layer) {
-//       console.log('RECEIVED FOR LAYER', {
-//         context,
-//         sequenceCount,
-//         layerName: layer.name
-//       });
-//       self.forwardTo(layer, data, info, context);
-//     } else {
-//       // /** This should never happen */
-//       // self.forward(data, info, context);
-
-//       console.log('RECEIVED FOR CONNECTION', {
-//         context,
-//         sequenceCount
-//       });
-
-//       const callback = self.callbackForContext(context);
-//       if (callback != null) {
-//         callback(null, data, info);
-//       } else {
-//         console.log('CIP.Connection Warning: Unhandled data received.');
-//         console.log(data);
-//       }
-//     }
-//   } else {
-//     console.log('CIP Connection unhandled message: ', data);
-//   }
-// }
 
 
 function incrementSequenceCount(self) {
