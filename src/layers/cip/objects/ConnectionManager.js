@@ -21,9 +21,18 @@ function incrementConnectionCounters() {
 class ConnectionManager {
   static UnconnectedSend(message, route, options) {
     options = Object.assign({
-      priority: 0,
-      timeTick: 7,
-      timeoutTicks: 0xE9
+      /**
+       * 2**7 * 0xE9 = 29824 ms total timeout
+       */
+      // tickTime: 7,
+      // timeoutTicks: 0xE9
+
+      // tickTime: 5,
+      // timeoutTicks = 247
+
+      /** total timeout = 9984 ms */
+      tickTime: 6,
+      timeoutTicks: 156
     }, options);
 
     const messageLength = message.length;
@@ -31,8 +40,7 @@ class ConnectionManager {
     let offset = 0;
     const data = Buffer.allocUnsafe(6 + messageLength + (messageLength % 2) + route.length);
 
-    offset = data.writeUInt8((options.priority << 4 | options.timeTick), offset);
-    offset = data.writeUInt8(options.timeoutTicks, offset);
+    offset = encodeConnectionTiming(data, offset, options.tickTime, options.timeoutTicks);
     offset = data.writeUInt16LE(messageLength, offset);
     offset += message.copy(data, offset);
     if (messageLength % 2 === 1) {
@@ -53,10 +61,9 @@ class ConnectionManager {
     }
     
     let offset = 0;
-    const data = Buffer.alloc(36 + connection.route.length);
+    const data = Buffer.alloc(36 + connection.route.length + (connection.large ? 4 : 0));
 
-    offset = data.writeUInt8(0x0A, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
-    offset = data.writeUInt8(0x0E, offset); // Time-out, ticks
+    offset = encodeConnectionTiming(data, offset, 6, 156);
     offset = data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); // Originator to Target Network Connection ID
     offset = data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); // Target to Originator Network Connection ID
     offset = data.writeUInt16LE(ConnectionSerialNumberCounter, offset);
@@ -85,7 +92,11 @@ class ConnectionManager {
 
     offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
     offset = data.writeUInt8(connection.route.length / 2, offset); // Connection path size
-    offset += connection.route.copy(data, offset);
+    connection.route.copy(data, offset); offset += connection.route.length;
+
+    if (offset !== data.length) {
+      throw new Error('offset does not match data length');
+    }
 
     return buildRequest(
       connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
@@ -109,8 +120,6 @@ class ConnectionManager {
     offset += 1; // reserved
     res.data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
 
-    // console.log('Connection Manager ForwardOpenReply:');
-    // console.log(res);
     return res;
   }
 
@@ -120,16 +129,18 @@ class ConnectionManager {
     let offset = 0;
     const data = Buffer.allocUnsafe(12 + connection.route.length);
 
-    offset = data.writeUInt8(0x01, offset); // Connection timing Priority (CIP vol 1 Table 3-5.11)
-    offset = data.writeUInt8(0x0E, offset); // Timeout, ticks
-
+    offset = encodeConnectionTiming(data, offset, 1, 14);
     offset = data.writeUInt16LE(connection.ConnectionSerialNumber, offset);
     offset = data.writeUInt16LE(connection.VendorID, offset);
     offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
 
     offset = data.writeUInt8(connection.route.length / 2, offset); // connection path size, 16-bit words
     offset = data.writeUInt8(0, offset); /** Reserved */
-    offset += connection.route.copy(data, offset);
+    connection.route.copy(data, offset); offset += connection.route.length;
+
+    if (offset !== data.length) {
+      throw new Error('offset does not match data length');
+    }
 
     return buildRequest(ServiceCodes.ForwardClose, data);
   }
@@ -249,6 +260,14 @@ const ConnectionManager_EPath = EPath.EncodeSegments(true, [
   new EPath.Segments.Logical.ClassID(CIP.Classes.ConnectionManager),
   new EPath.Segments.Logical.InstanceID(0x01)
 ]);
+
+
+function encodeConnectionTiming(buffer, offset, tickTime, timeoutTicks) {
+  const priority = 0; // 1 is reserved, keep for future
+  offset = buffer.writeUInt8(((priority << 4) | (tickTime & 0b1111)), offset);
+  offset = buffer.writeUInt8(timeoutTicks, offset);
+  return offset;
+}
 
 
 function buildRequest(code, data) {

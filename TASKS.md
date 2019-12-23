@@ -16,6 +16,7 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
 - [ ] CIP
+  - [ ] Cleanup unused EPath code
   - [ ] Only send packets up to the packet rate
   - [X] Improve Connection network connection parameters handling
   - [ ] ConnnectionManager handle duplicate connection send null forward open
@@ -68,3 +69,6 @@
       - [ ] double (64-bit floating point)
       - [ ] ascii string Lo-Hi (null-terminated)
       - [ ] ascii string Hi-Lo (null-terminated)
+- EIP
+  - [ ] Clean up _callback handling, remove and just use a switch statement
+  - [ ] Improve response EIPPacket options property

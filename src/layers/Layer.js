@@ -38,6 +38,7 @@ class Layer extends EventEmitter {
     this.__contextToCallback = new Map();
     this.__contextToCallbackTimeouts = new Map();
     this.__contextToLayer = new Map();
+    this.__idContext = new Map();
 
     if (defaultOptions) {
       passDefaultOptionsDown(defaultOptions, this);
@@ -237,6 +238,24 @@ class Layer extends EventEmitter {
     }
     return layer;
   }
+
+  setContextForID(id, context) {
+    if (id != null) {
+      this.__idContext.set(id, context);
+      return true;
+    }
+    return false;
+  }
+
+  getContextForID(id, keep) {
+    if (this.__idContext.has(id)) {
+      const context = this.__idContext.get(id);
+      if (keep !== true) {
+        this.__idContext.delete(id);
+      }
+      return context;
+    }
+  }
 }
 
 
@@ -274,6 +293,7 @@ function internalDestroy(layer, error) {
   /** Clear all internal context callbacks */
   layer.__contextToCallback.forEach(cb => cb(error));
   layer.__contextToCallback.clear();
+  layer.__idContext.clear();
 
   layer.clearRequestQueue();
 

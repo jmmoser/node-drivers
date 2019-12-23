@@ -3,7 +3,11 @@
 const { CallbackPromise, InfoError } = require('../../utils');
 const Layer = require('../Layer');
 const EIPPacket = require('./EIPPacket');
-const EIPCommand = EIPPacket.Command;
+// const CommandCodes = EIPPacket.Command;
+const {
+  CommandCodes,
+  CPFItemTypeIDs
+} = EIPPacket;
 
 
 function SendData_Packet(interfaceHandle, timeout, data) {
@@ -17,9 +21,9 @@ function SendData_Packet(interfaceHandle, timeout, data) {
 function CPF_UCMM_Packet(data) {
   const buffer = Buffer.allocUnsafe(10 + data.length);
   buffer.writeUInt16LE(2, 0); // One address item and one data item
-  buffer.writeUInt16LE(EIPPacket.CPFItemID.NullAddress, 2); // AddressTypeID = 0 to indicate a UCMM message
+  buffer.writeUInt16LE(CPFItemTypeIDs.NullAddress, 2); // AddressTypeID = 0 to indicate a UCMM message
   buffer.writeUInt16LE(0, 4); // AddressLength = 0 since UCMM messages use the NULL address item
-  buffer.writeUInt16LE(EIPPacket.CPFItemID.UnconnectedMessage, 6); // DataTypeID = 0x00B2 to encapsulate the UCMM
+  buffer.writeUInt16LE(CPFItemTypeIDs.UnconnectedMessage, 6); // DataTypeID = 0x00B2 to encapsulate the UCMM
   buffer.writeUInt16LE(data.length, 8);
   data.copy(buffer, 10);
   return buffer;
@@ -28,10 +32,10 @@ function CPF_UCMM_Packet(data) {
 function CPF_Connected_Packet(connectionIdentifier, data) {
   const buffer = Buffer.allocUnsafe(14 + data.length);
   buffer.writeUInt16LE(2, 0);
-  buffer.writeUInt16LE(EIPPacket.CPFItemID.ConnectedAddress, 2);
+  buffer.writeUInt16LE(CPFItemTypeIDs.ConnectedAddress, 2);
   buffer.writeUInt16LE(4, 4);
   buffer.writeUInt32LE(connectionIdentifier, 6);
-  buffer.writeUInt16LE(EIPPacket.CPFItemID.ConnectedMessage, 10);
+  buffer.writeUInt16LE(CPFItemTypeIDs.ConnectedMessage, 10);
   buffer.writeUInt16LE(data.length, 12);
   data.copy(buffer, 14);
   return buffer;
@@ -41,13 +45,13 @@ function CPF_Connected_Packet(connectionIdentifier, data) {
 function SendRRDataRequest(sessionHandle, senderContext, data) {
   // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
   return EIPPacket.toBuffer(
-    EIPCommand.SendRRData, sessionHandle, 0, senderContext, 0, SendData_Packet(0, 0, CPF_UCMM_Packet(data))
+    CommandCodes.SendRRData, sessionHandle, 0, senderContext, 0, SendData_Packet(0, 0, CPF_UCMM_Packet(data))
   );
 }
 
 function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connectionIdentifier, data) {
   return EIPPacket.toBuffer(
-    EIPCommand.SendUnitData, sessionHandle, 0, null, 0, SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data))
+    CommandCodes.SendUnitData, sessionHandle, 0, null, 0, SendData_Packet(interfaceHandle, timeout, CPF_Connected_Packet(connectionIdentifier, data))
   );
 }
 
@@ -319,9 +323,12 @@ class EIPLayer extends Layer {
 
           if (info && info.connectionID != null) {
             fullMessage = SendUnitDataRequest(this._sessionHandle, 0, 0, info.connectionID, message);
-            if (request.context != null && info.responseID != null) {
-              // this._connectedContexts.set(info.responseID, request.context);
-              this._connectedContexts.set(info.responseID, request.layer);
+
+            if (info.connectionID != null && info.responseID != null) {
+              // // this._connectedContexts.set(info.responseID, request.context);
+              
+              // this._connectedContexts.set(info.responseID, request.layer);
+              this._connectedContexts.set(info.responseID, info.connectionID);
             }
           } else {
             incrementContext(this);
@@ -373,7 +380,6 @@ class EIPLayer extends Layer {
 
   handleDestroy(error) {
     // console.log(new Error());
-    // console.log(`EIP layer handleDestroy queue size: ${this.requestQueueSize()}`);
     this._userCallbacks.forEach(callbacks => {
       callbacks.forEach(cb => {
         cb(error);
@@ -405,7 +411,7 @@ function setupCallbacks(self) {
   self._unconnectedContexts = new Map();
   self._connectedContexts = new Map();
 
-  self._callbacks.set(EIPCommand.RegisterSession, packet => {
+  self._callbacks.set(CommandCodes.RegisterSession, packet => {
     // console.log('RegisterSession');
     // console.log(packet);
     if (packet.status.code === 0) {
@@ -420,14 +426,12 @@ function setupCallbacks(self) {
   });
 
   /** This should never be called, UnregisterSession has no response */
-  self._callbacks.set(EIPCommand.UnregisterSession, packet => {
+  self._callbacks.set(CommandCodes.UnregisterSession, packet => {
     // console.log('UnregisterSession');
     cleanup(self);
   });
 
-  self._callbacks.set(EIPCommand.SendRRData, packet => {
-    // console.log('SendRRData');
-
+  self._callbacks.set(CommandCodes.SendRRData, packet => {
     const info = { connected: false };
     const senderContext = packet.senderContext.toString('hex');
     let context = null; // context can be null if only one upper layer
@@ -442,26 +446,40 @@ function setupCallbacks(self) {
     //   console.log(self._unconnectedContexts);
     // }
 
-
     if (!Array.isArray(packet.items)) {
-      self.destroy(new InfoError(packet, packet.status.description))
+      console.log('EIP SendRRData response does not have any CPF items');
+      console.log(packet);
+      self.destroy(new InfoError(packet, packet.status.description));
+      return;
+    }
+
+    const messageItem = packet.items.find(item => item.type.code === CPFItemTypeIDs.UnconnectedMessage);
+    if (messageItem) {
+      self.forward(messageItem.data, info, context);
     } else {
-      self.forward(
-        Array.isArray(packet.items) ? packet.items[1].data : null,
-        info,
-        context
-      );
+      console.log('EIP unhandled SendRRData packet', packet.items);
     }
   });
 
-  self._callbacks.set(EIPCommand.SendUnitData, packet => {
+  self._callbacks.set(CommandCodes.SendUnitData, packet => {
     if (packet.status.code === 0) {
-      const info = {
-        connected: true,
-        connectionID: packet.items[0].address
-      };
-      const context = self._connectedContexts.get(info.connectionID);
-      self.forward(packet.items[1].data, info, context);
+      const addressItem = packet.items.find(item => item.type.code === CPFItemTypeIDs.ConnectedAddress);
+      const messageItem = packet.items.find(item => item.type.code === CPFItemTypeIDs.ConnectedMessage);
+      // console.log(addressItem);
+      // console.log(self._connectedContexts);
+      
+      if (addressItem && messageItem) {
+        const info = {
+          connected: true,
+          responseID: addressItem.address,
+          connectionID: self._connectedContexts.get(addressItem.address)
+        };
+        // console.log(info);
+        /** DO NOT SEND CONTEXT FOR CONNECTED MESSAGES */
+        self.forward(messageItem.data, info);
+      } else {
+        console.log('EIP unhandled SendUnitData packet', packet);
+      }
     } else {
       console.log('EIPLayer Error: Packet Status:');
       console.log(packet);
