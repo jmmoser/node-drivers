@@ -303,7 +303,6 @@ function assert(condition, message) {
 
   const symbol = 'n1.n2[1,2]';
   console.log(EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(symbol)));
-  console.log(EPath.EncodeANSIExtSymbol(symbol));
 
   // const CIP = require('../src/layers/cip/objects/CIP');
   // const buffer = Buffer.from(

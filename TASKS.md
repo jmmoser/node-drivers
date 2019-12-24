@@ -26,9 +26,9 @@
   - [ ] Connection object add reading attributes (attribute 2 is instance type)
   - [ ] Read CIP Vol 1 Chapter 10 regarding briding and routing
   - [X] ConnectionManager/Connection implement LargeForwardOpen
-  - [ ] Improve ConnectionManager functions to use EPATH
+  - [X] Improve ConnectionManager functions to use EPATH
     - [X] Port Segment
-    - [ ] Message Router Logical Segments
+    - [X] Message Router Logical Segments
   - [ ] Allow explicit unconnected sends even with connection
   - [X] DecodeDataType with structs/arrays
   - [X] Hook up DecodeDataType to Decode

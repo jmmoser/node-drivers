@@ -1,9 +1,9 @@
 # Changelog
 
-## 2.0.0-beta.4 (2019-12-??)
+## 2.0.0-beta.4 (2019-12-23)
 - Logix5000 can now read program scoped symbols
 - Logix5000 can read program symbols, returns an object with all scoped symbols
-- Logix5000 can now determine size of single-dimension arrays and reads the entire array if elements is not specified
+- Logix5000 can now determine size of single-dimension arrays and reads the entire array if elements is not specified (multidimensional array read support coming soon)
 - Logix5000 added readTemplateClassAttributes
 - UDP layer now receives default port 44818 from upper EIP layer if user or previous layer does not specify port
 - CIP added decoding for data types LREAL, LWORD, and LTIME, STRINGN, STRINGI STRUCT (formal encoding), EPATH, ARRAY

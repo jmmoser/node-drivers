@@ -11,6 +11,10 @@ const PCCCPacket = require('./PCCCPacket');
   - Similar to EIPLayer, can directly use or use upper layers
 */
 
+const INFO = {
+  type: 'pccc'
+};
+
 class PCCCLayer extends Layer {
   constructor(lowerLayer) {
     super('pccc', lowerLayer);
@@ -32,7 +36,7 @@ class PCCCLayer extends Layer {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.WordRangeReadRequest(transaction, address, words);
 
-      this.send(message, null, false, this.contextCallback(function (error, reply) {
+      this.send(message, INFO, false, this.contextCallback(function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -63,11 +67,10 @@ class PCCCLayer extends Layer {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.TypedReadRequest(transaction, address, items);
 
-      this.send(message, null, false, this.contextCallback(function (error, reply) {
+      this.send(message, INFO, false, this.contextCallback(function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          console.log(reply.data);
           const value = PCCCPacket.ParseTypedReadData(reply.data);
           if (items === 1 && Array.isArray(value) && value.length > 0) {
             resolver.resolve(value[0]);
@@ -95,7 +98,7 @@ class PCCCLayer extends Layer {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.TypedWriteRequest(transaction, address, value);
 
-      this.send(message, null, false, this.contextCallback(function (error, reply) {
+      this.send(message, INFO, false, this.contextCallback(function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -116,7 +119,7 @@ class PCCCLayer extends Layer {
   //   let transaction = incrementTransaction(this);
   //   let message = PCCCPacket.UnprotectedReadRequest(transaction, address, size);
   //
-  //   this.send(message, null, false, this.contextCallback(function(error, reply) {
+  //   this.send(message, INFO, false, this.contextCallback(function(error, reply) {
   //     if (error) {
   //       callback(error);
   //     } else {
@@ -130,7 +133,7 @@ class PCCCLayer extends Layer {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.DiagnosticStatusRequest(transaction);
 
-      this.send(message, null, false, this.contextCallback(function (error, reply) {
+      this.send(message, INFO, false, this.contextCallback(function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -145,7 +148,7 @@ class PCCCLayer extends Layer {
     return CallbackPromise(callback, resolver => {
       const transaction = incrementTransaction(this);
       const message = PCCCPacket.EchoRequest(transaction, data);
-      this.send(message, null, false, this.contextCallback(function (error, reply) {
+      this.send(message, INFO, false, this.contextCallback(function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {

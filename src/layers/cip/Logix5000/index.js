@@ -1023,7 +1023,7 @@ function encodeFullSymbolPath(scope, symbol) {
 
   if (scope) {
     return Buffer.concat([
-      EPath.EncodeANSIExtSymbol(scope),
+      EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(scope)),
       symbolPath
     ]);
   }
@@ -1243,9 +1243,7 @@ async function getSymbolInstanceID(layer, scope, tag) {
   }
 
   const createScopedSymbolName = scopedGenerator(scope);
-
   const tagNameToSymbolInstanceIDKey = createScopedSymbolName(tagName);
-  // console.log(tagNameToSymbolInstanceIDKey);
 
   if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
     return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);

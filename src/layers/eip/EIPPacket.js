@@ -138,9 +138,9 @@ class EIPPacket {
     return (length >= EIPPacket.Length(buffer));
   }
 
-  static NextMessage(buffer) {
-    return buffer.slice(0, EIPPacket.Length(buffer));
-  }
+  // static NextMessage(buffer) {
+  //   return buffer.slice(0, EIPPacket.Length(buffer));
+  // }
 
   static Length(buffer) {
     return 24 + EIPPacket.DataLength(buffer);
