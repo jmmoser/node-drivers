@@ -115,32 +115,11 @@ class TCPLayer extends Layer {
     return this._disconnect;
   }
 
-  // disconnect(callback) {
-  //   return CallbackPromise(callback, resolver => {
-  //     if (this._connectionState > 0) {
-  //       if (this._connectionState === 1) {
-  //         this._connectionState = 0;
-  //         this.socket.destroy();
-  //         resolver.resolve();
-  //       } else {
-  //         this._connectionState = -1;
-  //         this.socket.end(() => {
-  //           this.socket.destroy();
-  //           resolver.resolve();
-  //         });
-  //       }
-  //     } else {
-  //       resolver.resolve();
-  //     }
-  //   });
-  // }
-
 
   sendNextMessage() {
     if (this._connectionState === 2) {
       const request = this.getNextRequest();
       if (request) {
-        // console.log('Sending', request.message);
         this.socket.write(request.message, err => {
           if (err) {
             console.log('TCP layer write error:')

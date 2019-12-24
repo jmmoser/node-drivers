@@ -183,55 +183,6 @@ function CallbackPromise(callback, func, timeout) {
   });
 }
 
-// function CallbackPromise(callback, func, timeout) {
-//   const hasCallback = typeof callback === 'function';
-//   return new Promise(function (resolve, reject) {
-//     let timeoutHandle;
-//     let active = true;
-//     const resolver = {
-//       resolve: function (res) {
-//         // console.log(`resolve: ${res}, active: ${active}`);
-//         if (active) {
-//           active = false;
-//           clearTimeout(timeoutHandle);
-//           if (hasCallback) {
-//             callback(null, res);
-//           }
-//           resolve(res);
-//         }
-//       },
-//       reject: function (err, info) {
-//         if (active) {
-//           if (typeof err === 'string') {
-//             err = new InfoError(info, err);
-//           } else if (err instanceof Error && info != null && err.info == null) {
-//             err = new InfoError(info, err.message);
-//           } else if (!(err instanceof Error)) {
-//             err = new Error(err);
-//           }
-
-//           active = false;
-//           clearTimeout(timeoutHandle);
-//           if (hasCallback) {
-//             callback(err);
-//             resolve();
-//           } else {
-//             reject(err);
-//           }
-//         }
-//       }
-//     };
-
-//     if (Number.isFinite(timeout)) {
-//       timeoutHandle = setTimeout(function () {
-//         resolver.reject('Timeout');
-//       }, timeout);
-//     }
-
-//     return func(resolver);
-//   });
-// }
-
 
 module.exports = {
   getBits,

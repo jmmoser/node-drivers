@@ -200,71 +200,6 @@ class EIPLayer extends Layer {
     });
   }
 
-  // listIdentity(options, callback) {
-  //   let timeout = -1;
-  //   let host = null;
-  //   let port = null;
-
-  //   if (arguments.length === 1 && typeof arguments[0] === 'function') {
-  //     callback = arguments[0];
-  //   } else {
-  //     switch (typeof options) {
-  //       case 'number':
-  //         timeout = options;
-  //         break;
-  //       case 'object':
-  //         timeout = typeof options.timeout === 'number' ? options.timeout : -1;
-  //         host = typeof options.host === 'string' ? options.host : null;
-  //         port = typeof options.port === 'number' ? options.port : null;
-  //         break;
-  //       default:
-  //         break;
-  //     }
-  //   }
-
-  //   const shouldBroadcast = timeout > 0;
-  //   const identities = [];
-
-  //   return CallbackPromise(callback, resolver => {
-  //     let timeoutHandler;
-
-  //     function finalizer(error, reply) {
-  //       clearTimeout(timeoutHandler);
-  //       if (error) {
-  //         resolver.reject(error, reply);
-  //       } else {
-  //         resolver.resolve(identities);
-  //       }
-  //     }
-
-  //     if (shouldBroadcast) {
-  //       timeoutHandler = setTimeout(finalizer, timeout)
-  //     }
-
-  //     const info = {
-  //       host,
-  //       port
-  //     };
-
-  //     queueUserRequest(this, EIPPacket.ListIdentityRequest(), info, function(error, reply) {
-  //       if (error) {
-  //         finalizer(error, reply);
-  //       } else {
-  //         if (Array.isArray(reply.items) && reply.items.length === 1) {
-  //           identities.push(reply.items[0]);
-  //           if (shouldBroadcast) {
-  //             return true;
-  //           } else {
-  //             finalizer();
-  //           }
-  //         } else {
-  //           finalizer('Unexpected result', reply);
-  //         }
-  //       }
-  //     });
-  //   });
-  // }
-
   listInterfaces(callback) {
     return CallbackPromise(callback, resolver => {
       queueUserRequest(this, EIPPacket.ListInterfacesRequest(), null, function (error, reply) {
@@ -280,12 +215,6 @@ class EIPLayer extends Layer {
       });
     });
   }
-
-  // indicateStatus(callback) {
-  //   return CallbackPromise(callback, resolver => {
-  //     queueUserRequest(this, EIPPacket.Ind)
-  //   });
-  // }
 
   connect(callback) {
     if (this._connectionState === 2) {
@@ -348,6 +277,7 @@ class EIPLayer extends Layer {
   }
 
   handleData(data, info, context) {
+    // console.log(data);
     const packet = EIPPacket.fromBuffer(data);
     const command = packet.command;
 

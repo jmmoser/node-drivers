@@ -72,7 +72,7 @@ class EIPPacket {
     };
   }
 
-  toBuffer(opts) {
+  toBuffer() {
     const dataLength = Buffer.isBuffer(this.data) ? this.data.length : 0;
     const buffer = Buffer.allocUnsafe(24 + dataLength);
     buffer.writeUInt16LE(this.command, 0);
@@ -172,19 +172,23 @@ class EIPPacket {
   }
 
   static ListIdentityRequest() {
-    return toBuffer(Command.ListIdentity, 0, 0, NullSenderContext, 0, []);
+    return toBuffer(Command.ListIdentity, 0, 0, NullSenderContext, 0);
   }
 
   static ListServicesRequest(senderContext) {
-    return toBuffer(Command.ListServices, 0, 0, senderContext, 0, []);
+    return toBuffer(Command.ListServices, 0, 0, senderContext, 0);
   }
 
   static ListInterfacesRequest() {
-    return toBuffer(Command.ListInterfaces, 0, 0, NullSenderContext, 0, []);
+    return toBuffer(Command.ListInterfaces, 0, 0, NullSenderContext, 0);
   }
 
   static NOPRequest() {
-    return toBuffer(Command.NOP, 0, 0, NullSenderContext, 0, []);
+    return toBuffer(Command.NOP, 0, 0, NullSenderContext, 0);
+  }
+
+  static IndicateStatusRequest() {
+    return toBuffer(Command.IndicateStatus, 0, 0, NullSenderContext, 0);
   }
 }
 
@@ -194,11 +198,11 @@ EIPPacket.CPFItemTypeIDs = CPFItemTypeIDs;
 module.exports = EIPPacket;
 
 
-function toBuffer(command, handle, status, context, options, data = []) {
-  const length = data.length;
+function toBuffer(command, handle, status, context, options = 0, data) {
+  const length = Buffer.isBuffer(data) ? data.length : 0;
   const buffer = Buffer.alloc(24 + length);
   buffer.writeUInt16LE(command, 0);
-  buffer.writeUInt16LE(data.length, 2);
+  buffer.writeUInt16LE(length, 2);
   buffer.writeUInt32LE(handle, 4);
   buffer.writeUInt32LE(status, 8);
   (context || NullSenderContext).copy(buffer, 12, 0, 8);
@@ -282,7 +286,7 @@ function DecodeCPFItems(buffer, offset, cb) {
 
         let nameLength;
         for (nameLength = 0; nameLength <= 16; nameLength++) {
-          if (data[offset + j] === 0) {
+          if (data[offset + nameLength] === 0) {
             break;
           }
         }
