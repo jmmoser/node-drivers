@@ -1,8 +1,8 @@
 # Changelog
 
 ## 2.0.0-beta.4 (2019-12-23)
-- Logix5000 can now read program scoped symbols
 - Logix5000 can read program symbols, returns an object with all scoped symbols
+- Logix5000 can now read program scoped symbols
 - Logix5000 can now determine size of single-dimension arrays and reads the entire array if elements is not specified (multidimensional array read support coming soon)
 - Logix5000 added readTemplateClassAttributes
 - UDP layer now receives default port 44818 from upper EIP layer if user or previous layer does not specify port
@@ -10,8 +10,7 @@
 - CIP added encoding for data types USINT, BYTE, LWORD, LREAL, STRING, SHORT_STRING, STRING2, EPATH, ARRAY, ABBREV_ARRAY, STRUCT
 - CIP Connection Slot can now be a number, a string, or a buffer
 - CIP Identity added Device Type Names
-- CIP Connection added decoding for instance attributes
-- CIP Connection/ConnectionManager now support Large Forward Open
+- CIP Connection/ConnectionManager now supports LargeForwardOpen (connection size greater than 511 bytes), automatically falls back to regular ForwardOpen if device does not support LargeForwardOpen
 
 ## 2.0.0-beta.3 (2019-12-7)
 - `Logix5000.readTag()` now reads the entire array if the tag is a 1-dimensional array
