@@ -63,24 +63,23 @@ class PortSegment {
   }
 
 
-  static Validate(number, address) {
-    return validate(number, serializeAddress(address));
-  }
+  // static Validate(number, address) {
+  //   return validate(number, serializeAddress(address));
+  // }
+
+  // static EncodeSize(number, address) {
+  //   return (new PortSegment(number, address)).encodeSize();
+  // }
 
 
-  static EncodeSize(number, address) {
-    return (new PortSegment(number, address)).encodeSize();
-  }
+  // static Encode(number, address) {
+  //   return (new PortSegment(number, address)).encode();
+  // }
 
 
-  static Encode(number, address) {
-    return (new PortSegment(number, address)).encode();
-  }
-
-
-  static EncodeTo(buffer, offset, number, address) {
-    return (new PortSegment(number, address)).encodeTo(buffer, offset);
-  }
+  // static EncodeTo(buffer, offset, number, address) {
+  //   return (new PortSegment(number, address)).encodeTo(buffer, offset);
+  // }
 
 
   static Decode(segmentCode, buffer, offset, padded, cb) {

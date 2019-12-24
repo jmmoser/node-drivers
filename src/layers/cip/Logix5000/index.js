@@ -14,6 +14,11 @@ const ConnectionLayer = require('../objects/Connection');
 // };
 
 const {
+  CommonServices,
+  Classes
+} = require('../objects/CIP');
+
+const {
   DataType,
   DataTypeCodes,
   DataTypeNames,
@@ -21,10 +26,8 @@ const {
   EncodeSize,
   EncodeTo,
   Decode,
-  DecodeDataType,
-  CommonServices,
-  Classes
-} = require('../objects/CIP');
+  DecodeDataType
+} = require('../datatypes');
 
 const {
   getBit,

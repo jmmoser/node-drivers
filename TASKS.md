@@ -16,6 +16,8 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
 - [ ] CIP
+  - [ ] Finish Data Segment
+  - [ ] Encoding for Symbolic Segment
   - [X] Cleanup unused EPath code
   - [ ] Only send packets up to the packet rate
   - [X] Improve Connection network connection parameters handling

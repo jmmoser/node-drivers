@@ -102,19 +102,19 @@ class LogicalSegment {
     return encodeTo(buffer, offset, padded, this.type.code, this.format.code, this.value);
   }
 
-  static EncodeSize(padded, type, format, value) {
-    return encodeSize(padded, type, format, value); 
-  }
+  // static EncodeSize(padded, type, format, value) {
+  //   return encodeSize(padded, type, format, value); 
+  // }
 
-  static Encode(padded, type, format, value) {
-    const buffer = Buffer.alloc(encodeSize(padded, type, format, value));
-    encodeTo(buffer, 0, padded, type, format, value);
-    return buffer;
-  }
+  // static Encode(padded, type, format, value) {
+  //   const buffer = Buffer.alloc(encodeSize(padded, type, format, value));
+  //   encodeTo(buffer, 0, padded, type, format, value);
+  //   return buffer;
+  // }
 
-  static EncodeTo(buffer, offset, padded, type, format, value) {
-    return encodeTo(buffer, offset, padded, type, format, value);
-  }
+  // static EncodeTo(buffer, offset, padded, type, format, value) {
+  //   return encodeTo(buffer, offset, padded, type, format, value);
+  // }
 
   static Decode(segmentCode, buffer, offset, padded, cb) {
     const type = getBits(segmentCode, 2, 5);
@@ -378,12 +378,6 @@ function encodeSize(padded, type, format, value) {
 
   return size;
 }
-
-
-// function encodeBuffer(padded, type, format, value) {
-//   return Buffer.alloc(encodeSize(padded, type, format, value));
-// }
-
 
 
 function encodeTo(buffer, offset, padded, type, format, value) {

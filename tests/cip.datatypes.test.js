@@ -2,9 +2,8 @@ const {
   DataType,
   DataTypeCodes,
   Encode,
-  EncodeTo,
   Decode
-} = require('../src/layers/cip/objects/CIP');
+} = require('../src/layers/cip/datatypes');
 
 const EPath = require('../src/layers/cip/objects/EPath');
 

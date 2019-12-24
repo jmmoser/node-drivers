@@ -1,7 +1,8 @@
 'use strict';
 
 const { CallbackPromise, InvertKeyValues } = require('../../../utils');
-const { DataType, CommonServices, Classes, Encode } = require('./CIP');
+const { CommonServices } = require('./CIP');
+const { DataType } = require('../datatypes');
 const EPath = require('./EPath');
 const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
@@ -42,6 +43,26 @@ const PriorityCodes = Object.freeze({
 const SizeTypeCodes = Object.freeze({
   Fixed: 0,
   Variable: 1
+});
+
+
+/** For Transport Class Trigger Attribute */
+const TransportClassCodes = Object.freeze({
+  Class0: 0,
+  Class1: 1,
+  Class2: 2,
+  Class3: 3
+});
+
+const TransportProductionTriggerCodes = Object.freeze({
+  Cyclic: 0,
+  ChangeOfState: 1,
+  ApplicationObject: 2
+});
+
+const TransportDirectionCodes = Object.freeze({
+  Client: 0,
+  Server: 1
 });
 
 
@@ -316,6 +337,10 @@ class Connection extends Layer {
 
     return offset;
   }
+
+  // static BuildTransportClassTriggerCode({ transportClass, productionTrigger, direction }) {
+  //   return buildTransportClassTriggerCode({ transportClass, productionTrigger, direction });
+  // }
 }
 
 module.exports = Connection;
@@ -368,6 +393,35 @@ function buildNetworkConnectionParametersCode(options) {
 }
 
 
+const TransportClassCodesSet = new Set(
+  Object.values(TransportClassCodes)
+);
+const TransportProductionTriggerCodesSet = new Set(
+  Object.values(TransportProductionTriggerCodes)
+);
+const TransportDirectionCodesSet = new Set(
+  Object.values(TransportDirectionCodes)
+);
+
+
+function buildTransportClassTriggerCode(transport) {
+  if (!TransportClassCodesSet.has(transport.transportClass)) {
+    throw new Error(`CIP Connection invalid transport class ${transport.transportClass}`);
+  }
+  if (!TransportProductionTriggerCodesSet.has(transport.productionTrigger)) {
+    throw new Error(`CIP Connection invalid transport production trigger ${transport.productionTrigger}`);
+  }
+  if (!TransportDirectionCodesSet.has(transport.direction)) {
+    throw new Error(`CIP Connection invalid transport direction ${transport.direction}`);
+  }
+  return (
+    ((transport.direction & 0b1) << 7) |
+    ((transport.productionTrigger & 0b111) << 4) |
+    ((transport.transportClass & 0b1111))
+  )
+}
+
+
 function mergeOptionsWithDefaults(self, options) {
   if (!options) options = {};
 
@@ -387,6 +441,16 @@ function mergeOptionsWithDefaults(self, options) {
     maximumSize: 500
   }, options.networkConnectionParameters);
 
+  self.transport = Object.assign({
+    transportClass: TransportClassCodes.Class3,
+    productionTrigger: TransportProductionTriggerCodes.ApplicationObject,
+    direction: TransportDirectionCodes.Server
+  }, options.transport);
+
+  self.transportClass = options.transportClass || TransportClassCodes.Class3;
+  self.transportProductionTrigger = options.transportProductionTrigger || TransportProductionTriggerCodes.ApplicationObject;
+  self.transportDirection = options.transportDirection || TransportDirectionCodes.Server;
+
   // console.log(self.networkConnectionParameters);
 
   self.large = self.networkConnectionParameters.maximumSize > MaximumNormalConnectionSize;
@@ -398,7 +462,7 @@ function mergeOptionsWithDefaults(self, options) {
   self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
   self.TtoORPI = options.TtoORPI || 2000000;
   self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
-  self.TransportClassTrigger = options.TransportClassTrigger || 0xA3 // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+  self.TransportClassTrigger = buildTransportClassTriggerCode(self.transport);
   self.route = options.route;
 
   // self.options = Object.assign({
