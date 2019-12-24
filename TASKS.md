@@ -16,14 +16,12 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
 - [ ] CIP
-  - [ ] Cleanup unused EPath code
+  - [X] Cleanup unused EPath code
   - [ ] Only send packets up to the packet rate
   - [X] Improve Connection network connection parameters handling
-  - [ ] ConnnectionManager handle duplicate connection send null forward open
-  - [ ] Connection get instance attributes
   - [ ] Consider making CIPLayer intelligent, uses upper layer to determine if it is forwarding PCCC, Modbus, etc.
   - [ ] Add I/O Connections
-  - [ ] Connection object add reading attributes (attribute 2 is instance type)
+  - [ ] Connection object read attributes (attribute 2 is instance type)
   - [ ] Read CIP Vol 1 Chapter 10 regarding briding and routing
   - [X] ConnectionManager/Connection implement LargeForwardOpen
   - [X] Improve ConnectionManager functions to use EPATH
@@ -41,8 +39,8 @@
     - [X] Add decoding for constructed data types
     - [X] Add encoding for constructed data types
   - [ ] Improve data type encoding
-    - [ ] add DataTypeSize calculation
-    - [ ] encode into existing buffer, dont create new buffers
+    - [X] add DataTypeSize calculation
+    - [X] encode into existing buffer, dont create new buffers
     - [ ] add encoding for bool
 - TCP Layer
   - [X] allow passing just host for options
@@ -69,6 +67,3 @@
       - [ ] double (64-bit floating point)
       - [ ] ascii string Lo-Hi (null-terminated)
       - [ ] ascii string Hi-Lo (null-terminated)
-- EIP
-  - [ ] Clean up _callback handling, remove and just use a switch statement
-  - [ ] Improve response EIPPacket options property

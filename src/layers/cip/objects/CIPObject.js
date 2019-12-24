@@ -130,7 +130,7 @@ class CIPObject {
   getAttributesAllRequest(instance = 0x01) {
     return this.request(
       CommonServices.GetAttributesAll,
-      EPath.EncodeSegments(true, [
+      EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(this.code),
         new EPath.Segments.Logical.InstanceID(instance)
       ])

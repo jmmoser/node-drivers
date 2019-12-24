@@ -842,7 +842,7 @@ function EncodeTo(buffer, offset, dataType, value) {
       offset = buffer.writeDoubleLE(value, offset);
       break;
     case DataTypeCodes.EPATH:
-      offset = EPath.EncodeSegmentsTo(buffer, offset, dataType.padded, value);
+      offset = EPath.EncodeTo(buffer, offset, dataType.padded, value);
       break;
     case DataTypeCodes.ARRAY:
     case DataTypeCodes.ABBREV_ARRAY: {

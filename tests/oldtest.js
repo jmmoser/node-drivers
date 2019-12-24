@@ -77,7 +77,7 @@ function assert(condition, message) {
     TtoORPI: 0x00204001,
     TtoONetworkConnectionParameters: 0x43F4,
     TransportClassTrigger: 0xA3, // 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-    route: EPath.EncodeSegments(true, [
+    route: EPath.Encode(true, [
       new EPath.Segments.Port(1, 0),
       new EPath.Segments.Logical.ClassID(2),
       new EPath.Segments.Logical.InstanceID(1)
@@ -302,7 +302,7 @@ function assert(condition, message) {
   const EPath = require('../src/layers/cip/objects/EPath');
 
   const symbol = 'n1.n2[1,2]';
-  console.log(EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(symbol)));
+  console.log(EPath.Encode(true, EPath.ConvertSymbolToSegments(symbol)));
 
   // const CIP = require('../src/layers/cip/objects/CIP');
   // const buffer = Buffer.from(
@@ -368,7 +368,7 @@ function assert(condition, message) {
 
 //   const request = MessageRouter.Request(
 //     CIP.CommonServices.GetAttributesAll,
-//     EPath.EncodeSegments(true, [
+//     EPath.Encode(true, [
 //       new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
 //       new EPath.Segments.Logical.InstanceID(0x01)
 //     ])
@@ -389,12 +389,12 @@ function assert(condition, message) {
   // const MessageRouter = require('../src/layers/cip/objects/MessageRouter');
   // const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
 
-  assert(EPath.EncodeSegments(true, [
+  assert(EPath.Encode(true, [
     new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
     new EPath.Segments.Logical.InstanceID(1),
   ]).equals(Buffer.from([0x20, 0x02, 0x24, 0x01])));
 
-  assert(EPath.EncodeSegments(true, [
+  assert(EPath.Encode(true, [
     new EPath.Segments.Port(1, 0),
     new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
     new EPath.Segments.Logical.InstanceID(1),
@@ -405,7 +405,7 @@ function assert(condition, message) {
   // console.log(EPath.Decode(Buffer.from([0x2C, 0x01]), 0, true, false, console.log));
   // console.log(EPath.Decode(EPath.Segments.Logical.SpecialNormalElectronicKey(1, 2, 3, 4, 5, 0).encode(true), 0, null, true, console.log));
 
-  // console.log(EPath.EncodeSegments(true, [
+  // console.log(EPath.Encode(true, [
   //   new EPath.Segments.Port(1, 0),
   //   EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
   //   EPath.Segments.Logical.InstanceID(1),

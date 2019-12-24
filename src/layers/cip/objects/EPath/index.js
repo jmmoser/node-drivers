@@ -114,18 +114,18 @@ class EPath {
     return encodeSize(padded, segments);
   }
 
-  static EncodeSegments(padded, segments) {
+  static Encode(padded, segments) {
     let size = 0;
     for (let i = 0; i < segments.length; i++) {
       size += segments[i].encodeSize(padded);
     }
     const buffer = Buffer.alloc(size);
-    encodeSegmentsTo(buffer, 0, padded, segments);
+    EncodeTo(buffer, 0, padded, segments);
     return buffer;
   }
 
-  static EncodeSegmentsTo(buffer, offset, padded, segments) {
-    return encodeSegmentsTo(buffer, offset, padded, segments);
+  static EncodeTo(buffer, offset, padded, segments) {
+    return EncodeTo(buffer, offset, padded, segments);
   }
 }
 
@@ -147,7 +147,7 @@ function encodeSize(padded, segments) {
 }
 
 
-function encodeSegmentsTo(buffer, offset, padded, segments) {
+function EncodeTo(buffer, offset, padded, segments) {
   if (!Array.isArray(segments)) {
     throw new Error(`Segments must be an array. Received: ${typeof segments}`);
   }

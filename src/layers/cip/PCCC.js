@@ -70,7 +70,7 @@ class PCCC extends CIPLayer {
   }
 }
 
-const PCCC_EPATH = EPath.EncodeSegments(true, [
+const PCCC_EPATH = EPath.Encode(true, [
   new EPath.Segments.Logical.ClassID(CIP.Classes.PCCC),
   new EPath.Segments.Logical.InstanceID(0x01)
 ]);

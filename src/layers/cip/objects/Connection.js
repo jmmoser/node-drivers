@@ -106,7 +106,6 @@ class Connection extends Layer {
           };
 
           // await this.readAttributes();
-          // await this.findNextInstance();
 
           this._connectionState = 2;
 
@@ -119,121 +118,73 @@ class Connection extends Layer {
     }));
   }
 
-
-
-  async findNextInstance() {
-    if (this._connectionState === 0) {
-      this.connect();
-    }
-
-    if (this.sendInfo == null) {
-      return;
-    }
-
-    const service = CommonServices.FindNextObjectInstance;
-
-    const path = EPath.EncodeSegments(true, [
-      new EPath.Segments.Logical.ClassID(Classes.Connection),
-      new EPath.Segments.Logical.InstanceID(1)
-    ]);
-
-    const data = Encode(DataType.USINT, 10);
-
-    const request = MessageRouter.Request(service, path, data);
-
-    await new Promise(resolve => {
-      // this.send(request, null, false, unconnectedContext(true, null, request, function(err, res) {
-      //   if (err) {
-      //     console.log(err, res);
-      //   } else {
-      //     console.log(res);
-      //   }
-      //   resolve();
-      // }));
-
-      // sendConnected(this, true, request, )
-      sendConnected(this, true, request, this.contextCallback(function (err, res) {
-        if (err) {
-          console.log(err);
-          console.log(res);
-        } else {
-          console.log(res);
-        }
-        resolve();
-      }));
-    });
-  }
-
   
-  async readAttributes() {
-    if (this._connectionState === 0) {
-      // return {};
-      this.connect();
-    }
+  // async readAttributes() {
+  //   if (this._connectionState === 0) {
+  //     // return {};
+  //     this.connect();
+  //   }
 
-    if (this.sendInfo == null) {
-      return;
-    }
-    // if (this._connectionState !== 2) {
-    //   return;
-    // }
+  //   if (this.sendInfo == null) {
+  //     return;
+  //   }
 
-    const attributes = [
-      InstanceAttributeCodes.State,
-      // InstanceAttributeCodes.Type,
-      // InstanceAttributeCodes.TransportClassTrigger,
-      // InstanceAttributeCodes.ProducedConnectionSize,
-      // InstanceAttributeCodes.ConsumedConnectionSize,
-      // InstanceAttributeCodes.ExpectedPacketRate,
-      // InstanceAttributeCodes.WatchdogTimeoutAction,
-      // InstanceAttributeCodes.ProducedConnectionPathLength,
-      // InstanceAttributeCodes.ProducedConnectionPath,
-      // InstanceAttributeCodes.ConsumedConnectionPathLength,
-      // InstanceAttributeCodes.ConsumedConnectionPath
-    ];
+  //   const attributes = [
+  //     InstanceAttributeCodes.State,
+  //     // InstanceAttributeCodes.Type,
+  //     // InstanceAttributeCodes.TransportClassTrigger,
+  //     // InstanceAttributeCodes.ProducedConnectionSize,
+  //     // InstanceAttributeCodes.ConsumedConnectionSize,
+  //     // InstanceAttributeCodes.ExpectedPacketRate,
+  //     // InstanceAttributeCodes.WatchdogTimeoutAction,
+  //     // InstanceAttributeCodes.ProducedConnectionPathLength,
+  //     // InstanceAttributeCodes.ProducedConnectionPath,
+  //     // InstanceAttributeCodes.ConsumedConnectionPathLength,
+  //     // InstanceAttributeCodes.ConsumedConnectionPath
+  //   ];
 
-    // const service = CommonServices.GetAttributeList;
+  //   // const service = CommonServices.GetAttributeList;
 
-    // const data = Encode(DataType.STRUCT([
-    //   DataType.UINT,
-    //   DataType.ARRAY(DataType.UINT, 0, attributes.length - 1)
-    // ]), [
-    //   attributes.length,
-    //   attributes
-    // ]);
-    // console.log(data);
+  //   // const data = Encode(DataType.STRUCT([
+  //   //   DataType.UINT,
+  //   //   DataType.ARRAY(DataType.UINT, 0, attributes.length - 1)
+  //   // ]), [
+  //   //   attributes.length,
+  //   //   attributes
+  //   // ]);
+  //   // console.log(data);
 
-    for (let i = 0; i < attributes.length; i++) {
-      const attribute = attributes[i];
+  //   for (let i = 0; i < attributes.length; i++) {
+  //     const attribute = attributes[i];
 
-      const service = CommonServices.GetAttributeSingle;
+  //     const service = CommonServices.GetAttributeSingle;
 
-      const path = EPath.EncodeSegments(true, [
-        new EPath.Segments.Logical.ClassID(Classes.Connection),
-        // new EPath.Segments.Logical.InstanceID(this._OtoTConnectionID),
-        new EPath.Segments.Logical.InstanceID(this._TtoOConnectionID),
-        new EPath.Segments.Logical.AttributeID(attribute)
-      ]);
+  //     const path = EPath.Encode(true, [
+  //       new EPath.Segments.Logical.ClassID(Classes.Connection),
+  //       // new EPath.Segments.Logical.InstanceID(this._OtoTConnectionID),
+  //       new EPath.Segments.Logical.InstanceID(this._TtoOConnectionID),
+  //       new EPath.Segments.Logical.AttributeID(attribute)
+  //     ]);
 
-      // console.log(path);
-      // const path = Buffer.from([]);
-      // const data = Encode(DataType.USINT, attribute);
-      const data = null;
-      const request = MessageRouter.Request(service, path, data);
+  //     // console.log(path);
+  //     // const path = Buffer.from([]);
+  //     // const data = Encode(DataType.USINT, attribute);
+  //     const data = null;
+  //     const request = MessageRouter.Request(service, path, data);
 
-      await new Promise(resolve => {
-        sendConnected(this, true, request, this.contextCallback(function(err, res) {
-          if (err) {
-            console.log(err);
-            console.log(res);
-          } else {
-            console.log(res);
-          }
-          resolve();
-        }));
-      });
-    }
-  }
+  //     await new Promise(resolve => {
+  //       sendConnected(this, true, request, this.contextCallback(function(err, res) {
+  //         if (err) {
+  //           console.log(err);
+  //           console.log(res);
+  //         } else {
+  //           console.log(res);
+  //         }
+  //         resolve();
+  //       }));
+  //     });
+  //   }
+  // }
 
 
   disconnect(callback) {

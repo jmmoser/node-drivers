@@ -70,7 +70,7 @@ class Logix5000 extends CIPLayer {
       /** Inject Connection as lower layer */
       lowerLayer = new ConnectionLayer(lowerLayer, {
         ...options,
-        route: EPath.EncodeSegments(true, [
+        route: EPath.Encode(true, [
           new EPath.Segments.Port(options.port, options.slot),
           new EPath.Segments.Logical.ClassID(Classes.MessageRouter),
           new EPath.Segments.Logical.InstanceID(0x01)
@@ -535,7 +535,7 @@ class Logix5000 extends CIPLayer {
 
         const service = TemplateServiceCodes.Read;
 
-        const path = EPath.EncodeSegments(true, [
+        const path = EPath.Encode(true, [
           new EPath.Segments.Logical.ClassID(ClassCodes.Template),
           new EPath.Segments.Logical.InstanceID(templateID)
         ]);
@@ -628,7 +628,7 @@ class Logix5000 extends CIPLayer {
     return CallbackPromise(callback, async resolver => {
       const service = CommonServices.GetAttributeList;
 
-      const path = EPath.EncodeSegments(true, [
+      const path = EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(ClassCodes.Template),
         new EPath.Segments.Logical.InstanceID(0)
       ]);
@@ -677,7 +677,7 @@ class Logix5000 extends CIPLayer {
 
         const service = CommonServices.GetAttributeList;
 
-        const path = EPath.EncodeSegments(true, [
+        const path = EPath.Encode(true, [
           new EPath.Segments.Logical.ClassID(ClassCodes.Template),
           new EPath.Segments.Logical.InstanceID(templateID)
         ]);
@@ -742,7 +742,7 @@ class Logix5000 extends CIPLayer {
     return CallbackPromise(callback, resolver => {
       const service = CommonServices.GetAttributeList;
 
-      const path = EPath.EncodeSegments(true, [
+      const path = EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(0xAC),
         new EPath.Segments.Logical.InstanceID(0x01)
       ]);
@@ -1004,14 +1004,14 @@ function encodeAttributes(attributes) {
 function encodeSymbolPath(tag) {
   switch (typeof tag) {
     case 'string':
-      return EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(tag));
+      return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
     case 'number':
-      return EPath.EncodeSegments(true, [
+      return EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(ClassCodes.Symbol),
         new EPath.Segments.Logical.InstanceID(tag)
       ]);
     case 'object':
-      return EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(tag));
+      return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
     default:
       throw new Error('Tag must be a tag name, symbol instance number, or a tag object');
   }
@@ -1023,7 +1023,7 @@ function encodeFullSymbolPath(scope, symbol) {
 
   if (scope) {
     return Buffer.concat([
-      EPath.EncodeSegments(true, EPath.ConvertSymbolToSegments(scope)),
+      EPath.Encode(true, EPath.ConvertSymbolToSegments(scope)),
       symbolPath
     ]);
   }

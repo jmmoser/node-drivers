@@ -28,7 +28,7 @@ class CIPLayer extends Layer {
     return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
       
-      const path = EPath.EncodeSegments(true, [
+      const path = EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
         new EPath.Segments.Logical.InstanceID(0x01)
       ]);
@@ -52,7 +52,7 @@ class CIPLayer extends Layer {
     return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributeSingle;
 
-      const path = EPath.EncodeSegments(true, [
+      const path = EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
         new EPath.Segments.Logical.InstanceID(0x01),
         new EPath.Segments.Logical.AttributeID(0x01)
@@ -79,7 +79,7 @@ class CIPLayer extends Layer {
     return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
 
-      const path = EPath.EncodeSegments(true, [
+      const path = EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
         new EPath.Segments.Logical.InstanceID(0x01)
       ]);
@@ -139,7 +139,7 @@ class CIPLayer extends Layer {
 
     // return CallbackPromise(callback, async resolver => {
     //   const service = CIP.CommonServices.GetAttributesAll;
-    //   const path = EPath.EncodeSegments(
+    //   const path = EPath.Encode(
     //     new EPath.Segments.Logical.ClassID(classCode),
     //     new EPath.Segments.Logical.InstanceID(instanceID),
     //   );
@@ -155,7 +155,7 @@ class CIPLayer extends Layer {
 
       for (let i = 1; i < maxAttribute; i++) {
         try {
-          const path = EPath.EncodeSegments(true, [
+          const path = EPath.Encode(true, [
             new EPath.Segments.Logical.ClassID(classCode),
             new EPath.Segments.Logical.InstanceID(instanceID),
             new EPath.Segments.Logical.AttributeID(i)
@@ -183,7 +183,7 @@ class CIPLayer extends Layer {
     return CallbackPromise(callback, resolver => {
       const service = CIP.CommonServices.GetAttributesAll;
 
-      const path = EPath.EncodeSegments(true, [
+      const path = EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
         new EPath.Segments.Logical.InstanceID(0)
       ]);
