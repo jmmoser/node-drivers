@@ -6,7 +6,7 @@
  * - handles all common and reserved services and attributes
  */
 
-const EPath = require('./EPath');
+const EPath = require('../EPath');
 
 const {
   // Decode,

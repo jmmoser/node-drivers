@@ -1,8 +1,12 @@
 'use strict';
 
 const { CallbackPromise } = require('../../../utils');
-const EPath = require('./EPath');
+const EPath = require('../EPath');
 const CIP = require('./CIP');
+const {
+  DataType,
+  Decode
+} = require('../datatypes');
 const Layer = require('./../../Layer');
 const Identity = require('./Identity');
 const MessageRouter = require('./MessageRouter');
@@ -104,14 +108,14 @@ class CIPLayer extends Layer {
 
             /** number active may not be supported */
             if (offset < length) {
-              offset = CIP.Decode(CIP.DataType.UINT, data, offset, val => info.maximumConnections = val);
+              offset = Decode(DataType.UINT, data, offset, val => info.maximumConnections = val);
 
               let connectionCount;
-              offset = CIP.Decode(CIP.DataType.UINT, data, offset, val => connectionCount = val);
+              offset = Decode(DataType.UINT, data, offset, val => connectionCount = val);
 
               const connectionIDs = [];
               for (let i = 0; i < connectionCount; i++) {
-                offset = CIP.Decode(CIP.DataType.UINT, data, offset, val => connectionIDs.push(val));
+                offset = Decode(DataType.UINT, data, offset, val => connectionIDs.push(val));
               }
 
               info.connections = connectionIDs;

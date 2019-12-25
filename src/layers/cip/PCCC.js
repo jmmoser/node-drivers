@@ -1,6 +1,6 @@
 'use strict';
 
-const EPath = require('./objects/EPath');
+const EPath = require('./EPath');
 const CIP = require('./objects/CIP');
 const CIPLayer = require('./objects/CIPLayer');
 const MessageRouter = require('./objects/MessageRouter');

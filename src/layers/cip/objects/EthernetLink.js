@@ -1,6 +1,7 @@
 'use strict';
 
-const { DataType } = require('./CIP');
+const { DataType } = require('../datatypes');
+// const { DataType } = require('./CIP');
 
 
 const InstanceAttributeCodes = {

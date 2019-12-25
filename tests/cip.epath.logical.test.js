@@ -1,4 +1,4 @@
-const EPath = require('../src/layers/cip/objects/EPath');
+const EPath = require('../src/layers/cip/EPath');
 const Logical = EPath.Segments.Logical;
 
 describe('Logical ClassID', () => {

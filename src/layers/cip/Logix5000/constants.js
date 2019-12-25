@@ -1,7 +1,11 @@
+'use strict';
 
 const {
   DataType
-} = require('../objects/CIP');
+} = require('../datatypes');
+// const {
+//   DataType
+// } = require('../objects/CIP');
 
 
 const {

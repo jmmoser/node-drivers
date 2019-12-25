@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-beta.5 (???)
+- CIP added decoding for data types ENGUNIT
+- CIP added encoding for data types ENGUNIT
+
 ## 2.0.0-beta.4 (2019-12-23)
 - Logix5000 can read program symbols, returns an object with all scoped symbols
 - Logix5000 can now read program scoped symbols

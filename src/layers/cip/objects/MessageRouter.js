@@ -1,13 +1,16 @@
 'use strict';
 
 const {
-  Decode,
-  DataType,
   ClassNames,
   CommonServiceNames,
   GeneralStatusCodeNames,
   GeneralStatusCodeDescriptions
 } = require('./CIP');
+
+const {
+  Decode,
+  DataType
+} = require('../datatypes');
 
 
 class MessageRouter {

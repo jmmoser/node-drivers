@@ -4,7 +4,7 @@
 
 const { InvertKeyValues } = require('../../../utils');
 const CIP = require('./CIP');
-const EPath = require('./EPath');
+const EPath = require('../EPath');
 const MessageRouter = require('./MessageRouter');
 
 let ConnectionSerialNumberCounter = 0x0001;

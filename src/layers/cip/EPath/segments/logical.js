@@ -17,7 +17,7 @@ const {
   decodeUnsignedInteger,
   sizeToEncodeUnsignedInteger,
   InvertKeyValues
-} = require('../../../../../utils');
+} = require('../../../../utils');
 
 
 const TypeCodes = Object.freeze({

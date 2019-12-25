@@ -4,10 +4,11 @@ const {
   InvertKeyValues
 } = require('../../../utils');
 
-const {
-  DataType,
-  Decode
-} = require('./CIP');
+const { DataType, Decode } = require('../datatypes');
+// const {
+//   DataType,
+//   Decode
+// } = require('./CIP');
 
 
 const ClassAttributeCodes = Object.freeze({
@@ -42,11 +43,15 @@ const InstanceAttributeNames = Object.freeze(InvertKeyValues(InstanceAttributeCo
 const InstanceAttributeDataTypes = Object.freeze({
   [InstanceAttributeCodes.Type]: DataType.UINT,
   [InstanceAttributeCodes.Number]: DataType.UINT,
-  [InstanceAttributeCodes.Link]: DataType.STRUCT([DataType.SMEMBER(DataType.UINT, true), DataType.PLACEHOLDER], function (members) {
+  [InstanceAttributeCodes.Link]: DataType.STRUCT([
+    DataType.SMEMBER(DataType.UINT, true),
+    DataType.PLACEHOLDER((padded, length) => DataType.EPATH(padded, length))
+  ], function (members, dt) {
     // console.log(members);
     if (members.length === 1) {
       // console.log(`Setting epath length: ${2 * members[0]}`);
-      return DataType.EPATH(true, 2 * members[0]);
+      return dt.resolve(true, 2 * members[0]);
+      // return DataType.EPATH(true, 2 * members[0]);
     }
   }),
   [InstanceAttributeCodes.Name]: DataType.SHORT_STRING,

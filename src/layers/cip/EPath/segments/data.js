@@ -22,7 +22,7 @@ const {
   getBit,
   getBits,
   InvertKeyValues
-} = require('../../../../../utils');
+} = require('../../../../utils');
 
 const SubtypeCodes = {
   Simple: 0,

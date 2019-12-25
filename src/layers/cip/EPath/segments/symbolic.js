@@ -10,7 +10,7 @@
 const {
   getBits,
   sizeToEncodeUnsignedInteger
-} = require('../../../../../utils');
+} = require('../../../../utils');
 
 
 const ExtendedStringFormatCodes = {
@@ -119,7 +119,7 @@ class SymbolicSegment {
         offset += buffer.write(this.value, offset, 'ascii');
       }
     } else {
-      offset = buffer.writeUInt8(((this.extendedFormat & 0b111) << 5) | (this.size & 0b11111), offset);
+      offset = buffer.writeUInt8(((this.extendedFormat & 0b111) << 5) | (this.extendedSize & 0b11111), offset);
       switch (this.extendedFormat) {
         case ExtendedStringFormatCodes.DoubleByteCharacters:
           this.value.copy(buffer, offset);

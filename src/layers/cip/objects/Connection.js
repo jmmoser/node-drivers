@@ -3,7 +3,7 @@
 const { CallbackPromise, InvertKeyValues } = require('../../../utils');
 const { CommonServices } = require('./CIP');
 const { DataType } = require('../datatypes');
-const EPath = require('./EPath');
+// const EPath = require('../EPath');
 const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');

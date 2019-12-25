@@ -1,7 +1,7 @@
 'use strict';
 
 // const MessageRouter = require('./../src/layers/cip/objects/MessageRouter');
-const EPath = require('../src/layers/cip/objects/EPath');
+const EPath = require('../src/layers/cip/EPath');
 
 
 function assert(condition, message) {
@@ -84,74 +84,91 @@ function assert(condition, message) {
     ])
   };
 
+  // const b1 = ConnectionManager.ForwardOpenRequest(options, false);
+  // const b2 = Buffer.from([
+  //   0x54, 0x02, 0x20, 0x06, 0x24, 0x01, 0x06, 0x9C,
+  //   0x02, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00, 0x20,
+  //   0x01, 0x00, 0x39, 0x13, 0x2a, 0x00, 0x00, 0x00,
+  //   0x01, 0x00, 0x00, 0x00, 0x34, 0x12, 0x20, 0x00,
+  //   0xf4, 0x43, 0x01, 0x40, 0x20, 0x00, 0xf4, 0x43,
+  //   0xa3, 0x03, 0x01, 0x00, 0x20, 0x02, 0x24, 0x01
+  // ]);
+
+  // console.log(b1);
+  // console.log(b2);
+
   assert(ConnectionManager.ForwardOpenRequest(options, false).equals(Buffer.from([
-    0x54, 0x02, 0x20, 0x06, 0x24, 0x01, 0x0a, 0x0e,
+    0x54, 0x02, 0x20, 0x06, 0x24, 0x01, 0x06, 0x9C,
     0x02, 0x00, 0x00, 0x20, 0x01, 0x00, 0x00, 0x20,
     0x01, 0x00, 0x39, 0x13, 0x2a, 0x00, 0x00, 0x00,
     0x01, 0x00, 0x00, 0x00, 0x34, 0x12, 0x20, 0x00,
     0xf4, 0x43, 0x01, 0x40, 0x20, 0x00, 0xf4, 0x43,
     0xa3, 0x03, 0x01, 0x00, 0x20, 0x02, 0x24, 0x01
   ])));
+
+  const { DecodeDataTypeTag } = require('../src/layers/cip/datatypes/codes');
+
+  DecodeDataTypeTag(Buffer.from([0xA1, 0x00]), 0, console.log);
 })();
 
 
-(() => {
-  const PortSegment = require('../src/layers/cip/objects/EPath/segments/port');
+// (() => {
+//   const PortSegment = require('../src/layers/cip/EPath/segments/port');
 
-  assert(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
-  assert(PortSegment.EncodeSize(2, 6) === 2);
-  assert(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
-  assert(PortSegment.EncodeSize(2, 6) === 2);
-  assert(PortSegment.EncodeSize(18, Buffer.from([0x01])) === 4);
-  assert(PortSegment.EncodeSize(5, Buffer.from([
-    0x31, 0x33, 0x30, 0x2E,
-    0x31, 0x35, 0x31, 0x2E,
-    0x31, 0x33, 0x37, 0x2E,
-    0x31, 0x30, 0x35
-  ])) === 18);
+//   assert(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
+//   assert(PortSegment.EncodeSize(2, 6) === 2);
+//   assert(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
+//   assert(PortSegment.EncodeSize(2, 6) === 2);
+//   assert(PortSegment.EncodeSize(18, Buffer.from([0x01])) === 4);
+//   assert(PortSegment.EncodeSize(5, Buffer.from([
+//     0x31, 0x33, 0x30, 0x2E,
+//     0x31, 0x35, 0x31, 0x2E,
+//     0x31, 0x33, 0x37, 0x2E,
+//     0x31, 0x30, 0x35
+//   ])) === 18);
 
-  (() => {
-    const number = 0;
-    const address = Buffer.from([0x06]);
-    const expectedLength = 2;
-    const buffer = Buffer.alloc(expectedLength);
-    assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
-    assert(buffer.equals(PortSegment.Encode(number, address)));
-  })();
+//   (() => {
+//     const number = 0;
+//     const address = Buffer.from([0x06]);
+//     const expectedLength = 2;
+//     const buffer = Buffer.alloc(expectedLength);
+//     assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
+//     assert(buffer.equals(PortSegment.Encode(number, address)));
+//   })();
 
-  (() => {
-    const number = 0;
-    const address = 6
-    const expectedLength = 2;
-    const buffer = Buffer.alloc(expectedLength);
-    assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
-    assert(buffer.equals(PortSegment.Encode(number, address)));
-  })();
+//   (() => {
+//     const number = 0;
+//     const address = 6
+//     const expectedLength = 2;
+//     const buffer = Buffer.alloc(expectedLength);
+//     assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
+//     assert(buffer.equals(PortSegment.Encode(number, address)));
+//   })();
 
-  (() => {
-    const number = 18;
-    const address = 1;
-    const expectedLength = 4;
-    const buffer = Buffer.alloc(expectedLength);
-    assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
-    assert(buffer.equals(PortSegment.Encode(number, address)));
-  })();
+//   (() => {
+//     const number = 18;
+//     const address = 1;
+//     const expectedLength = 4;
+//     const buffer = Buffer.alloc(expectedLength);
+//     assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
+//     assert(buffer.equals(PortSegment.Encode(number, address)));
+//   })();
 
-  (() => {
-    const number = 5;
-    const address = Buffer.from([
-      0x31, 0x33, 0x30, 0x2E,
-      0x31, 0x35, 0x31, 0x2E,
-      0x31, 0x33, 0x37, 0x2E,
-      0x31, 0x30, 0x35
-    ]);
-    const expectedLength = 18;
+//   (() => {
+//     const number = 5;
+//     const address = Buffer.from([
+//       0x31, 0x33, 0x30, 0x2E,
+//       0x31, 0x35, 0x31, 0x2E,
+//       0x31, 0x33, 0x37, 0x2E,
+//       0x31, 0x30, 0x35
+//     ]);
+//     const expectedLength = 18;
 
-    const buffer = Buffer.alloc(expectedLength);
-    assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
-    assert(buffer.equals(PortSegment.Encode(number, address)));
-  })();
-})();
+//     const buffer = Buffer.alloc(expectedLength);
+//     assert(PortSegment.EncodeTo(buffer, 0, number, address) === expectedLength);
+//     assert(buffer.equals(PortSegment.Encode(number, address)));
+//   })();
+// })();
 
 
 
@@ -299,7 +316,7 @@ function assert(condition, message) {
 
 
 (() => {
-  const EPath = require('../src/layers/cip/objects/EPath');
+  const EPath = require('../src/layers/cip/EPath');
 
   const symbol = 'n1.n2[1,2]';
   console.log(EPath.Encode(true, EPath.ConvertSymbolToSegments(symbol)));
@@ -385,7 +402,7 @@ function assert(condition, message) {
 
 (() => {
   const CIP = require('../src/layers/cip/objects/CIP');
-  const EPath = require('../src/layers/cip/objects/EPath');
+  const EPath = require('../src/layers/cip/EPath');
   // const MessageRouter = require('../src/layers/cip/objects/MessageRouter');
   // const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
 

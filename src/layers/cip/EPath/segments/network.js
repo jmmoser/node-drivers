@@ -10,10 +10,10 @@
  */
 
 const {
-  getBit,
+  // getBit,
   getBits,
   InvertKeyValues
-} = require('../../../../../utils');
+} = require('../../../../utils');
 
 const SubtypeCodes = Object.freeze({
   Schedule: 1,
@@ -30,6 +30,39 @@ class NetworkSegment {
   constructor(subtype, value) {
     this.subtype = subtype;
     this.value = value;
+  }
+
+
+  encodeSize() {
+    switch (this.subtype) {
+      case SubtypeCodes.Schedule:
+      case SubtypeCodes.FixedTag:
+      case SubtypeCodes.ProductionInhibitTime:
+        return 2;
+      default:
+        throw new Error(`Network segment subtype ${this.subtype} not supported yet`);
+    }
+  }
+
+  encode() {
+    const buffer = Buffer.alloc(this.encodeSize());
+    this.encodeTo(buffer, 0);
+    return buffer;
+  }
+
+  encodeTo(buffer, offset) {
+    offset = buffer.writeUInt8((0b01000000) | (this.subtype & 0b11111), offset);
+    switch (this.subtype) {
+      case SubtypeCodes.Schedule:
+      case SubtypeCodes.FixedTag:
+      case SubtypeCodes.ProductionInhibitTime:
+        offset = buffer.writeUInt8(this.value, offset);
+        break;
+      default:
+        throw new Error(`Network segment subtype ${this.subtype} not supported yet`);
+    }
+    
+    return offset;
   }
 
   static Decode(segmentCode, buffer, offset, padded, cb) {
