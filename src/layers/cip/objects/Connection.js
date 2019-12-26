@@ -18,15 +18,6 @@ const MaximumLargeConnectionSize = 0xFFFF;
 const MaximumNormalConnectionSize = 0b111111111; /** 511 */
 
 
-function unconnectedContext(internal, context, request, callback) {
-  return {
-    internal,
-    context,
-    request,
-    callback
-  };
-}
-
 const TypeCodes = Object.freeze({
   Null: 0,
   Multicast: 1,
@@ -91,7 +82,7 @@ class Connection extends Layer {
 
     const request = ConnectionManager.ForwardOpenRequest(this, true);
 
-    this.send(request, null, false, unconnectedContext(true, null, request, async (err, res) => {
+    send(this, false, true, request, async (err, res) => {
       if (err) {
         this._connectionState = 0;
 
@@ -130,13 +121,14 @@ class Connection extends Layer {
 
           this._connectionState = 2;
 
+          // console.log('CIP Connection connected');
           this.sendNextMessage();
         }
       }
 
       if (this._connectCallback) this._connectCallback(res);
       this._connectCallback = null;
-    }));
+    });
   }
 
   
@@ -218,6 +210,8 @@ class Connection extends Layer {
         return;
       }
 
+      stopResend(this);
+
       this._disconnectCallback = () => {
         resolver.resolve();
       };
@@ -229,10 +223,8 @@ class Connection extends Layer {
       this._connectionState = -1;
 
       const request = ConnectionManager.ForwardCloseRequest(this);
-      
-      this.send(request, null, false, unconnectedContext(true, null, request, (err, res) => {
-        stopResend(this);
 
+      send(this, false, true, request, (err, res) => {
         if (res.status.code === 0) {
           const reply = ConnectionManager.ForwardCloseReply(res.data);
 
@@ -248,10 +240,10 @@ class Connection extends Layer {
           // console.log('CIP connection unsuccessful close');
           // console.log(res);
           ConnectionManager.TranslateResponse(res);
-          console.log(res);
+          // console.log(res);
           this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
         }
-      }));
+      });
     });
   }
 
@@ -264,7 +256,7 @@ class Connection extends Layer {
           this.connect();
         } else {
           const request = this.getNextRequest();
-          this.send(request.message, null, false, unconnectedContext(false, request.context));
+          send(this, false, false, request.message, request.context);
           setImmediate(() => this.sendNextMessage());
         }
       }
@@ -278,7 +270,7 @@ class Connection extends Layer {
 
         // console.log('sending connected');
         // console.log(request.message);
-        sendConnected(this, false, request.message, request.context);
+        send(this, true, false, request.message, request.context);
         setImmediate(() => this.sendNextMessage());
       }
     }
@@ -302,13 +294,6 @@ class Connection extends Layer {
 
   handleDestroy(error) {
     this._connectionState === 0;
-
-    for (const context of this.clearContexts()) {
-      if (context.internal === true && typeof context.callback === 'function') {
-        console.log('clearing');
-        context.callback(error);
-      }
-    }
   }
 
 
@@ -349,30 +334,58 @@ class Connection extends Layer {
 
     return offset;
   }
-
-  // static BuildTransportClassTriggerCode({ transportClass, productionTrigger, direction }) {
-  //   return buildTransportClassTriggerCode({ transportClass, productionTrigger, direction });
-  // }
 }
 
 module.exports = Connection;
 
 
-function sendConnected(connection, internal, message, context) {
-  const sequenceCount = incrementSequenceCount(connection);
-  connection.setContextForID(sequenceCount, {
-    context,
-    internal,
-    request: message
-  });
+/**
+ * Request
+ *  connected, internal => callback
+ *  connected, external => context
+ *  unconnected, internal => callback
+ *  unconnected, external => context
+ */
+function send(connection, connected, internal, request, contextOrCallback) {
+  let context, callback;
+  if (internal && typeof contextOrCallback === 'function') {
+    callback = contextOrCallback;
+  } else {
+    context = contextOrCallback;
+  }
 
-  const buffer = Buffer.allocUnsafe(message.length + 2);
-  buffer.writeUInt16LE(sequenceCount, 0);
-  message.copy(buffer, 2);
+  if (connected) {
+    const sequenceCount = incrementSequenceCount(connection);
 
-  connection.send(buffer, connection.sendInfo, false);
+    if (internal && callback) {
+      connection.contextCallback(callback, 'c' + sequenceCount);
+    }
 
-  startResend(connection, buffer);
+    connection.setContextForID(sequenceCount, {
+      context,
+      internal,
+      request,
+      // callback
+    });
+
+    const buffer = Buffer.allocUnsafe(request.length + 2);
+    buffer.writeUInt16LE(sequenceCount, 0);
+    request.copy(buffer, 2);
+
+    connection.send(buffer, connection.sendInfo, false);
+
+    startResend(connection, buffer);
+  } else {
+    if (internal && callback) {
+      context = connection.contextCallback(callback);
+    }
+    connection.send(request, null, false, {
+      internal,
+      context,
+      request,
+      // callback
+    });
+  }
 }
 
 
@@ -432,14 +445,6 @@ function buildTransportClassTriggerCode(transport) {
 function mergeOptionsWithDefaults(self, options) {
   if (!options) options = {};
 
-  // self.networkConnectionParameters = options.networkConnectionParameters || {
-  //   redundantOwner: 0,
-  //   type: TypeCodes.PointToPoint,
-  //   priority: PriorityCodes.Low,
-  //   sizeType: SizeTypeCodes.Variable,
-  //   maximumSize: 500
-  // };
-
   self.networkConnectionParameters = Object.assign({
     redundantOwner: 0,
     type: TypeCodes.PointToPoint,
@@ -464,8 +469,6 @@ function mergeOptionsWithDefaults(self, options) {
   self.transportClass = options.transportClass || TransportClassCodes.Class3;
   self.transportProductionTrigger = options.transportProductionTrigger || TransportProductionTriggerCodes.ApplicationObject;
   self.transportDirection = options.transportDirection || TransportDirectionCodes.Server;
-
-  // console.log(self.networkConnectionParameters);
 
   self.large = self.networkConnectionParameters.maximumSize > MaximumNormalConnectionSize;
 
@@ -501,14 +504,18 @@ function handleUnconnectedMessage(self, data, info, context) {
   }
 
   if (context.internal === true) {
-    const message = MessageRouter.Reply(data);
-
-    message.request = context.request;
-
-    context.callback(
-      message.status.error ? message.status.description || 'CIP Error' : null,
-      message
-    );
+    const callback = self.callbackForContext(context.context);
+    if (callback) {
+      const response = MessageRouter.Reply(data);
+      response.request = context.request;
+      callback(
+        response.status.error ? response.status.description || 'CIP Error' : null,
+        response
+      );
+    }
+    // else {
+    //   /** Request may have already timed out but we still received the response later */
+    // }
   } else {
     /** Unconnected message for upper layer */
     self.forward(data, info, context.context);
@@ -518,12 +525,21 @@ function handleUnconnectedMessage(self, data, info, context) {
 
 function handleConnectedMessage(self, data, info) {
   if (self.sendInfo == null || info == null) {
-    console.log('CIP Connection unhandled connected message, not connected', data);
+    console.log(
+      'CIP Connection unhandled connected message, not connected',
+      data,
+      info
+    );
     return;
   }
 
   if (self.sendInfo.connectionID !== info.connectionID || self.sendInfo.responseID !== info.responseID) {
-    console.log(`CIP Connection unhandled connected message, invalid Originator and/or Target connection identifiers`, data, info);
+    console.log(
+      `CIP Connection unhandled connected message, invalid Originator and/or Target connection identifiers`,
+      data,
+      info
+    );
+    return;
   }
 
   const sequenceCount = data.readUInt16LE(0);
@@ -539,13 +555,11 @@ function handleConnectedMessage(self, data, info) {
   if (savedContext.internal) {
     const callback = self.callbackForContext(savedContext.context);
     if (callback != null) {
-      const reply = MessageRouter.Reply(data);
-
-      reply.request = savedContext.request;
-
+      const response = MessageRouter.Reply(data);
+      response.request = savedContext.request;
       callback(
-        reply.status.error ? reply.status.description || 'CIP Error' : null,
-        reply
+        response.status.error ? response.status.description || 'CIP Error' : null,
+        response
       );
     } else {
       console.log('CIP.Connection: Unhandled data received.', data);

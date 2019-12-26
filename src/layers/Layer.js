@@ -298,8 +298,12 @@ function incrementContext(self) {
 
 function internalDestroy(layer, error) {
   /** Clear all internal context callbacks */
+  layer.__contextToCallbackTimeouts.forEach(handle => clearTimeout(handle));
+  layer.__contextToCallbackTimeouts.clear();
+
   layer.__contextToCallback.forEach(cb => cb(error));
   layer.__contextToCallback.clear();
+  
   layer.__idContext.clear();
 
   layer.clearRequestQueue();
