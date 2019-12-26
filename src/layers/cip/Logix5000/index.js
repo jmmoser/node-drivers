@@ -2,7 +2,7 @@
 
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
-const EPath = require('../EPath');
+const EPath = require('../epath');
 const CIPLayer = require('../objects/CIPLayer');
 const ConnectionLayer = require('../objects/Connection');
 
@@ -828,7 +828,8 @@ async function readTagFragmented(layer, path, elements) {
     const reply = await sendPromise(layer, service, path, reqData, 5000);
 
     /** remove the tag type bytes if already received */
-    const dataTypeOffset = DecodeDataType(reply.data, 0);
+    // const dataTypeOffset = DecodeDataType(reply.data, 0);
+    const dataTypeOffset = Logix5000_DecodeDataType(reply.data, 0);
     chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
 
     if (reply.status.code === 0x06) {
@@ -884,13 +885,15 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
   return structValues;
 }
 
+
 async function parseReadTag(layer, scope, tag, elements, data) {
   if (data.length === 0) {
     return undefined;
   }
 
   let typeInfo;
-  let offset = DecodeDataType(data, 0, val => typeInfo = val);
+  let offset = Logix5000_DecodeDataType(data, 0, val => typeInfo = val);
+  // let offset = DecodeDataType(data, 0, val => typeInfo = val);
   // console.log(typeInfo);
 
   if (!typeInfo) {
@@ -1423,4 +1426,13 @@ async function getSymbolSize(layer, scope, tag) {
   }
   // console.log(`SIZE: ${tag}: RETURNING DIMENSION LENGTH 1`);
   return 1;
+}
+
+
+function Logix5000_DecodeDataType(buffer, offset, cb) {
+  const nextOffset = DecodeDataType(buffer, offset, cb);
+  if (nextOffset - offset < 2) {
+    return nextOffset + 1;
+  }
+  return nextOffset;
 }

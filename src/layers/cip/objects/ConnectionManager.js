@@ -4,7 +4,7 @@
 
 const { InvertKeyValues } = require('../../../utils');
 const CIP = require('./CIP');
-const EPath = require('../EPath');
+const EPath = require('../epath');
 const MessageRouter = require('./MessageRouter');
 
 let ConnectionSerialNumberCounter = 0x0001;
@@ -63,7 +63,7 @@ class ConnectionManager {
     let offset = 0;
     const data = Buffer.alloc(36 + connection.route.length + (connection.large ? 4 : 0));
 
-    offset = encodeConnectionTiming(data, offset, 6, 156);
+    offset = encodeConnectionTiming(data, offset, connection.timing.tickTime, connection.timing.timeoutTicks);
     offset = data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); // Originator to Target Network Connection ID
     offset = data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); // Target to Originator Network Connection ID
     offset = data.writeUInt16LE(ConnectionSerialNumberCounter, offset);
@@ -129,7 +129,8 @@ class ConnectionManager {
     let offset = 0;
     const data = Buffer.allocUnsafe(12 + connection.route.length);
 
-    offset = encodeConnectionTiming(data, offset, 1, 14);
+    // offset = encodeConnectionTiming(data, offset, 1, 14);
+    offset = encodeConnectionTiming(data, offset, 2, 125);
     offset = data.writeUInt16LE(connection.ConnectionSerialNumber, offset);
     offset = data.writeUInt16LE(connection.VendorID, offset);
     offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);

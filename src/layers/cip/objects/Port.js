@@ -4,26 +4,15 @@ const {
   InvertKeyValues
 } = require('../../../utils');
 
-const { DataType, Decode } = require('../datatypes');
+const MessageRouter = require('./MessageRouter');
+const { Classes, CommonServices } = require('./CIP');
+const EPath = require('../epath');
+
+const { DataType, Decode, Encode } = require('../datatypes');
 // const {
 //   DataType,
 //   Decode
 // } = require('./CIP');
-
-
-const ClassAttributeCodes = Object.freeze({
-  // 1
-  InstanceInfo: 9
-});
-
-const ClassAttributeDataTypes = Object.freeze({
-  [ClassAttributeCodes.InstanceInfo]: DataType.ABBREV_ARRAY(
-    DataType.STRUCT([
-      DataType.UINT, // Port Type
-      DataType.UINT // Port Number
-    ])
-  )
-});
 
 
 const InstanceAttributeCodes = Object.freeze({
@@ -70,6 +59,28 @@ const InstanceGetAttributesAllOrder = Object.freeze([
   InstanceAttributeCodes.NodeAddress
 ]);
 
+
+const ClassAttributeCodes = Object.freeze({
+  // 1
+  InstanceInfo: 9
+});
+
+const ClassAttributeNames = InvertKeyValues(ClassAttributeCodes);
+
+
+const ClassAttributeDataTypes = Object.freeze({
+  [ClassAttributeCodes.InstanceInfo]: DataType.ABBREV_ARRAY(
+    DataType.STRUCT([
+      // DataType.UINT, // Port Type
+      // DataType.UINT // Port Number
+      InstanceAttributeDataTypes[InstanceAttributeCodes.Type],
+      InstanceAttributeDataTypes[InstanceAttributeCodes.Number]
+    ])
+  )
+});
+
+
+
 /** CIP Vol 3 Chapter 3-7.3 */
 const PortTypeNames = Object.freeze({
   0: 'Connection terminates in this device',
@@ -86,8 +97,23 @@ const PortTypeNames = Object.freeze({
 
 
 class Port {
-  static DecodeAttribute(forClass, attribute, attributes, data, offset, cb) {
-    const 
+  static DecodeClassAttribute(buffer, offset, attribute, cb) {
+    const dataType = ClassAttributeDataTypes[attribute];
+    if (!dataType) {
+      throw new Error(`Unknown class attribute: ${attribute}`);
+    }
+
+    let value;
+    offset = Decode(dataType, buffer, offset, val => value = val);
+
+    if (typeof cb === 'function') {
+      cb({
+        code: attribute,
+        name: ClassAttributeNames[attribute] || 'Unknown',
+        value
+      });
+    }
+    return offset;
   }
 
   static DecodeInstanceAttribute(attribute, data, offset, cb) {
@@ -138,6 +164,21 @@ class Port {
       cb(attributes);
     }
     return offset;
+  }
+
+  static GetInstanceInfoRequest() {
+    const attribute = ClassAttributeCodes.InstanceInfo;
+
+    const service = CommonServices.GetAttributeSingle;
+
+    const path = EPath.Encode(true, [
+      new EPath.Segments.Logical.ClassID(Classes.Port),
+      new EPath.Segments.Logical.InstanceID(0)
+    ]);
+    
+    const data = Encode(DataType.USINT, attribute);
+
+    return MessageRouter.Request(service, path, data);
   }
 }
 

@@ -1,7 +1,7 @@
 'use strict';
 
-const DataType = require('./types');
-const { DataTypeCodes } = require('./codes');
+const { DataType } = require('./types');
+const { DataTypeCodes, DataTypeNames } = require('./codes');
 
 const {
   Decode
@@ -15,6 +15,7 @@ const {
 
 module.exports = {
   DataType,
+  DataTypeNames,
   DataTypeCodes,
   Decode,
   EncodeSize,

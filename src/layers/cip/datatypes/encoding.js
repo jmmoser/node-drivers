@@ -1,6 +1,6 @@
 'use strict';
 
-const EPath = require('../EPath');
+const EPath = require('../epath');
 const { DataTypeCodes } = require('./codes');
 
 

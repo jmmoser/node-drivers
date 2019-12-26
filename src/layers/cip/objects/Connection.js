@@ -74,8 +74,6 @@ class Connection extends Layer {
 
     this._connectionState = 0;
     this._sequenceCount = 0;
-
-    this.connect();
   }
 
 
@@ -105,8 +103,10 @@ class Connection extends Layer {
           console.log('Large forward open not supported. Attempting normal forward open');
           this.connect();
         } else {
-          console.log('CIP Connection Error: Status is not successful or service is not correct:');
-          console.log(message);
+          // console.log('CIP Connection Error: Status is not successful or service is not correct:');
+          ConnectionManager.TranslateResponse(res);
+          // console.log(res);
+          this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
         }
       } else {
         if (this._connectionState === 1) {
@@ -245,8 +245,11 @@ class Connection extends Layer {
             this._disconnectCallback = null;
           }
         } else {
-          console.log('CIP connection unsuccessful close');
+          // console.log('CIP connection unsuccessful close');
+          // console.log(res);
+          ConnectionManager.TranslateResponse(res);
           console.log(res);
+          this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
         }
       }));
     });
@@ -273,6 +276,8 @@ class Connection extends Layer {
           throw new Error('CIP Connection Error: Connected messages must include a context');
         }
 
+        // console.log('sending connected');
+        // console.log(request.message);
         sendConnected(this, false, request.message, request.context);
         setImmediate(() => this.sendNextMessage());
       }
@@ -296,7 +301,14 @@ class Connection extends Layer {
 
 
   handleDestroy(error) {
-    cleanup(this);
+    this._connectionState === 0;
+
+    for (const context of this.clearContexts()) {
+      if (context.internal === true && typeof context.callback === 'function') {
+        console.log('clearing');
+        context.callback(error);
+      }
+    }
   }
 
 
@@ -361,11 +373,6 @@ function sendConnected(connection, internal, message, context) {
   connection.send(buffer, connection.sendInfo, false);
 
   startResend(connection, buffer);
-}
-
-
-function cleanup(layer) {
-  layer._connectionState === 0;
 }
 
 
@@ -447,6 +454,13 @@ function mergeOptionsWithDefaults(self, options) {
     direction: TransportDirectionCodes.Server
   }, options.transport);
 
+  self.timing = Object.assign({
+    tickTime: 6,
+    timeoutTicks: 156
+    // tickTime: 5,
+    // timeoutTicks: 247
+  }, options.timing);
+
   self.transportClass = options.transportClass || TransportClassCodes.Class3;
   self.transportProductionTrigger = options.transportProductionTrigger || TransportProductionTriggerCodes.ApplicationObject;
   self.transportDirection = options.transportDirection || TransportDirectionCodes.Server;
@@ -477,6 +491,7 @@ function mergeOptionsWithDefaults(self, options) {
   //   route: options.route
   // }, options);
 }
+
 
 
 function handleUnconnectedMessage(self, data, info, context) {

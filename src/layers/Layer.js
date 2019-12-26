@@ -256,6 +256,13 @@ class Layer extends EventEmitter {
       return context;
     }
   }
+
+  clearContexts() {
+    const entries = this.__idContext.entries();
+    // const map = new Map(this.__idContext.entries());
+    this.__idContext.clear();
+    return entries;
+  }
 }
 
 

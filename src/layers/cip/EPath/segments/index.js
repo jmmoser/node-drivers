@@ -6,5 +6,5 @@ module.exports = {
   Network: require('./network'),
   Symbolic: require('./symbolic'),
   Data: require('./data'),
-  // DataType: require('./datatype')
+  DataType: require('./datatype')
 };

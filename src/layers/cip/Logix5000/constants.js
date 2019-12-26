@@ -3,9 +3,6 @@
 const {
   DataType
 } = require('../datatypes');
-// const {
-//   DataType
-// } = require('../objects/CIP');
 
 
 const {

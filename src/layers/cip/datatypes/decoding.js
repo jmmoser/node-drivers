@@ -1,7 +1,7 @@
 'use strict';
 
-const EPath = require('../EPath');
-const { DataTypeCodes } = require('./codes');
+const EPath = require('../epath');
+const { DataTypeCodes, DataTypeNames } = require('./codes');
 
 
 function Decode(dataType, buffer, offset, cb, ctx) {

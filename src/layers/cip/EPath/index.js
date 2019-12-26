@@ -87,9 +87,9 @@ class EPath {
           break;
         case 5:
         case 6:
-          throw new Error(`Use datatypes/decoding instead of EPath`);
-          // offset = Segments.DataType.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
-          // break;
+          // throw new Error(`Use datatypes/decoding instead of EPath`);
+          offset = Segments.DataType.Decode(segmentCode, buffer, offset, padded, val => segments.push(val));
+          break;
         default:
           throw new Error(`Unexpected segment: ${segmentType}`);
       }

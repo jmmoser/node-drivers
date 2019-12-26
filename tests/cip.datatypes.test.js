@@ -251,8 +251,8 @@ describe('Decoding', () => {
           [
             [
               'eng',
-              // new EPath.Segments.DataType(DataType.SHORT_STRING),
-              DataTypeCodes.SHORT_STRING,
+              new EPath.Segments.DataType(DataType.SHORT_STRING),
+              // DataTypeCodes.SHORT_STRING,
               1,
               'abc'
             ]

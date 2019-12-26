@@ -48,6 +48,8 @@ const DataTypeCodes = Object.freeze({
   ARRAY: 0xA3 /* Data is an array type descriptor */
 });
 
+const DataTypeNames = InvertKeyValues(DataTypeCodes);
+
 
 /** ANS.1 */
 const DataTypeTagClassCodes = Object.freeze({
@@ -103,6 +105,7 @@ function DecodeDataTypeTag(buffer, offset, cb) {
 
 module.exports = {
   DataTypeCodes,
+  DataTypeNames,
   // DataTypeTag,
   DecodeDataTypeTag
 };

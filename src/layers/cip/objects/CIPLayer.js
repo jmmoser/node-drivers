@@ -1,7 +1,7 @@
 'use strict';
 
 const { CallbackPromise } = require('../../../utils');
-const EPath = require('../EPath');
+const EPath = require('../epath');
 const CIP = require('./CIP');
 const {
   DataType,
@@ -37,7 +37,7 @@ class CIPLayer extends Layer {
         new EPath.Segments.Logical.InstanceID(0x01)
       ]);
 
-      CIPLayer.send(this, false, service, path, null, function (error, reply) {
+      CIPLayer.send(this, true, service, path, null, function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -234,7 +234,7 @@ class CIPLayer extends Layer {
 
     layer.send(request, info, false, typeof callback === 'function' ? layer.contextCallback((error, message) => {
       if (error) {
-        callback(error);
+        callback(error, message);
       } else {
         const reply = MessageRouter.Reply(message);
         reply.request = request;

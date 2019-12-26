@@ -3,6 +3,7 @@
 ## 2.0.0-beta.5 (???)
 - CIP added decoding for data types ENGUNIT
 - CIP added encoding for data types ENGUNIT
+- Improved EIP Layer listIdentities timeout handling, it should be much faster to resolve
 
 ## 2.0.0-beta.4 (2019-12-23)
 - Logix5000 can read program symbols, returns an object with all scoped symbols

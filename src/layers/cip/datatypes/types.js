@@ -108,27 +108,29 @@ const DataType = Object.freeze({
               DataType.ARRAY(DataType.USINT, 0, 2), // First three characters of the ISO 639-2/T language
               val => Buffer.from(val).toString('ascii')
             ),
-            // DataType.EPATH(false), // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
-            DataType.USINT, // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
+            DataType.EPATH(false), // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
+            // DataType.USINT, // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
             DataType.UINT, // Character set which the character string is based on,
-            DataType.PLACEHOLDER(code => { // Actual International character string
-              switch (code) {
-                case DataTypeCodes.STRING:
-                  return DataType.STRING;
-                case DataTypeCodes.STRING2:
-                  return DataType.STRING2;
-                case DataTypeCodes.STRINGN:
-                  return DataType.STRINGN;
-                case DataTypeCodes.SHORT_STRING:
-                  return DataType.SHORT_STRING;
-                default:
-                  throw new Error(`Invalid internationalized string data type ${code}`);
-              }
-            })
+            DataType.PLACEHOLDER(dt => dt)
+            // DataType.PLACEHOLDER(code => { // Actual International character string
+            //   switch (code) {
+            //     case DataTypeCodes.STRING:
+            //       return DataType.STRING;
+            //     case DataTypeCodes.STRING2:
+            //       return DataType.STRING2;
+            //     case DataTypeCodes.STRINGN:
+            //       return DataType.STRINGN;
+            //     case DataTypeCodes.SHORT_STRING:
+            //       return DataType.SHORT_STRING;
+            //     default:
+            //       throw new Error(`Invalid internationalized string data type ${code}`);
+            //   }
+            // })
           ], function (members, dt) {
             if (members.length === 3) {
+              return dt.resolve(members[1].value);
               // return dt.resolve(members[1].value.code);
-              return dt.resolve(members[1]);
+              // return dt.resolve(members[1]);
             }
           }), 0, length - 1)
         ),
@@ -200,4 +202,6 @@ const DataType = Object.freeze({
   }
 });
 
-module.exports = DataType;
+module.exports = {
+  DataType
+};
