@@ -4,6 +4,7 @@ const {
   InvertKeyValues
 } = require('../../../utils');
 
+const CIPObject = require('./CIPObject');
 const MessageRouter = require('./MessageRouter');
 const { Classes, CommonServices } = require('./CIP');
 const EPath = require('../epath');
@@ -61,7 +62,9 @@ const InstanceGetAttributesAllOrder = Object.freeze([
 
 
 const ClassAttributeCodes = Object.freeze({
-  // 1
+  MaxInstance: 2,
+  NumberOfInstances: 3,
+  EntryPort: 8,
   InstanceInfo: 9
 });
 
@@ -69,6 +72,17 @@ const ClassAttributeNames = InvertKeyValues(ClassAttributeCodes);
 
 
 const ClassAttributeDataTypes = Object.freeze({
+  // [ClassAttributeCodes.InstanceInfo]: DataType.ARRAY(
+  //   DataType.STRUCT([
+  //     // DataType.UINT, // Port Type
+  //     // DataType.UINT // Port Number
+  //     InstanceAttributeDataTypes[InstanceAttributeCodes.Type],
+  //     InstanceAttributeDataTypes[InstanceAttributeCodes.Number]
+  //   ])
+  // )
+  [ClassAttributeCodes.MaxInstance]: DataType.UINT,
+  [ClassAttributeCodes.NumberOfInstances]: DataType.UINT,
+  [ClassAttributeCodes.EntryPort]: DataType.UINT,
   [ClassAttributeCodes.InstanceInfo]: DataType.ABBREV_ARRAY(
     DataType.STRUCT([
       // DataType.UINT, // Port Type
@@ -96,7 +110,11 @@ const PortTypeNames = Object.freeze({
 });
 
 
-class Port {
+class Port extends CIPObject {
+  constructor() {
+    super();
+  }
+
   static DecodeClassAttribute(buffer, offset, attribute, cb) {
     const dataType = ClassAttributeDataTypes[attribute];
     if (!dataType) {
@@ -155,6 +173,7 @@ class Port {
     return offset;
   }
 
+
   static DecodeInstanceGetAttributesAll(buffer, offset, cb) {
     const attributes = []
     InstanceGetAttributesAllOrder.forEach((attributeCode) => {
@@ -166,19 +185,28 @@ class Port {
     return offset;
   }
 
-  static GetInstanceInfoRequest() {
-    const attribute = ClassAttributeCodes.InstanceInfo;
 
-    const service = CommonServices.GetAttributeSingle;
+  static GetInstanceAttributesAll(instanceID) {
+    return MessageRouter.Request(
+      CommonServices.GetAttributesAll,
+      EPath.Encode(true, [
+        new EPath.Segments.Logical.ClassID(Classes.Port),
+        new EPath.Segments.Logical.InstanceID(instanceID)
+      ])
+    );
+  }
+  
 
-    const path = EPath.Encode(true, [
-      new EPath.Segments.Logical.ClassID(Classes.Port),
-      new EPath.Segments.Logical.InstanceID(0)
-    ]);
-    
-    const data = Encode(DataType.USINT, attribute);
-
-    return MessageRouter.Request(service, path, data);
+  static GetClassAttributeRequest(attribute) {
+    return MessageRouter.Request(
+      CommonServices.GetAttributeSingle,
+      EPath.Encode(true, [
+        new EPath.Segments.Logical.ClassID(Classes.Port),
+        new EPath.Segments.Logical.InstanceID(0),
+        new EPath.Segments.Logical.AttributeID(attribute)
+      ]),
+      // Encode(DataType.USINT, attribute)
+    );
   }
 }
 
@@ -186,3 +214,6 @@ Port.InstanceAttribute = InstanceAttributeCodes;
 
 
 module.exports = Port;
+
+
+Port.ClassAttribute = ClassAttributeCodes;

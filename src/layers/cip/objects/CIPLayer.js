@@ -16,6 +16,18 @@ const MessageRouter = require('./MessageRouter');
 // let totalBytesIn = 0;
 
 class CIPLayer extends Layer {
+  sendRequest(connected, request, callback) {
+    return CallbackPromise(callback, resolver => {
+      CIPLayer.SendRequest(this, connected, request, function (error, reply) {
+        if (error) {
+          resolver.reject(error, reply);
+        } else {
+          resolver.resolve(reply);
+        }
+      });
+    });
+  }
+
   request(connected, service, path, data, callback) {
     return CallbackPromise(callback, resolver => {
       CIPLayer.send(this, connected, service, path, data, function (error, reply) {
@@ -221,6 +233,35 @@ class CIPLayer extends Layer {
   }
 
 
+  static SendRequest(layer, connected, request, callback, timeout) {
+    layer.send(request, { connected }, false, typeof callback === 'function' ? layer.contextCallback((error, message) => {
+      if (error) {
+        callback(error, message);
+      } else {
+        const reply = MessageRouter.Reply(message);
+        reply.request = request;
+
+        // console.log('IN:', message);
+        // // console.log('IN:', JSON.stringify(message));
+        // // console.log(reply);
+        // totalBytesIn += message.length;
+        // // console.log(`REQUEST: ${requestCount}, ${totalBytesOut} ${totalBytesIn}`);
+
+
+        // if (reply.service.code !== service) {
+        //   return callback('Response service does not match request service. This should never happen.', reply);
+        // }
+
+        if (reply.status.error) {
+          callback(reply.status.description || 'CIP Error', reply);
+        } else {
+          callback(null, reply);
+        }
+      }
+    }, null, timeout) : undefined);
+  }
+
+
   static send(layer, connected, service, path, data, callback, timeout) {
     const request = MessageRouter.Request(service, path, data);
 
@@ -258,6 +299,8 @@ class CIPLayer extends Layer {
       }
     }, null, timeout) : undefined);
   }
+
+  
 }
 
 module.exports = CIPLayer;

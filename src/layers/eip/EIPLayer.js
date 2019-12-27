@@ -367,6 +367,7 @@ class EIPLayer extends Layer {
             }
           }
 
+          // console.log(fullMessage);
           this.send(fullMessage, null, false);
 
           setImmediate(() => this.sendNextMessage());

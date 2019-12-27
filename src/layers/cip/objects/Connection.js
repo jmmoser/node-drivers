@@ -379,6 +379,7 @@ function send(connection, connected, internal, request, contextOrCallback) {
     if (internal && callback) {
       context = connection.contextCallback(callback);
     }
+    // console.log('sending unconnected', request);
     connection.send(request, null, false, {
       internal,
       context,
