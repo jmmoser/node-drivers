@@ -1,5 +1,6 @@
 'use strict';
 
+const CIPRequest = require('../core/request');
 const { CallbackPromise } = require('../../../utils');
 const EPath = require('../epath');
 const CIP = require('./CIP');
@@ -234,12 +235,26 @@ class CIPLayer extends Layer {
 
 
   static SendRequest(layer, connected, request, callback, timeout) {
-    layer.send(request, { connected }, false, typeof callback === 'function' ? layer.contextCallback((error, message) => {
+    let req;
+    if (request instanceof CIPRequest) {
+      req = request.encode();
+    } else {
+      req = request;
+    }
+    layer.send(req, { connected }, false, typeof callback === 'function' ? layer.contextCallback((error, message) => {
       if (error) {
         callback(error, message);
       } else {
-        const reply = MessageRouter.Reply(message);
-        reply.request = request;
+        let reply;
+        if (request instanceof CIPRequest) {
+          reply = request.response(message, 0);
+        } else {
+          reply = MessageRouter.Reply(message);
+          reply.request = request;
+        }
+
+        // const reply = MessageRouter.Reply(message);
+        // reply.request = request;
 
         // console.log('IN:', message);
         // // console.log('IN:', JSON.stringify(message));

@@ -4,6 +4,7 @@ const {
   InvertKeyValues
 } = require('../../../utils');
 
+const CIPRequest = require('../core/request');
 const CIPObject = require('./CIPObject');
 const MessageRouter = require('./MessageRouter');
 const { Classes, CommonServices } = require('./CIP');
@@ -142,7 +143,6 @@ class Port extends CIPObject {
 
     let value;
     offset = Decode(dataType, data, offset, val => value = val);
-    // const raw = value;
 
     switch (attribute) {
       case InstanceAttributeCodes.Type: {
@@ -166,8 +166,7 @@ class Port extends CIPObject {
       cb({
         code: attribute,
         name: InstanceAttributeNames[attribute] || 'Unknown',
-        value,
-        // raw
+        value
       });
     }
     return offset;
@@ -187,33 +186,37 @@ class Port extends CIPObject {
 
 
   static GetInstanceAttributesAll(instanceID) {
-    return MessageRouter.Request(
+    return new CIPRequest(
       CommonServices.GetAttributesAll,
       EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(Classes.Port),
         new EPath.Segments.Logical.InstanceID(instanceID)
-      ])
+      ]),
+      null,
+      (buffer, offset, cb) => {
+        this.DecodeInstanceGetAttributesAll(buffer, offset, cb);
+      }
     );
   }
-  
+
 
   static GetClassAttributeRequest(attribute) {
-    return MessageRouter.Request(
+    return new CIPRequest(
       CommonServices.GetAttributeSingle,
       EPath.Encode(true, [
         new EPath.Segments.Logical.ClassID(Classes.Port),
         new EPath.Segments.Logical.InstanceID(0),
         new EPath.Segments.Logical.AttributeID(attribute)
       ]),
-      // Encode(DataType.USINT, attribute)
+      null,
+      (buffer, offset, cb) => {
+        this.DecodeClassAttribute(buffer, offset, attribute, cb);
+      }
     );
   }
 }
 
 Port.InstanceAttribute = InstanceAttributeCodes;
-
+Port.ClassAttribute = ClassAttributeCodes;
 
 module.exports = Port;
-
-
-Port.ClassAttribute = ClassAttributeCodes;
