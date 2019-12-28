@@ -25,8 +25,7 @@ const {
   Encode,
   EncodeSize,
   EncodeTo,
-  Decode,
-  DecodeDataType
+  Decode
 } = require('../datatypes');
 
 const {
@@ -892,7 +891,7 @@ async function parseReadTag(layer, scope, tag, elements, data) {
   }
 
   let typeInfo;
-  let offset = Logix5000_DecodeDataType(data, 0, val => typeInfo = val);
+  let offset = Logix5000_DecodeDataType(data, 0, val => typeInfo = val.value);
   // let offset = DecodeDataType(data, 0, val => typeInfo = val);
   // console.log(typeInfo);
 
@@ -1430,7 +1429,13 @@ async function getSymbolSize(layer, scope, tag) {
 
 
 function Logix5000_DecodeDataType(buffer, offset, cb) {
-  const nextOffset = DecodeDataType(buffer, offset, cb);
+  // const nextOffset = DecodeDataType(buffer, offset, cb);
+  // if (nextOffset - offset < 2) {
+  //   return nextOffset + 1;
+  // }
+  // return nextOffset;
+
+  const nextOffset = EPath.Decode(buffer, offset, null, false, cb);
   if (nextOffset - offset < 2) {
     return nextOffset + 1;
   }

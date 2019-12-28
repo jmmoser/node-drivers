@@ -1,5 +1,6 @@
 'use strict';
 
+const CIPRequest = require('../core/request');
 const { CallbackPromise, InvertKeyValues } = require('../../../utils');
 const { CommonServices } = require('./CIP');
 const { DataType } = require('../datatypes');
@@ -80,7 +81,7 @@ class Connection extends Layer {
 
     this._connectionState = 1;
 
-    const request = ConnectionManager.ForwardOpenRequest(this, true);
+    const request = ConnectionManager.ForwardOpen(this, true);
 
     send(this, false, true, request, async (err, res) => {
       if (err) {
@@ -130,6 +131,69 @@ class Connection extends Layer {
       this._connectCallback = null;
     });
   }
+
+  // connect(callback) {
+  //   this._connectCallback = callback;
+  //   if (this._connectionState === 1) return;
+  //   if (this._connectionState === 2 && callback != null) {
+  //     if (callback != null) {
+  //       callback();
+  //     }
+  //     return;
+  //   }
+
+  //   this._connectionState = 1;
+
+  //   const request = ConnectionManager.ForwardOpenRequest(this, true);
+
+  //   send(this, false, true, request, async (err, res) => {
+  //     if (err) {
+  //       this._connectionState = 0;
+
+  //       if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === 8) {
+  //         this.networkConnectionParameters.maximumSize = 500;
+  //         this.large = false;
+  //         this.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(this.networkConnectionParameters);
+  //         this.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(this.networkConnectionParameters);
+  //         console.log('Large forward open not supported. Attempting normal forward open');
+  //         this.connect();
+  //       } else {
+  //         // console.log('CIP Connection Error: Status is not successful or service is not correct:');
+  //         ConnectionManager.TranslateResponse(res);
+  //         // console.log(res);
+  //         this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
+  //       }
+  //     } else {
+  //       if (this._connectionState === 1) {
+  //         const reply = ConnectionManager.ForwardOpenReply(res.data);
+  //         this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
+  //         this._TtoOConnectionID = reply.TtoONetworkConnectionID;
+  //         this._OtoTPacketRate = reply.OtoTActualPacketRate;
+  //         this._TtoOPacketRate = reply.TtoOActualPacketRate;
+  //         this._connectionSerialNumber = reply.ConnectionSerialNumber;
+
+  //         const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
+  //         this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
+
+  //         // EIP specific information
+  //         this.sendInfo = {
+  //           connectionID: this._OtoTConnectionID,
+  //           responseID: this._TtoOConnectionID
+  //         };
+
+  //         // await this.readAttributes();
+
+  //         this._connectionState = 2;
+
+  //         // console.log('CIP Connection connected');
+  //         this.sendNextMessage();
+  //       }
+  //     }
+
+  //     if (this._connectCallback) this._connectCallback(res);
+  //     this._connectCallback = null;
+  //   });
+  // }
 
   
   // async readAttributes() {
@@ -346,13 +410,15 @@ module.exports = Connection;
  *  unconnected, internal => callback
  *  unconnected, external => context
  */
-function send(connection, connected, internal, request, contextOrCallback) {
+function send(connection, connected, internal, requestObj, contextOrCallback) {
   let context, callback;
   if (internal && typeof contextOrCallback === 'function') {
     callback = contextOrCallback;
   } else {
     context = contextOrCallback;
   }
+
+  const request = requestObj instanceof CIPRequest ? requestObj.encode() : requestObj;
 
   if (connected) {
     const sequenceCount = incrementSequenceCount(connection);
@@ -507,8 +573,16 @@ function handleUnconnectedMessage(self, data, info, context) {
   if (context.internal === true) {
     const callback = self.callbackForContext(context.context);
     if (callback) {
-      const response = MessageRouter.Reply(data);
-      response.request = context.request;
+      const request = context.request;
+      let response;
+      if (request instanceof CIPRequest) {
+        console.log('USING CIPREQUEST');
+        response = request.response(data);
+      } else {
+        response = MessageRouter.Reply(data);
+        response.request = request;
+      }
+
       callback(
         response.status.error ? response.status.description || 'CIP Error' : null,
         response

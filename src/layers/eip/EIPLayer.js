@@ -109,6 +109,7 @@ class EIPLayer extends Layer {
 
   listIdentity(options, callback) {
     // let timeout = -1;
+    let hostsSpecified = false;
     const hosts = [];
 
     if (arguments.length === 1 && typeof arguments[0] === 'function') {
@@ -121,6 +122,7 @@ class EIPLayer extends Layer {
         case 'object':
           // timeout = typeof options.timeout === 'number' ? options.timeout : -1;
           if (Array.isArray(options.hosts)) {
+            hostsSpecified = true;
             options.hosts.forEach(host => {
               switch (typeof host) {
                 case 'string':
@@ -166,7 +168,7 @@ class EIPLayer extends Layer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          resolver.resolve(identities.sort(function (i1, i2) {
+          const sortedIdentities = identities.sort(function (i1, i2) {
             if (i1.socket && i2.socket) {
               const s1 = i1.socket;
               const s2 = i2.socket;
@@ -177,7 +179,15 @@ class EIPLayer extends Layer {
               }
             }
             return 0;
-          }));
+          });
+
+          if (hostsSpecified) {
+            resolver.resolve(sortedIdentities);
+          } else if (identities.length === 1) {
+            resolver.resolve(sortedIdentities[0]);
+          } else {
+            resolver.resolve(null);
+          }
         }
       }
 
@@ -191,8 +201,12 @@ class EIPLayer extends Layer {
             identities.push(reply.items[0]);
             // console.log(identities.length);
             clearTimeout(timeoutHandler);
-            timeoutHandler = setTimeout(finalizer, resetTimeout);
-            return true;
+            if (hostsSpecified) {
+              timeoutHandler = setTimeout(finalizer, resetTimeout);
+              return true;
+            } else {
+              finalizer();
+            }
           } else {
             finalizer('Unexpected result', reply);
           }
@@ -205,99 +219,7 @@ class EIPLayer extends Layer {
       });
     });
   }
-  // listIdentity(options, callback) {
-  //   let timeout = -1;
-  //   const hosts = [];
-
-  //   if (arguments.length === 1 && typeof arguments[0] === 'function') {
-  //     callback = arguments[0];
-  //   } else {
-  //     switch (typeof options) {
-  //       case 'number':
-  //         timeout = options;
-  //         break;
-  //       case 'object':
-  //         timeout = typeof options.timeout === 'number' ? options.timeout : -1;
-  //         if (Array.isArray(options.hosts)) {
-  //           options.hosts.forEach(host => {
-  //             switch (typeof host) {
-  //               case 'string':
-  //                 const parts = host.split(':', 2);
-  //                 if (parts.length === 0) {
-  //                   hosts.push({ host: parts[0] });
-  //                 } else {
-  //                   hosts.push({ host: parts[0], port: parts[1] });
-  //                 }
-  //                 break;
-  //               case 'object':
-  //                 hosts.push(host);
-  //                 break;
-  //               default:
-  //                 break;
-  //             }
-  //           });
-  //         }
-  //         break;
-  //       default:
-  //         break;
-  //     }
-  //   }
-
-  //   if (timeout <= 0) {
-  //     timeout = 2000;
-  //   }
-
-  //   if (hosts.length === 0) {
-  //     hosts.push({});
-  //   }
-
-  //   const identities = [];
-
-  //   return CallbackPromise(callback, resolver => {
-  //     let timeoutHandler;
-
-  //     function finalizer(error, reply) {
-  //       clearTimeout(timeoutHandler);
-  //       if (error) {
-  //         resolver.reject(error, reply);
-  //       } else {
-  //         resolver.resolve(identities.sort(function(i1, i2) {
-  //           if (i1.socket && i2.socket) {
-  //             const s1 = i1.socket;
-  //             const s2 = i2.socket;
-
-  //             if (s1.address && s2.address) {
-  //               if (s1.address < s2.address) return -1;
-  //               if (s1.address > s2.address) return 1;
-  //             }
-  //           }
-  //           return 0;
-  //         }));
-  //       }
-  //     }
-
-  //     timeoutHandler = setTimeout(finalizer, timeout);
-
-  //     function internalListIdentityReplyHandler(error, reply) {
-  //       if (error) {
-  //         finalizer(error, reply);
-  //       } else {
-  //         if (Array.isArray(reply.items) && reply.items.length === 1) {
-  //           identities.push(reply.items[0]);
-  //           console.log(identities.length);
-  //           return true;
-  //         } else {
-  //           finalizer('Unexpected result', reply);
-  //         }
-  //       }
-  //     }
-
-  //     hosts.forEach((host, idx) => {
-  //       const cb = idx === 0 ? internalListIdentityReplyHandler : null;
-  //       queueUserRequest(this, EIPPacket.ListIdentityRequest(), host, cb);
-  //     });
-  //   });
-  // }
+  
 
   listInterfaces(callback) {
     return CallbackPromise(callback, resolver => {

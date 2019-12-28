@@ -3,6 +3,7 @@
 // EIP-CIP-V1 3.5, page 3-53
 
 const { InvertKeyValues } = require('../../../utils');
+const CIPRequest = require('../core/request');
 const CIP = require('./CIP');
 const EPath = require('../epath');
 const MessageRouter = require('./MessageRouter');
@@ -54,12 +55,12 @@ class ConnectionManager {
   }
 
 
-  static ForwardOpenRequest(connection, incrementCounters) {
+  static ForwardOpen(connection, incrementCounters) {
     if (incrementCounters) {
       incrementConnectionCounters();
       connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
     }
-    
+
     let offset = 0;
     const data = Buffer.alloc(36 + connection.route.length + (connection.large ? 4 : 0));
 
@@ -81,9 +82,9 @@ class ConnectionManager {
     } else {
       offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
     }
-    
+
     offset = data.writeUInt32LE(connection.TtoORPI, offset); // Target to Originator requested packet interval (rate), in microseconds
-    
+
     if (connection.large) {
       offset = data.writeUInt32LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
     } else {
@@ -98,11 +99,82 @@ class ConnectionManager {
       throw new Error('offset does not match data length');
     }
 
-    return buildRequest(
+    return new CIPRequest(
       connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
-      data
+      ConnectionManager_EPath,
+      data,
+      (buffer, offset, cb) => {
+        const res = {};
+
+        res.OtoTNetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
+        res.TtoONetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
+        res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
+        res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
+        res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
+        res.OtoTActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
+        res.TtoOActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
+        const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
+        offset += 1; // reserved
+        res.data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
+        cb(res);
+      }
     );
+
+    // return buildRequest(
+    //   connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
+    //   data
+    // );
   }
+
+  // static ForwardOpenRequest(connection, incrementCounters) {
+  //   if (incrementCounters) {
+  //     incrementConnectionCounters();
+  //     connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
+  //   }
+    
+  //   let offset = 0;
+  //   const data = Buffer.alloc(36 + connection.route.length + (connection.large ? 4 : 0));
+
+  //   offset = encodeConnectionTiming(data, offset, connection.timing.tickTime, connection.timing.timeoutTicks);
+  //   offset = data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); // Originator to Target Network Connection ID
+  //   offset = data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); // Target to Originator Network Connection ID
+  //   offset = data.writeUInt16LE(ConnectionSerialNumberCounter, offset);
+  //   offset = data.writeUInt16LE(connection.VendorID, offset);
+  //   offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
+  //   offset = data.writeUInt8(connection.ConnectionTimeoutMultiplier, offset);
+
+  //   offset = data.writeUInt8(0, offset); /** Reserved */
+  //   offset = data.writeUInt8(0, offset); /** Reserved */
+  //   offset = data.writeUInt8(0, offset); /** Reserved */
+
+  //   offset = data.writeUInt32LE(connection.OtoTRPI, offset); // Originator to Target requested packet interval (rate), in microseconds
+  //   if (connection.large) {
+  //     offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
+  //   } else {
+  //     offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
+  //   }
+    
+  //   offset = data.writeUInt32LE(connection.TtoORPI, offset); // Target to Originator requested packet interval (rate), in microseconds
+    
+  //   if (connection.large) {
+  //     offset = data.writeUInt32LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
+  //   } else {
+  //     offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
+  //   }
+
+  //   offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+  //   offset = data.writeUInt8(connection.route.length / 2, offset); // Connection path size
+  //   connection.route.copy(data, offset); offset += connection.route.length;
+
+  //   if (offset !== data.length) {
+  //     throw new Error('offset does not match data length');
+  //   }
+
+  //   return buildRequest(
+  //     connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
+  //     data
+  //   );
+  // }
 
 
   static ForwardOpenReply(buffer) {

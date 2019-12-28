@@ -60,7 +60,7 @@ class CIPRequest {
     return offset;
   }
 
-  response(buffer, offset) {
+  response(buffer, offset = 0) {
     const res = {};
     res.request = this._request;
     res.buffer = buffer.slice(offset);

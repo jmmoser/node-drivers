@@ -278,7 +278,10 @@ class CIPLayer extends Layer {
 
 
   static send(layer, connected, service, path, data, callback, timeout) {
-    const request = MessageRouter.Request(service, path, data);
+    // const request = MessageRouter.Request(service, path, data);
+    const cipRequest = new CIPRequest(service, path, data);
+    const request = cipRequest.encode();
+
 
     // console.log('OUT:', request);
     // // console.log('OUT:', JSON.stringify(request));
