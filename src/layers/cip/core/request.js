@@ -68,7 +68,7 @@ class CIPRequest {
     const service = buffer.readUInt8(offset) & 0x7F; offset += 1;
 
     if (service !== this.service) {
-      throw new Error(`Invalid service.  Expected ${this.service}, Received ${service}`);
+      throw new Error(`Invalid service. Expected ${this.service}, Received ${service}`);
     }
 
     res.service = {

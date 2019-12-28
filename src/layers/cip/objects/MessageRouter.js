@@ -1,5 +1,12 @@
 'use strict';
 
+const { InvertKeyValues } = require('../../../utils');
+
+const CIPRequest = require('../core/request');
+const { ClassCodes, CommonServiceCodes } = require('../core/constants');
+
+const EPath = require('../epath');
+
 const {
   ClassNames,
   CommonServiceNames,
@@ -11,6 +18,48 @@ const {
   Decode,
   DataType
 } = require('../datatypes');
+
+
+const InstanceAttributeCodes = Object.freeze({
+  ObjectList: 1,
+  MaxSupportedConnections: 2,
+  NumberOfActiveConnections: 3,
+  ActiveConnections: 4
+});
+
+const InstanceAttributeNames = InvertKeyValues(InstanceAttributeCodes);
+
+const InstanceAttributeDataTypes = Object.freeze({
+  [InstanceAttributeCodes.ObjectList]: DataType.TRANSFORM(
+    DataType.STRUCT([
+      DataType.UINT,
+      DataType.PLACEHOLDER(length => DataType.ABBREV_ARRAY(DataType.UINT, length))
+    ], function(members, placeholder) {
+      if (members.length === 1) {
+        return placeholder.resolve(members[0]);
+      }
+    }),
+    function (members) {
+      const list = members[1];
+      return list.sort(function (o1, o2) {
+        if (o1 < o2) return -1;
+        else if (o1 > o2) return 1;
+        return 0;
+      }).map(classCode => ({
+        code: classCode,
+        name: ClassNames[classCode] || 'Unknown'
+      }));
+    }
+  ),
+  [InstanceAttributeCodes.MaxSupportedConnections]: DataType.UINT,
+  [InstanceAttributeCodes.NumberOfActiveConnections]: DataType.UINT,
+  [InstanceAttributeCodes.ActiveConnections]: DataType.ABBREV_ARRAY(DataType.UINT, true)
+});
+
+
+const ClassAttributeCodes = Object.freeze({});
+const ClassAttributeNames = InvertKeyValues(ClassAttributeCodes);
+
 
 
 class MessageRouter {
@@ -65,70 +114,149 @@ class MessageRouter {
   }
 
 
-  static Segments(buffer) {
-    let offset = 0;
-    let length = buffer.length;
-    let segments = [];
+  // static DecodeClassAttribute(buffer, offset, attribute, cb) {
+  //   const dataType = ClassAttributeDataTypes[attribute];
+  //   if (!dataType) {
+  //     throw new Error(`Unknown class attribute: ${attribute}`);
+  //   }
 
-    let count = 0;
+  //   let value;
+  //   offset = Decode(dataType, buffer, offset, val => value = val);
 
-    while (offset < length) {
-      count++;
-      if (count > 100) throw new Error('Infinite loop');
+  //   if (typeof cb === 'function') {
+  //     cb({
+  //       code: attribute,
+  //       name: ClassAttributeNames[attribute] || 'Unknown',
+  //       value
+  //     });
+  //   }
+  //   return offset;
+  // }
 
-      let segmentType = utils.getBits(buffer[offset], 5, 8);
-      let segment = null;
-      switch (segmentType) {
-        case 0:
-          offset += PortSegment(buffer, offset, segments);
-          break;
-        case 1:
-          offset += LogicalSegment(buffer, offset, segments);
-          break;
-        case 2:
-          offset += NetworkSegment(buffer, offset, segments);
-          break;
-        case 3:
-          offset += SymbolicSegment(buffer, offset, segments);
-          break;
-        case 4:
-          offset += DataSegment(buffer, offset, segments);
-          break;
-        case 5:
-          // DataType constructed (EIP-CIP V1 Appendix C-2.2)
-          break;
-        case 6:
-          // DataType elementary (EIP-CIP V1 Appendix C-2.1)
-          break;
-        default:
-          throw new Error('Segment type not recognized');
-      }
-      segments.push(segment);
-    }
-    return segments;
-  }
 
-  static DecodeSupportedObjects(data, offset, cb) {
-    // const objectCount = data.readUInt16LE(offset); offset += 2;
-    let objectCount;
-    offset = Decode(DataType.UINT, data, offset, val => objectCount = val);
-
-    const classes = [];
-    for (let i = 0; i < objectCount; i++) {
-      offset = Decode(DataType.UINT, data, offset, val => classes.push(val));
+  static DecodeInstanceAttribute(data, offset, attribute, cb) {
+    const dataType = InstanceAttributeDataTypes[attribute];
+    if (!dataType) {
+      console.log(attribute);
+      throw new Error(`Unknown instance attribute: ${attribute}`);
     }
 
-    cb(classes.sort(function (o1, o2) {
-      if (o1 < o2) return -1;
-      else if (o1 > o2) return 1;
-      return 0;
-    }).map(classCode => ({
-      code: classCode,
-      name: ClassNames[classCode] || 'Unknown'
-    })));
+    let value;
+    offset = Decode(dataType, data, offset, val => value = val);
 
+    if (typeof cb === 'function') {
+      cb({
+        code: attribute,
+        name: InstanceAttributeNames[attribute] || 'Unknown',
+        value
+      });
+    }
     return offset;
   }
+
+
+  static GetInstanceAttribute(instanceID, attribute) {
+    return new CIPRequest(
+      CommonServiceCodes.GetAttributeSingle,
+      EPath.Encode(true, [
+        new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+        new EPath.Segments.Logical.InstanceID(instanceID),
+        new EPath.Segments.Logical.AttributeID(attribute)
+      ]),
+      null,
+      (buffer, offset, cb) => {
+        this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
+      }
+    );
+  }
+
+  // static GetInstanceAttributesAll(instanceID) {
+  //   return new CIPRequest(
+  //     CommonServiceCodes.GetAttributesAll,
+  //     EPath.Encode(true, [
+  //       new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+  //       new EPath.Segments.Logical.InstanceID(instanceID)
+  //     ]),
+  //     null,
+  //     (buffer, offset, cb) => {
+  //       this.DecodeInstanceGetAttributesAll(buffer, offset, cb);
+  //     }
+  //   );
+  // }
+
+
+  // static GetClassAttribute(attribute) {
+  //   return new CIPRequest(
+  //     CommonServiceCodes.GetAttributeSingle,
+  //     EPath.Encode(true, [
+  //       new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+  //       new EPath.Segments.Logical.InstanceID(0),
+  //       new EPath.Segments.Logical.AttributeID(attribute)
+  //     ]),
+  //     null,
+  //     (buffer, offset, cb) => {
+  //       this.DecodeClassAttribute(buffer, offset, attribute, cb);
+  //     }
+  //   );
+  // }
+
+
+
+
+
+
+
+
+  // static DecodeSupportedObjects(data, offset, cb) {
+  //   // const objectCount = data.readUInt16LE(offset); offset += 2;
+  //   let objectCount;
+  //   offset = Decode(DataType.UINT, data, offset, val => objectCount = val);
+
+  //   const classes = [];
+  //   for (let i = 0; i < objectCount; i++) {
+  //     offset = Decode(DataType.UINT, data, offset, val => classes.push(val));
+  //   }
+
+  //   cb(classes.sort(function (o1, o2) {
+  //     if (o1 < o2) return -1;
+  //     else if (o1 > o2) return 1;
+  //     return 0;
+  //   }).map(classCode => ({
+  //     code: classCode,
+  //     name: ClassNames[classCode] || 'Unknown'
+  //   })));
+
+  //   return offset;
+  // }
+
+  
+
+
+  // static DecodeGetInstanceAttributesAll(buffer, offset, cb) {
+  //   const info = {};
+
+  //   /** object list may not be supported */
+  //   if (offset < length) {
+  //     offset = MessageRouter.DecodeSupportedObjects(reply.data, 0, function (classes) {
+  //       info.classes = classes;
+  //     });
+  //   }
+
+  //   /** number active may not be supported */
+  //   if (offset < length) {
+  //     offset = Decode(DataType.UINT, data, offset, val => info.maximumConnections = val);
+
+  //     let connectionCount;
+  //     offset = Decode(DataType.UINT, data, offset, val => connectionCount = val);
+
+  //     const connectionIDs = [];
+  //     for (let i = 0; i < connectionCount; i++) {
+  //       offset = Decode(DataType.UINT, data, offset, val => connectionIDs.push(val));
+  //     }
+
+  //     info.connections = connectionIDs;
+  //   }
+  // }
 
 
   static DecodeGetClassAttributesAll(data, offset, cb) {
@@ -168,7 +296,7 @@ class MessageRouter {
       console.log({
         numberOfOptionalAttributes,
         length: info.optionalAttributes.length
-      })
+      });
     }
 
     if (offset < length) {
@@ -215,81 +343,7 @@ class MessageRouter {
   }
 }
 
+MessageRouter.InstanceAttribute = InstanceAttributeCodes;
+MessageRouter.ClassAttribute = ClassAttributeCodes;
+
 module.exports = MessageRouter;
-
-MessageRouter.Code = 0x02;
-
-
-// Data Segment - 0b100XXXXX
-//    Simple Data Segment, 0x80, 0b10000000
-//    ASNI Extended Symbol Segment, 0x91, 0b10010001
-
-const Segments = {
-  LogicalSegmentMemberID: 0x28,
-  LogicalSegmentMemberLong: 0x29
-};
-
-
-
-
-function PortSegment(buffer, offset, segments) {
-  // used for routing from one subnet to another
-  let originalOffset = offset;
-  // let length = 1;
-  let extendedLinkAddressSize = utils.getBit(buffer[offset], 4);
-  let portIdentifier = utils.getBits(buffer[offset], 0, 4);
-  let linkAddress = null;
-  let linkAddressSize = 0;
-  offset += 1;
-
-  if (extendedLinkAddressSize) {
-    linkAddressSize = buffer[offset]; offset += 1;
-  } else {
-    linkAddressSize = 1;
-  }
-
-  if (portIdentifier === 15) {
-    portIdentifier = buffer.readUInt16LE(offset); offset += 2;
-  }
-
-  linkAddress = buffer.slice(offset, offset + linkAddressSize);
-
-  offset += linkAddressSize;
-
-  offset = (offset - originalOffset) % 2 === 0 ? offset : offset + 1;
-
-  segments.push({
-    Type: CIPSegmentType.PortSegment,
-    Port: portIdentifier,
-    Address: linkAddress
-  });
-
-  return offset - originalOffset;
-}
-
-function LogicalSegment(buffer, offset, segments) {
-  // logical reference information (such as class/instance/attribute IDs)
-  let originalOffset = 0;
-  let logicalType = utils.getBits(buffer[offset], 2, 5);
-  let logicalFormat = utils.getBits(buffer[offset], 0, 2);
-
-  // 8bit - all
-  // 16bit - ClassID, InstanceID, MemberID, ConnectionPoint
-  // 32bit - not allowed, reserved for future use
-
-
-
-  return offset - originalOffset;
-}
-
-function NetworkSegment(buffer, offset, segments) {
-
-}
-
-function SymbolicSegment(buffer, offset, segments) {
-  // symbolic name
-}
-
-function DataSegment(buffer, offset, segments) {
-  // embedded data (such as configuration data)
-}

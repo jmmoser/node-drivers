@@ -430,8 +430,7 @@ function send(connection, connected, internal, requestObj, contextOrCallback) {
     connection.setContextForID(sequenceCount, {
       context,
       internal,
-      request,
-      // callback
+      request
     });
 
     const buffer = Buffer.allocUnsafe(request.length + 2);
@@ -449,8 +448,7 @@ function send(connection, connected, internal, requestObj, contextOrCallback) {
     connection.send(request, null, false, {
       internal,
       context,
-      request,
-      // callback
+      request
     });
   }
 }
@@ -576,7 +574,7 @@ function handleUnconnectedMessage(self, data, info, context) {
       const request = context.request;
       let response;
       if (request instanceof CIPRequest) {
-        console.log('USING CIPREQUEST');
+        // console.log('USING CIPREQUEST');
         response = request.response(data);
       } else {
         response = MessageRouter.Reply(data);
@@ -630,12 +628,26 @@ function handleConnectedMessage(self, data, info) {
   if (savedContext.internal) {
     const callback = self.callbackForContext(savedContext.context);
     if (callback != null) {
-      const response = MessageRouter.Reply(data);
-      response.request = savedContext.request;
+      const request = savedContext.request;
+      let response;
+      if (request instanceof CIPRequest) {
+        // console.log('USING CIPREQUEST');
+        response = request.response(data);
+      } else {
+        response = MessageRouter.Reply(data);
+        response.request = request;
+      }
+
       callback(
         response.status.error ? response.status.description || 'CIP Error' : null,
         response
       );
+      // const response = MessageRouter.Reply(data);
+      // response.request = savedContext.request;
+      // callback(
+      //   response.status.error ? response.status.description || 'CIP Error' : null,
+      //   response
+      // );
     } else {
       console.log('CIP.Connection: Unhandled data received.', data);
     }

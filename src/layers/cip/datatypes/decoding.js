@@ -127,9 +127,36 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       value = [];
       for (let i = dataType.lowerBound; i <= dataType.upperBound; i++) {
         offset = Decode(dataType.itemType, buffer, offset, function (item) {
-          value.push(item)
+          value.push(item);
         });
       }
+      break;
+    }
+    case DataTypeCodes.ABBREV_ARRAY: {
+      value = [];
+      if (dataType.length === true) {
+        const bufferLength = buffer.length;
+        while (offset < bufferLength) {
+          const nextOffset = Decode(dataType.itemType, buffer, offset, function (item) {
+            value.push(item);
+          });
+          /** Make sure nextOffset is greater than offset */
+          if (nextOffset <= offset) {
+            throw new Error(`Unexpected offset while decoding abbreviated array`);
+          }
+          offset = nextOffset;
+        }
+      } else {
+        if (!Number.isInteger(dataType.length) || dataType.length < 0) {
+          throw new Error('Abbreviate array length must be a non-negative integer to decode values');
+        }
+        for (let i = 0; i < dataType.length; i++) {
+          offset = Decode(dataType.itemType, buffer, offset, function (item) {
+            value.push(item);
+          });
+        }
+      }
+      
       break;
     }
     case DataTypeCodes.EPATH:

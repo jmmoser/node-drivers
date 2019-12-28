@@ -175,8 +175,13 @@ class Port extends CIPObject {
 
   static DecodeInstanceGetAttributesAll(buffer, offset, cb) {
     const attributes = []
-    InstanceGetAttributesAllOrder.forEach((attributeCode) => {
-      offset = this.DecodeInstanceAttribute(attributeCode, buffer, offset, val => attributes.push(val));
+    InstanceGetAttributesAllOrder.forEach(attributeCode => {
+      offset = this.DecodeInstanceAttribute(
+        attributeCode,
+        buffer,
+        offset,
+        val => attributes.push(val)
+      );
     });
     if (typeof cb === 'function') {
       cb(attributes);

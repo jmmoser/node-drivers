@@ -152,13 +152,14 @@ const DataType = Object.freeze({
       crc
     };
   },
-  ABBREV_ARRAY(itemType) {
+  ABBREV_ARRAY(itemType, length) {
     return {
       type: DataType.ABBREV_ARRAY,
       code: DataTypeCodes.ABBREV_ARRAY,
       constructed: true,
       abbreviated: true,
-      itemType
+      itemType,
+      length
     };
   },
   /**

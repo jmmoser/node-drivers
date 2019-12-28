@@ -4,10 +4,10 @@ const CIPRequest = require('../core/request');
 const { CallbackPromise } = require('../../../utils');
 const EPath = require('../epath');
 const CIP = require('./CIP');
-const {
-  DataType,
-  Decode
-} = require('../datatypes');
+// const {
+//   DataType,
+//   Decode
+// } = require('../datatypes');
 const Layer = require('./../../Layer');
 const Identity = require('./Identity');
 const MessageRouter = require('./MessageRouter');
@@ -67,77 +67,16 @@ class CIPLayer extends Layer {
 
   supportedClasses(callback) {
     return CallbackPromise(callback, resolver => {
-      const service = CIP.CommonServices.GetAttributeSingle;
+      const request = MessageRouter.GetInstanceAttribute(
+        1,
+        MessageRouter.InstanceAttribute.ObjectList
+      );
 
-      const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
-        new EPath.Segments.Logical.InstanceID(0x01),
-        new EPath.Segments.Logical.AttributeID(0x01)
-      ]);
-
-      CIPLayer.send(this, true, service, path, null, (error, reply) => {
+      CIPLayer.SendRequest(this, true, request, (error, response) => {
         if (error) {
-          resolver.reject(error, reply);
+          resolver.reject(error, response);
         } else {
-          try {
-            MessageRouter.DecodeSupportedObjects(reply.data, 0, function(classes) {
-              resolver.resolve(classes);
-            });
-          } catch (err) {
-            resolver.reject(err, reply);
-          }
-        }
-      });
-    });
-  }
-
-
-  messageRouterInstanceAttributes(callback) {
-    return CallbackPromise(callback, resolver => {
-      const service = CIP.CommonServices.GetAttributesAll;
-
-      const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(CIP.Classes.MessageRouter),
-        new EPath.Segments.Logical.InstanceID(0x01)
-      ]);
-
-      CIPLayer.send(this, true, service, path, null, (error, reply) => {
-        if (error) {
-          resolver.reject(error, reply);
-        } else {
-          try {
-            const data = reply.data;
-            let length = data.length;
-            let offset = 0;
-
-            const info = {};
-
-            /** object list may not be supported */
-            if (offset < length) {
-              offset = MessageRouter.DecodeSupportedObjects(reply.data, 0, function (classes) {
-                info.classes = classes;
-              });
-            }   
-
-            /** number active may not be supported */
-            if (offset < length) {
-              offset = Decode(DataType.UINT, data, offset, val => info.maximumConnections = val);
-
-              let connectionCount;
-              offset = Decode(DataType.UINT, data, offset, val => connectionCount = val);
-
-              const connectionIDs = [];
-              for (let i = 0; i < connectionCount; i++) {
-                offset = Decode(DataType.UINT, data, offset, val => connectionIDs.push(val));
-              }
-
-              info.connections = connectionIDs;
-            }
-
-            resolver.resolve(info);
-          } catch (err) {
-            resolver.reject(err, reply);
-          }
+          resolver.resolve(response.value);
         }
       });
     });
@@ -278,10 +217,8 @@ class CIPLayer extends Layer {
 
 
   static send(layer, connected, service, path, data, callback, timeout) {
-    // const request = MessageRouter.Request(service, path, data);
     const cipRequest = new CIPRequest(service, path, data);
     const request = cipRequest.encode();
-
 
     // console.log('OUT:', request);
     // // console.log('OUT:', JSON.stringify(request));
@@ -295,24 +232,18 @@ class CIPLayer extends Layer {
       if (error) {
         callback(error, message);
       } else {
-        const reply = MessageRouter.Reply(message);
-        reply.request = request;
-
         // console.log('IN:', message);
         // // console.log('IN:', JSON.stringify(message));
         // // console.log(reply);
         // totalBytesIn += message.length;
         // // console.log(`REQUEST: ${requestCount}, ${totalBytesOut} ${totalBytesIn}`);
 
+        const response = cipRequest.response(message);
 
-        if (reply.service.code !== service) {
-          return callback('Response service does not match request service. This should never happen.', reply);
-        }
-
-        if (reply.status.error) {
-          callback(reply.status.description || 'CIP Error', reply);
+        if (response.status.error) {
+          callback(response.status.description || 'CIP Error', response);
         } else {
-          callback(null, reply);
+          callback(null, response);
         }
       }
     }, null, timeout) : undefined);
