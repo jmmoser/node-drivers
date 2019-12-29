@@ -10,7 +10,6 @@
  */
 
 const {
-  // getBit,
   getBits,
   InvertKeyValues
 } = require('../../../../utils');
@@ -85,10 +84,41 @@ class NetworkSegment {
     }
 
     if (typeof cb === 'function') {
-      cb(new NetworkSegment(subtype, value));
+      switch (subtype) {
+        case SubtypeCodes.Schedule:
+          cb(new NetworkSegment.Schedule(value));
+          break;
+        case SubtypeCodes.FixedTag:
+          cb(new NetworkSegment.FixedTag(value));
+          break;
+        case SubtypeCodes.ProductionInhibitTime:
+          cb(new NetworkSegment.ProductionInhibitTime(value));
+          break;
+        default:
+          throw new Error('Invalid subtype');
+      }
     }
 
     return offset;
+  }
+}
+
+
+NetworkSegment.Schedule = class ScheduleNetworkSegment extends NetworkSegment {
+  constructor(value) {
+    super(SubtypeCodes.Schedule, value);
+  }
+}
+
+NetworkSegment.FixedTag = class FixedTagNetworkSegment extends NetworkSegment {
+  constructor(value) {
+    super(SubtypeCodes.FixedTag, value);
+  }
+}
+
+NetworkSegment.ProductionInhibitTime = class ProductionInhibitTimeNetworkSegment extends NetworkSegment {
+  constructor(value) {
+    super(SubtypeCodes.ProductionInhibitTime, value);
   }
 }
 

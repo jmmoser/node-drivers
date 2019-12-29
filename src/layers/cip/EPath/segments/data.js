@@ -39,7 +39,7 @@ class DataSegment {
   }
 
   encodeSize(padded) {
-    return encodeSize(this.subtype, this.value);
+    return 1 + this.value.length;
   }
 
   encode(padded) {
@@ -49,7 +49,9 @@ class DataSegment {
   }
 
   encodeTo(buffer, offset, padded) {
-    return encodeTo(buffer, offset, padded, this.subtype, this.value);
+    offset = buffer.writeUInt8(0b10000000 | (this.subtype & 0b11111), offset);
+    offset += this.value.copy(buffer, offset);
+    return offset;
   }
 
   static Decode(segmentCode, buffer, offset, padded, cb) {
@@ -109,16 +111,4 @@ function validate(subtype, value) {
   if (value != null && !Buffer.isBuffer(value)) {
     throw new Error(`Data segment value must be a buffer`);
   }
-}
-
-
-function encodeSize(subtype, value) {
-  return 1 + value.length;
-}
-
-
-function encodeTo(buffer, offset, padded, subtype, value) {
-  offset = buffer.writeUInt8(0b10000000 | (subtype & 0b11111), offset);
-  offset += value.copy(buffer, offset);
-  return offset;
 }
