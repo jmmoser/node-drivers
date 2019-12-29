@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0-beta.5 (???)
+## 2.0.0-beta.5 (2019-12-29)
 - CIP added decoding for data types ENGUNIT
 - CIP added encoding for data types ENGUNIT
 - Improved EIP Layer listIdentities timeout handling, it should be much faster to resolve
