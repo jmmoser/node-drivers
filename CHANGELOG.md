@@ -1,11 +1,33 @@
 # Changelog
 
 ## 2.0.0-beta.5 (2019-12-29)
-- CIP added decoding for data types ENGUNIT
-- CIP added encoding for data types ENGUNIT
-- Improved EIP Layer listIdentities timeout handling, it should be much faster to resolve
 - Logix5000 fixed boolean decoding
-- Logix5000 listTags now allows async iterator as well as callback 
+- Logix5000 listTags now allows async iterator style as well as callback style
+  - async iterator style:
+  ```javascript
+  let i = 0;
+  for await (const tag of logix.listTags()) {
+    i++;
+    console.log(i, tag);
+    if (i >= 10) {
+      break;
+    }
+  }
+  ```
+  - callback style:
+  ```javascript
+  let i = 0;
+  logix.listTags(function(tag) {
+    i++;
+    console.log(i, tag);
+    return i < 10; // return true to continue listing tags
+  });
+  ```
+
+- Improved EIP Layer listIdentities timeout handling, it should be much faster to resolve
+- CIP added encoding and decoding for ENGUNIT data type
+
+
 
 ## 2.0.0-beta.4 (2019-12-23)
 - Logix5000 can read program symbols, returns an object with all scoped symbols
