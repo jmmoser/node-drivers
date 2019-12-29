@@ -167,6 +167,9 @@ class MessageRouter {
       (buffer, offset, cb) => {
         this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
       }
+      // (buffer, offset, cb) => {
+      //   this.DecodeInstanceAttribute(buffer, offset, attribute, val => res.value = val);
+      // }
     );
   }
 

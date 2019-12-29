@@ -5,8 +5,8 @@ const {
 } = require('../../../utils');
 
 const CIPRequest = require('../core/request');
-const CIPObject = require('./CIPObject');
-const MessageRouter = require('./MessageRouter');
+// const CIPObject = require('./CIPObject');
+// const MessageRouter = require('./MessageRouter');
 const { Classes, CommonServices } = require('./CIP');
 const EPath = require('../epath');
 
@@ -111,10 +111,11 @@ const PortTypeNames = Object.freeze({
 });
 
 
-class Port extends CIPObject {
-  constructor() {
-    super();
-  }
+class Port {
+// class Port extends CIPObject {
+  // constructor() {
+  //   super();
+  // }
 
   static DecodeClassAttribute(buffer, offset, attribute, cb) {
     const dataType = ClassAttributeDataTypes[attribute];
@@ -217,6 +218,9 @@ class Port extends CIPObject {
       (buffer, offset, cb) => {
         this.DecodeClassAttribute(buffer, offset, attribute, cb);
       }
+      // (buffer, offset, res) => {
+      //   this.DecodeClassAttribute(buffer, offset, attribute, val => res.value = val);
+      // }
     );
   }
 }

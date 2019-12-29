@@ -220,26 +220,13 @@ class CIPLayer extends Layer {
     const cipRequest = new CIPRequest(service, path, data);
     const request = cipRequest.encode();
 
-    // console.log('OUT:', request);
-    // // console.log('OUT:', JSON.stringify(request));
-    // totalBytesOut += request.length;
-    // requestCount++;
-    // const tmpRequestCount = requestCount;
-
     const info = { connected };
 
     layer.send(request, info, false, typeof callback === 'function' ? layer.contextCallback((error, message) => {
       if (error) {
         callback(error, message);
       } else {
-        // console.log('IN:', message);
-        // // console.log('IN:', JSON.stringify(message));
-        // // console.log(reply);
-        // totalBytesIn += message.length;
-        // // console.log(`REQUEST: ${requestCount}, ${totalBytesOut} ${totalBytesIn}`);
-
         const response = cipRequest.response(message);
-
         if (response.status.error) {
           callback(response.status.description || 'CIP Error', response);
         } else {

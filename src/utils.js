@@ -10,7 +10,7 @@ function getBit(k, n) {
 }
 
 
-function sizeToEncodeUnsignedInteger(i) {
+function unsignedIntegerSize(i) {
   if (i < 0x10000) {
     if (i < 0x100) return 1;
     else return 2;
@@ -187,7 +187,7 @@ function CallbackPromise(callback, func, timeout) {
 module.exports = {
   getBits,
   getBit,
-  sizeToEncodeUnsignedInteger,
+  unsignedIntegerSize,
   encodeUnsignedInteger,
   decodeUnsignedInteger,
   once,

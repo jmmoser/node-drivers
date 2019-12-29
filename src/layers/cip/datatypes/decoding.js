@@ -2,6 +2,7 @@
 
 const EPath = require('../epath');
 const { DataTypeCodes, DataTypeNames } = require('./codes');
+const { getBits, unsignedIntegerSize, decodeUnsignedInteger } = require('../../../utils');
 
 
 function Decode(dataType, buffer, offset, cb, ctx) {
@@ -29,13 +30,9 @@ function Decode(dataType, buffer, offset, cb, ctx) {
 
   switch (dataTypeCode) {
     case DataTypeCodes.BOOL:
-      value = buffer.readUInt8(offset); offset += 1;
-      if (dataType.info != null) {
-        if (dataType.info > 7) {
-          throw new Error(`Bit position too high: ${dataType.info}`);
-        }
-        value = getBit(value, dataType.info);
-      }
+      /** BOOL does not change the offset */
+      value = decodeUnsignedInteger(buffer, offset, unsignedIntegerSize(dataType.position));
+      value = getBits(value, dataType.position, dataType.position + 1);
       value = value > 0;
       break;
     case DataTypeCodes.SINT:

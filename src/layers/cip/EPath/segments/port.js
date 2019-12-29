@@ -30,7 +30,7 @@
 const {
   getBit,
   getBits,
-  sizeToEncodeUnsignedInteger,
+  unsignedIntegerSize,
   encodeUnsignedInteger
 } = require('../../../../utils');
 
@@ -124,7 +124,7 @@ function serializeAddress(address) {
   if (Buffer.isBuffer(address)) {
     return address;
   } else if (Number.isInteger(address) && address >= 0) {
-    const addressSize = sizeToEncodeUnsignedInteger(address);
+    const addressSize = unsignedIntegerSize(address);
     const buffer = Buffer.alloc(addressSize);
     encodeUnsignedInteger(buffer, 0, address, addressSize);
     return buffer;

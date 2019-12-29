@@ -2,7 +2,7 @@
 
 const {
   decodeUnsignedInteger,
-  sizeToEncodeUnsignedInteger,
+  unsignedIntegerSize,
   encodeUnsignedInteger
 } = require('../../../../utils');
 
@@ -166,11 +166,11 @@ function __EncodeDataTypeTo(buffer, offset, type) {
     case DataType.ARRAY:
       offset = buffer.writeUInt8(encodeSize(type), offset);
       offset = buffer.writeUInt8(type.lowerBoundTag, offset);
-      const lowerSize = sizeToEncodeUnsignedInteger(type.lowerBound);
+      const lowerSize = unsignedIntegerSize(type.lowerBound);
       offset = buffer.writeUInt8(lowerSize, offset);
       offset = encodeUnsignedInteger(buffer, offset, type.lowerBound, lowerSize);
       offset = buffer.writeUInt8(type.upperBoundTag, offset);
-      const upperSize = sizeToEncodeUnsignedInteger(type.upperBound);
+      const upperSize = unsignedIntegerSize(type.upperBound);
       offset = buffer.writeUInt8(upperSize, offset);
       offset = encodeUnsignedInteger(buffer, offset, type.upperBound, upperSize);
       offset = __EncodeDataTypeTo(buffer, offset, type.itemType);

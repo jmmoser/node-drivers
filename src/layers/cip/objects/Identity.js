@@ -1,17 +1,16 @@
 'use strict';
 
+// const CIPObject = require('./CIPObject');
 // const { Decode, DataType } = require('./CIP');
 const { Decode, DataType } = require('../datatypes');
-const CIPObject = require('./CIPObject');
 const { getBit, getBits, InvertKeyValues } = require('../../../utils');
 
 
-/** Class Code 0x01 */
-class Identity extends CIPObject {
-  constructor() {
-    super(CIP.Classes.Identity);
-  }
-
+// class Identity extends CIPObject {
+//   constructor() {
+//     super(CIP.Classes.Identity);
+//   }
+class Identity {
   static DecodeInstanceAttribute(attribute, data, offset, cb) {
     const dataType = InstanceAttributeDataTypes[attribute];
     if (!dataType) {

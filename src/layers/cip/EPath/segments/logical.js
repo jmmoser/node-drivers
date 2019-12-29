@@ -15,7 +15,7 @@ const {
   getBit,
   getBits,
   decodeUnsignedInteger,
-  sizeToEncodeUnsignedInteger,
+  unsignedIntegerSize,
   InvertKeyValues
 } = require('../../../../utils');
 
@@ -287,7 +287,7 @@ function validate(type, format, value) {
 
 
 function getFormatFromID(id) {
-  switch (sizeToEncodeUnsignedInteger(id)) {
+  switch (unsignedIntegerSize(id)) {
     case 1:
       return FormatCodes.Address8Bit;
     case 2:

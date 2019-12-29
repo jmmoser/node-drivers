@@ -4,7 +4,7 @@ const {
   getBit,
   getBits,
   encodeUnsignedInteger,
-  sizeToEncodeUnsignedInteger
+  unsignedIntegerSize
 } = require('../../utils');
 
 
@@ -270,7 +270,7 @@ function dataTypeAttributeAdditionalEncodingLength(value) {
   if (value < 7) {
     return 0;
   } else {
-    return sizeToEncodeUnsignedInteger(value);
+    return unsignedIntegerSize(value);
   }
 }
 

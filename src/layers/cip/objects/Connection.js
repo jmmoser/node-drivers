@@ -96,6 +96,7 @@ class Connection extends Layer {
           this.connect();
         } else {
           // console.log('CIP Connection Error: Status is not successful or service is not correct:');
+          console.log(res);
           ConnectionManager.TranslateResponse(res);
           // console.log(res);
           this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
@@ -631,7 +632,6 @@ function handleConnectedMessage(self, data, info) {
       const request = savedContext.request;
       let response;
       if (request instanceof CIPRequest) {
-        // console.log('USING CIPREQUEST');
         response = request.response(data);
       } else {
         response = MessageRouter.Reply(data);
@@ -642,12 +642,6 @@ function handleConnectedMessage(self, data, info) {
         response.status.error ? response.status.description || 'CIP Error' : null,
         response
       );
-      // const response = MessageRouter.Reply(data);
-      // response.request = savedContext.request;
-      // callback(
-      //   response.status.error ? response.status.description || 'CIP Error' : null,
-      //   response
-      // );
     } else {
       console.log('CIP.Connection: Unhandled data received.', data);
     }

@@ -8,7 +8,7 @@ const DataType = Object.freeze({
   },
 
   /** Elementary Types */
-  BOOL(position) {
+  BOOL(position = 0) {
     return { type: DataType.BOOL, code: DataTypeCodes.BOOL, position };
   },
   SINT() {

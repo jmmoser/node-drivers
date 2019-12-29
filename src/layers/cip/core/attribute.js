@@ -1,8 +1,11 @@
 'use strict';
 
 class CIPAttribute {
-  constructor() {
-    
+  constructor(number, dataType, getable, setable) {
+    this.number = number;
+    this.dataType = dataType;
+    this.getable = getable;
+    this.setable = setable;
   }
 }
 

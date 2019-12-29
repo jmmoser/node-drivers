@@ -7,11 +7,11 @@ const {
 } = require('./constants');
 
 class CIPRequest {
-  constructor(service, path, data, dataHandler) {
+  constructor(service, path, data, responseHandler) {
     this.service = service,
     this.path = path;
     this.data = data;
-    this.dataHandler = dataHandler;
+    this.handler = responseHandler;
   }
 
   encodeSize() {
@@ -93,10 +93,16 @@ class CIPRequest {
 
     res.data = buffer.slice(offset);
 
-    if (typeof this.dataHandler === 'function') {
-      offset = this.dataHandler(buffer, offset, function(val) {
-        res.value = val;
-      });
+    if (typeof this.handler === 'function') {
+      if (this.handler.length === 4) {
+        offset = this.handler(buffer, offset, res, function (val) {
+          res.value = val;
+        });
+      } else {
+        offset = this.handler(buffer, offset, function (val) {
+          res.value = val;
+        });
+      }
     }
 
     return res;

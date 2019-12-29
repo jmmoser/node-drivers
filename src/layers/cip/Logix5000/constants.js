@@ -10,15 +10,33 @@ const {
 } = require('../../../utils');
 
 
-const LDataTypeCodes = {
+const Logix5000_DataTypeCodes = Object.freeze({
   Program: 0x68,
   Map: 0x69,
   Routine: 0x6D,
   Task: 0x70,
   Cxn: 0x7E
-};
+});
 
-const LDatatypeNames = InvertKeyValues(LDataTypeCodes);
+const LDatatypeNames = InvertKeyValues(Logix5000_DataTypeCodes);
+
+const Logix5000_DataType = Object.freeze({
+  Program() {
+    return { type: Logix5000_DataType.Program, code: Logix5000_DataTypeCodes.Program };
+  },
+  Map() {
+    return { type: Logix5000_DataType.Map, code: Logix5000_DataTypeCodes.Map };
+  },
+  Routine() {
+    return { type: Logix5000_DataType.Routine, code: Logix5000_DataTypeCodes.Routine };
+  },
+  Task() {
+    return { type: Logix5000_DataType.Task, code: Logix5000_DataTypeCodes.Task };
+  },
+  Cxn() {
+    return { type: Logix5000_DataType.Cxn, code: Logix5000_DataTypeCodes.Cxn };
+  },
+});
 
 
 const ClassCodes = {
@@ -135,8 +153,9 @@ const GenericServiceStatusDescriptions = {
 
 
 module.exports = {
-  LDataTypeCodes,
+  Logix5000_DataTypeCodes,
   LDatatypeNames,
+  Logix5000_DataType,
   ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,

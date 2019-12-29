@@ -9,7 +9,7 @@
 
 const {
   getBits,
-  sizeToEncodeUnsignedInteger
+  unsignedIntegerSize
 } = require('../../../../utils');
 
 
@@ -45,7 +45,7 @@ class SymbolicSegment {
           }
           break;
         case ExtendedStringFormatCodes.Numeric: {
-          switch (sizeToEncodeUnsignedInteger(value)) {
+          switch (unsignedIntegerSize(value)) {
             case 1:
               extendedSize = ExtendedStringNumericTypeCodes.USINT;
               break;
