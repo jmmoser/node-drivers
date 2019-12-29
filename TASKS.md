@@ -3,9 +3,7 @@
   - [X] EIP passes down port 44818 to TCP layer
   - [X] modbus passes down port 502 to TCP layer
 - [ ] Logix5000
-  - [ ] fix or ensure boolean decoding is working
-  - [ ] understand the difference between direct requests, Connection Manager Unconnected Send messages, Connected messages, and how routes to eni/controller
-  - [ ] use UCMM to get identity and verify device type is programmable logic controller OR fix path routing
+  - [x] fix or ensure boolean decoding is working
   - [X] fix reading symbol structures
   - [X] getTagSymbolInstanceID and _highestListedSymbolInstanceID need to be scoped (global scope vs program scope)
   - [X] When Program data type is read, read all symbols contained
@@ -18,6 +16,8 @@
   - [X] Decide if reading an array should return all values or just the first, if all values then fix
   - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
 - [ ] CIP
+  - [ ] understand the difference between direct requests, Connection Manager Unconnected Send messages, Connected messages, and how routes to eni/controller
+  - [ ] use UCMM to get identity and verify device type is programmable logic controller OR fix path routing
   - [ ] Finish Data Segment
   - [ ] Encoding for Symbolic Segment
   - [X] Cleanup unused EPath code

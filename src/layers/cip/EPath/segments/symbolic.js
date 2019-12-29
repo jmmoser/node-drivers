@@ -293,12 +293,12 @@ function validate(value, extendedFormat, extendedSize) {
             }
             break;
           default:
-            break;
+            throw new Error(`Invalid extended size`);
         }
         break;
       }
       default:
-        break;
+        throw new Error('Invalid extended format');
     }
   }
 }

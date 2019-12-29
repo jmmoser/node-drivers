@@ -32,6 +32,11 @@ describe('Symbolic Numeric', () => {
     expect(new Symbolic.Numeric(65536).encode()).toEqual(Buffer.from([0x60, 0xC8, 0x00, 0x00, 0x01, 0x00]));
   });
 
+  test('Encode Invalid', () => {
+    expect(() => new Symbolic.Numeric(0xFFFFFFFFF)).toThrow();
+    expect(() => new Symbolic.Numeric(-1)).toThrow();
+  });
+
   test('Decode 8-bit', () => {
     expect(EPath.Decode(Buffer.from([0x60, 0xC6, 0x05]), 0, true, false, segments => {
       expect(segments).toEqual([new Symbolic.Numeric(5)]);
@@ -46,5 +51,31 @@ describe('Symbolic Numeric', () => {
     expect(EPath.Decode(Buffer.from([0x60, 0xC8, 0x00, 0x00, 0x01, 0x00]), 0, true, false, segments => {
       expect(segments).toEqual([new Symbolic.Numeric(65536)]);
     })).toBe(6);
+  });
+});
+
+
+describe('Symbolic Double Byte Characters', () => {
+  test('Encode', () => {
+    expect(new Symbolic.Double(Buffer.from([0x12, 0x34, 0x23, 0x45])).encode()).toEqual(Buffer.from([0x60, 0x22, 0x12, 0x34, 0x23, 0x45]));
+  });
+
+  test('Decode', () => {
+    expect(EPath.Decode(Buffer.from([0x60, 0x22, 0x12, 0x34, 0x23, 0x45]), 0, true, false, segments => {
+      expect(segments).toEqual([new Symbolic.Double(Buffer.from([0x12, 0x34, 0x23, 0x45]))]);
+    })).toBe(6);
+  });
+});
+
+
+describe('Symbolic Triple Byte Characters', () => {
+  test('Encode', () => {
+    expect(new Symbolic.Triple(Buffer.from([0x12, 0x34, 0x56, 0x23, 0x45, 0x67])).encode()).toEqual(Buffer.from([0x60, 0x42, 0x12, 0x34, 0x56, 0x23, 0x45, 0x67]));
+  });
+
+  test('Decode', () => {
+    expect(EPath.Decode(Buffer.from([0x60, 0x42, 0x12, 0x34, 0x56, 0x23, 0x45, 0x67]), 0, true, false, segments => {
+      expect(segments).toEqual([new Symbolic.Triple(Buffer.from([0x12, 0x34, 0x56, 0x23, 0x45, 0x67]))]);
+    })).toBe(8);
   });
 });
