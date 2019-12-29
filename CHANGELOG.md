@@ -23,7 +23,6 @@
     return i < 10; // return true to continue listing tags
   });
   ```
-
 - Improved EIP Layer listIdentities timeout handling, it should be much faster to resolve
 - CIP added encoding and decoding for ENGUNIT data type
 
