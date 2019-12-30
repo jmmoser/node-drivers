@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.0-beta.6 (???)
+- Fixed CIPRequest handling response data when length is 0
+
 ## 2.0.0-beta.5 (2019-12-29)
 - Logix5000 fixed boolean decoding
 - Logix5000 listTags now allows async iterator style as well as callback style
