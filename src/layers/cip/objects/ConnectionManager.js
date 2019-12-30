@@ -3,8 +3,8 @@
 // EIP-CIP-V1 3.5, page 3-53
 
 const { InvertKeyValues } = require('../../../utils');
+const { ClassCodes } = require('../core/constants');
 const CIPRequest = require('../core/request');
-const CIP = require('./CIP');
 const EPath = require('../epath');
 const MessageRouter = require('./MessageRouter');
 
@@ -330,7 +330,7 @@ class ConnectionManager {
 module.exports = ConnectionManager;
 
 const ConnectionManager_EPath = EPath.Encode(true, [
-  new EPath.Segments.Logical.ClassID(CIP.Classes.ConnectionManager),
+  new EPath.Segments.Logical.ClassID(ClassCodes.ConnectionManager),
   new EPath.Segments.Logical.InstanceID(0x01)
 ]);
 

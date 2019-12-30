@@ -93,7 +93,7 @@ class CIPRequest {
 
     res.data = buffer.slice(offset);
 
-    if (typeof this.handler === 'function') {
+    if (res.data.length > 0 && typeof this.handler === 'function') {
       if (this.handler.length === 4) {
         offset = this.handler(buffer, offset, res, function (val) {
           res.value = val;

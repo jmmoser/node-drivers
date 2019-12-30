@@ -3,16 +3,17 @@
 const { InvertKeyValues } = require('../../../utils');
 
 const CIPRequest = require('../core/request');
-const { ClassCodes, CommonServiceCodes } = require('../core/constants');
-
-const EPath = require('../epath');
 
 const {
+  ClassCodes,
   ClassNames,
+  CommonServiceCodes,
   CommonServiceNames,
   GeneralStatusCodeNames,
   GeneralStatusCodeDescriptions
-} = require('./CIP');
+} = require('../core/constants');
+
+const EPath = require('../epath');
 
 const {
   Decode,
@@ -156,6 +157,17 @@ class MessageRouter {
 
 
   static GetInstanceAttribute(instanceID, attribute) {
+    // return new CIPRequest(
+    //   CommonServiceCodes.GetAttributeSingle,
+    //   EPath.Encode(true, [
+    //     new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+    //     new EPath.Segments.Logical.InstanceID(instanceID)
+    //   ]),
+    //   Buffer.from([attribute]),
+    //   (buffer, offset, cb) => {
+    //     this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
+    //   }
+    // );
     return new CIPRequest(
       CommonServiceCodes.GetAttributeSingle,
       EPath.Encode(true, [
@@ -167,9 +179,6 @@ class MessageRouter {
       (buffer, offset, cb) => {
         this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
       }
-      // (buffer, offset, cb) => {
-      //   this.DecodeInstanceAttribute(buffer, offset, attribute, val => res.value = val);
-      // }
     );
   }
 

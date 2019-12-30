@@ -1,7 +1,9 @@
 'use strict';
 
+const EPath = require('../epath');
+const { ClassCodes, CommonServiceCodes } = require('../core/constants');
 const { DataType } = require('../datatypes');
-// const { DataType } = require('./CIP');
+const CIPRequest = require('../core/request');
 
 
 const InstanceAttributeCodes = {
@@ -135,6 +137,36 @@ class EthernetLink {
       });
     }
     return offset;
+  }
+
+  static GetClassAttribute(attribute) {
+    return new CIPRequest(
+      CommonServiceCodes.GetAttributeSingle,
+      EPath.Encode(true, [
+        new EPath.Segments.Logical.ClassID(ClassCodes.EthernetLink),
+        new EPath.Segments.Logical.InstanceID(0),
+        new EPath.Segments.Logical.AttributeID(attribute)
+      ]),
+      null,
+      // (buffer, offset, cb) => {
+      //   this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
+      // }
+    );
+  }
+
+  static GetInstanceAttribute(instance, attribute) {
+    return new CIPRequest(
+      CommonServiceCodes.GetAttributeSingle,
+      EPath.Encode(true, [
+        new EPath.Segments.Logical.ClassID(ClassCodes.EthernetLink),
+        new EPath.Segments.Logical.InstanceID(instance),
+        new EPath.Segments.Logical.AttributeID(attribute)
+      ]),
+      null,
+      // (buffer, offset, cb) => {
+      //   this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
+      // }
+    );
   }
 }
 

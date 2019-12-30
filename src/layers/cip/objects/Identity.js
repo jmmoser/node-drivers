@@ -1,7 +1,6 @@
 'use strict';
 
 // const CIPObject = require('./CIPObject');
-// const { Decode, DataType } = require('./CIP');
 const { Decode, DataType } = require('../datatypes');
 const { getBit, getBits, InvertKeyValues } = require('../../../utils');
 
