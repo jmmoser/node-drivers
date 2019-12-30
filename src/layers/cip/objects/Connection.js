@@ -68,134 +68,6 @@ class Connection extends Layer {
     this._sequenceCount = 0;
   }
 
-
-  connect(callback) {
-    this._connectCallback = callback;
-    if (this._connectionState === 1) return;
-    if (this._connectionState === 2 && callback != null) {
-      if (callback != null) {
-        callback();
-      }
-      return;
-    }
-
-    this._connectionState = 1;
-
-    const request = ConnectionManager.ForwardOpen(this, true);
-
-    send(this, false, true, request, async (err, res) => {
-      if (err) {
-        this._connectionState = 0;
-
-        if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === 8) {
-          this.networkConnectionParameters.maximumSize = 500;
-          this.large = false;
-          this.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(this.networkConnectionParameters);
-          this.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(this.networkConnectionParameters);
-          console.log('Large forward open not supported. Attempting normal forward open');
-          this.connect();
-        } else {
-          // console.log('CIP Connection Error: Status is not successful or service is not correct:');
-          console.log(res);
-          ConnectionManager.TranslateResponse(res);
-          // console.log(res);
-          this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
-        }
-      } else {
-        if (this._connectionState === 1) {
-          const reply = ConnectionManager.ForwardOpenReply(res.data);
-          this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
-          this._TtoOConnectionID = reply.TtoONetworkConnectionID;
-          this._OtoTPacketRate = reply.OtoTActualPacketRate;
-          this._TtoOPacketRate = reply.TtoOActualPacketRate;
-          this._connectionSerialNumber = reply.ConnectionSerialNumber;
-
-          const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
-          this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
-
-          // EIP specific information
-          this.sendInfo = {
-            connectionID: this._OtoTConnectionID,
-            responseID: this._TtoOConnectionID
-          };
-
-          // await this.readAttributes();
-
-          this._connectionState = 2;
-
-          // console.log('CIP Connection connected');
-          this.sendNextMessage();
-        }
-      }
-
-      if (this._connectCallback) this._connectCallback(res);
-      this._connectCallback = null;
-    });
-  }
-
-  // connect(callback) {
-  //   this._connectCallback = callback;
-  //   if (this._connectionState === 1) return;
-  //   if (this._connectionState === 2 && callback != null) {
-  //     if (callback != null) {
-  //       callback();
-  //     }
-  //     return;
-  //   }
-
-  //   this._connectionState = 1;
-
-  //   const request = ConnectionManager.ForwardOpenRequest(this, true);
-
-  //   send(this, false, true, request, async (err, res) => {
-  //     if (err) {
-  //       this._connectionState = 0;
-
-  //       if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === 8) {
-  //         this.networkConnectionParameters.maximumSize = 500;
-  //         this.large = false;
-  //         this.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(this.networkConnectionParameters);
-  //         this.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(this.networkConnectionParameters);
-  //         console.log('Large forward open not supported. Attempting normal forward open');
-  //         this.connect();
-  //       } else {
-  //         // console.log('CIP Connection Error: Status is not successful or service is not correct:');
-  //         ConnectionManager.TranslateResponse(res);
-  //         // console.log(res);
-  //         this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
-  //       }
-  //     } else {
-  //       if (this._connectionState === 1) {
-  //         const reply = ConnectionManager.ForwardOpenReply(res.data);
-  //         this._OtoTConnectionID = reply.OtoTNetworkConnectionID;
-  //         this._TtoOConnectionID = reply.TtoONetworkConnectionID;
-  //         this._OtoTPacketRate = reply.OtoTActualPacketRate;
-  //         this._TtoOPacketRate = reply.TtoOActualPacketRate;
-  //         this._connectionSerialNumber = reply.ConnectionSerialNumber;
-
-  //         const rpi = this._OtoTPacketRate < this._TtoOPacketRate ? this._OtoTPacketRate : this._TtoOPacketRate;
-  //         this._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, this.ConnectionTimeoutMultiplier);
-
-  //         // EIP specific information
-  //         this.sendInfo = {
-  //           connectionID: this._OtoTConnectionID,
-  //           responseID: this._TtoOConnectionID
-  //         };
-
-  //         // await this.readAttributes();
-
-  //         this._connectionState = 2;
-
-  //         // console.log('CIP Connection connected');
-  //         this.sendNextMessage();
-  //       }
-  //     }
-
-  //     if (this._connectCallback) this._connectCallback(res);
-  //     this._connectCallback = null;
-  //   });
-  // }
-
   
   // async readAttributes() {
   //   if (this._connectionState === 0) {
@@ -318,7 +190,8 @@ class Connection extends Layer {
       const peek = this.getNextRequest(true);
       if (peek && peek.info) {
         if (peek.info.connected === true) {
-          this.connect();
+          // this.connect();
+          connect(this);
         } else {
           const request = this.getNextRequest();
           send(this, false, false, request.message, request.context);
@@ -382,7 +255,7 @@ class Connection extends Layer {
       case InstanceAttributeCodes.Type: {
         value = {
           code: value,
-          name: InstanceTypeNames[value] || 'Unkown'
+          name: InstanceTypeNames[value] || 'Unknown'
         }
       }
       default:
@@ -504,7 +377,7 @@ function buildTransportClassTriggerCode(transport) {
     ((transport.direction & 0b1) << 7) |
     ((transport.productionTrigger & 0b111) << 4) |
     ((transport.transportClass & 0b1111))
-  )
+  );
 }
 
 
@@ -781,3 +654,66 @@ const ConnectionBindServiceStatusCodeDescriptions = {
     0x02: 'One or both of the connection instances were created internally and the device is not allowing a binding to it'
   }
 };
+
+
+function connect(self) {
+  if (self._connectionState === 1 || self._connectionState === 2) {
+    return self._connect;
+  }
+
+  if (self._connectionState === -1) {
+    return;
+  }
+
+  self._connectionState = 1;
+
+  const request = ConnectionManager.ForwardOpen(self, true);
+
+  self._connect = new Promise(resolve => {
+    send(self, false, true, request, async (err, res) => {
+      if (err) {
+        self._connectionState = 0;
+
+        if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === 8) {
+          self.networkConnectionParameters.maximumSize = 500;
+          self.large = false;
+          self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
+          self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
+          console.log('Large forward open not supported. Attempting normal forward open');
+          connect(self);
+        } else {
+          // console.log('CIP Connection Error: Status is not successful or service is not correct:');
+          // console.log(res);
+          ConnectionManager.TranslateResponse(res);
+          // console.log(res);
+          self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
+        }
+      } else {
+        if (self._connectionState === 1) {
+          const reply = ConnectionManager.ForwardOpenReply(res.data);
+          self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
+          self._TtoOConnectionID = reply.TtoONetworkConnectionID;
+          self._OtoTPacketRate = reply.OtoTActualPacketRate;
+          self._TtoOPacketRate = reply.TtoOActualPacketRate;
+          self._connectionSerialNumber = reply.ConnectionSerialNumber;
+
+          const rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
+          self._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
+
+          // EIP specific information
+          self.sendInfo = {
+            connectionID: self._OtoTConnectionID,
+            responseID: self._TtoOConnectionID
+          };
+
+          // await self.readAttributes();
+          self._connectionState = 2;
+
+          // console.log('CIP Connection connected');
+          self.sendNextMessage();
+        }
+      }
+      resolve();
+    });
+  });
+}
