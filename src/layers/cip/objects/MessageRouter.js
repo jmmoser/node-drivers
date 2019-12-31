@@ -9,8 +9,8 @@ const {
   ClassNames,
   CommonServiceCodes,
   CommonServiceNames,
-  GeneralStatusCodeNames,
-  GeneralStatusCodeDescriptions
+  GeneralStatusNames,
+  GeneralStatusDescriptions
 } = require('../core/constants');
 
 const EPath = require('../epath');
@@ -102,8 +102,8 @@ class MessageRouter {
 
     res.status = {};
     res.status.code = statusCode;
-    res.status.name = GeneralStatusCodeNames[statusCode] || '';
-    res.status.description = GeneralStatusCodeDescriptions[statusCode] || '';
+    res.status.name = GeneralStatusNames[statusCode] || '';
+    res.status.description = GeneralStatusDescriptions[statusCode] || '';
     res.status.error = statusCode !== 0 && statusCode !== 6;
 
     const extendedStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words

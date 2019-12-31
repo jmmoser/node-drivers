@@ -5,16 +5,9 @@ const {
 } = require('../../../utils');
 
 const CIPRequest = require('../core/request');
-// const CIPObject = require('./CIPObject');
-// const MessageRouter = require('./MessageRouter');
-const { Classes, CommonServices } = require('./CIP');
+const { ClassCodes, CommonServiceCodes } = require('../core/constants');
 const EPath = require('../epath');
-
-const { DataType, Decode, Encode } = require('../datatypes');
-// const {
-//   DataType,
-//   Decode
-// } = require('./CIP');
+const { DataType, Decode } = require('../datatypes');
 
 
 const InstanceAttributeCodes = Object.freeze({
@@ -112,11 +105,6 @@ const PortTypeNames = Object.freeze({
 
 
 class Port {
-// class Port extends CIPObject {
-  // constructor() {
-  //   super();
-  // }
-
   static DecodeClassAttribute(buffer, offset, attribute, cb) {
     const dataType = ClassAttributeDataTypes[attribute];
     if (!dataType) {
@@ -193,9 +181,9 @@ class Port {
 
   static GetInstanceAttributesAll(instanceID) {
     return new CIPRequest(
-      CommonServices.GetAttributesAll,
+      CommonServiceCodes.GetAttributesAll,
       EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Classes.Port),
+        new EPath.Segments.Logical.ClassID(ClassCodes.Port),
         new EPath.Segments.Logical.InstanceID(instanceID)
       ]),
       null,
@@ -208,9 +196,9 @@ class Port {
 
   static GetClassAttributeRequest(attribute) {
     return new CIPRequest(
-      CommonServices.GetAttributeSingle,
+      CommonServiceCodes.GetAttributeSingle,
       EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Classes.Port),
+        new EPath.Segments.Logical.ClassID(ClassCodes.Port),
         new EPath.Segments.Logical.InstanceID(0),
         new EPath.Segments.Logical.AttributeID(attribute)
       ]),

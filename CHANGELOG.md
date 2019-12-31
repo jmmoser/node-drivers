@@ -1,7 +1,12 @@
 # Changelog
 
-## 2.0.0-beta.6 (???)
+## 2.0.0-beta.6 (2019-12-30)
 - Fixed CIPRequest handling response data when length is 0
+- EPath Port Segment now encodes the pad byte ensuring the pad byte is 0 and the buffer is large enough
+- EPath DataType Segment fixed encodeSize for ARRAY and reference error when decoding abbreviated array
+- EPath Data Segment finished
+- Added unit tests for Data and DataType EPath segments
+- Logix5000.readControllerAttributes() now throws descriptive error if attribute status is not successful
 
 ## 2.0.0-beta.5 (2019-12-29)
 - Logix5000 fixed boolean decoding

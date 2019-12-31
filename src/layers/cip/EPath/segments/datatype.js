@@ -6,19 +6,14 @@ const {
   encodeUnsignedInteger
 } = require('../../../../utils');
 
-
-// const { DataType, DataTypeCodes, DataTypeNames } = require('../../datatypes');
+const convertDataTypeToObject = require('../../datatypes/convertToObject');
 const { DataTypeCodes, DataTypeNames } = require('../../datatypes/codes');
 const { DataType } = require('../../datatypes/types');
 
-// if (DataTypeCodes == null || DataType == null) {
-//   // console.log(buffer, offset);
-//   throw new Error('abc');
-// }
 
 class DataTypeSegment {
   constructor(value) {
-    this.value = value;
+    this.value = convertDataTypeToObject(value);
   }
 
   encodeSize() {
@@ -48,7 +43,7 @@ module.exports = DataTypeSegment;
 
 
 
-function __DecodeDataType(buffer, offset, cb) {
+function DecodeDataType(buffer, offset, cb) {
   let type;
   const code = buffer.readUInt8(offset); offset += 1;
   switch (code) {
@@ -62,8 +57,8 @@ function __DecodeDataType(buffer, offset, cb) {
     case DataTypeCodes.ABBREV_ARRAY: {
       /* const length = buffer.readUInt8(offset); */ offset += 1;
       let itemType;
-      offset = __DecodeDataType(buffer, offset, items => itemType = items);
-      type = Datatype.ABBREV_ARRAY(itemType);
+      offset = DecodeDataType(buffer, offset, items => itemType = items);
+      type = DataType.ABBREV_ARRAY(itemType);
       break;
     }
     case DataTypeCodes.STRUCT: {
@@ -71,7 +66,7 @@ function __DecodeDataType(buffer, offset, cb) {
       const members = [];
       const lastOffset = offset + length;
       while (offset < lastOffset) {
-        offset = __DecodeDataType(buffer, offset, function (member) {
+        offset = DecodeDataType(buffer, offset, function (member) {
           members.push(member);
         });
       }
@@ -91,15 +86,12 @@ function __DecodeDataType(buffer, offset, cb) {
       const upperBound = decodeUnsignedInteger(buffer, offset, upperBoundLength);
       offset += upperBoundLength;
 
-      const boundTags = [lowerBoundTag, upperBoundTag];
-
       let itemType;
-      offset = __DecodeDataType(buffer, offset, items => itemType = items);
-      type = DataType.ARRAY(itemType, lowerBound, upperBound, boundTags);
+      offset = DecodeDataType(buffer, offset, items => itemType = items);
+      type = DataType.ARRAY(itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag);
       break;
     }
     default:
-      // console.log(code, DataTypeNames[code], DataType[DataTypeNames[code]]);
       type = DataType[DataTypeNames[code]];
       break;
   }
@@ -112,20 +104,8 @@ function __DecodeDataType(buffer, offset, cb) {
 }
 
 
-function DecodeDataType(buffer, offset, cb) {
-  const nextOffset = __DecodeDataType(buffer, offset, cb);
-  // if (nextOffset - offset === 1) {
-  //   /**
-  //    * If data type is elementary then __DecodeDataType will only
-  //    * read 1 byte but data type encoding is 2 bytes
-  //    */
-  //   return offset + 2;
-  // }
-  return nextOffset;
-}
-
-
 function encodeSize(type) {
+  type = convertDataTypeToObject(type);
   let size;
   switch (type.code) {
     case DataTypeCodes.STRUCT:
@@ -136,6 +116,7 @@ function encodeSize(type) {
       break;
     case DataTypeCodes.ARRAY:
       size = 8 + encodeSize(type.itemType);
+      break;
     case DataTypeCodes.ABBREV_STRUCT:
       size = 4;
       break;
@@ -149,22 +130,23 @@ function encodeSize(type) {
 }
 
 
-function __EncodeDataTypeTo(buffer, offset, type) {
+function encodeTo(buffer, offset, type) {
+  type = convertDataTypeToObject(type);
   offset = buffer.writeUInt8(type.code, offset);
 
   switch (type.code) {
-    case DataType.STRUCT:
-      offset = buffer.writeUInt8(encodeSize(type), offset);
-      for (let i = 0; i < type.members; i++) {
-        offset = __EncodeDataTypeTo(buffer, offset, type.members[i]);
+    case DataTypeCodes.STRUCT:
+      offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
+      for (let i = 0; i < type.members.length; i++) {
+        offset = encodeTo(buffer, offset, type.members[i]);
       }
       break;
-    case DataType.ABBREV_STRUCT:
-      offset = buffer.writeUInt8(2, offset);
+    case DataTypeCodes.ABBREV_STRUCT:
+      offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
       offset = buffer.writeUInt16LE(type.crc, offset);
       break;
-    case DataType.ARRAY:
-      offset = buffer.writeUInt8(encodeSize(type), offset);
+    case DataTypeCodes.ARRAY:
+      offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
       offset = buffer.writeUInt8(type.lowerBoundTag, offset);
       const lowerSize = unsignedIntegerSize(type.lowerBound);
       offset = buffer.writeUInt8(lowerSize, offset);
@@ -173,23 +155,14 @@ function __EncodeDataTypeTo(buffer, offset, type) {
       const upperSize = unsignedIntegerSize(type.upperBound);
       offset = buffer.writeUInt8(upperSize, offset);
       offset = encodeUnsignedInteger(buffer, offset, type.upperBound, upperSize);
-      offset = __EncodeDataTypeTo(buffer, offset, type.itemType);
+      offset = encodeTo(buffer, offset, type.itemType);
       break;
-    case DataType.ABBREV_ARRAY:
-      offset = buffer.writeUInt8(encodeSize(type), offset);
-      offset = __EncodeDataTypeTo(buffer, offset, type.itemType);
+    case DataTypeCodes.ABBREV_ARRAY:
+      offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
+      offset = encodeTo(buffer, offset, type.itemType);
       break;
     default:
       break;
   }
   return offset;
-}
-
-
-function encodeTo(buffer, offset, type) {
-  const nextOffset = __EncodeDataTypeTo(buffer, offset, type);
-  // if (nextOffset - offset === 1) {
-  //   return buffer.writeUInt8(0, offset);
-  // }
-  return nextOffset;
 }

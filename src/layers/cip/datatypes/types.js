@@ -109,28 +109,11 @@ const DataType = Object.freeze({
               val => Buffer.from(val).toString('ascii')
             ),
             DataType.EPATH(false), // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
-            // DataType.USINT, // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
             DataType.UINT, // Character set which the character string is based on,
-            DataType.PLACEHOLDER(dt => dt)
-            // DataType.PLACEHOLDER(code => { // Actual International character string
-            //   switch (code) {
-            //     case DataTypeCodes.STRING:
-            //       return DataType.STRING;
-            //     case DataTypeCodes.STRING2:
-            //       return DataType.STRING2;
-            //     case DataTypeCodes.STRINGN:
-            //       return DataType.STRINGN;
-            //     case DataTypeCodes.SHORT_STRING:
-            //       return DataType.SHORT_STRING;
-            //     default:
-            //       throw new Error(`Invalid internationalized string data type ${code}`);
-            //   }
-            // })
+            DataType.PLACEHOLDER() // Actual International character string
           ], function (members, dt) {
             if (members.length === 3) {
               return dt.resolve(members[1].value);
-              // return dt.resolve(members[1].value.code);
-              // return dt.resolve(members[1]);
             }
           }), 0, length - 1)
         ),
@@ -175,7 +158,7 @@ const DataType = Object.freeze({
       decodeCallback
     };
   },
-  ARRAY(itemType, lowerBound, upperBound, boundTags) {
+  ARRAY(itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag) {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
@@ -184,7 +167,8 @@ const DataType = Object.freeze({
       itemType,
       lowerBound,
       upperBound,
-      boundTags
+      lowerBoundTag,
+      upperBoundTag
     };
   },
 
@@ -195,7 +179,7 @@ const DataType = Object.freeze({
     return {
       type: DataType.PLACEHOLDER,
       code: DataTypeCodes.PLACEHOLDER,
-      resolve
+      resolve: resolve || (dt => dt)
     }
   },
   TRANSFORM(dataType, transform) {

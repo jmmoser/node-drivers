@@ -105,7 +105,6 @@ class ConnectionManager {
       data,
       (buffer, offset, cb) => {
         const res = {};
-
         res.OtoTNetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
         res.TtoONetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
         res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
@@ -117,87 +116,14 @@ class ConnectionManager {
         offset += 1; // reserved
         res.data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
         cb(res);
+        return offset;
       }
     );
-
-    // return buildRequest(
-    //   connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
-    //   data
-    // );
-  }
-
-  // static ForwardOpenRequest(connection, incrementCounters) {
-  //   if (incrementCounters) {
-  //     incrementConnectionCounters();
-  //     connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
-  //   }
-    
-  //   let offset = 0;
-  //   const data = Buffer.alloc(36 + connection.route.length + (connection.large ? 4 : 0));
-
-  //   offset = encodeConnectionTiming(data, offset, connection.timing.tickTime, connection.timing.timeoutTicks);
-  //   offset = data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); // Originator to Target Network Connection ID
-  //   offset = data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); // Target to Originator Network Connection ID
-  //   offset = data.writeUInt16LE(ConnectionSerialNumberCounter, offset);
-  //   offset = data.writeUInt16LE(connection.VendorID, offset);
-  //   offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
-  //   offset = data.writeUInt8(connection.ConnectionTimeoutMultiplier, offset);
-
-  //   offset = data.writeUInt8(0, offset); /** Reserved */
-  //   offset = data.writeUInt8(0, offset); /** Reserved */
-  //   offset = data.writeUInt8(0, offset); /** Reserved */
-
-  //   offset = data.writeUInt32LE(connection.OtoTRPI, offset); // Originator to Target requested packet interval (rate), in microseconds
-  //   if (connection.large) {
-  //     offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
-  //   } else {
-  //     offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
-  //   }
-    
-  //   offset = data.writeUInt32LE(connection.TtoORPI, offset); // Target to Originator requested packet interval (rate), in microseconds
-    
-  //   if (connection.large) {
-  //     offset = data.writeUInt32LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
-  //   } else {
-  //     offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
-  //   }
-
-  //   offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
-  //   offset = data.writeUInt8(connection.route.length / 2, offset); // Connection path size
-  //   connection.route.copy(data, offset); offset += connection.route.length;
-
-  //   if (offset !== data.length) {
-  //     throw new Error('offset does not match data length');
-  //   }
-
-  //   return buildRequest(
-  //     connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
-  //     data
-  //   );
-  // }
-
-
-  static ForwardOpenReply(buffer) {
-    let offset = 0;
-    const res = {};
-
-    res.OtoTNetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
-    res.TtoONetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
-    res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
-    res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
-    res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-    res.OtoTActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
-    res.TtoOActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
-    const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
-    offset += 1; // reserved
-    res.data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
-
-    return res;
   }
 
 
   /** CIP Vol 1 3-5.5.3 */
-  static ForwardCloseRequest(connection) {
+  static ForwardClose(connection) {
     let offset = 0;
     const data = Buffer.allocUnsafe(12 + connection.route.length);
 
@@ -215,67 +141,43 @@ class ConnectionManager {
       throw new Error('offset does not match data length');
     }
 
-    return buildRequest(ServiceCodes.ForwardClose, data);
+    return new CIPRequest(
+      ServiceCodes.ForwardClose,
+      ConnectionManager_EPath,
+      data,
+      (buffer, offset, cb) => {
+        const res = {};
+        res.SerialNumber = buffer.readUInt16LE(offset); offset += 2;
+        res.VendorID = buffer.readUInt16LE(offset); offset += 2;
+        res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
+        const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
+        offset += 1; /** Reserved */
+        res.data = buffer.slice(offset, offset + applicationReplySize);
+        offset += applicationReplySize;
+        cb(res);
+        return offset;
+      }
+    );
   }
-  
-
-  static ForwardCloseReply(buffer) {
-    let offset = 0;
-    const res = {};
-
-    res.SerialNumber = buffer.readUInt16LE(offset); offset += 2;
-    res.VendorID = buffer.readUInt16LE(offset); offset += 2;
-    res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-    const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
-    offset += 1; /** Reserved */
-    res.data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
-
-    return res;
-  }
 
 
-  /** CIP Vol1 3-5.5.5 */
-  static GetConnectionDataRequest(connectionNumber) {
+  /** CIP Vol 1 3-5.5.5 */
+  static GetConnectionData(connectionNumber) {
     const data = Buffer.allocUnsafe(2);
 
     data.writeUInt16LE(connectionNumber, 0);
 
-    return buildRequest(
+    return new CIPRequest(
       ServiceCodes.GetConnectionData,
-      data
+      ConnectionManager_EPath,
+      data,
+      connectionDataResponse
     );
   }
 
-  /** CIP Vol1 3-5.5.5 */
-  static GetConnectionDataResponse(buffer) {
-    let offset = 0;
-    const res = {};
-
-    res.ConnectionNumber = buffer.readUInt16LE(offset); offset += 2;
-    res.ConnectionState = buffer.readUInt16LE(offset); offset += 2;
-    res.OriginatorPort = buffer.readUInt16LE(offset); offset += 2;
-    res.TargetPort = buffer.readUInt16LE(offset); offset += 2;
-    res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
-    res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
-    res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-    res.OriginatorOtoTCID = buffer.readUInt32LE(offset); offset += 4;
-    res.TargetOtoTCID = buffer.readUInt32LE(offset); offset += 4;
-    res.ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offset); offset += 1;
-    offset += 3; // Reserved
-    res.OriginatorRPIOtoT = buffer.readUInt32LE(offset); offset += 4;
-    res.OriginatorAPIOtoT = buffer.readUInt32LE(offset); offset += 4;
-    res.OriginatorTtoOCID = buffer.readUInt32LE(offset); offset += 4;
-    res.TargetTtoOCID = buffer.readUInt32LE(offset); offset += 4;
-    res.ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offset); offset += 1;
-    offset += 3; // Reserved
-    res.OriginatorRPITtoO = buffer.readUInt32LE(offset); offset += 4;
-    res.OriginatorAPITtoO = buffer.readUInt32LE(offset); offset += 4;
-
-    return res;
-  }
 
   /** CIP Vol1 3-5.5.6 */
-  static SearchConnectionDataRequest(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
+  static SearchConnectionData(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
     let offset = 0;
     const data = Buffer.allocUnsafe(8);
 
@@ -283,12 +185,12 @@ class ConnectionManager {
     offset = data.writeUInt16LE(originatorVendorID, offset);
     offset = data.writeUInt32LE(originatorSerialNumber, offset);
 
-    return buildRequest(ServiceCodes.SearchConnectionData, data);
-  }
-
-  /** CIP Vol1 3-5.5.6 */
-  static SearchConnectionDataResponse(buffer) {
-    return GetConnectionDataResponse(buffer);
+    return new CIPRequest(
+      ServiceCodes.SearchConnectionData,
+      ConnectionManager_EPath,
+      data,
+      connectionDataResponse
+    );
   }
 
 
@@ -313,17 +215,6 @@ class ConnectionManager {
       }
     }
   }
-
-
-  // static GetConnectionOwner() {
-  //   let offset = 0;
-  //   const data = Buffer.alloc(64);
-
-  //   return buildRequest(
-  //     ServiceCodes.GetConnectionOwner,
-  //     data.slice(0, offset)
-  //   );
-  // }
 }
 
 
@@ -339,6 +230,32 @@ function encodeConnectionTiming(buffer, offset, tickTime, timeoutTicks) {
   const priority = 0; // 1 is reserved, keep for future
   offset = buffer.writeUInt8(((priority << 4) | (tickTime & 0b1111)), offset);
   offset = buffer.writeUInt8(timeoutTicks, offset);
+  return offset;
+}
+
+
+function connectionDataResponse(buffer, offset, cb) {
+  const res = {};
+  res.ConnectionNumber = buffer.readUInt16LE(offset); offset += 2;
+  res.ConnectionState = buffer.readUInt16LE(offset); offset += 2;
+  res.OriginatorPort = buffer.readUInt16LE(offset); offset += 2;
+  res.TargetPort = buffer.readUInt16LE(offset); offset += 2;
+  res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
+  res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
+  res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
+  res.OriginatorOtoTCID = buffer.readUInt32LE(offset); offset += 4;
+  res.TargetOtoTCID = buffer.readUInt32LE(offset); offset += 4;
+  res.ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offset); offset += 1;
+  offset += 3; // Reserved
+  res.OriginatorRPIOtoT = buffer.readUInt32LE(offset); offset += 4;
+  res.OriginatorAPIOtoT = buffer.readUInt32LE(offset); offset += 4;
+  res.OriginatorTtoOCID = buffer.readUInt32LE(offset); offset += 4;
+  res.TargetTtoOCID = buffer.readUInt32LE(offset); offset += 4;
+  res.ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offset); offset += 1;
+  offset += 3; // Reserved
+  res.OriginatorRPITtoO = buffer.readUInt32LE(offset); offset += 4;
+  res.OriginatorAPITtoO = buffer.readUInt32LE(offset); offset += 4;
+  cb(res);
   return offset;
 }
 

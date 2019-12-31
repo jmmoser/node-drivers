@@ -1,6 +1,6 @@
 'use strict';
 
-const { Classes } = require('./objects/CIP');
+const { ClassCodes } = require('./core/constants');
 const EPath = require('./EPath');
 const CIPLayer = require('./objects/CIPLayer');
 const { CallbackPromise } = require('../../utils');
@@ -124,7 +124,7 @@ module.exports = Modbus;
 
 
 const MODBUS_EPATH = EPath.Encode(true, [
-  new EPath.Segments.Logical.ClassID(Classes.Modbus),
+  new EPath.Segments.Logical.ClassID(ClassCodes.Modbus),
   new EPath.Segments.Logical.InstanceID(0x01)
 ]);
 

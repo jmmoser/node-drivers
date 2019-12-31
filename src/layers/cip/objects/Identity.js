@@ -1,14 +1,9 @@
 'use strict';
 
-// const CIPObject = require('./CIPObject');
 const { Decode, DataType } = require('../datatypes');
 const { getBit, getBits, InvertKeyValues } = require('../../../utils');
 
 
-// class Identity extends CIPObject {
-//   constructor() {
-//     super(CIP.Classes.Identity);
-//   }
 class Identity {
   static DecodeInstanceAttribute(attribute, data, offset, cb) {
     const dataType = InstanceAttributeDataTypes[attribute];
@@ -18,7 +13,6 @@ class Identity {
 
     let value;
     offset = Decode(dataType, data, offset, val => value = val);
-    // const raw = value;
 
     switch (attribute) {
       case InstanceAttributeCodes.DeviceType: {
@@ -66,8 +60,7 @@ class Identity {
       cb({
         code: attribute,
         name: InstanceAttributeNames[attribute] || 'Unknown',
-        value,
-        // raw
+        value
       });
     }
 

@@ -9,7 +9,7 @@ const {
  * Ref. CIP Vol 1 Table 5.1
  * and https://github.com/Res260/wireshark/blob/b7107f5fcb9bcc20be33b6263f90d1b20cc1591d/epan/dissectors/packet-cip.c
  */
-const ClassCodes = {
+const ClassCodes = Object.freeze({
   Identity: 0x01,
   MessageRouter: 0x02,
   DeviceNet: 0x03,
@@ -105,14 +105,14 @@ const ClassCodes = {
   EthernetLink: 0xF6,
   CompoNetLink: 0xF7,
   CompoNetRepeater: 0xF8
-};
+});
 
 const ClassNames = InvertKeyValues(ClassCodes);
 
 
 
 // CIP Vol1 Appendix A
-const CommonServiceCodes = {
+const CommonServiceCodes = Object.freeze({
   GetAttributesAll: 0x01,
   SetAttributesAll: 0x02,
   GetAttributeList: 0x03,
@@ -135,58 +135,108 @@ const CommonServiceCodes = {
   InsertMember: 0x1A,
   RemoveMember: 0x1B,
   GroupSync: 0x1C
-};
+});
 
 const CommonServiceNames = InvertKeyValues(CommonServiceCodes);
 
 
-// CIP-V1-1.0 Appendix B-1. General status codes
-const GeneralStatusCodeNames = {
-  0x00: 'Success',
-  0x01: 'Connection failure',
-  0x02: 'Resource unavailable',
-  0x03: 'Invalid parameter value',
-  0x04: 'Path segment error',
-  0x05: 'Path destination unknown',
-  0x06: 'Partial transfer',
-  0x07: 'Connection lost',
-  0x08: 'Service not supported',
-  0x09: 'Invalid attribute value',
-  0x0A: 'Attribute list error',
-  0x0B: 'Already in requested mode/state',
-  0x0C: 'Object state conflict',
-  0x0D: 'Object already exists',
-  0x0E: 'Attribute not settable',
-  0x0F: 'Privilege violation',
-  0x10: 'Device state conflict',
-  0x11: 'Reply data too large',
-  0x12: 'Fragmentation of a primitive value',
-  0x13: 'Not enough data',
-  0x14: 'Attribute not supported',
-  0x15: 'Too much data',
-  0x16: 'Objet does not exist',
-  0x17: 'Service fragmentation sequence not in progress',
-  0x18: 'No stored attribute data',
-  0x19: 'Store operation failure',
-  0x1A: 'Routing failure, request packet too large',
-  0x1B: 'Routing failure, response packet too large',
-  0x1C: 'Missing attribute list entry data',
-  0x1D: 'Invalid attribute value list',
-  0x1E: 'Embedded service error',
-  0x1F: 'Vendor specific error',
-  0x20: 'Invalid parameter',
-  0x21: 'Write-once value or medium already written',
-  0x22: 'Invalid Replay Received',
-  0x25: 'Key Failure in path',
-  0x26: 'Path Size Invalid',
-  0x27: 'Unexpected attribute in list',
-  0x28: 'Invalid member ID',
-  0x29: 'Member not settable',
-  0x2A: 'Group 2 only server general failure'
-};
+const GeneralStatusCodes = Object.freeze({
+  Success: 0x00,
+  ConnectionFailure: 0x01,
+  ResourceUnavailable: 0x02,
+  InvalidParameterValue: 0x03,
+  PathSegmentError: 0x04,
+  PathDestinationUnknown: 0x05,
+  PartialTransfer: 0x06,
+  ConnectionLost: 0x07,
+  ServiceNotSupported: 0x08,
+  InvalidAttributeValue: 0x09,
+  AttributeListError: 0x0A,
+  AlreadyInRequestedModeOrState: 0x0B,
+  ObjectStateConflict: 0x0C,
+  ObjectAlreadyExists: 0x0D,
+  AttributeNotSettable: 0x0E,
+  PrivilegeViolation: 0x0F,
+  DeviceStateConflict: 0x10,
+  ReplyDataTooLarge: 0x11,
+  FragmentationOfPrimitiveValue: 0x12,
+  NotEnoughData: 0x13,
+  AttributeNotSupported: 0x14,
+  TooMuchData: 0x15,
+  ObjectDoesNotExist: 0x16,
+  ServiceFragmentationSequenceNotInProgress: 0x17,
+  NoStoredAttributeData: 0x18,
+  StoreOperationFailure: 0x19,
+  RoutingFailureRequestTooLarge: 0x1A,
+  RoutingFailureResponseTooLarge: 0x1B,
+  MissingAttributeListEntryData: 0x1C,
+  InvalidAttributeValueList: 0x1D,
+  EmbeddedServiceError: 0x1E,
+  VendorSpecificError: 0x1F,
+  InvalidParameter: 0x20,
+  WriteOnceValueOrMediumAlreadyWritten: 0x21,
+  InvalidReplyReceived: 0x22,
+  BufferOverflow: 0x23,
+  MessageFormatError: 0x24,
+  KeyFailureInPath: 0x25,
+  PathSizeInvalid: 0x26,
+  UnexpectedAttributeInList: 0x27,
+  InvalidMemberID: 0x28,
+  MemberNotSettable: 0x29,
+  Group2OnlyServerGeneralFailure: 0x2A,
+  UnknownModbusError: 0x2B
+});
+
+const GeneralStatusNames = InvertKeyValues(GeneralStatusCodes);
+
+// // CIP-V1-1.0 Appendix B-1. General status codes
+// const GeneralStatusNames = Object.freeze({
+//   [GeneralStatusCodes.Success]: 'Success',
+//   [GeneralStatusCodes.ConnectionFailure]: 'Connection failure',
+//   [GeneralStatusCodes.ResourceUnavailable]: 'Resource unavailable',
+//   [GeneralStatusCodes.InvalidParameterValue]: 'Invalid parameter value',
+//   [GeneralStatusCodes.PathSegmentError]: 'Path segment error',
+//   [GeneralStatusCodes.PathDestinationUnknown]: 'Path destination unknown',
+//   [GeneralStatusCodes.PartialTransfer]: 'Partial transfer',
+//   [GeneralStatusCodes.ConnectionLost]: 'Connection lost',
+//   [GeneralStatusCodes.ServiceNotSupported]: 'Service not supported',
+//   [GeneralStatusCodes.InvalidAttributeValue]: 'Invalid attribute value',
+//   [GeneralStatusCodes.AttributeListError]: 'Attribute list error',
+//   [GeneralStatusCodes.AlreadyInRequestedModeOrState]: 'Already in requested mode/state',
+//   [GeneralStatusCodes.ObjectStateConflict]: 'Object state conflict',
+//   [GeneralStatusCodes.ObjectAlreadyExists]: 'Object already exists',
+//   [GeneralStatusCodes.AttributeNotSettable]: 'Attribute not settable',
+//   [GeneralStatusCodes.PrivilegeViolation]: 'Privilege violation',
+//   0x10: 'Device state conflict',
+//   0x11: 'Reply data too large',
+//   0x12: 'Fragmentation of a primitive value',
+//   0x13: 'Not enough data',
+//   0x14: 'Attribute not supported',
+//   0x15: 'Too much data',
+//   0x16: 'Objet does not exist',
+//   0x17: 'Service fragmentation sequence not in progress',
+//   0x18: 'No stored attribute data',
+//   0x19: 'Store operation failure',
+//   0x1A: 'Routing failure, request packet too large',
+//   0x1B: 'Routing failure, response packet too large',
+//   0x1C: 'Missing attribute list entry data',
+//   0x1D: 'Invalid attribute value list',
+//   0x1E: 'Embedded service error',
+//   0x1F: 'Vendor specific error',
+//   0x20: 'Invalid parameter',
+//   0x21: 'Write-once value or medium already written',
+//   0x22: 'Invalid Replay Received',
+//   0x25: 'Key Failure in path',
+//   0x26: 'Path Size Invalid',
+//   0x27: 'Unexpected attribute in list',
+//   0x28: 'Invalid member ID',
+//   0x29: 'Member not settable',
+//   0x2A: 'Group 2 only server general failure',
+//   [GeneralStatusCodes.UnknownModbusError]: 'Unknown Modbus Error'
+// });
 
 // CIP-V1-1.0 Appendix B-1. General status codes
-const GeneralStatusCodeDescriptions = {
+const GeneralStatusDescriptions = Object.freeze({
   0x01: 'A connection related service failed along the connection path.',
   0x02: 'Resources needed for the object to perform the requested service were unavailable.',
   0x03: 'See Status Code 0x20, which is the preferred value to use for this condition.',
@@ -226,8 +276,9 @@ const GeneralStatusCodeDescriptions = {
   0x27: 'An attempt was made to set an attribute that is not able to be set at this time.',
   0x28: 'The Member ID specified in the request does not exist in the specified Class/Instance/Attribute.',
   0x29: 'A request to modify a non-modifiable member was received.',
-  0x2A: 'This error code may only be reported by DeviceNet group 2 only servers with 4K or less code space and only in place of Service not supported, Attribute not supported and Attribute not settable.'
-};
+  0x2A: 'This error code may only be reported by DeviceNet group 2 only servers with 4K or less code space and only in place of Service not supported, Attribute not supported and Attribute not settable.',
+  [GeneralStatusCodes.UnknownModbusError]: 'A CIP to Modbus translator received an unknown Modbus Exception Code.'
+});
 
 
 module.exports = {
@@ -235,6 +286,7 @@ module.exports = {
   ClassNames,
   CommonServiceCodes,
   CommonServiceNames,
-  GeneralStatusCodeNames,
-  GeneralStatusCodeDescriptions
+  GeneralStatusCodes,
+  GeneralStatusNames,
+  GeneralStatusDescriptions
 };

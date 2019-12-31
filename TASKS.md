@@ -1,14 +1,13 @@
-- [ ] Add processor specific PCCC layers (SLC/PLC2/PLC5)
-- [ ] Logix5000
+- Logix5000
   - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
   - [ ] Optimize
     - [ ] persist processor information to file system
     - [ ] readTags/bulkReadTags, multiple service packet
-- [ ] CIP
+- CIP
+  - [ ] Add engineering unit codes
+  - [ ] Connection handle duplicate connection
   - [ ] understand the difference between direct requests, Connection Manager Unconnected Send messages, Connected messages, and how routes to eni/controller
   - [ ] use UCMM to get identity and verify device type is programmable logic controller OR fix path routing
-  - [ ] Finish Data Segment
-  - [ ] Encoding for Symbolic Segment
   - [ ] Only send packets up to the packet rate
   - [ ] Consider making CIPLayer intelligent, uses upper layer to determine if it is forwarding PCCC, Modbus, etc.
   - [ ] Add I/O Connections
@@ -18,10 +17,11 @@
   - [ ] add encoding for STRINGI, STRINGN, BOOL
 - TCP Layer
   - [ ] create TLS layer or just use options.tls?
-- [ ] PCCC
+- PCCC
+  - [ ] Add processor specific layers (SLC/PLC2/PLC5)
   - [ ] Word range read request must be an even number of bytes??
   - [ ] Abstract word range read request where total bytes to read is greater than 228
-- [ ] Modbus
+- Modbus
   - [ ] improve readHoldingRegisters address/number support
     - [ ] addressing using string, '40001' or '400001'
     - [ ] addressing using string with data type '40001S'

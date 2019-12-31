@@ -7,27 +7,14 @@
  * during connection establishment, or at any other time as defined by the application.
  */
 
-'use strict';
-
-/**
- * CIP Vol 1, Appendix C-1.4.3
- * 
- * The network segment shall be used to specify network parameters that may be required by a
- * node to transmit a message across a network. The network segment shall immediately precede
- * the port segment of the device to which it applies. In other words, the network segment shall
- * be the first item in the path that the device receives.
- */
-
 const {
-  getBit,
-  getBits,
-  InvertKeyValues
+  getBits
 } = require('../../../../utils');
 
-const SubtypeCodes = {
+const SubtypeCodes = Object.freeze({
   Simple: 0,
   ANSIExtendedSymbol: 17
-};
+});
 
 
 class DataSegment {
@@ -38,42 +25,87 @@ class DataSegment {
     this.value = value;
   }
 
-  encodeSize(padded) {
-    return 1 + this.value.length;
+  encodeSize() {
+    switch (this.subtype) {
+      case SubtypeCodes.Simple:
+        return 2 + this.value.length;
+      case SubtypeCodes.ANSIExtendedSymbol:
+        return 2 + this.value.length + this.value.length % 2;
+      default:
+        throw new Error(`Invalid Data Segment subtype ${this.subtype}`);
+    }
   }
 
-  encode(padded) {
-    const buffer = Buffer.alloc(this.encodeSize(padded));
-    this.encodeTo(buffer, 0, padded);
+  encode() {
+    const buffer = Buffer.alloc(this.encodeSize());
+    this.encodeTo(buffer, 0);
     return buffer;
   }
 
-  encodeTo(buffer, offset, padded) {
+  encodeTo(buffer, offset) {
     offset = buffer.writeUInt8(0b10000000 | (this.subtype & 0b11111), offset);
-    offset += this.value.copy(buffer, offset);
+
+    switch (this.subtype) {
+      case SubtypeCodes.Simple: {
+        offset = buffer.writeUInt8(this.value.length / 2, offset);
+        const bytesCopied = this.value.copy(buffer, offset);
+        if (bytesCopied !== this.value.length) {
+          throw new Error(`Buffer to encode Simple Data Segment value is not large enough`);
+        }
+        offset += bytesCopied;
+        break;
+      }
+      case SubtypeCodes.ANSIExtendedSymbol: {
+        offset = buffer.writeUInt8(this.value.length, offset);
+        const bytesWritten = buffer.write(this.value, offset, 'ascii');
+        if (bytesWritten !== this.value.length) {
+          throw new Error(`Buffer to encode Simple Data Segment value is not large enough`);
+        }
+        offset += bytesWritten;
+        if (this.value.length % 2 > 0) {
+          offset = buffer.writeUInt8(0, offset);
+        }
+        break;
+      }
+      default:
+        throw new Error(`Invalid Data Segment subtype ${this.subtype}`);
+    }
     return offset;
   }
 
   static Decode(segmentCode, buffer, offset, padded, cb) {
     const subtype = getBits(segmentCode, 0, 5);
+    const length = buffer.readUInt8(offset); offset += 1;
 
+    let segment;
     switch (subtype) {
       case SubtypeCodes.Simple:
-
+        if (buffer.length < offset + 2 * length) {
+          throw new Error(`Simple Data Segment decode buffer not long enough`);
+        }
+        segment = new DataSegment.Simple(buffer.slice(offset, offset + 2 * length));
+        offset += 2 * length;
         break;
       case SubtypeCodes.ANSIExtendedSymbol:
-
+        if (buffer.length < offset + length) {
+          throw new Error(`ANSI Extended Symbol Data Segment decode buffer not long enough`);
+        }
+        segment = new DataSegment.ANSIExtendedSymbol(buffer.toString('ascii', offset, offset + length));
+        offset += length;
+        if (length % 2 > 0) {
+          /** make sure pad byte is 0 */
+          const padByte = buffer.readUInt8(offset); offset += 1;
+          if (padByte !== 0) {
+            throw new Error(`ANSI Extended Symbol Data Segment pad byte is not zero. Received: ${padByte}`);
+          }
+        }
         break;
       default:
         throw new Error(`Data segment subtype ${subtype} reserved for future use`);
     }
 
-
     if (typeof cb === 'function') {
-      cb({
-        // number,
-        // address
-      });
+      cb(segment);
     }
 
     return offset;
@@ -82,25 +114,14 @@ class DataSegment {
 
 
 DataSegment.Simple = class SimpleDataSegment extends DataSegment {
-  constructor(buffer) {
-    super(SubtypeCodes.Simple, buffer);
+  constructor(value) {
+    super(SubtypeCodes.Simple, value);
   }
 }
 
 DataSegment.ANSIExtendedSymbol = class ANSIExtendedSymbolDataSegment extends DataSegment {
-  constructor(symbol) {
-    if (typeof symbol !== 'string' || symbol.length === 0) {
-      throw new Error(`ANSI Extended Symbol Data Segment value must be a non-empty string. Received '${symbol}'`);
-    }
-    const pad = symbol.length % 2;
-    const buffer = Buffer.allocUnsafe(1 + symbol.length + pad);
-    let offset = 0;
-    offset = buffer.writeUInt8(symbol.length, offset);
-    offset += buffer.write(symbol, offset, 'ascii');
-    if (pad > 0) {
-      offset = buffer.writeUInt8(0, offset);
-    }
-    super(SubtypeCodes.ANSIExtendedSymbol, buffer);
+  constructor(value) {
+    super(SubtypeCodes.ANSIExtendedSymbol, value);
   }
 }
 
@@ -108,7 +129,24 @@ module.exports = DataSegment;
 
 
 function validate(subtype, value) {
-  if (value != null && !Buffer.isBuffer(value)) {
-    throw new Error(`Data segment value must be a buffer`);
+  switch (subtype) {
+    case SubtypeCodes.Simple:
+      if (!Buffer.isBuffer(value)) {
+        throw new Error(`Simple Data Segment value must be a buffer. Received ${value}`);
+      }
+      if (value.length % 2 !== 0) {
+        throw new Error(`Length of Simple Data Segment value must be even. Received ${value.length}`);
+      }
+      break;
+    case SubtypeCodes.ANSIExtendedSymbol:
+      if (typeof value !== 'string') {
+        throw new Error(`ANSI Extended Symbol Data Segment value must be a string. Received ${value}`);
+      }
+      if (value.length === 0) {
+        throw new Error(`ANSI Extended Symbol Data Segment value must not be empty. Received: ${value}`);
+      }
+      break;
+    default:
+      throw new Error(`Invalid Data Segment subtype ${subtype}`);
   }
 }

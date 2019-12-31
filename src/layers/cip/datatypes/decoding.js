@@ -3,37 +3,28 @@
 const EPath = require('../epath');
 const { DataTypeCodes, DataTypeNames } = require('./codes');
 const { getBits, unsignedIntegerSize, decodeUnsignedInteger } = require('../../../utils');
+const convertToObject = require('./convertToObject');
 
 
 function Decode(dataType, buffer, offset, cb, ctx) {
   let value;
 
-  if (dataType instanceof Function) dataType = dataType();
+  dataType = convertToObject(dataType);
 
   if (ctx && ctx.dataTypeCallback) {
     /** Used to modify the datatype, especially with placeholders */
-    dataType = ctx.dataTypeCallback(dataType) || dataType;
-
-    /** dataTypeCallback may return a type function */
-    if (dataType instanceof Function) dataType = dataType();
+    dataType = convertToObject(ctx.dataTypeCallback(dataType) || dataType);
   }
 
-  let dataTypeCode = dataType;
-
-  if (typeof dataType === 'object') {
-    dataTypeCode = dataType.code;
-
-    if (dataType.itype) {
-      return Decode(dataType.itype, buffer, offset, cb, ctx);
-    }
+  if (dataType.itype) {
+    return Decode(dataType.itype, buffer, offset, cb, ctx);
   }
 
-  switch (dataTypeCode) {
+  switch (dataType.code) {
     case DataTypeCodes.BOOL:
       /** BOOL does not change the offset */
       value = decodeUnsignedInteger(buffer, offset, unsignedIntegerSize(dataType.position));
-      value = getBits(value, dataType.position, dataType.position + 1);
-      value = value > 0;
+      value = getBits(value, dataType.position, dataType.position + 1) > 0;
       break;
     case DataTypeCodes.SINT:
       value = buffer.readInt8(offset); offset += 1;
@@ -174,7 +165,7 @@ function Decode(dataType, buffer, offset, cb, ctx) {
     case DataTypeCodes.PLACEHOLDER:
       throw new Error(`Placeholder datatype should have been replaced before decoding`);
     default:
-      throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
+      throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataType.code] || dataType.code}`);
   }
 
   if (cb instanceof Function) {

@@ -2,8 +2,8 @@
 
 const {
   CommonServiceNames,
-  GeneralStatusCodeNames,
-  GeneralStatusCodeDescriptions
+  GeneralStatusNames,
+  GeneralStatusDescriptions
 } = require('./constants');
 
 class CIPRequest {
@@ -83,8 +83,8 @@ class CIPRequest {
 
     res.status = {};
     res.status.code = statusCode;
-    res.status.name = GeneralStatusCodeNames[statusCode] || '';
-    res.status.description = GeneralStatusCodeDescriptions[statusCode] || '';
+    res.status.name = GeneralStatusNames[statusCode] || '';
+    res.status.description = GeneralStatusDescriptions[statusCode] || '';
     res.status.error = statusCode !== 0 && statusCode !== 6;
 
     const extendedStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words

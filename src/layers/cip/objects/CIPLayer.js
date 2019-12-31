@@ -1,13 +1,9 @@
 'use strict';
 
 const CIPRequest = require('../core/request');
+const { CommonServiceCodes, ClassCodes } = require('../core/constants');
 const { CallbackPromise } = require('../../../utils');
 const EPath = require('../epath');
-const CIP = require('./CIP');
-// const {
-//   DataType,
-//   Decode
-// } = require('../datatypes');
 const Layer = require('./../../Layer');
 const Identity = require('./Identity');
 const MessageRouter = require('./MessageRouter');
@@ -43,10 +39,10 @@ class CIPLayer extends Layer {
 
   identity(callback) {
     return CallbackPromise(callback, resolver => {
-      const service = CIP.CommonServices.GetAttributesAll;
+      const service = CommonServiceCodes.GetAttributesAll;
       
       const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
+        new EPath.Segments.Logical.ClassID(ClassCodes.Identity),
         new EPath.Segments.Logical.InstanceID(0x01)
       ]);
 
@@ -94,7 +90,7 @@ class CIPLayer extends Layer {
     }
 
     // return CallbackPromise(callback, async resolver => {
-    //   const service = CIP.CommonServices.GetAttributesAll;
+    //   const service = CommonServiceCodes.GetAttributesAll;
     //   const path = EPath.Encode(
     //     new EPath.Segments.Logical.ClassID(classCode),
     //     new EPath.Segments.Logical.InstanceID(instanceID),
@@ -105,7 +101,7 @@ class CIPLayer extends Layer {
     // });
 
     return CallbackPromise(callback, async resolver => {
-      const service = CIP.CommonServices.GetAttributeSingle;
+      const service = CommonServiceCodes.GetAttributeSingle;
 
       const attributes = [];
 
@@ -137,10 +133,10 @@ class CIPLayer extends Layer {
 
   messageRouterClassAttributes(callback) {
     return CallbackPromise(callback, resolver => {
-      const service = CIP.CommonServices.GetAttributesAll;
+      const service = CommonServiceCodes.GetAttributesAll;
 
       const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
+        new EPath.Segments.Logical.ClassID(ClassCodes.Identity),
         new EPath.Segments.Logical.InstanceID(0)
       ]);
 

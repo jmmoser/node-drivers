@@ -14,14 +14,14 @@ const ConnectionLayer = require('../objects/Connection');
 // };
 
 const {
-  CommonServices,
-  Classes
-} = require('../objects/CIP');
+  CommonServiceCodes,
+  ClassCodes,
+  GeneralStatusCodes
+} = require('../core/constants');
 
 const {
   DataType,
   DataTypeCodes,
-  DataTypeNames,
   Encode,
   EncodeSize,
   EncodeTo,
@@ -29,8 +29,6 @@ const {
 } = require('../datatypes');
 
 const {
-  // getBit,
-  getBits,
   CallbackPromise,
   InfoError
 } = require('../../../utils');
@@ -40,9 +38,8 @@ const {
 
 const {
   Logix5000_DataTypeCodes,
-  Logix5000_DataType,
-  LDatatypeNames,
-  ClassCodes,
+  Logix5000_DatatypeNames,
+  Logix5000_ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,
   SymbolInstanceAttributeCodes,
@@ -53,7 +50,11 @@ const {
   TemplateClassAttributeDataTypes,
   TemplateInstanceAttributeCodes,
   TemplateInstanceAttributeDataTypes,
-  GenericServiceStatusDescriptions
+  GenericServiceStatusDescriptions,
+  Member,
+  ControllerInstanceAttributeCodes,
+  ControllerInstanceAttributeDataTypes,
+  ControllerInstanceAttributeNames
 } = require('./constants');
 
 
@@ -75,7 +76,7 @@ class Logix5000 extends CIPLayer {
         ...options,
         route: EPath.Encode(true, [
           new EPath.Segments.Port(options.port, options.slot),
-          new EPath.Segments.Logical.ClassID(Classes.MessageRouter),
+          new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
           new EPath.Segments.Logical.InstanceID(0x01)
         ])
       });
@@ -364,7 +365,7 @@ class Logix5000 extends CIPLayer {
     }
 
     return CallbackPromise(callback, async resolver => {
-      const service = CommonServices.GetAttributeList;
+      const service = CommonServiceCodes.GetAttributeList;
 
       const symbolID = await getSymbolInstanceID(this, scope, tag);
       if (symbolID == null) {
@@ -401,13 +402,13 @@ class Logix5000 extends CIPLayer {
               let value;
               offset = Decode(type, data, offset, val => value = val);
 
-              switch (code) {
-                case SymbolInstanceAttributeCodes.Type:
-                  value = new SymbolType(value);
-                  break;
-                default:
-                  break;
-              }
+              // switch (code) {
+              //   case SymbolInstanceAttributeCodes.Type:
+              //     value = new SymbolType(value);
+              //     break;
+              //   default:
+              //     break;
+              // }
 
               attributeResults.push({
                 name: SymbolInstanceAttributeNames[code] || 'Unknown',
@@ -440,7 +441,7 @@ class Logix5000 extends CIPLayer {
     }
 
     return CallbackPromise(callback, async resolver => {
-      const service = CommonServices.GetAttributesAll;
+      const service = CommonServiceCodes.GetAttributesAll;
 
       const symbolID = await getSymbolInstanceID(this, scope, tag);
       if (symbolID == null) {
@@ -463,13 +464,15 @@ class Logix5000 extends CIPLayer {
                 attributes.push({
                   name: SymbolInstanceAttributeNames[code] || 'Unknown',
                   code,
-                  value: typeof modifier === 'function' ? modifier(val) : val
+                  // value: typeof modifier === 'function' ? modifier(val) : val
+                  val
                 });
               });
             }
 
             /** Attribute 2 */
-            appendAttribute(SymbolInstanceAttributeCodes.Type, code => new SymbolType(code));
+            // appendAttribute(SymbolInstanceAttributeCodes.Type, code => new SymbolType(code));
+            appendAttribute(SymbolInstanceAttributeCodes.Type);
 
             /** Attribute 3 */
             appendAttribute(3);
@@ -547,7 +550,7 @@ class Logix5000 extends CIPLayer {
         const service = TemplateServiceCodes.Read;
 
         const path = EPath.Encode(true, [
-          new EPath.Segments.Logical.ClassID(ClassCodes.Template),
+          new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Template),
           new EPath.Segments.Logical.InstanceID(templateID)
         ]);
 
@@ -634,15 +637,19 @@ class Logix5000 extends CIPLayer {
 
   readTemplateClassAttributes(callback) {
     return CallbackPromise(callback, async resolver => {
-      const service = CommonServices.GetAttributeList;
+      const service = CommonServiceCodes.GetAttributeList;
 
       const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(ClassCodes.Template),
+        new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Template),
         new EPath.Segments.Logical.InstanceID(0)
       ]);
 
       const reply = await sendPromise(this, service, path, encodeAttributes([
-        1, 2, 3, 8, /** 9 timed out?? */
+        TemplateClassAttributeCodes.Unknown1,
+        TemplateClassAttributeCodes.Unknown2,
+        TemplateClassAttributeCodes.Unknown3,
+        TemplateClassAttributeCodes.Unknown8
+        /** 9 timed out?? */
       ]));
 
       const { data } = reply;
@@ -681,10 +688,10 @@ class Logix5000 extends CIPLayer {
           return resolver.resolve(this._templateInstanceAttributes.get(templateID));
         }
 
-        const service = CommonServices.GetAttributeList;
+        const service = CommonServiceCodes.GetAttributeList;
 
         const path = EPath.Encode(true, [
-          new EPath.Segments.Logical.ClassID(ClassCodes.Template),
+          new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Template),
           new EPath.Segments.Logical.InstanceID(templateID)
         ]);
 
@@ -744,14 +751,20 @@ class Logix5000 extends CIPLayer {
    * */
   readControllerAttributes(callback) {
     return CallbackPromise(callback, resolver => {
-      const service = CommonServices.GetAttributeList;
+      const service = CommonServiceCodes.GetAttributeList;
 
       const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(0xAC),
+        new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Controller),
         new EPath.Segments.Logical.InstanceID(0x01)
       ]);
 
-      const data = encodeAttributes([1, 2, 3, 4, 10]);
+      const data = encodeAttributes([
+        ControllerInstanceAttributeCodes.Unknown1,
+        ControllerInstanceAttributeCodes.Unknown2,
+        ControllerInstanceAttributeCodes.Unknown3,
+        ControllerInstanceAttributeCodes.Unknown4,
+        ControllerInstanceAttributeCodes.Unknown10
+      ]);
 
       send(this, service, path, data, (error, reply) => {
         if (error) {
@@ -766,25 +779,24 @@ class Logix5000 extends CIPLayer {
             for (let i = 0; i < numberOfAttributes; i++) {
               const attributeNumber = data.readUInt16LE(offset); offset += 2;
               const attributeStatus = data.readUInt16LE(offset); offset += 2;
-              let attributeValue;
-              switch (attributeNumber) {
-                case 1:
-                case 2:
-                  attributeValue = data.readUInt16LE(offset); offset += 2;
-                  break;
-                case 3:
-                case 4:
-                case 10:
-                  attributeValue = data.readUInt32LE(offset); offset += 4;
-                  break;
-                default:
-                  return resolver.reject(`Unexpected attribute received: ${attributeNumber}`, reply);
+
+              if (attributeStatus === GeneralStatusCodes.Success) {
+                const attributeDataType = ControllerInstanceAttributeDataTypes[attributeNumber];
+                if (!attributeDataType) {
+                  throw new Error(`Invalid Controller Attribute ${attributeNumber}`);
+                }
+
+                let attributeValue;
+                offset = Decode(attributeDataType, data, offset, val => attributeValue = val);
+
+                attributeResponses.push({
+                  code: attributeNumber,
+                  name: ControllerInstanceAttributeNames[attributeNumber],
+                  value: attributeValue
+                });
+              } else {
+                throw new Error(`Status ${attributeStatus} received for controller attribute ${attributeNumber}`);
               }
-              attributeResponses.push({
-                attribute: attributeNumber,
-                status: attributeStatus,
-                value: attributeValue
-              });
             }
 
             resolver.resolve(attributeResponses);
@@ -832,7 +844,7 @@ async function readTagFragmented(layer, path, elements) {
     const dataTypeOffset = Logix5000_DecodeDataType(reply.data, 0);
     chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
 
-    if (reply.status.code === 0x06) {
+    if (reply.status.code === GeneralStatusCodes.PartialTransfer) {
       offset = reply.data.length - dataTypeOffset;
     } else if (reply.status.code === 0) {
       break;
@@ -886,50 +898,6 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
   }
   return structValues;
 }
-// async function parseReadTagMemberStructure(layer, structureType, data, offset) {
-//   if (!structureType.template) {
-//     console.log(structureType);
-//     throw new Error(`Tried to read template without id`);
-//   }
-
-//   const template = await layer.readTemplate(structureType.template.id);
-//   if (!template || !Array.isArray(template.members)) {
-//     return new Error(`Unable to read template: ${structureType.template.id}`);
-//   }
-
-//   const members = template.members;
-//   let lastHostMemberValue;
-//   const structValues = {};
-//   for (let i = 0; i < members.length; i++) {
-//     const member = members[i];
-//     if (member.host === true) {
-//       Decode(member.type.dataType, data, offset + member.offset, value => lastHostMemberValue = value);
-//     } else if (member.type.atomic) {
-//       if (member.type.dimensions === 0) {
-//         if (member.type.dataType.code === DataTypeCodes.BOOL && lastHostMemberValue != null) {
-//           const position = member.info;
-//           structValues[member.name] = getBits(lastHostMemberValue, position, position + 1) > 0;
-//         } else {
-//           Decode(member.type.dataType, data, offset + member.offset, value => structValues[member.name] = value);
-//         }
-//       } else if (member.type.dimensions === 1) {
-//         const memberValues = [];
-//         let nextOffset = offset + member.offset;
-//         for (let memberArrIndex = 0; memberArrIndex < member.info; memberArrIndex++) {
-//           nextOffset = Decode(member.type.dataType, data, nextOffset, value => memberValues.push(value));
-//         }
-//         structValues[member.name] = memberValues;
-//       } else {
-//         // TODO
-//         console.log(member);
-//         throw new Error('Currently unable to read members with dimensions other than 0 or 1');
-//       }
-//     } else {
-//       structValues[member.name] = await parseReadTagMemberStructure(layer, member.type, data, offset + member.offset);
-//     }
-//   }
-//   return structValues;
-// }
 
 
 async function parseReadTag(layer, scope, tag, elements, data) {
@@ -991,7 +959,7 @@ async function parseReadTag(layer, scope, tag, elements, data) {
       case Logix5000_DataTypeCodes.Program:
       case Logix5000_DataTypeCodes.Routine:
       case Logix5000_DataTypeCodes.Task:
-        throw new Error(`Unable to directly read type ${LDatatypeNames[templateType.code].toUpperCase()}: ${tag}`);
+        throw new Error(`Unable to directly read type ${Logix5000_DatatypeNames[templateType.code].toUpperCase()}: ${tag}`);
       default:
         break;
     }
@@ -1051,7 +1019,7 @@ function encodeSymbolPath(tag) {
       return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
     case 'number':
       return EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(ClassCodes.Symbol),
+        new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Symbol),
         new EPath.Segments.Logical.InstanceID(tag)
       ]);
     case 'object':
@@ -1094,23 +1062,10 @@ function parseListTagsResponse(reply, attributes, tags, modifier) {
     for (let i = 0; i < attributes.length; i++) {
       const attribute = attributes[i];
       const attributeDataType = SymbolInstanceAttributeDataTypes[attribute];
-      switch (attribute) {
-        case SymbolInstanceAttributeCodes.Name:
-          offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
-          break;
-        case SymbolInstanceAttributeCodes.Type:
-          offset = Decode(attributeDataType, data, offset, val => tag[attribute] = new SymbolType(val));
-          break;
-        case SymbolInstanceAttributeCodes.ArrayDimensionLengths: {
-          offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
-          break;
-        }
-        case SymbolInstanceAttributeCodes.Bytes:
-          offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
-          break;
-        default:
-          throw new Error(`Unknown attribute: ${attributes[i]}`);
+      if (!attributeDataType) {
+        throw new Error(`Unknown attribute ${attribute}`);
       }
+      offset = Decode(attributeDataType, data, offset, val => tag[attribute] = val);
     }
 
     if (hasModifier) {
@@ -1148,67 +1103,6 @@ function parseListTagsResponse(reply, attributes, tags, modifier) {
 
 //   return res;
 // }
-
-
-class SymbolType {
-  constructor(code) {
-    this.code = code;
-    this.atomic = getBits(code, 15, 16) === 0;
-    this.system = getBits(code, 12, 13) > 0;
-    this.dimensions = getBits(code, 13, 15);
-
-    let dataType;
-
-    if (this.atomic) {
-      const dataTypeCode = getBits(code, 0, 8);
-      if (dataTypeCode === DataTypeCodes.BOOL) {
-        dataType = DataType.BOOL(getBits(code, 8, 11));
-      } else {
-        const dataTypeName = DataTypeNames[dataTypeCode] || LDatatypeNames[dataTypeCode] || 'Unknown';
-        if (dataTypeName) {
-          dataType = DataType[dataTypeName] || Logix5000_DataType[dataTypeName];
-          if (typeof dataType === 'function') {
-            dataType = dataType();
-          }
-        }
-      }
-    } else {
-      const templateID = getBits(code, 0, 12);
-      this.template = {
-        id: templateID
-      };
-
-      dataType = DataType.ABBREV_STRUCT;
-    }
-    this.dataType = dataType;
-
-    // const parsed = parseTypeCode(code);
-    // if (parsed.template && parsed.template.id !== this.template.id) {
-    //   console.log(this);
-    //   console.log(parsed);
-    //   throw new Error('invalid code parsing')
-    // }
-  }
-}
-
-
-class Member {
-  constructor(typeCode, info, offset, name, host) {
-    this.type = new SymbolType(typeCode);
-    this.info = info;
-    this.offset = offset;
-    this.name = name;
-    this.host = !!host;
-  }
-}
-
-
-
-
-
-function getDataTypeName(code) {
-  return DataTypeNames[code] || LDatatypeNames[code] || 'Unknown';
-}
 
 
 function parseTemplateMemberName(data, offset, cb) {

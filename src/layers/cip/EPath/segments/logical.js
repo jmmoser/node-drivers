@@ -102,39 +102,9 @@ class LogicalSegment {
     return encodeTo(buffer, offset, padded, this.type.code, this.format.code, this.value);
   }
 
-  // static EncodeSize(padded, type, format, value) {
-  //   return encodeSize(padded, type, format, value); 
-  // }
-
-  // static Encode(padded, type, format, value) {
-  //   const buffer = Buffer.alloc(encodeSize(padded, type, format, value));
-  //   encodeTo(buffer, 0, padded, type, format, value);
-  //   return buffer;
-  // }
-
-  // static EncodeTo(buffer, offset, padded, type, format, value) {
-  //   return encodeTo(buffer, offset, padded, type, format, value);
-  // }
-
   static Decode(segmentCode, buffer, offset, padded, cb) {
     const type = getBits(segmentCode, 2, 5);
     const format = getBits(segmentCode, 0, 2);
-
-    validate(type, format);
-
-    // if (format === FormatCodes.Address32Bit) {
-    //   if (type !== TypeCodes.InstanceID || type !== TypeCodes.ConnectionPoint) {
-    //     throw new Error(`The 32-bit logical address format is only allowed for the logical Instance ID and Connection Point types. It is not allowed for any other Logical Type (reserved for future use).`);
-    //   }
-    // }
-
-    // if (type === TypeCodes.ServiceID && format !== 0) {
-    //   throw new Error(`Service ID Logical Type with format ${format} is reserved for future use`);
-    // }
-
-    // if (type === TypeCodes.Special && format !== 0) {
-    //   throw new Error(`Special Logical Type with format ${format} is reserved for future use`);
-    // }
 
     let value;
     if (type === TypeCodes.Special) {
@@ -150,7 +120,12 @@ class LogicalSegment {
       }
 
       if (valueSize > 1 && padded) {
-        offset += 1; /** Pad byte */
+        // offset += 1; /** Pad byte */
+        /** make sure pad byte is 0 */
+        const padByte = buffer.readUInt8(offset); offset += 1;
+        if (padByte !== 0) {
+          throw new Error(`Padded EPath Logical Segment pad byte is not zero. Received: ${padByte}`);
+        }
       }
 
       value = decodeUnsignedInteger(buffer, offset, valueSize);

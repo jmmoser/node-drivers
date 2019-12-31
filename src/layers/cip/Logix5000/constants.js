@@ -1,13 +1,24 @@
 'use strict';
 
 const {
-  DataType
+  DataType,
+  DataTypeCodes,
+  DataTypeNames
 } = require('../datatypes');
 
 
 const {
   InvertKeyValues
 } = require('../../../utils');
+
+const {
+  getBits
+} = require('../../../utils');
+
+// const {
+//   Logix5000_DataType,
+//   Logix5000_DatatypeNames
+// } = require('./constants');
 
 
 const Logix5000_DataTypeCodes = Object.freeze({
@@ -18,7 +29,7 @@ const Logix5000_DataTypeCodes = Object.freeze({
   Cxn: 0x7E
 });
 
-const LDatatypeNames = InvertKeyValues(Logix5000_DataTypeCodes);
+const Logix5000_DatatypeNames = InvertKeyValues(Logix5000_DataTypeCodes);
 
 const Logix5000_DataType = Object.freeze({
   Program() {
@@ -35,19 +46,20 @@ const Logix5000_DataType = Object.freeze({
   },
   Cxn() {
     return { type: Logix5000_DataType.Cxn, code: Logix5000_DataTypeCodes.Cxn };
-  },
+  }
 });
 
 
-const ClassCodes = {
+const Logix5000_ClassCodes = Object.freeze({
   Symbol: 0x6B,
-  Template: 0x6C
-};
+  Template: 0x6C,
+  Controller: 0xAC
+});
 
 
 
 /** 1756-PM020, pg. 16 */
-const SymbolServiceCodes = {
+const SymbolServiceCodes = Object.freeze({
   Read: 0x4C,
   ReadFragmented: 0x52,
   WriteTag: 0x4D,
@@ -56,17 +68,23 @@ const SymbolServiceCodes = {
   // MultipleServicePacket: 0x0A, // Common service defined by CIP
 
   GetInstanceAttributeList: 0x55
-};
+});
 
 const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
 
 
-const SymbolInstanceAttributeCodes = {
+const SymbolInstanceAttributeCodes = Object.freeze({
   Name: 0x01,
   Type: 0x02,
   Bytes: 0x07,
-  ArrayDimensionLengths: 0x08
-};
+  ArrayDimensionLengths: 0x08,
+  Unknown3: 3,
+  Unknown5: 5,
+  Unknown6: 6,
+  Unknown9: 9,
+  Unknown10: 10,
+  Unknown11: 11
+});
 
 const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
 
@@ -82,55 +100,72 @@ const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCode
  * - Constant
  *    Defines whether a tag value remains constant. Tags with this attribute set cannot be changed programmatically.)
  */
-const SymbolInstanceAttributeDataTypes = {
+const SymbolInstanceAttributeDataTypes = Object.freeze({
   [SymbolInstanceAttributeCodes.Name]: DataType.STRING,
-  [SymbolInstanceAttributeCodes.Type]: DataType.UINT,
+  [SymbolInstanceAttributeCodes.Type]: DataType.TRANSFORM(DataType.UINT, val => new SymbolType(val)),
   [SymbolInstanceAttributeCodes.Bytes]: DataType.UINT,
   [SymbolInstanceAttributeCodes.ArrayDimensionLengths]: DataType.ARRAY(DataType.UDINT, 0, 2),
-  3: DataType.UNKNOWN(4),
-  5: DataType.UNKNOWN(4),
-  6: DataType.UNKNOWN(4),
-  9: DataType.UNKNOWN(1),
-  10: DataType.UNKNOWN(1),
-  11: DataType.UNKNOWN(1)
-};
+  [SymbolInstanceAttributeCodes.Unknown3]: DataType.UNKNOWN(4),
+  [SymbolInstanceAttributeCodes.Unknown5]: DataType.UNKNOWN(4),
+  [SymbolInstanceAttributeCodes.Unknown6]: DataType.UNKNOWN(4),
+  [SymbolInstanceAttributeCodes.Unknown9]: DataType.UNKNOWN(1),
+  [SymbolInstanceAttributeCodes.Unknown10]: DataType.UNKNOWN(1),
+  [SymbolInstanceAttributeCodes.Unknown11]: DataType.UNKNOWN(1)
+});
 
 
-const TemplateServiceCodes = {
+const TemplateServiceCodes = Object.freeze({
   Read: 0x4C
-};
+});
 
 
-const TemplateInstanceAttributeCodes = {
+const TemplateInstanceAttributeCodes = Object.freeze({
   StructureHandle: 0x01, /** Calculated CRC value for members of the structure */
   MemberCount: 0x02, /** Number of members defined in the structure */
   DefinitionSize: 0x04, /** Size of the template definition structure */
   StructureSize: 0x05 /** Number of bytes transferred on the wire when the structure is read using the Read Tag service */
-};
+});
 
-const TemplateInstanceAttributeDataTypes = {
+const TemplateInstanceAttributeDataTypes = Object.freeze({
   [TemplateInstanceAttributeCodes.StructureHandle]: DataType.UINT,
   [TemplateInstanceAttributeCodes.MemberCount]: DataType.UINT,
   [TemplateInstanceAttributeCodes.DefinitionSize]: DataType.UDINT,
   [TemplateInstanceAttributeCodes.StructureSize]: DataType.UDINT
-};
+});
 
 
-const TemplateClassAttributeCodes = {
+const TemplateClassAttributeCodes = Object.freeze({
   Unknown1: 1,
   Unknown2: 2,
   Unknown3: 3,
   Unknown8: 8
-};
+});
 
-const TemplateClassAttributeDataTypes = {
+const TemplateClassAttributeDataTypes = Object.freeze({
   [TemplateClassAttributeCodes.Unknown1]: DataType.UNKNOWN(2),
   [TemplateClassAttributeCodes.Unknown2]: DataType.UNKNOWN(4),
   [TemplateClassAttributeCodes.Unknown3]: DataType.UNKNOWN(4),
   [TemplateClassAttributeCodes.Unknown8]: DataType.UNKNOWN(4),
-};
+});
 
 
+const ControllerInstanceAttributeCodes = Object.freeze({
+  Unknown1: 1,
+  Unknown2: 2,
+  Unknown3: 3,
+  Unknown4: 4,
+  Unknown10: 10
+});
+
+const ControllerInstanceAttributeNames = InvertKeyValues(ControllerInstanceAttributeCodes);
+
+const ControllerInstanceAttributeDataTypes = Object.freeze({
+  [ControllerInstanceAttributeCodes.Unknown1]: DataType.UINT,
+  [ControllerInstanceAttributeCodes.Unknown2]: DataType.UINT,
+  [ControllerInstanceAttributeCodes.Unknown3]: DataType.UDINT,
+  [ControllerInstanceAttributeCodes.Unknown4]: DataType.UDINT,
+  [ControllerInstanceAttributeCodes.Unknown10]: DataType.UDINT
+});
 
 const GenericServiceStatusDescriptions = {
   0x04: 'A syntax error was detected decoding the Request Path',
@@ -152,11 +187,57 @@ const GenericServiceStatusDescriptions = {
 };
 
 
+class SymbolType {
+  constructor(code) {
+    this.code = code;
+    this.atomic = getBits(code, 15, 16) === 0;
+    this.system = getBits(code, 12, 13) > 0;
+    this.dimensions = getBits(code, 13, 15);
+
+    let dataType;
+
+    if (this.atomic) {
+      const dataTypeCode = getBits(code, 0, 8);
+      if (dataTypeCode === DataTypeCodes.BOOL) {
+        dataType = DataType.BOOL(getBits(code, 8, 11));
+      } else {
+        const dataTypeName = DataTypeNames[dataTypeCode] || Logix5000_DatatypeNames[dataTypeCode] || 'Unknown';
+        if (dataTypeName) {
+          dataType = DataType[dataTypeName] || Logix5000_DataType[dataTypeName];
+          if (typeof dataType === 'function') {
+            dataType = dataType();
+          }
+        }
+      }
+    } else {
+      const templateID = getBits(code, 0, 12);
+      this.template = {
+        id: templateID
+      };
+
+      dataType = DataType.ABBREV_STRUCT;
+    }
+    this.dataType = dataType;
+  }
+}
+
+
+class Member {
+  constructor(typeCode, info, offset, name, host) {
+    this.type = new SymbolType(typeCode);
+    this.info = info;
+    this.offset = offset;
+    this.name = name;
+    this.host = !!host;
+  }
+}
+
+
 module.exports = {
   Logix5000_DataTypeCodes,
-  LDatatypeNames,
+  Logix5000_DatatypeNames,
   Logix5000_DataType,
-  ClassCodes,
+  Logix5000_ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,
   SymbolInstanceAttributeCodes,
@@ -169,5 +250,10 @@ module.exports = {
   TemplateInstanceAttributeCodes,
   TemplateInstanceAttributeDataTypes,
   // TemplateServiceErrorDescriptions,
-  GenericServiceStatusDescriptions
+  GenericServiceStatusDescriptions,
+  Member,
+  SymbolType,
+  ControllerInstanceAttributeCodes,
+  ControllerInstanceAttributeDataTypes,
+  ControllerInstanceAttributeNames
 };

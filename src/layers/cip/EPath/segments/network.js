@@ -78,7 +78,6 @@ class NetworkSegment {
       case SubtypeCodes.Extended:
         /** variable */
         throw new Error(`Network segment subtype ${SubtypeNames[subtype]} not currently supported. TODO`);
-        break;
       default:
         throw new Error(`Reserved Network segment subtype ${subtype}`);
     }

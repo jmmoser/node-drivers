@@ -13,17 +13,17 @@ const {
 } = require('../../../../utils');
 
 
-const ExtendedStringFormatCodes = {
+const ExtendedStringFormatCodes = Object.freeze({
   DoubleByteCharacters: 1,
   TripleByteCharacters: 2,
   Numeric: 6
-};
+});
 
-const ExtendedStringNumericTypeCodes = {
+const ExtendedStringNumericTypeCodes = Object.freeze({
   USINT: 6,
   UINT: 7,
   UDINT: 8
-};
+});
 
 
 class SymbolicSegment {
@@ -86,9 +86,8 @@ class SymbolicSegment {
           case ExtendedStringNumericTypeCodes.UDINT:
             return 6;
           default:
-            break;
+            throw new Error(`Invalid Port Segment Extended String Format Numeric size ${this.extendedSize}`);
         }
-        break;
       }
       default:
         return 1 + this.value.length;

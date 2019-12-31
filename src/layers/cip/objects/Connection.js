@@ -1,8 +1,8 @@
 'use strict';
 
 const CIPRequest = require('../core/request');
-const { CallbackPromise, InvertKeyValues } = require('../../../utils');
-const { CommonServices } = require('./CIP');
+const { InvertKeyValues } = require('../../../utils');
+const { CommonServiceCodes, GeneralStatusCodes } = require('../core/constants');
 const { DataType } = require('../datatypes');
 // const EPath = require('../EPath');
 const Layer = require('./../../Layer');
@@ -93,7 +93,7 @@ class Connection extends Layer {
   //     // InstanceAttributeCodes.ConsumedConnectionPath
   //   ];
 
-  //   // const service = CommonServices.GetAttributeList;
+  //   // const service = CommonServiceCodes.GetAttributeList;
 
   //   // const data = Encode(DataType.STRUCT([
   //   //   DataType.UINT,
@@ -107,7 +107,7 @@ class Connection extends Layer {
   //   for (let i = 0; i < attributes.length; i++) {
   //     const attribute = attributes[i];
 
-  //     const service = CommonServices.GetAttributeSingle;
+  //     const service = CommonServiceCodes.GetAttributeSingle;
 
   //     const path = EPath.Encode(true, [
   //       new EPath.Segments.Logical.ClassID(Classes.Connection),
@@ -136,52 +136,52 @@ class Connection extends Layer {
   //   }
   // }
 
+  disconnect() {
+    if (this._connectionState === 0) {
+      return;
+    }
 
-  disconnect(callback) {
-    return CallbackPromise(callback, resolver => {
-      if (this._connectionState === 0) {
-        return resolver.resolve();
-      }
+    if (this._connectionState === -1) {
+      return this._disconnect;
+    }
 
-      if (this._connectionState === -1) {
-        return;
-      }
+    this._connectionState = -1;
 
-      stopResend(this);
+    stopResend(this);
 
-      this._disconnectCallback = () => {
-        resolver.resolve();
-      };
+    this._disconnect = new Promise(resolve => {
+      const disconnectTimeout = setTimeout(() => {
+        resolve();
+      }, 5000);
 
-      this._disconnectTimeout = setTimeout(() => {
-        this._disconnectCallback();
-      }, 10000);
-
-      this._connectionState = -1;
-
-      const request = ConnectionManager.ForwardCloseRequest(this);
+      const request = ConnectionManager.ForwardClose(this);
 
       send(this, false, true, request, (err, res) => {
-        if (res.status.code === 0) {
-          const reply = ConnectionManager.ForwardCloseReply(res.data);
+        clearTimeout(disconnectTimeout);
 
-          this._connectionState = 0;
-          this.sendInfo = null;
-          // console.log('CIP Connection closed');
-          if (this._disconnectCallback) {
-            this._disconnectCallback(reply);
-            clearTimeout(this._disconnectTimeout);
-            this._disconnectCallback = null;
+        if (err || res == null || res.status.code !== 0) {
+          console.log('CIP connection unsuccessful close');
+          // ConnectionManager.TranslateResponse(res);
+          if (err) {
+            console.log(err);
+          } else if (res) {
+            console.log(res);
           }
+          // this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
+          this.destroy('Forward Close error');
         } else {
-          // console.log('CIP connection unsuccessful close');
-          // console.log(res);
-          ConnectionManager.TranslateResponse(res);
-          // console.log(res);
-          this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
+          // this._connectionState = 0;
+          // this._sequenceCount = 0;
+          // this.sendInfo = null;
+          // console.log('CIP Connection closed');
+          // console.log(res.value);
         }
+        this._connectionState = 0;
+        resolve();
       });
     });
+
+    return this._disconnect;
   }
 
 
@@ -232,6 +232,8 @@ class Connection extends Layer {
 
   handleDestroy(error) {
     this._connectionState === 0;
+    this._sequenceCount = 0;
+    this.sendInfo = null;
   }
 
 
@@ -304,7 +306,7 @@ function send(connection, connected, internal, requestObj, contextOrCallback) {
     connection.setContextForID(sequenceCount, {
       context,
       internal,
-      request
+      request: requestObj
     });
 
     const buffer = Buffer.allocUnsafe(request.length + 2);
@@ -322,8 +324,100 @@ function send(connection, connected, internal, requestObj, contextOrCallback) {
     connection.send(request, null, false, {
       internal,
       context,
-      request
+      request: requestObj
     });
+  }
+}
+
+
+function handleUnconnectedMessage(self, data, info, context) {
+  if (!context) {
+    console.log('CIP Connection unhandled unconnected message, no context', data);
+    return;
+  }
+  // console.log(data, info, context);
+
+  if (context.internal === true) {
+    const callback = self.callbackForContext(context.context);
+    if (callback) {
+      const request = context.request;
+      let response;
+      if (request instanceof CIPRequest) {
+        // console.log('USING CIPREQUEST');
+        response = request.response(data);
+        // console.log(response);
+      } else {
+        console.log('!!!!!!!USING MESSAGE ROUTER');
+        response = MessageRouter.Reply(data);
+        response.request = request;
+        console.log(response);
+      }
+
+      callback(
+        response.status.error ? response.status.description || 'CIP Error' : null,
+        response
+      );
+    }
+    // else {
+    //   /** Request may have already timed out but we still received the response later */
+    // }
+  } else {
+    /** Unconnected message for upper layer */
+    self.forward(data, info, context.context);
+  }
+}
+
+
+function handleConnectedMessage(self, data, info) {
+  if (self.sendInfo == null || info == null) {
+    console.log(
+      'CIP Connection unhandled connected message, not connected',
+      data,
+      info
+    );
+    return;
+  }
+
+  if (self.sendInfo.connectionID !== info.connectionID || self.sendInfo.responseID !== info.responseID) {
+    console.log(
+      `CIP Connection unhandled connected message, invalid Originator and/or Target connection identifiers`,
+      data,
+      info
+    );
+    return;
+  }
+
+  const sequenceCount = data.readUInt16LE(0);
+
+  const savedContext = self.getContextForID(sequenceCount);
+  if (!savedContext) {
+    /* This happens when the last message is resent to prevent CIP connection timeout disconnect */
+    return;
+  }
+
+  data = data.slice(2);
+
+  if (savedContext.internal) {
+    const callback = self.callbackForContext(savedContext.context);
+    if (callback != null) {
+      const request = savedContext.request;
+      let response;
+      if (request instanceof CIPRequest) {
+        response = request.response(data);
+      } else {
+        response = MessageRouter.Reply(data);
+        response.request = request;
+      }
+
+      callback(
+        response.status.error ? response.status.description || 'CIP Error' : null,
+        response
+      );
+    } else {
+      console.log('CIP.Connection: Unhandled data received.', data);
+    }
+  } else {
+    self.forward(data, null, savedContext.context);
   }
 }
 
@@ -435,95 +529,6 @@ function mergeOptionsWithDefaults(self, options) {
 }
 
 
-
-function handleUnconnectedMessage(self, data, info, context) {
-  if (!context) {
-    console.log('CIP Connection unhandled unconnected message, no context', data);
-    return;
-  }
-
-  if (context.internal === true) {
-    const callback = self.callbackForContext(context.context);
-    if (callback) {
-      const request = context.request;
-      let response;
-      if (request instanceof CIPRequest) {
-        // console.log('USING CIPREQUEST');
-        response = request.response(data);
-      } else {
-        response = MessageRouter.Reply(data);
-        response.request = request;
-      }
-
-      callback(
-        response.status.error ? response.status.description || 'CIP Error' : null,
-        response
-      );
-    }
-    // else {
-    //   /** Request may have already timed out but we still received the response later */
-    // }
-  } else {
-    /** Unconnected message for upper layer */
-    self.forward(data, info, context.context);
-  }
-}
-
-
-function handleConnectedMessage(self, data, info) {
-  if (self.sendInfo == null || info == null) {
-    console.log(
-      'CIP Connection unhandled connected message, not connected',
-      data,
-      info
-    );
-    return;
-  }
-
-  if (self.sendInfo.connectionID !== info.connectionID || self.sendInfo.responseID !== info.responseID) {
-    console.log(
-      `CIP Connection unhandled connected message, invalid Originator and/or Target connection identifiers`,
-      data,
-      info
-    );
-    return;
-  }
-
-  const sequenceCount = data.readUInt16LE(0);
-
-  const savedContext = self.getContextForID(sequenceCount);
-  if (!savedContext) {
-    /* This happens when the last message is resent to prevent CIP connection timeout disconnect */
-    return;
-  }
-
-  data = data.slice(2);
-
-  if (savedContext.internal) {
-    const callback = self.callbackForContext(savedContext.context);
-    if (callback != null) {
-      const request = savedContext.request;
-      let response;
-      if (request instanceof CIPRequest) {
-        response = request.response(data);
-      } else {
-        response = MessageRouter.Reply(data);
-        response.request = request;
-      }
-
-      callback(
-        response.status.error ? response.status.description || 'CIP Error' : null,
-        response
-      );
-    } else {
-      console.log('CIP.Connection: Unhandled data received.', data);
-    }
-  } else {
-    self.forward(data, null, savedContext.context);
-  }
-}
-
-
 function incrementSequenceCount(self) {
   self._sequenceCount = (self._sequenceCount + 1) % 0x10000;
   return self._sequenceCount;
@@ -550,11 +555,11 @@ function stopResend(self) {
 // CIP Vol1 Table 3-4.2
 const ClassServices = {
   /** Common */
-  Create: CommonServices.Create,
-  Delete: CommonServices.Delete,
-  Reset: CommonServices.Reset,
-  FindNextObjectInstance: CommonServices.FindNextObjectInstance,
-  GetAttributeSingle: CommonServices.GetAttributeSingle,
+  Create: CommonServiceCodes.Create,
+  Delete: CommonServiceCodes.Delete,
+  Reset: CommonServiceCodes.Reset,
+  FindNextObjectInstance: CommonServiceCodes.FindNextObjectInstance,
+  GetAttributeSingle: CommonServiceCodes.GetAttributeSingle,
   /** Class Specific */
   ConnectionBind: 0x4B,
   ProducingApplicationLookup: 0x4C,
@@ -674,7 +679,8 @@ function connect(self) {
       if (err) {
         self._connectionState = 0;
 
-        if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === 8) {
+        if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === GeneralStatusCodes.ServiceNotSupported) {
+          console.log(res);
           self.networkConnectionParameters.maximumSize = 500;
           self.large = false;
           self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
@@ -690,7 +696,7 @@ function connect(self) {
         }
       } else {
         if (self._connectionState === 1) {
-          const reply = ConnectionManager.ForwardOpenReply(res.data);
+          const reply = res.value;
           self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
           self._TtoOConnectionID = reply.TtoONetworkConnectionID;
           self._OtoTPacketRate = reply.OtoTActualPacketRate;

@@ -1,7 +1,7 @@
 'use strict';
 
 const EPath = require('./EPath');
-const CIP = require('./objects/CIP');
+const { ClassCodes } = require('./core/constants');
 const CIPLayer = require('./objects/CIPLayer');
 const MessageRouter = require('./objects/MessageRouter');
 
@@ -71,7 +71,7 @@ class PCCC extends CIPLayer {
 }
 
 const PCCC_EPATH = EPath.Encode(true, [
-  new EPath.Segments.Logical.ClassID(CIP.Classes.PCCC),
+  new EPath.Segments.Logical.ClassID(ClassCodes.PCCC),
   new EPath.Segments.Logical.InstanceID(0x01)
 ]);
 

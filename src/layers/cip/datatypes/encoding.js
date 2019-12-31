@@ -2,11 +2,12 @@
 
 const EPath = require('../epath');
 const { DataTypeCodes } = require('./codes');
+const convertToObject = require('./convertToObject');
 
 
 
 function EncodeSize(dataType, value) {
-  if (dataType instanceof Function) dataType = dataType();
+  dataType = convertToObject(dataType);
 
   const dataTypeCode = dataType.code != null ? dataType.code : dataType;
 
