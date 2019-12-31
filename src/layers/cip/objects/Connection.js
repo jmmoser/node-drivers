@@ -609,11 +609,18 @@ const InstanceAttributeDataTypes = {
   [InstanceAttributeCodes.ConsumedConnectionPath]: DataType.EPATH(false),
   [InstanceAttributeCodes.ProductionInhibitTime]: DataType.UINT,
   [InstanceAttributeCodes.ConnectionTimeoutMultiplier]: DataType.USINT,
-  [InstanceAttributeCodes.ConnectionBindingList]: DataType.STRUCT([DataType.SMEMBER(DataType.UINT, true), DataType.PLACEHOLDER], function (members) {
-    if (members.length === 1) {
-      return DataType.ARRAY(DataType.UINT, 0, members[0]);
+  [InstanceAttributeCodes.ConnectionBindingList]: DataType.TRANSFORM(
+    DataType.STRUCT([
+      DataType.UINT,
+      DataType.PLACEHOLDER(length => DataType.ABBREV_ARRAY(DataType.UINT, length))
+    ], function (members, dt) {
+      if (members.length === 1) {
+        return dt.resolve(members[0]);
+      }
+    }), function(val) {
+      return val[1];
     }
-  })
+  )
 };
 
 
