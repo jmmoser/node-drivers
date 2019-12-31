@@ -4,16 +4,11 @@ const CIPRequest = require('../core/request');
 const { InvertKeyValues } = require('../../../utils');
 const { CommonServiceCodes, GeneralStatusCodes } = require('../core/constants');
 const { DataType } = require('../datatypes');
-// const EPath = require('../EPath');
 const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
 const MessageRouter = require('./MessageRouter');
 
-// const FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.ForwardOpen;
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
-// const FORWARD_CLOSE_SERVICE = ConnectionManager.ServiceCodes.ForwardClose;
-// // const FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.ForwardOpen | (1 << 7);
-// // const FORWARD_CLOSE_SERVICE = ConnectionManager.ServiceCodes.ForwardClose | (1 << 7);
 
 const MaximumLargeConnectionSize = 0xFFFF;
 const MaximumNormalConnectionSize = 0b111111111; /** 511 */
@@ -689,7 +684,6 @@ function connect(self) {
           connect(self);
         } else {
           // console.log('CIP Connection Error: Status is not successful or service is not correct:');
-          // console.log(res);
           ConnectionManager.TranslateResponse(res);
           // console.log(res);
           self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
@@ -706,7 +700,6 @@ function connect(self) {
           const rpi = self._OtoTPacketRate < self._TtoOPacketRate ? self._OtoTPacketRate : self._TtoOPacketRate;
           self._connectionTimeout = 4 * (rpi / 1e6) * Math.pow(2, self.ConnectionTimeoutMultiplier);
 
-          // EIP specific information
           self.sendInfo = {
             connectionID: self._OtoTConnectionID,
             responseID: self._TtoOConnectionID
