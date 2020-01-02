@@ -123,10 +123,25 @@ class InfoError extends Error {
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, InfoError);
     }
-
+    this.name = 'InfoError';
     this.info = info;
   }
 }
+
+
+// function InfoError(info, message) {
+//   Error.call(this, message);
+
+//   this.message = message;
+//   this.info = info;
+
+//   // hide custom error implementation details from end-users
+//   Error.captureStackTrace(this, this.constructor);
+// }
+
+// InfoError.prototype = Object.create(Error.prototype);
+// InfoError.prototype.constructor = InfoError;
+// InfoError.prototype.name = 'InfoError';
 
 
 function CallbackPromise(callback, func, timeout) {

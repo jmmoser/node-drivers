@@ -19,6 +19,8 @@ const {
   InvertKeyValues
 } = require('../../../../utils');
 
+const { ClassNames } = require('../../core/constants');
+
 
 const TypeCodes = Object.freeze({
   ClassID: 0,
@@ -86,6 +88,10 @@ class LogicalSegment {
       name: formatName
     };
     this.value = value;
+
+    if (type === TypeCodes.ClassID && ClassNames[value]) {
+      this.className = ClassNames[value];
+    }
   }
 
   encodeSize(padded) {

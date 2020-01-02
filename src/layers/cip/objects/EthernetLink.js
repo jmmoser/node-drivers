@@ -1,9 +1,16 @@
 'use strict';
 
-const EPath = require('../epath');
-const { ClassCodes, CommonServiceCodes } = require('../core/constants');
-const { DataType } = require('../datatypes');
+const CIPMetaObject = require('../core/object');
+const CIPAttribute = require('../core/attribute');
+const CIPFeatureGroup = require('../core/featuregroup');
 const CIPRequest = require('../core/request');
+const { ClassCodes, CommonServiceCodes } = require('../core/constants');
+const EPath = require('../epath');
+const { DataType } = require('../datatypes');
+
+
+const CLASS_CODE = ClassCodes.EthernetLink;
+
 
 
 const InstanceAttributeCodes = {
@@ -23,8 +30,8 @@ const InstanceAttributeCodes = {
   PortTrafficOverloadAlarm: 107
 };
 
-const InstanceAttributeDataTypes = {
-  [InstanceAttributeCodes.InterfaceSpeed]: DataType.UDINT,
+const InstanceAttribute = {
+  InterfaceSpeed: new CIPAttribute.Instance(1, 'Interface Speed', DataType.UDINT),
   /**
    * Bit 0 - Link Status
    *  Value 0: Inactive link
@@ -33,9 +40,9 @@ const InstanceAttributeDataTypes = {
    *  Value 0: Half duplex
    *  Value 1: Full duplex
    */
-  [InstanceAttributeCodes.InterfaceFlags]: DataType.DWORD,
-  [InstanceAttributeCodes.PhysicalAddress]: DataType.ARRAY(DataType.SINT, 0, 6),
-  [InstanceAttributeCodes.InterfaceCounters]: DataType.STRUCT([
+  InterfaceFlags: new CIPAttribute.Instance(2, 'Interface Flags', DataType.DWORD),
+  PhysicalAddress: new CIPAttribute.Instance(3, 'Physical Address', DataType.ABBREV_ARRAY(DataType.SINT, 6)),
+  InterfaceCounters: new CIPAttribute.Instance(4, 'Interface Counters', DataType.STRUCT([
     DataType.UDINT, /** Inbound Octets */
     DataType.UDINT, /** Inbound Unicast Packets */
     DataType.UDINT, /** Inbound Non-Unicast Packets */
@@ -47,8 +54,8 @@ const InstanceAttributeDataTypes = {
     DataType.UDINT, /** Outbound Non-Unicast Packets */
     DataType.UDINT, /** Outbound Discarded Packets */
     DataType.UDINT /** Outbound Error Packets */
-  ]),
-  [InstanceAttributeCodes.MediaCounters]: DataType.STRUCT([
+  ])),
+  MediaCounters: new CIPAttribute.Instance(5, 'Media Counters', DataType.STRUCT([
     DataType.UDINT, /** Alignment Errors, Received frames that are not an integral number of octets in length */
     DataType.UDINT, /** FCS Errors */
     DataType.UDINT, /** Single Collisions */
@@ -61,8 +68,8 @@ const InstanceAttributeDataTypes = {
     DataType.UDINT, /** Carrier Sense Errors */
     DataType.UDINT, /** Frame Too Long */
     DataType.UDINT /** MAC Receive Errors */
-  ]),
-  [InstanceAttributeCodes.InterfaceControl]: DataType.STRUCT([
+  ])),
+  InterfaceControl: new CIPAttribute.Instance(6, 'Interface Control', DataType.STRUCT([
     /** 
      * Control Bits
      * Bit 0: Auto-Negotiate
@@ -79,17 +86,19 @@ const InstanceAttributeDataTypes = {
      * Speed at which the interface shall be forced to operate
      * */
     DataType.UINT
-  ]),
-  [InstanceAttributeCodes.InterfacePortIndex]: DataType.UDINT,
-  [InstanceAttributeCodes.InterfacePortDescription]: DataType.STRING,
+  ])),
+  InterfacePortIndex: new CIPAttribute.Instance(100, 'Interface Port Index', DataType.UDINT),
+  InterfacePortDescription: new CIPAttribute.Instance(101, 'Interface Port Description', DataType.STRING),
   /**
    * Value 0: Disabled Broadcast Storm Protection
    * Value 1: Enable Broadcast Storm Protection
    */
-  [InstanceAttributeCodes.BroadcastStormProtection]: DataType.USINT,
-  [InstanceAttributeCodes.InterfaceUtilization]: DataType.USINT,
-  [InstanceAttributeCodes.UtilizationAlarmUpperThreshold]: DataType.USINT,
-  [InstanceAttributeCodes.UtilizationAlarmLowerThreshold]: DataType.USINT,
+  BroadcastStormProtection: new CIPAttribute.Instance(102, 'Broadcast Storm Protection', DataType.USINT),
+
+  InterfaceUtilization: new CIPAttribute.Instance(103, 'Interface Utilization', DataType.USINT),
+  UtilizationAlarmUpperThreshold: new CIPAttribute.Instance(104, 'Utilization Alarm Upper Threshold', DataType.USINT),
+  UtilizationAlarmLowerThreshold: new CIPAttribute.Instance(105, 'Utilization Alarm Lower Threshold', DataType.USINT),
+  
   /**
    * Value 0: Ignore
    * Value 1: On (Relay 1)
@@ -97,77 +106,26 @@ const InstanceAttributeDataTypes = {
    * Value 3: Off (Relay 1)
    * Value 4: Off (Relay 2)
    * */
-  [InstanceAttributeCodes.PortLinkAlarm]: DataType.USINT,
+  PortLinkAlarm: new CIPAttribute.Instance(106, 'Port Link Alarm', DataType.USINT),
   /**
    * Value 0: Disable
    * Value 1: Enable (Relay 1)
    * Value 2: Enable (Relay 2)
    */
-  [InstanceAttributeCodes.PortTrafficOverloadAlarm]: DataType.USINT
+  PortTrafficOverloadAlarm: new CIPAttribute.Instance(107, 'Port Traffic Overload Alarm', DataType.USINT)
 };
 
 
-class EthernetLink {
-  static DecodeInstanceAttribute(attribute, data, offset, cb) {
-    const dataType = InstanceAttributeDataTypes[attribute];
-    if (!dataType) {
-      throw new Error(`Unknown instance attribute: ${attribute}`);
-    }
+const CIPObject = CIPMetaObject(
+  CLASS_CODE,
+  ClassAttributeGroup,
+  InstanceAttributeGroup,
+  null
+);
 
-    let value;
-    offset = Decode(dataType, data, offset, val => value = val);
 
-    // switch (attribute) {
-    //   case InstanceAttributeCodes.Type: {
-    //     value = {
-    //       code: value,
-    //       name: PortTypeNames[value] || 'Unknown'
-    //     };
-    //     break;
-    //   }
-    //   default:
-    //     break;
-    // }
+class EthernetLink extends CIPObject {
 
-    if (typeof cb === 'function') {
-      cb({
-        code: attribute,
-        name: InstanceAttributeNames[attribute] || 'Unknown',
-        value
-      });
-    }
-    return offset;
-  }
-
-  static GetClassAttribute(attribute) {
-    return new CIPRequest(
-      CommonServiceCodes.GetAttributeSingle,
-      EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(ClassCodes.EthernetLink),
-        new EPath.Segments.Logical.InstanceID(0),
-        new EPath.Segments.Logical.AttributeID(attribute)
-      ]),
-      null,
-      // (buffer, offset, cb) => {
-      //   this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
-      // }
-    );
-  }
-
-  static GetInstanceAttribute(instance, attribute) {
-    return new CIPRequest(
-      CommonServiceCodes.GetAttributeSingle,
-      EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(ClassCodes.EthernetLink),
-        new EPath.Segments.Logical.InstanceID(instance),
-        new EPath.Segments.Logical.AttributeID(attribute)
-      ]),
-      null,
-      // (buffer, offset, cb) => {
-      //   this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
-      // }
-    );
-  }
 }
 
 
