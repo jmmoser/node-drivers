@@ -7,8 +7,43 @@ const CIPAttribute = require('./attribute');
 const { Decode } = require('../datatypes/decoding');
 
 
-function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, statusDescriptions) {
+function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, extras) {
+  extras = Object.assign({
+    GetAttributesAllInstanceAttributes: []
+  }, extras);
+
   return class CIPObject {
+    static GetInstanceAttributesAll(instanceID) {
+      return new CIPRequest(
+        CommonServiceCodes.GetAttributesAll,
+        EPath.Encode(true, [
+          new EPath.Segments.Logical.ClassID(classCode),
+          new EPath.Segments.Logical.InstanceID(instanceID)
+        ]),
+        null,
+        (buffer, offset, cb) => {
+          const attributeResults = [];
+          const attributes = extras.GetAttributesAllInstanceAttributes;
+          for (let i = 0; i < attributes.length; i++) {
+            if (offset < buffer.length) {
+              offset = this.DecodeInstanceAttribute(
+                buffer,
+                offset,
+                attributes[i],
+                val => attributeResults.push(val)
+              );
+            } else {
+              break;
+            }
+          }
+          if (typeof cb === 'function') {
+            cb(attributeResults);
+          }
+          return offset;
+        }
+      );
+    }
+
     static GetClassAttribute(attribute) {
       attribute = classAttributeGroup.getCode(attribute);
       return new CIPRequest(
@@ -78,7 +113,10 @@ function DecodeAttribute(buffer, offset, attribute, cb) {
 
   if (typeof cb === 'function') {
     cb({
-      attribute,
+      attribute: {
+        code: attribute.code,
+        name: attribute.name
+      },
       value
     });
   }
