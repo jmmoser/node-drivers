@@ -376,30 +376,6 @@ function assert(condition, message) {
 })();
 
 
-
-// (() => {
-//   const CIP = require('../src/layers/cip/objects/CIP');
-//   const EPath = require('../src/layers/cip/objects/EPath');
-//   const MessageRouter = require('../src/layers/cip/objects/MessageRouter');
-//   const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
-
-//   const request = MessageRouter.Request(
-//     CIP.CommonServices.GetAttributesAll,
-//     EPath.Encode(true, [
-//       new EPath.Segments.Logical.ClassID(CIP.Classes.Identity),
-//       new EPath.Segments.Logical.InstanceID(0x01)
-//     ])
-//   );
-
-//   const routePath = Buffer.from([
-//     0x01,
-//     0x00
-//   ]);
-
-//   console.log(ConnectionManager.UnconnectedSend(request, routePath));
-// })();
-
-
 (() => {
   const CIP = require('../src/layers/cip/objects/CIP');
   const EPath = require('../src/layers/cip/EPath');

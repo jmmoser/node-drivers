@@ -63,73 +63,6 @@ class Connection extends Layer {
     this._sequenceCount = 0;
   }
 
-  
-  // async readAttributes() {
-  //   if (this._connectionState === 0) {
-  //     // return {};
-  //     this.connect();
-  //   }
-
-  //   if (this.sendInfo == null) {
-  //     return;
-  //   }
-
-  //   const attributes = [
-  //     InstanceAttributeCodes.State,
-  //     // InstanceAttributeCodes.Type,
-  //     // InstanceAttributeCodes.TransportClassTrigger,
-  //     // InstanceAttributeCodes.ProducedConnectionSize,
-  //     // InstanceAttributeCodes.ConsumedConnectionSize,
-  //     // InstanceAttributeCodes.ExpectedPacketRate,
-  //     // InstanceAttributeCodes.WatchdogTimeoutAction,
-  //     // InstanceAttributeCodes.ProducedConnectionPathLength,
-  //     // InstanceAttributeCodes.ProducedConnectionPath,
-  //     // InstanceAttributeCodes.ConsumedConnectionPathLength,
-  //     // InstanceAttributeCodes.ConsumedConnectionPath
-  //   ];
-
-  //   // const service = CommonServiceCodes.GetAttributeList;
-
-  //   // const data = Encode(DataType.STRUCT([
-  //   //   DataType.UINT,
-  //   //   DataType.ARRAY(DataType.UINT, 0, attributes.length - 1)
-  //   // ]), [
-  //   //   attributes.length,
-  //   //   attributes
-  //   // ]);
-  //   // console.log(data);
-
-  //   for (let i = 0; i < attributes.length; i++) {
-  //     const attribute = attributes[i];
-
-  //     const service = CommonServiceCodes.GetAttributeSingle;
-
-  //     const path = EPath.Encode(true, [
-  //       new EPath.Segments.Logical.ClassID(Classes.Connection),
-  //       // new EPath.Segments.Logical.InstanceID(this._OtoTConnectionID),
-  //       new EPath.Segments.Logical.InstanceID(this._TtoOConnectionID),
-  //       new EPath.Segments.Logical.AttributeID(attribute)
-  //     ]);
-
-  //     // console.log(path);
-  //     // const path = Buffer.from([]);
-  //     // const data = Encode(DataType.USINT, attribute);
-  //     const data = null;
-  //     const request = MessageRouter.Request(service, path, data);
-
-  //     await new Promise(resolve => {
-  //       sendConnected(this, true, request, this.contextCallback(function(err, res) {
-  //         if (err) {
-  //           console.log(err);
-  //           console.log(res);
-  //         } else {
-  //           console.log(res);
-  //         }
-  //         resolve();
-  //       }));
-  //     });
-  //   }
-  // }
 
   disconnect() {
     if (this._connectionState === 0) {
@@ -681,19 +614,21 @@ function connect(self) {
       if (err) {
         self._connectionState = 0;
 
-        if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === GeneralStatusCodes.ServiceNotSupported) {
-          console.log(res);
-          self.networkConnectionParameters.maximumSize = 500;
-          self.large = false;
-          self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
-          self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
-          console.log('Large forward open not supported. Attempting normal forward open');
-          connect(self);
-        } else {
-          // console.log('CIP Connection Error: Status is not successful or service is not correct:');
-          ConnectionManager.TranslateResponse(res);
-          // console.log(res);
-          self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
+        if (res) {
+          if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === GeneralStatusCodes.ServiceNotSupported) {
+            console.log(res);
+            self.networkConnectionParameters.maximumSize = 500;
+            self.large = false;
+            self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
+            self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
+            console.log('Large forward open not supported. Attempting normal forward open');
+            connect(self);
+          } else {
+            // console.log('CIP Connection Error: Status is not successful or service is not correct:');
+            ConnectionManager.TranslateResponse(res);
+            // console.log(res);
+            self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
+          }
         }
       } else {
         if (self._connectionState === 1) {

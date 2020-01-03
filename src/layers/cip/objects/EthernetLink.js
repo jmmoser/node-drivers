@@ -3,9 +3,7 @@
 const CIPMetaObject = require('../core/object');
 const CIPAttribute = require('../core/attribute');
 const CIPFeatureGroup = require('../core/featuregroup');
-// const CIPRequest = require('../core/request');
 const { ClassCodes } = require('../core/constants');
-// const EPath = require('../epath');
 const { DataType } = require('../datatypes');
 const { getBits } = require('../../../utils');
 
@@ -13,9 +11,7 @@ const { getBits } = require('../../../utils');
 const CLASS_CODE = ClassCodes.EthernetLink;
 
 
-const ClassAttribute = Object.freeze({
-
-});
+const ClassAttribute = Object.freeze({});
 
 const InstanceAttribute = Object.freeze({
   InterfaceSpeed: new CIPAttribute.Instance(1, 'Interface Speed', DataType.TRANSFORM(

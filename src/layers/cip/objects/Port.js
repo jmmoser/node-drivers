@@ -49,8 +49,8 @@ const PortTypeNames = Object.freeze({
 
 
 const ClassAttribute = Object.freeze({
-  MaxInstance: CIPAttribute.Class.MaxInstance(),
-  NumberOfInstances: CIPAttribute.Class.NumberOfInstances(),
+  // MaxInstance: CIP
+  // NumberOfInstances: CIPAttribute.Class.NumberOfInstances(),
   EntryPort: new CIPAttribute.Class(8, 'Entry Port', DataType.UINT),
   InstanceInfo: new CIPAttribute.Class(9, 'Instance Info', DataType.ABBREV_ARRAY(
     DataType.STRUCT([

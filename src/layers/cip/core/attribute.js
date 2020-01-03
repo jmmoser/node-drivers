@@ -1,6 +1,6 @@
 'use strict';
 
-const { DataType } = require('../datatypes/types');
+// const { DataType } = require('../datatypes/types');
 
 const CIPFeature = require('./feature');
 

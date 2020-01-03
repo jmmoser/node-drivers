@@ -6,7 +6,6 @@ const { InvertKeyValues } = require('../../../utils');
 const { ClassCodes } = require('../core/constants');
 const CIPRequest = require('../core/request');
 const EPath = require('../epath');
-const MessageRouter = require('./MessageRouter');
 
 let ConnectionSerialNumberCounter = 0x0001;
 let OtoTNetworkConnectionIDCounter = 0x20000002;
@@ -51,7 +50,7 @@ class ConnectionManager {
     offset = data.writeUInt8(0, offset); /** Reserved */
     offset += route.copy(data, offset);
 
-    return buildRequest(ServiceCodes.UnconnectedSend, data);
+    return new CIPRequest(ServiceCodes.UnconnectedSend, ConnectionManager_EPath, data);
   }
 
 
@@ -257,15 +256,6 @@ function connectionDataResponse(buffer, offset, cb) {
   res.OriginatorAPITtoO = buffer.readUInt32LE(offset); offset += 4;
   cb(res);
   return offset;
-}
-
-
-function buildRequest(code, data) {
-  return MessageRouter.Request(
-    code,
-    ConnectionManager_EPath,
-    data
-  );
 }
 
 
