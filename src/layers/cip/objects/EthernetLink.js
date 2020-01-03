@@ -148,6 +148,7 @@ const InstanceAttribute = Object.freeze({
       };
     }
   )),
+  InterfaceLabel: new CIPAttribute.Instance(10, 'Interface Label', DataType.SHORT_STRING),
   // InterfacePortIndex: new CIPAttribute.Instance(100, 'Interface Port Index', DataType.UDINT),
   // InterfacePortDescription: new CIPAttribute.Instance(101, 'Interface Port Description', DataType.STRING),
   // /**

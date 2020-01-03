@@ -276,7 +276,7 @@ function getFormatFromID(id) {
     case 4:
       return FormatCodes.Address32Bit;
     default:
-      throw new Error(`Unable to determin logical segment format for id: ${id}`);
+      throw new Error(`Unable to determine logical segment format for id: ${id}`);
   }
 }
 

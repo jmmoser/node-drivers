@@ -14,12 +14,18 @@ class CIPAttribute extends CIPFeature {
 }
 
 CIPAttribute.Class = class CIPClassAttribute extends CIPAttribute {
-  static MaxInstance() {
-    return new this(2, 'Max Instance', DataType.UINT)
-  }
-  static NumberOfInstances() {
-    return new this(3, 'Number of Instances', DataType.UINT)
-  }
+  // static MaxInstance() {
+  //   return new this(2, 'Max Instance', DataType.UINT)
+  // }
+  // static NumberOfInstances() {
+  //   return new this(3, 'Number of Instances', DataType.UINT)
+  // }
+  // static MaxClassAttributeID() {
+  //   return new this(6, 'Max Class Attribute ID', DataType.UINT)
+  // }
+  // static MaxInstanceAttributeID() {
+  //   return new this(7, 'Max Instance Attribute ID', DataType.UINT)
+  // }
 }
 
 CIPAttribute.Instance = class CIPInstanceAttribute extends CIPAttribute {}

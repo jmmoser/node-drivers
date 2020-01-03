@@ -4,7 +4,42 @@ const EPath = require('../epath');
 const { CommonServiceCodes } = require('./constants');
 const CIPRequest = require('./request');
 const CIPAttribute = require('./attribute');
+const CIPFeatureGroup = require('./featuregroup');
+const { DataType } = require('../datatypes/types');
 const { Decode } = require('../datatypes/decoding');
+
+
+const CommonClassAttribute = Object.freeze({
+  Revision: new CIPAttribute.Class(1, 'Revision', DataType.UINT),
+  MaxInstance: new CIPAttribute.Class(2, 'Max Instance ID', DataType.UINT),
+  NumberOfInstances: new CIPAttribute.Class(3, 'Number Of Instances', DataType.UINT),
+  OptionalAttributeList: new CIPAttribute.Class(4, 'Optional Attribute List', DataType.TRANSFORM(
+    DataType.STRUCT([
+      DataType.UINT,
+      DataType.PLACEHOLDER(length => DataType.ABBREV_ARRAY(DataType.UINT, length))
+    ], function (members, dt) {
+      if (members.length === 1) {
+        return dt.resolve(members[0]);
+      }
+    }),
+    value => value[1]
+  )),
+  OptionalServiceList: new CIPAttribute.Class(4, 'Optional Service List', DataType.TRANSFORM(
+    DataType.STRUCT([
+      DataType.UINT,
+      DataType.PLACEHOLDER(length => DataType.ABBREV_ARRAY(DataType.UINT, length))
+    ], function (members, dt) {
+      if (members.length === 1) {
+        return dt.resolve(members[0]);
+      }
+    }),
+    value => value[1]
+  )),
+  MaxClassAttribute: new CIPAttribute.Class(6, 'Max Class Attribute ID', DataType.UINT),
+  MaxInstanceAttribute: new CIPAttribute.Class(7, 'Max Instance Attribute ID', DataType.UINT),
+});
+
+const CommonClassAttributeGroup = new CIPFeatureGroup(Object.values(CommonClassAttribute));
 
 
 function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, extras) {
@@ -12,7 +47,7 @@ function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, e
     GetAttributesAllInstanceAttributes: []
   }, extras);
 
-  return class CIPObject {
+  class CIPObject {
     static GetInstanceAttributesAll(instanceID) {
       return new CIPRequest(
         CommonServiceCodes.GetAttributesAll,
@@ -45,7 +80,7 @@ function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, e
     }
 
     static GetClassAttribute(attribute) {
-      attribute = classAttributeGroup.getCode(attribute);
+      attribute = classAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute);
       return new CIPRequest(
         CommonServiceCodes.GetAttributeSingle,
         EPath.Encode(true, [
@@ -91,9 +126,13 @@ function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, e
     }
 
     static DecodeClassAttribute(buffer, offset, attribute, cb) {
-      return DecodeAttribute(buffer, offset, classAttributeGroup.get(attribute), cb);
+      return DecodeAttribute(buffer, offset, classAttributeGroup.get(attribute) || CommonClassAttributeGroup.get(attribute), cb);
     }
   }
+
+  CIPObject.CommonClassAttribute = CommonClassAttribute;
+
+  return CIPObject;
 }
 
 
