@@ -248,7 +248,7 @@ function send(connection, connected, internal, requestObj, contextOrCallback) {
     if (internal && callback) {
       context = connection.contextCallback(callback);
     }
-    // console.log('sending unconnected', request);
+    
     connection.send(request, null, false, {
       internal,
       context,
@@ -268,18 +268,7 @@ function handleUnconnectedMessage(self, data, info, context) {
   if (context.internal === true) {
     const callback = self.callbackForContext(context.context);
     if (callback) {
-      const request = context.request;
-      let response;
-      if (request instanceof CIPRequest) {
-        // console.log('USING CIPREQUEST');
-        response = request.response(data);
-        // console.log(response);
-      } else {
-        console.log('!!!!!!!USING MESSAGE ROUTER');
-        response = MessageRouter.Reply(data);
-        response.request = request;
-        console.log(response);
-      }
+      const response = context.request.response(data);
 
       callback(
         response.status.error ? response.status.description || 'CIP Error' : null,
@@ -328,14 +317,7 @@ function handleConnectedMessage(self, data, info) {
   if (savedContext.internal) {
     const callback = self.callbackForContext(savedContext.context);
     if (callback != null) {
-      const request = savedContext.request;
-      let response;
-      if (request instanceof CIPRequest) {
-        response = request.response(data);
-      } else {
-        response = MessageRouter.Reply(data);
-        response.request = request;
-      }
+      const response = savedContext.request.response(data);
 
       callback(
         response.status.error ? response.status.description || 'CIP Error' : null,

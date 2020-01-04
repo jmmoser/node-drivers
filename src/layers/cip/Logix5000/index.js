@@ -5,6 +5,7 @@ const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 const EPath = require('../epath');
 const CIPLayer = require('../objects/CIPLayer');
 const ConnectionLayer = require('../objects/Connection');
+const CIPRequest = require('../core/request');
 
 // const RECORD_TYPES = {
 //   CONTROLLER_ATTRIBUTES: 1,
@@ -98,7 +99,7 @@ class Logix5000 extends CIPLayer {
     // }
 
     /** GET PROCESSOR IDENTITY INFO */
-    // this.request(false, )
+    // this.sendRequest(false, )
   }
 
   // async setupOptimizations(layer, optimization) {
@@ -989,7 +990,8 @@ function sendPromise(self, service, path, data, timeout) {
 
 /** Use driver specific error handling if exists */
 function send(self, service, path, data, callback, timeout) {
-  return CIPLayer.send(self, true, service, path, data, (error, reply) => {
+  const request = new CIPRequest(service, path, data);
+  return CIPLayer.Send(self, true, request, (error, reply) => {
     if (error && reply) {
       error = getError(reply);
     }
