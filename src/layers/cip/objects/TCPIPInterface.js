@@ -3,18 +3,10 @@
 const CIPMetaObject = require('../core/object');
 const CIPAttribute = require('../core/attribute');
 const CIPFeatureGroup = require('../core/featuregroup');
-const CIPRequest = require('../core/request');
-const { ClassCodes, CommonServiceCodes } = require('../core/constants');
-const EPath = require('../epath');
+const { ClassCodes } = require('../core/constants');
 const { DataType } = require('../datatypes');
 
-
-const CLASS_CODE = ClassCodes.TCPIPInterface;
-
-
-const ClassAttribute = Object.freeze({
-
-});
+const ClassAttribute = Object.freeze({});
 
 
 const IPAddressDataType = DataType.TRANSFORM(
@@ -81,7 +73,7 @@ const ClassAttributeGroup = new CIPFeatureGroup(Object.values(ClassAttribute))
 const InstanceAttributeGroup = new CIPFeatureGroup(Object.values(InstanceAttribute));
 
 
-const InstanceGetAttributesAllOrder = Object.freeze([
+const GetAttributesAllInstanceAttributes = Object.freeze([
   InstanceAttribute.Status,
   InstanceAttribute.ConfigurationCapability,
   InstanceAttribute.ConfigurationControl,
@@ -91,43 +83,16 @@ const InstanceGetAttributesAllOrder = Object.freeze([
 ]);
 
 
-const CIPObject = CIPMetaObject(
-  CLASS_CODE,
+const CIPObject = CIPMetaObject(ClassCodes.TCPIPInterface, {
   ClassAttributeGroup,
   InstanceAttributeGroup,
-  null
-);
+  GetAttributesAllInstanceAttributes
+});
 
 
-class TCPIPInterface extends CIPObject {
-  static GetInstanceAttributesAll(instanceID) {
-    return new CIPRequest(
-      CommonServiceCodes.GetAttributesAll,
-      EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(CLASS_CODE),
-        new EPath.Segments.Logical.InstanceID(instanceID)
-      ]),
-      null,
-      (buffer, offset, cb) => {
-        const attributes = [];
-        InstanceGetAttributesAllOrder.forEach(attribute => {
-          offset = this.DecodeInstanceAttribute(
-            buffer,
-            offset,
-            attribute,
-            val => attributes.push(val)
-          );
-        });
-        if (typeof cb === 'function') {
-          cb(attributes);
-        }
-        return offset;
-      }
-    );
-  }
-}
+class TCPIPInterface extends CIPObject {}
 
-TCPIPInterface.InstanceAttribute = InstanceAttribute;
 TCPIPInterface.ClassAttribute = ClassAttribute;
+TCPIPInterface.InstanceAttribute = InstanceAttribute;
 
 module.exports = TCPIPInterface;

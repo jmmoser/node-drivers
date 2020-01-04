@@ -42,10 +42,11 @@ const CommonClassAttribute = Object.freeze({
 const CommonClassAttributeGroup = new CIPFeatureGroup(Object.values(CommonClassAttribute));
 
 
-function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, extras) {
-  extras = Object.assign({
-    GetAttributesAllInstanceAttributes: []
-  }, extras);
+function CIPMetaObject(classCode, options) {
+  options = options || {};
+  const ClassAttributeGroup = options.ClassAttributeGroup || new CIPFeatureGroup([]);
+  const InstanceAttributeGroup = options.InstanceAttributeGroup || new CIPFeatureGroup([]);
+  const GetAttributesAllInstanceAttributes = options.GetAttributesAllInstanceAttributes || [];
 
   class CIPObject {
     static GetInstanceAttributesAll(instanceID) {
@@ -58,13 +59,12 @@ function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, e
         null,
         (buffer, offset, cb) => {
           const attributeResults = [];
-          const attributes = extras.GetAttributesAllInstanceAttributes;
-          for (let i = 0; i < attributes.length; i++) {
+          for (let i = 0; i < GetAttributesAllInstanceAttributes.length; i++) {
             if (offset < buffer.length) {
               offset = this.DecodeInstanceAttribute(
                 buffer,
                 offset,
-                attributes[i],
+                GetAttributesAllInstanceAttributes[i],
                 val => attributeResults.push(val)
               );
             } else {
@@ -80,7 +80,7 @@ function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, e
     }
 
     static GetClassAttribute(attribute) {
-      attribute = classAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute);
+      attribute = ClassAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute);
       return new CIPRequest(
         CommonServiceCodes.GetAttributeSingle,
         EPath.Encode(true, [
@@ -96,7 +96,7 @@ function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, e
     }
 
     static GetInstanceAttribute(instance, attribute) {
-      attribute = instanceAttributeGroup.getCode(attribute);
+      attribute = InstanceAttributeGroup.getCode(attribute);
       return new CIPRequest(
         CommonServiceCodes.GetAttributeSingle,
         EPath.Encode(true, [
@@ -122,11 +122,11 @@ function CIPMetaObject(classCode, classAttributeGroup, instanceAttributeGroup, e
     }
 
     static DecodeInstanceAttribute(buffer, offset, attribute, cb) {
-      return DecodeAttribute(buffer, offset, instanceAttributeGroup.get(attribute), cb);
+      return DecodeAttribute(buffer, offset, InstanceAttributeGroup.get(attribute), cb);
     }
 
     static DecodeClassAttribute(buffer, offset, attribute, cb) {
-      return DecodeAttribute(buffer, offset, classAttributeGroup.get(attribute) || CommonClassAttributeGroup.get(attribute), cb);
+      return DecodeAttribute(buffer, offset, ClassAttributeGroup.get(attribute) || CommonClassAttributeGroup.get(attribute), cb);
     }
   }
 

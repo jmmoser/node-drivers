@@ -7,10 +7,6 @@ const { ClassCodes } = require('../core/constants');
 const { DataType } = require('../datatypes');
 const { getBits } = require('../../../utils');
 
-
-const CLASS_CODE = ClassCodes.EthernetLink;
-
-
 const ClassAttribute = Object.freeze({});
 
 const InstanceAttribute = Object.freeze({
@@ -187,23 +183,15 @@ const GetAttributesAllInstanceAttributes = Object.freeze([
 ]);
 
 
-const CIPObject = CIPMetaObject(
-  CLASS_CODE,
+const CIPObject = CIPMetaObject(ClassCodes.EthernetLink, {
   ClassAttributeGroup,
   InstanceAttributeGroup,
-  {
-    GetAttributesAllInstanceAttributes
-  }
-);
+  GetAttributesAllInstanceAttributes
+});
 
-
-class EthernetLink extends CIPObject {
-
-}
-
+class EthernetLink extends CIPObject {}
 
 EthernetLink.ClassAttribute = ClassAttribute;
 EthernetLink.InstanceAttribute = InstanceAttribute;
-
 
 module.exports = EthernetLink;
