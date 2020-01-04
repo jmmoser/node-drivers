@@ -19,7 +19,7 @@ function incrementConnectionCounters() {
 
 
 class ConnectionManager {
-  static UnconnectedSend(message, route, options) {
+  static UnconnectedSend(request, route, options) {
     options = Object.assign({
       /**
        * 2**7 * 0xE9 = 29824 ms total timeout
@@ -35,23 +35,73 @@ class ConnectionManager {
       timeoutTicks: 156
     }, options);
 
-    const messageLength = message.length;
+    const requestSize = request.encodeSize();
 
     let offset = 0;
-    const data = Buffer.allocUnsafe(6 + messageLength + (messageLength % 2) + route.length);
+    const buffer = Buffer.allocUnsafe(6 + requestSize + (requestSize % 2) + route.length);
 
-    offset = encodeConnectionTiming(data, offset, options.tickTime, options.timeoutTicks);
-    offset = data.writeUInt16LE(messageLength, offset);
-    offset += message.copy(data, offset);
-    if (messageLength % 2 === 1) {
-      offset = data.writeUInt8(0, offset); /** Pad byte if message length is odd */
+    offset = encodeConnectionTiming(buffer, offset, options.tickTime, options.timeoutTicks);
+    offset = buffer.writeUInt16LE(requestSize, offset);
+    offset = request.encodeTo(buffer, offset);
+    if (requestSize % 2 === 1) {
+      offset = buffer.writeUInt8(0, offset); /** Pad byte if message length is odd */
     }
-    offset = data.writeUInt8(route.length / 2, offset);
-    offset = data.writeUInt8(0, offset); /** Reserved */
-    offset += route.copy(data, offset);
+    offset = buffer.writeUInt8(route.length / 2, offset);
+    offset = buffer.writeUInt8(0, offset); /** Reserved */
+    offset += route.copy(buffer, offset);
 
-    return new CIPRequest(ServiceCodes.UnconnectedSend, ConnectionManager_EPath, data);
+    return new CIPRequest(
+      ServiceCodes.UnconnectedSend,
+      ConnectionManager_EPath,
+      buffer,
+      (responseBuffer, offset, cb) => {
+        // cb(request.response(responseBuffer, offset));
+        if (request.handler) {
+          return request.handler(responseBuffer, offset, cb);
+          // cb(request.handler(responseBuffer, offset, val => res.value = val));
+        } else {
+          console.log('no handler');
+        }
+      },
+      {
+        acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service]
+      }
+    );
   }
+
+  // static UnconnectedSend(message, route, options) {
+  //   options = Object.assign({
+  //     /**
+  //      * 2**7 * 0xE9 = 29824 ms total timeout
+  //      */
+  //     // tickTime: 7,
+  //     // timeoutTicks: 0xE9
+
+  //     // tickTime: 5,
+  //     // timeoutTicks = 247
+
+  //     /** total timeout = 9984 ms */
+  //     tickTime: 6,
+  //     timeoutTicks: 156
+  //   }, options);
+
+  //   const messageLength = message.length;
+
+  //   let offset = 0;
+  //   const data = Buffer.allocUnsafe(6 + messageLength + (messageLength % 2) + route.length);
+
+  //   offset = encodeConnectionTiming(data, offset, options.tickTime, options.timeoutTicks);
+  //   offset = data.writeUInt16LE(messageLength, offset);
+  //   offset += message.copy(data, offset);
+  //   if (messageLength % 2 === 1) {
+  //     offset = data.writeUInt8(0, offset); /** Pad byte if message length is odd */
+  //   }
+  //   offset = data.writeUInt8(route.length / 2, offset);
+  //   offset = data.writeUInt8(0, offset); /** Reserved */
+  //   offset += route.copy(data, offset);
+
+  //   return new CIPRequest(ServiceCodes.UnconnectedSend, ConnectionManager_EPath, data);
+  // }
 
 
   static ForwardOpen(connection, incrementCounters) {

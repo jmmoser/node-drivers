@@ -143,11 +143,14 @@ const {
 
 
 class CIPRequest {
-  constructor(service, path, data, responseHandler) {
+  constructor(service, path, data, responseHandler, options) {
     this.service = service,
     this.path = path;
     this.data = data;
     this.handler = responseHandler;
+    this.options = Object.assign({
+      acceptedServiceCodes: [service]
+    }, options);
   }
 
   encodeSize() {
@@ -207,13 +210,13 @@ class CIPRequest {
     // res.service = buffer.readUInt8(offset); offset += 1;
     const service = buffer.readUInt8(offset) & 0x7F; offset += 1;
 
-    if (service !== this.service) {
+    if (this.options.acceptedServiceCodes.indexOf(service) < 0) {
       throw new Error(`Invalid service. Expected ${this.service}, Received ${service}`);
     }
 
     res.service = {
       code: service,
-      hex: `0x${service.toString(16)}`,
+      hex: `0x${service.toString(16).padStart(2, '0')}`,
       name: CommonServiceNames[service] || 'Unknown'
     };
 
