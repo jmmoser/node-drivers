@@ -13,7 +13,7 @@ const Layer = require('./../../Layer');
 class CIPLayer extends Layer {
   sendRequest(connected, request, callback) {
     return CallbackPromise(callback, resolver => {
-      CIPLayer.SendRequest(this, connected, request, function (error, reply) {
+      CIPLayer.Send(this, connected, request, function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {

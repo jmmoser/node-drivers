@@ -135,14 +135,31 @@ function Decode(dataType, buffer, offset, cb, ctx) {
           offset = nextOffset;
         }
       } else {
-        if (!Number.isInteger(dataType.length) || dataType.length < 0) {
-          throw new Error('Abbreviate array length must be a non-negative integer to decode values');
+        if (dataType.length === true) {
+          while (offset < buffer.length) {
+            offset = Decode(dataType.itemType, buffer, offset, function (item) {
+              value.push(item);
+            });
+          }
+        } else {
+          if (!Number.isInteger(dataType.length) || dataType.length < 0) {
+            throw new Error(`Abbreviate array length must be a non-negative integer to decode values. Received: ${dataType.length}`);
+          }
+          for (let i = 0; i < dataType.length; i++) {
+            offset = Decode(dataType.itemType, buffer, offset, function (item) {
+              value.push(item);
+            });
+          }
         }
-        for (let i = 0; i < dataType.length; i++) {
-          offset = Decode(dataType.itemType, buffer, offset, function (item) {
-            value.push(item);
-          });
-        }
+
+        // if (!Number.isInteger(dataType.length) || dataType.length < 0) {
+        //   throw new Error(`Abbreviate array length must be a non-negative integer to decode values. Received: ${dataType.length}`);
+        // }
+        // for (let i = 0; i < dataType.length; i++) {
+        //   offset = Decode(dataType.itemType, buffer, offset, function (item) {
+        //     value.push(item);
+        //   });
+        // }
       }
       
       break;

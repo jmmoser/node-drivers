@@ -3,7 +3,8 @@
 const EPath = require('./EPath');
 const { ClassCodes } = require('./core/constants');
 const CIPLayer = require('./objects/CIPLayer');
-const MessageRouter = require('./objects/MessageRouter');
+const CIPRequest = require('./core/request');
+const { InvertKeyValues } = require('../../utils');
 
 const HEADER_LENGTH = 7;
 
@@ -35,37 +36,36 @@ class PCCC extends CIPLayer {
         HEADER_LENGTH + pcccMessage.length
       );
 
-      send(this, Services.ExecutePCCC, data);
+      send(this, ServiceCodes.ExecutePCCC, data);
 
       setImmediate(() => this.sendNextMessage());
     }
   }
 
 
-  handleData(data, info, context, error) {
+  handleData(data, info, context) {
     if (context) {
       /** Since this class extends CIPLayer, allow CIPLayer to handle requests like identity() and supportedObjects() */
-      super.handleData(data, info, context, error);
+      super.handleData(data, info, context);
       return;
     }
 
-    if (data) {
-      const reply = MessageRouter.Reply(data);
+    const reply = CIPRequest.Response(data, 0, {
+      serviceNames: ServiceNames
+    });
 
-      if (data.length > 4 && !reply.status.error) {
-        /** Only ExcutePCCC service supported right now */
-        if (reply.service.code === Services.ExecutePCCC) {
-          this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
-        } else {
-          console.log(reply);
-          console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${Services.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
-        }
-      } else {
-        console.log('CIP_PCCCLayer: Unexpected PCCC embedded in CIP response:');
-        console.log(reply);
-      }
-    } else if (error) {
-      this.forward(data, info, context, error);
+    if (data.length > 4 && !reply.status.error) {
+      this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
+      /** Only ExcutePCCC service supported right now */
+      // if (reply.service.code === ServiceCodes.ExecutePCCC) {
+      //   this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
+      // } else {
+      //   console.log(reply);
+      //   console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${ServiceCodes.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
+      // }
+    } else {
+      console.log('CIP_PCCCLayer: Unexpected PCCC embedded in CIP response:');
+      console.log(reply);
     }
   }
 }
@@ -77,12 +77,14 @@ const PCCC_EPATH = EPath.Encode(true, [
 
 /** Use driver specific error handling if exists */
 function send(self, service, data) {
-  return CIPLayer.send(self, false, service, PCCC_EPATH, data);
+  return CIPLayer.Send(self, false, new CIPRequest(service, PCCC_EPATH, data));
+  // return CIPLayer.Send(self, false, service, PCCC_EPATH, data);
 }
 
-const Services = {
+const ServiceCodes = Object.freeze({
   ExecutePCCC: 0x4B
-};
+});
 
+const ServiceNames = InvertKeyValues(ServiceCodes);
 
 module.exports = PCCC;

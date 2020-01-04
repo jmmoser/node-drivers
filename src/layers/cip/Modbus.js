@@ -3,6 +3,7 @@
 const { ClassCodes } = require('./core/constants');
 const EPath = require('./EPath');
 const CIPLayer = require('./objects/CIPLayer');
+const CIPRequest = require('./core/request');
 const { CallbackPromise } = require('../../utils');
 
 class Modbus extends CIPLayer {
@@ -139,11 +140,11 @@ function createData(address, count) {
 
 /** Use driver specific error handling if exists */
 function send(self, service, data, callback) {
-  CIPLayer.send(self, false, service, MODBUS_EPATH, data, this.contextCallback(callback));
+  CIPLayer.Send(self, false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
 }
 
 
-const Services = {
+const Services = Object.freeze({
   ReadDiscreteInputs: 0x4B,
   ReadCoils: 0x4C,
   ReadInputRegisters: 0x4D,
@@ -151,4 +152,4 @@ const Services = {
   WriteCoils: 0x4F,
   WriteHoldingRegisters: 0x50,
   Passthrough: 0x51
-};
+});

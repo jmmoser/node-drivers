@@ -49,10 +49,24 @@ const PortTypeNames = Object.freeze({
 const ClassAttribute = Object.freeze({
   EntryPort: new CIPAttribute.Class(8, 'Entry Port', DataType.UINT),
   InstanceInfo: new CIPAttribute.Class(9, 'Instance Info', DataType.ABBREV_ARRAY(
-    DataType.STRUCT([
-      DataType.UINT, // Type
-      DataType.UINT  // Number
-    ])
+    DataType.TRANSFORM(
+      DataType.STRUCT([
+        DataType.UINT, // Type
+        DataType.UINT  // Number
+      ]),
+      value => ({
+        type: {
+          code: value[0],
+          name: PortTypeNames[value[0]]
+        },
+        number: value[1]
+      })
+    ),
+    // DataType.STRUCT([
+    //   DataType.UINT, // Type
+    //   DataType.UINT  // Number
+    // ]),
+    true
   ))
 });
 
