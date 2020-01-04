@@ -54,15 +54,7 @@ class ConnectionManager {
       ServiceCodes.UnconnectedSend,
       ConnectionManager_EPath,
       buffer,
-      (responseBuffer, offset, cb) => {
-        // cb(request.response(responseBuffer, offset));
-        if (request.handler) {
-          return request.handler(responseBuffer, offset, cb);
-          // cb(request.handler(responseBuffer, offset, val => res.value = val));
-        } else {
-          console.log('no handler');
-        }
-      },
+      request.handler,
       {
         acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service]
       }
