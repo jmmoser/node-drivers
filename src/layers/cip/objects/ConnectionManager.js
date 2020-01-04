@@ -56,7 +56,52 @@ class ConnectionManager {
       buffer,
       request.handler,
       {
-        acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service]
+        acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service],
+        statusHandler: function(statusCode, extendedBuffer, cb) {
+          switch (statusCode) {
+            case 1:
+              if (extendedBuffer.length === 2) {
+                switch (extendedBuffer.readUInt16LE(0)) {
+                  case 0x0204:
+                    cb('Unconnected Send Error', 'Timeout', 'timeout');
+                    break;
+                  case 0x0311:
+                    cb('Unconnected Send Error', 'Invalid Port ID specified in the route path field.', 'routing');
+                    break;
+                  case 0x0312:
+                    cb('Unconnected Send Error', 'Invalid Node Address specified in the route path field.', 'routing');
+                    break;
+                  case 0x0315:
+                    cb('Unconnected Send Error', 'Invalid segment type in the route path field.', 'routing');
+                    break;
+                  default:
+                    break;
+                }
+              }
+              break;
+            case 2:
+              cb('Unconnected Send Error', 'Resource error. The CIP Router lacks the resources to fully process the Unconnected Send Request.', 'resource');
+              break;
+            case 4:
+              cb('Unconnected Send Error', 'Segment type error. The CIP Router experienced a parsing error when extracting the Explicit Messaging Request from the Unconnected Send Request Service Data.', 'parsing')
+              break;
+            default:
+              break;
+          }
+        },
+        errorDataHandler: function(buffer, offset, res) {
+          if (res.status.type === 'routing') {
+            res.remainingPathSize = buffer.readUInt8(offset); offset += 1;
+
+            if (offset < buffer.length) {
+              if (buffer.readUInt8(offset) === 0) {
+                /** TODO: confirm possible pad byte? */
+                offset += 1;
+              }
+            }
+          }
+          return offset;
+        }
       }
     );
   }

@@ -234,17 +234,37 @@ class CIPRequest {
     res.status.extended = buffer.slice(offset, offset + 2 * extendedStatusSize);
     offset += 2 * extendedStatusSize;
 
+    if (typeof this.options.statusHandler === 'function') {
+      this.options.statusHandler(statusCode, res.status.extended, function(name, description, type) {
+        if (name) {
+          res.status.name = name;
+        }
+        if (description) {
+          res.status.description = description;
+        }
+        if (type) {
+          res.status.type = type;
+        }
+      });
+    }
+
     res.data = buffer.slice(offset);
 
-    if (res.data.length > 0 && typeof this.handler === 'function') {
-      if (this.handler.length === 4) {
-        offset = this.handler(buffer, offset, res, function (val) {
-          res.value = val;
-        });
-      } else {
-        offset = this.handler(buffer, offset, function (val) {
-          res.value = val;
-        });
+    if (res.data.length > 0) {
+      if (res.status.error === false && typeof this.handler === 'function') {
+        if (this.handler.length === 4) {
+          offset = this.handler(buffer, offset, res, function (val) {
+            res.value = val;
+          });
+        } else {
+          offset = this.handler(buffer, offset, function (val) {
+            res.value = val;
+          });
+        }
+      }
+
+      if (res.status.error && typeof this.options.errorDataHandler === 'function') {
+        offset = this.options.errorDataHandler(buffer, offset, res);
       }
     }
 
