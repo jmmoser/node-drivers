@@ -72,17 +72,12 @@ class PCCCPacket {
     return packet;
   }
 
-  toBuffer() {
-    return toBuffer(
-      this.command,
-      this.status.code,
-      this.transaction,
-      this.data
-    );
+  encode() {
+    return encode(this.command, this.status.code, this.transaction, this.data);
   }
 
-  static toBuffer(command, status, transaction, data) {
-    return toBuffer(command, status, transaction, data);
+  static Encode(command, status, transaction, data) {
+    return encode(command, status, transaction, data);
   }
 
 
@@ -126,9 +121,8 @@ class PCCCPacket {
     if (size > 244) {
       throw new Error(`Maximum size of a single word range read transaction is 244. Received: ${size}`);
     }
-    offset = data.writeUInt8(size, offset); 
-    // console.log(new PCCCPacket(0x0F, 0, transaction, data).toBuffer().length);
-    return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
+    offset = data.writeUInt8(size, offset);
+    return new PCCCPacket(0x0F, 0, transaction, data);
   }
 
   // static WordRangeReadRequest(transaction, address, words) {
@@ -144,7 +138,7 @@ class PCCCPacket {
   //   offset = data.writeUInt16LE(1, offset); // Total Trans
   //   offset = logicalASCIIAddress(address, data, offset); // PLC system address
   //   offset = data.writeUInt8(info.size, offset);
-  //   return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
+  //   return new PCCCPacket(0x0F, 0, transaction, data);
   // }
 
   static WordRangeReadReply(buffer) {
@@ -168,7 +162,7 @@ class PCCCPacket {
     offset = data.writeUInt16LE(items, offset); // Total Trans
     offset = logicalASCIIAddress(address, data, offset); // PLC system address
     offset = data.writeUInt16LE(items, offset); // Size, number of elements to read from the specified system address
-    return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
+    return new PCCCPacket(0x0F, 0, transaction, data);
   }
 
 
@@ -199,12 +193,12 @@ class PCCCPacket {
       offset = typedWriteEncodeValue(data, offset, info.datatype, values[i]);
     }
 
-    return new PCCCPacket(0x0F, 0, transaction, data).toBuffer();
+    return new PCCCPacket(0x0F, 0, transaction, data);
   }
 
 
   static DiagnosticStatusRequest(transaction) {
-    return toBuffer(0x06, 0, transaction, Buffer.from([0x03]));
+    return new PCCCPacket(0x06, 0, transaction, Buffer.from([0x03]));
   }
 
 
@@ -215,7 +209,7 @@ class PCCCPacket {
     const buffer = Buffer.allocUnsafe(data.length + 1);
     buffer.writeUInt8(0, 0);
     data.copy(buffer, 1);
-    return new PCCCPacket(0x06, 0, transaction, buffer).toBuffer();
+    return new PCCCPacket(0x06, 0, transaction, buffer);
   }
 
 
@@ -223,29 +217,29 @@ class PCCCPacket {
     const buffer = Buffer.allocUnsafe(3);
     buffer.writeUInt16LE(address, 0);
     buffer.writeUInt8(size, 2);
-    return toBuffer(0x01, 0, transaction, buffer);
+    return new PCCCPacket(0x01, 0, transaction, buffer);
   }
 
   static UnprotectedWrite(transaction, address, writeData) {
-    const data = Buffer.allocUnsafe(2 + writeData.length);
-    data.writeUInt16LE(address, 0);
-    writeData.copy(data, 2);
-    return toBuffer(0x08, 0, transaction, data);
+    const buffer = Buffer.allocUnsafe(2 + writeData.length);
+    buffer.writeUInt16LE(address, 0);
+    writeData.copy(buffer, 2);
+    return new PCCCPacket(0x08, 0, transaction, buffer);
   }
 
   // static Upload(transaction) {
-  //   return toBuffer(0x0F, 0, transaction, Buffer.from([0x06]));
+  //   return new PCCCPacket(0x0F, 0, transaction, Buffer.from([0x06]));
   // }
 
   // static UploadCompleted(transaction) {
-  //   return toBuffer(0x0F, 0, transaction, Buffer.from([0x55]));
+  //   return new PCCCPacket(0x0F, 0, transaction, Buffer.from([0x55]));
   // }
 }
 
 module.exports = PCCCPacket;
 
 
-function toBuffer(command, status, transaction, data = []) {
+function encode(command, status, transaction, data = []) {
   const buffer = Buffer.allocUnsafe(4 + data.length);
   buffer.writeUInt8(command, 0);
   buffer.writeUInt8(status, 1);

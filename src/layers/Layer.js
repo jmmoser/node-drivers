@@ -25,6 +25,9 @@ const { CallbackPromise } = require('../utils');
 
 
 
+let globalConnectedCount = 0;
+
+
 class Layer extends EventEmitter {
   constructor(name, lowerLayer, options, defaultOptions) {
     if (!name || typeof name !== 'string') {
@@ -58,6 +61,8 @@ class Layer extends EventEmitter {
     this.__contextToCallbackTimeouts = new Map();
     this.__contextToLayer = new Map();
     this.__idContext = new Map();
+
+    this._open = 0;
 
     if (defaultOptions) {
       passDefaultOptionsDown(defaultOptions, this);

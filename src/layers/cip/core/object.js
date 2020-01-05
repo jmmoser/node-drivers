@@ -111,6 +111,36 @@ function CIPMetaObject(classCode, options) {
       );
     }
 
+
+    static GetAttributeSingle(attribute, instance) {
+      if (instance == null) {
+        /** class attribute */
+        instance = 0;
+        attribute = ClassAttributeGroup.getCode(attribute) || CommonClassAttribute.getCode(attribute);
+      } else {
+        /** instance attribute */
+        attribute = InstanceAttributeGroup.getCode(attribute);
+      }
+
+      return new CIPRequest(
+        CommonServiceCodes.GetAttributeSingle,
+        EPath.Encode(true, [
+          new EPath.Segments.Logical.ClassID(classCode),
+          new EPath.Segments.Logical.InstanceID(instance),
+          new EPath.Segments.Logical.AttributeID(attribute)
+        ]),
+        null,
+        (buffer, offset, cb) => {
+          this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
+        }
+      );
+    }
+    
+
+    static GetAttributeList(attributes, instance) {
+
+    }
+
     static DecodeAttribute(buffer, offset, attribute, cb) {
       if (attribute instanceof CIPAttribute.Class) {
         return this.DecodeClassAttribute(buffer, offset, attribute, cb);

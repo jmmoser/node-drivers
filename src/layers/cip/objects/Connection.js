@@ -462,24 +462,24 @@ function stopResend(self) {
 }
 
 
-// CIP Vol1 Table 3-4.2
-const ClassServices = {
-  /** Common */
-  Create: CommonServiceCodes.Create,
-  Delete: CommonServiceCodes.Delete,
-  Reset: CommonServiceCodes.Reset,
-  FindNextObjectInstance: CommonServiceCodes.FindNextObjectInstance,
-  GetAttributeSingle: CommonServiceCodes.GetAttributeSingle,
-  /** Class Specific */
-  ConnectionBind: 0x4B,
-  ProducingApplicationLookup: 0x4C,
-  SafetyClose: 0x4E,
-  SafetyOpen: 0x54
-};
+// /** CIP Vol1 Table 3-4.2 */
+// const ClassServices = Object.freeze({
+//   /** Common */
+//   Create: CommonServiceCodes.Create,
+//   Delete: CommonServiceCodes.Delete,
+//   Reset: CommonServiceCodes.Reset,
+//   FindNextObjectInstance: CommonServiceCodes.FindNextObjectInstance,
+//   GetAttributeSingle: CommonServiceCodes.GetAttributeSingle,
+//   /** Class Specific */
+//   ConnectionBind: 0x4B,
+//   ProducingApplicationLookup: 0x4C,
+//   SafetyClose: 0x4E,
+//   SafetyOpen: 0x54
+// });
 
 
 // CIP Vol 1, Table 3-4.9
-const InstanceAttributeCodes = {
+const InstanceAttributeCodes = Object.freeze({
   State: 1,
   Type: 2,
   TransportClassTrigger: 3,
@@ -499,13 +499,13 @@ const InstanceAttributeCodes = {
   ProductionInhibitTime: 17,
   ConnectionTimeoutMultiplier: 18,
   ConnectionBindingList: 19
-};
+});
 
 
 const InstanceAttributeNames = InvertKeyValues(InstanceAttributeCodes);
 
 
-const InstanceAttributeDataTypes = {
+const InstanceAttributeDataTypes = Object.freeze({
   [InstanceAttributeCodes.State]: DataType.USINT,
   [InstanceAttributeCodes.Type]: DataType.USINT,
   [InstanceAttributeCodes.TransportClassTrigger]: DataType.BYTE,
@@ -536,11 +536,11 @@ const InstanceAttributeDataTypes = {
       return val[1];
     }
   )
-};
+});
 
 
 // CIP Vol1 Table 3-4.10
-const InstanceStateNames = {
+const InstanceStateNames = Object.freeze({
   0: 'Non-existent',
   1: 'Configuring',
   2: 'Waiting for connection ID',
@@ -548,19 +548,19 @@ const InstanceStateNames = {
   4: 'Timed out',
   5: 'Deferred delete',
   6: 'Closing'
-};
+});
 
 
 // CIP Vol1 Table 3-4.11
-const InstanceTypeNames = {
+const InstanceTypeNames = Object.freeze({
   0: 'Explicit Messaging',
   1: 'I/O',
   2: 'CIP Bridged'
-};
+});
 
 
 // CIP Vol1 Table 3-4.5
-const ConnectionBindServiceStatusCodeDescriptions = {
+const ConnectionBindServiceStatusCodeDescriptions = Object.freeze({
   0x02: {
     0x01: 'One or both of the connection instances is Non-existent',
     0x02: 'The connection class and/or instance is out of resources to bind instances'
@@ -575,7 +575,7 @@ const ConnectionBindServiceStatusCodeDescriptions = {
     0x01: 'One or both of the connection instances is not a dynamically created I/O connection',
     0x02: 'One or both of the connection instances were created internally and the device is not allowing a binding to it'
   }
-};
+});
 
 
 function connect(self) {

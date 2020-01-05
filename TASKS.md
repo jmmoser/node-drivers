@@ -1,3 +1,4 @@
+
 - Logix5000
   - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
   - [ ] Optimize
@@ -18,6 +19,8 @@
 - TCP Layer
   - [ ] create TLS layer or just use options.tls?
 - PCCC
+  - [ ] Remove layerContext usage
+  - [ ] Add fragramentation
   - [ ] Add processor specific layers (SLC/PLC2/PLC5)
   - [ ] Word range read request must be an even number of bytes??
   - [ ] Abstract word range read request where total bytes to read is greater than 228
