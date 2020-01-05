@@ -230,26 +230,6 @@ class Layer extends EventEmitter {
     }
   }
 
-  // layerContext(layer, context) {
-  //   if (layer != null) {
-  //     if (context == null) {
-  //       // context = incrementContext(this);
-  //       context = this.contextGenerator(this);
-  //     }
-  //     this.__contextToLayer.set(context, layer);
-  //   }
-  //   return context;
-  // }
-
-  // layerForContext(context) {
-  //   let layer = null;
-  //   if (this.__contextToLayer.has(context)) {
-  //     layer = this.__contextToLayer.get(context);
-  //     this.__contextToLayer.delete(context);
-  //   }
-  //   return layer;
-  // }
-
   setContextForID(id, context) {
     if (id != null) {
       this.__idContext.set(id, context);
@@ -270,7 +250,6 @@ class Layer extends EventEmitter {
 
   clearContexts() {
     const entries = this.__idContext.entries();
-    // const map = new Map(this.__idContext.entries());
     this.__idContext.clear();
     return entries;
   }
@@ -295,16 +274,6 @@ function incrementContext(self) {
   self.__context = (self.__context + 1) % 0x100000000;
   return self.__context;
 }
-
-
-// function internalHandleData(self, data, info, context) {
-//   if (self._defragger != null) {
-//     data = self._defragger.defrag(data);
-//     if (data == null) return;
-//   }
-//   self.emit('data', data, info, context);
-//   return self.handleData(data, info, context);
-// }
 
 
 function internalDestroy(layer, error) {
