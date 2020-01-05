@@ -138,7 +138,7 @@ function CIPMetaObject(classCode, options) {
     
 
     static GetAttributeList(attributes, instance) {
-
+      
     }
 
     static DecodeAttribute(buffer, offset, attribute, cb) {
