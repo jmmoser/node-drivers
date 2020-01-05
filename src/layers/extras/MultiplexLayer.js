@@ -16,6 +16,8 @@ class MultiplexLayer extends Layer {
     });
     
     this._layers = new Set();
+    this.__context = 0;
+    this.__contextToLayer = new Map();
   }
 
   layerAdded(layer) {
@@ -49,14 +51,14 @@ class MultiplexLayer extends Layer {
   sendNextMessage() {
     const request = this.getNextRequest();
     if (request != null) {
-      this.send(request.message, request.info, false, this.layerContext(request.layer));
+      this.send(request.message, request.info, false, layerContext(this, request.layer));
       setImmediate(() => this.sendNextMessage());
     }
   }
 
   handleData(data, info, context) {
     if (context != null) {
-      const layer = this.layerForContext(context);
+      const layer = layerForContext(this, context);
       if (layer != null) {
         this.forwardTo(layer, data, info);
       } else {
@@ -72,6 +74,33 @@ class MultiplexLayer extends Layer {
       layer.destroy(error);
     });
   }
+
+  
 }
 
 module.exports = MultiplexLayer;
+
+
+function layerContext(self, layer, context) {
+  if (layer != null) {
+    if (context == null) {
+      context = incrementContext(this);
+    }
+    self.__contextToLayer.set(context, layer);
+  }
+  return context;
+}
+
+function layerForContext(self, context) {
+  let layer = null;
+  if (self.__contextToLayer.has(context)) {
+    layer = self.__contextToLayer.get(context);
+    self.__contextToLayer.delete(context);
+  }
+  return layer;
+}
+
+function incrementContext(self) {
+  self.__context = (self.__context + 1) % 0x100000000;
+  return self.__context;
+}

@@ -19,7 +19,6 @@
 - TCP Layer
   - [ ] create TLS layer or just use options.tls?
 - PCCC
-  - [ ] Remove layerContext usage
   - [ ] Add fragramentation
   - [ ] Add processor specific layers (SLC/PLC2/PLC5)
   - [ ] Word range read request must be an even number of bytes??

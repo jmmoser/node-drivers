@@ -25,9 +25,6 @@ const { CallbackPromise } = require('../utils');
 
 
 
-let globalConnectedCount = 0;
-
-
 class Layer extends EventEmitter {
   constructor(name, lowerLayer, options, defaultOptions) {
     if (!name || typeof name !== 'string') {
@@ -59,7 +56,6 @@ class Layer extends EventEmitter {
     this.__context = 0;
     this.__contextToCallback = new Map();
     this.__contextToCallbackTimeouts = new Map();
-    this.__contextToLayer = new Map();
     this.__idContext = new Map();
 
     this._open = 0;
@@ -153,8 +149,6 @@ class Layer extends EventEmitter {
     }
     layer.emit('data', data, info, context);
     return layer.handleData(data, info, context);
-
-    // return internalHandleData(layer, data, info, context);
   }
 
   send(message, info, priority, context) {
@@ -205,7 +199,6 @@ class Layer extends EventEmitter {
         // context = incrementContext(this);
         context = this.contextGenerator(this);
       }
-      // console.log(`setting callbackForContext: ${this.name}: ${context}`);
       this.__contextToCallback.set(context, callback);
 
       if (timeout != null && timeout > 0) {
@@ -224,10 +217,7 @@ class Layer extends EventEmitter {
   }
 
   callbackForContext(context) {
-    // console.log(`attempting callback for context: ${context}`);
-    // console.log(this.__contextToCallback);
     if (this.__contextToCallback.has(context)) {
-      // console.log(`getting callbackForContext: ${this.name}: ${context}`);
       const callback = this.__contextToCallback.get(context);
       this.__contextToCallback.delete(context);
       
@@ -240,28 +230,25 @@ class Layer extends EventEmitter {
     }
   }
 
-  layerContext(layer, context) {
-    if (layer != null) {
-      if (context == null) {
-        // context = incrementContext(this);
-        context = this.contextGenerator(this);
-      }
-      // console.log(`setting layerContext: ${this.name}(context: ${context})->${layer.name}`);
-      // console.log(new Error());
-      this.__contextToLayer.set(context, layer);
-    }
-    return context;
-  }
+  // layerContext(layer, context) {
+  //   if (layer != null) {
+  //     if (context == null) {
+  //       // context = incrementContext(this);
+  //       context = this.contextGenerator(this);
+  //     }
+  //     this.__contextToLayer.set(context, layer);
+  //   }
+  //   return context;
+  // }
 
-  layerForContext(context) {
-    let layer = null;
-    if (this.__contextToLayer.has(context)) {
-      layer = this.__contextToLayer.get(context);
-      // console.log(`getting layerContext: ${this.name}(context: ${context})->${layer.name}`);
-      this.__contextToLayer.delete(context);
-    }
-    return layer;
-  }
+  // layerForContext(context) {
+  //   let layer = null;
+  //   if (this.__contextToLayer.has(context)) {
+  //     layer = this.__contextToLayer.get(context);
+  //     this.__contextToLayer.delete(context);
+  //   }
+  //   return layer;
+  // }
 
   setContextForID(id, context) {
     if (id != null) {
