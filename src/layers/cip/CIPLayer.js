@@ -1,14 +1,11 @@
 'use strict';
 
-const CIPRequest = require('../core/request');
-const { CommonServiceCodes } = require('../core/constants');
-const { CallbackPromise } = require('../../../utils');
-const EPath = require('../epath');
-const Layer = require('./../../Layer');
+const CIPRequest = require('./core/request');
+const { CommonServiceCodes } = require('./core/constants');
+const { CallbackPromise } = require('../../utils');
+const EPath = require('./epath');
+const Layer = require('../Layer');
 
-// let requestCount = 0;
-// let totalBytesOut = 0;
-// let totalBytesIn = 0;
 
 class CIPLayer extends Layer {
   sendRequest(connected, request, callback) {
@@ -36,12 +33,11 @@ class CIPLayer extends Layer {
 
     // return CallbackPromise(callback, async resolver => {
     //   const service = CommonServiceCodes.GetAttributesAll;
-    //   const path = EPath.Encode(
+    //   const path = EPath.Encode(true [
     //     new EPath.Segments.Logical.ClassID(classCode),
-    //     new EPath.Segments.Logical.InstanceID(instanceID),
-    //   );
+    //     new EPath.Segments.Logical.InstanceID(instanceID)
+    //   ]);
     //   const reply = await this.sendRequest(true, new CIPRequest(service, path));
-
     //   resolver.resolve(reply.data);
     // });
 
@@ -65,8 +61,6 @@ class CIPLayer extends Layer {
         } catch (err) {
           if (!err.info || !err.info.status || err.info.status.code !== 20) {
             return resolver.reject(err);
-          } else {
-            //
           }
         }
       }
@@ -89,19 +83,19 @@ class CIPLayer extends Layer {
 
 
   static Send(layer, connected, request, callback, timeout) {
-    layer.send(request.encode(), { connected }, false, typeof callback === 'function' ? layer.contextCallback((error, message) => {
-      if (error) {
-        callback(error, message);
-      } else {
-        const response = request.response(message, 0);
-
-        if (response.status.error) {
-          callback( response.status.description || 'CIP Error', response);
+    let context;
+    if (typeof callback === 'function') {
+      context = layer.contextCallback((error, message) => {
+        if (error) {
+          callback(error, message);
         } else {
-          callback(null, response);
+          const res = request.response(message, 0);
+          callback(res.status.error ? res.status.description : null, res);
         }
-      }
-    }, null, timeout) : undefined);
+      }, null, timeout);
+    }
+
+    layer.send(request.encode(), { connected }, false, context);
   }
 }
 

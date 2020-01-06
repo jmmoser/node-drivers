@@ -2,7 +2,7 @@
 
 const EPath = require('./EPath');
 const { ClassCodes } = require('./core/constants');
-const CIPLayer = require('./objects/CIPLayer');
+const CIPLayer = require('./CIPLayer');
 const CIPRequest = require('./core/request');
 const { InvertKeyValues } = require('../../utils');
 

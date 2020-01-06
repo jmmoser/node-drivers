@@ -3,7 +3,7 @@
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
 const EPath = require('../epath');
-const CIPLayer = require('../objects/CIPLayer');
+const CIPLayer = require('../CIPLayer');
 const ConnectionLayer = require('../objects/Connection');
 const CIPRequest = require('../core/request');
 

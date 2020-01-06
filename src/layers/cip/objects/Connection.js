@@ -2,11 +2,10 @@
 
 const CIPRequest = require('../core/request');
 const { InvertKeyValues } = require('../../../utils');
-const { CommonServiceCodes, GeneralStatusCodes } = require('../core/constants');
+const { /* CommonServiceCodes, */ GeneralStatusCodes } = require('../core/constants');
 const { DataType } = require('../datatypes');
 const Layer = require('./../../Layer');
 const ConnectionManager = require('./ConnectionManager');
-const MessageRouter = require('./MessageRouter');
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 
@@ -88,14 +87,7 @@ class Connection extends Layer {
         clearTimeout(disconnectTimeout);
 
         if (err || res == null || res.status.code !== 0) {
-          console.log('CIP connection unsuccessful close');
-          // ConnectionManager.TranslateResponse(res);
-          if (err) {
-            console.log(err);
-          } else if (res) {
-            console.log(res);
-          }
-          // this.destroy(`${this.name} error: ${res.status.name}, ${res.status.description}`);
+          console.log('CIP connection unsuccessful close', err, res);
           this.destroy('Forward Close error');
         } else {
           // this._connectionState = 0;
@@ -118,7 +110,6 @@ class Connection extends Layer {
       const peek = this.getNextRequest(true);
       if (peek && peek.info) {
         if (peek.info.connected === true) {
-          // this.connect();
           connect(this);
         } else {
           const request = this.getNextRequest();
@@ -133,9 +124,6 @@ class Connection extends Layer {
         if (request.context == null) {
           throw new Error('CIP Connection Error: Connected messages must include a context');
         }
-
-        // console.log('sending connected');
-        // console.log(request.message);
         send(this, true, false, request.message, request.context);
         setImmediate(() => this.sendNextMessage());
       }
