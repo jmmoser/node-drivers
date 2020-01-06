@@ -14,8 +14,8 @@ class PCCC extends CIPLayer {
     super('cip.pccc', lowerLayer);
 
     this.options = Object.assign({
-      vendorID: 0x0001,
-      serialNumber: 0x01020304
+      vendorID: 0xABCD,
+      serialNumber: 0x12345678
     }, options);
     
     const header = Buffer.allocUnsafe(HEADER_LENGTH);

@@ -137,9 +137,13 @@ function CIPMetaObject(classCode, options) {
     }
     
 
-    static GetAttributeList(attributes, instance) {
-      
-    }
+    // static GetAttributeList(attributes, instance) {
+    //   Port.Run(Port.CommonServices)
+    // }
+
+    // static Run(service) {
+
+    // }
 
     static DecodeAttribute(buffer, offset, attribute, cb) {
       if (attribute instanceof CIPAttribute.Class) {
