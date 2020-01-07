@@ -1,11 +1,12 @@
 'use strict';
 
-const CIPRequest = require('../core/request');
-const { InvertKeyValues } = require('../../../utils');
-const { /* CommonServiceCodes, */ GeneralStatusCodes } = require('../core/constants');
-const { DataType } = require('../datatypes');
-const Layer = require('./../../Layer');
-const ConnectionManager = require('./ConnectionManager');
+const CIPRequest = require('./core/request');
+const { InvertKeyValues } = require('../../utils');
+const { /* CommonServiceCodes, */ GeneralStatusCodes, ClassCodes } = require('./core/constants');
+const { DataType } = require('./datatypes');
+const Layer = require('../Layer');
+const ConnectionManager = require('./objects/ConnectionManager');
+const EPath = require('./epath');
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 
@@ -54,7 +55,7 @@ const TransportDirectionCodes = Object.freeze({
 
 class Connection extends Layer {
   constructor(lowerLayer, options) {
-    super('cip.connection', lowerLayer);
+    super('connection.cip', lowerLayer);
 
     mergeOptionsWithDefaults(this, options);
 
@@ -153,43 +154,43 @@ class Connection extends Layer {
   }
 
 
-  static DecodeInstanceAttribute(attribute, data, offset, cb) {
-    const dataType = InstanceAttributeDataTypes[attribute];
-    if (!dataType) {
-      throw new Error(`Unknown instance attribute: ${attribute}`);
-    }
+  // static DecodeInstanceAttribute(attribute, data, offset, cb) {
+  //   const dataType = InstanceAttributeDataTypes[attribute];
+  //   if (!dataType) {
+  //     throw new Error(`Unknown instance attribute: ${attribute}`);
+  //   }
 
-    let value;
-    offset = Decode(dataType, data, offset, val => value = val);
+  //   let value;
+  //   offset = Decode(dataType, data, offset, val => value = val);
 
-    switch (attribute) {
-      case InstanceAttributeCodes.State: {
-        value = {
-          code: value,
-          name: InstanceStateNames[value] || 'Unknown'
-        };
-        break;
-      }
-      case InstanceAttributeCodes.Type: {
-        value = {
-          code: value,
-          name: InstanceTypeNames[value] || 'Unknown'
-        }
-      }
-      default:
-        break;
-    }
+  //   switch (attribute) {
+  //     case InstanceAttributeCodes.State: {
+  //       value = {
+  //         code: value,
+  //         name: InstanceStateNames[value] || 'Unknown'
+  //       };
+  //       break;
+  //     }
+  //     case InstanceAttributeCodes.Type: {
+  //       value = {
+  //         code: value,
+  //         name: InstanceTypeNames[value] || 'Unknown'
+  //       }
+  //     }
+  //     default:
+  //       break;
+  //   }
 
-    if (typeof cb === 'function') {
-      cb({
-        code: attribute,
-        name: InstanceAttributeNames[attribute] || 'Unknown',
-        value
-      });
-    }
+  //   if (typeof cb === 'function') {
+  //     cb({
+  //       code: attribute,
+  //       name: InstanceAttributeNames[attribute] || 'Unknown',
+  //       value
+  //     });
+  //   }
 
-    return offset;
-  }
+  //   return offset;
+  // }
 }
 
 module.exports = Connection;
@@ -202,7 +203,7 @@ module.exports = Connection;
  *  unconnected, internal => callback
  *  unconnected, external => context
  */
-function send(connection, connected, internal, requestObj, contextOrCallback) {
+function send(self, connected, internal, requestObj, contextOrCallback) {
   let context, callback;
   if (internal && typeof contextOrCallback === 'function') {
     callback = contextOrCallback;
@@ -213,13 +214,13 @@ function send(connection, connected, internal, requestObj, contextOrCallback) {
   const request = requestObj instanceof CIPRequest ? requestObj.encode() : requestObj;
 
   if (connected) {
-    const sequenceCount = incrementSequenceCount(connection);
+    const sequenceCount = incrementSequenceCount(self);
 
     if (internal && callback) {
-      connection.contextCallback(callback, 'c' + sequenceCount);
+      context = self.contextCallback(callback, 'c' + sequenceCount);
     }
 
-    connection.setContextForID(sequenceCount, {
+    self.setContextForID(sequenceCount, {
       context,
       internal,
       request: requestObj
@@ -229,15 +230,15 @@ function send(connection, connected, internal, requestObj, contextOrCallback) {
     buffer.writeUInt16LE(sequenceCount, 0);
     request.copy(buffer, 2);
 
-    connection.send(buffer, connection.sendInfo, false);
+    self.send(buffer, self.sendInfo, false);
 
-    startResend(connection, buffer);
+    startResend(self, buffer);
   } else {
     if (internal && callback) {
-      context = connection.contextCallback(callback);
+      context = self.contextCallback(callback, c => 'iu' + c);
     }
     
-    connection.send(request, null, false, {
+    self.send(request, null, false, {
       internal,
       context,
       request: requestObj
@@ -411,7 +412,13 @@ function mergeOptionsWithDefaults(self, options) {
   self.TtoORPI = options.TtoORPI || 2000000;
   self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
   self.TransportClassTrigger = buildTransportClassTriggerCode(self.transport);
-  self.route = options.route;
+
+  self.route = options.route || EPath.Encode(true, [
+    new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+    new EPath.Segments.Logical.InstanceID(1)
+  ]);
+
+  console.log(self.route);
 
   // self.options = Object.assign({
   //   vendorID: 0x1339,

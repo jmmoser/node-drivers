@@ -5,9 +5,18 @@ const { CommonServiceCodes } = require('./core/constants');
 const { CallbackPromise } = require('../../utils');
 const EPath = require('./epath');
 const Layer = require('../Layer');
+const ConnectionLayer = require('./CIPConnectionLayer');
 
 
 class CIPLayer extends Layer {
+  constructor(lowerLayer, options) {
+    /** Inject Connection as lower layer */
+    lowerLayer = new ConnectionLayer(lowerLayer, options);
+
+    const name = arguments.length === 3 ? arguments[2] : 'cip';
+    super(name, lowerLayer);
+  }
+  
   sendRequest(connected, request, callback) {
     return CallbackPromise(callback, resolver => {
       CIPLayer.Send(this, connected, request, function (error, reply) {
@@ -98,5 +107,7 @@ class CIPLayer extends Layer {
     layer.send(request.encode(), { connected }, false, context);
   }
 }
+
+CIPLayer.EPath = EPath;
 
 module.exports = CIPLayer;

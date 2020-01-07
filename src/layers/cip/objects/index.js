@@ -6,6 +6,6 @@ module.exports = {
   Port: require('./Port'),
   TCPIPInterface: require('./TCPIPInterface'),
   EthernetLink: require('./EthernetLink'),
-  Connection: require('./Connection'),
+  // Connection: require('./Connection'),
   ConnectionManager: require('./ConnectionManager')
 };

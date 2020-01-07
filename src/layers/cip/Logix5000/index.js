@@ -4,7 +4,6 @@ const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
 const EPath = require('../epath');
 const CIPLayer = require('../CIPLayer');
-const ConnectionLayer = require('../objects/Connection');
 const CIPRequest = require('../core/request');
 
 // const RECORD_TYPES = {
@@ -70,19 +69,14 @@ class Logix5000 extends CIPLayer {
     options.networkConnectionParameters = Object.assign({
       maximumSize: 500
     }, options.networkConnectionParameters);
+
+    options.route = options.route || EPath.Encode(true, [
+      new EPath.Segments.Port(options.port, options.slot),
+      new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+      new EPath.Segments.Logical.InstanceID(0x01)
+    ]);
     
-    if (!(lowerLayer instanceof ConnectionLayer)) {
-      /** Inject Connection as lower layer */
-      lowerLayer = new ConnectionLayer(lowerLayer, {
-        ...options,
-        route: EPath.Encode(true, [
-          new EPath.Segments.Port(options.port, options.slot),
-          new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
-          new EPath.Segments.Logical.InstanceID(0x01)
-        ])
-      });
-    }
-    super('cip.logix5000', lowerLayer);
+    super(lowerLayer, options, 'logix5000.cip');
 
     this.options = options;
 
@@ -531,9 +525,10 @@ class Logix5000 extends CIPLayer {
       return (async () => {
         for await (const tag of listTags(this, attributes, scope, 0, false, modifier)) {
           if (callback(tag) !== true) {
-            break;
+           return;
           }
         }
+        callback(null); /** use null to let caller know we are done */
       })();
     }
     

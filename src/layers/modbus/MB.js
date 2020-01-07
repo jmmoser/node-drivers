@@ -2,7 +2,7 @@
 
 const { InvertKeyValues } = require('../../utils');
 
-const Functions = {
+const Functions = Object.freeze({
   ReadCoils: 0x01,
   ReadDiscreteInputs: 0x02,
   ReadHoldingRegisters: 0x03,
@@ -14,13 +14,15 @@ const Functions = {
   WriteMultipleHoldingRegisters: 0x10,
   ReportSlaveID: 0x11,
   MaskWriteRegister: 0x16,
-  WriteAndReadRegisters: 0x17
-};
+  WriteAndReadRegisters: 0x17,
+  ReadFIFOQueue: 0x18,
+  EncapsulatedInterfaceTransport: 0x2B
+});
 
 const FunctionNames = InvertKeyValues(Functions);
 
 
-const ErrorDescriptions = {
+const ErrorDescriptions = Object.freeze({
   0x01: 'Illegal function',
   0x02: 'Illegal data address',
   0x03: 'Illegal data value',
@@ -33,11 +35,18 @@ const ErrorDescriptions = {
   0x0A: 'Gateway path',
   0x0B: 'Gateway target',
   0x0C: 'Max'
-};
+});
+
+
+const MEITransportFunctions = Object.freeze({
+  CANopenGeneralReference: 0x0D,
+  ReadDeviceIdentification: 0x0E
+});
 
 
 module.exports = {
   Functions,
   FunctionNames,
-  ErrorDescriptions
+  ErrorDescriptions,
+  MEITransportFunctions
 };

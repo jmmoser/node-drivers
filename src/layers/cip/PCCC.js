@@ -78,7 +78,6 @@ const PCCC_EPATH = EPath.Encode(true, [
 /** Use driver specific error handling if exists */
 function send(self, service, data) {
   return CIPLayer.Send(self, false, new CIPRequest(service, PCCC_EPATH, data));
-  // return CIPLayer.Send(self, false, service, PCCC_EPATH, data);
 }
 
 const ServiceCodes = Object.freeze({
