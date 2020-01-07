@@ -250,7 +250,7 @@ function DecodeResponse(buffer, offset, options, request, handler) {
   res.status.code = statusCode;
   res.status.error = statusCode !== 0 && statusCode !== 6;
   res.status.name = GeneralStatusNames[statusCode] || '';
-  res.status.description = GeneralStatusDescriptions[statusCode] || res.status.error ? 'CIP Error' : '';
+  res.status.description = GeneralStatusDescriptions[statusCode] || (res.status.error ? 'CIP Error' : '');
 
   const extendedStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
   res.status.extended = buffer.slice(offset, offset + 2 * extendedStatusSize);

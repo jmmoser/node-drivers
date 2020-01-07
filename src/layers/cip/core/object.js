@@ -175,6 +175,7 @@ module.exports = CIPMetaObject;
 
 
 function DecodeAttribute(buffer, offset, attribute, cb) {
+  console.log(attribute);
   const dataType = attribute.dataType;
   if (!dataType) {
     console.log(attribute);

@@ -33,7 +33,8 @@ const { DataType } = require('../datatypes');
 /** CIP Vol 3 Chapter 3-7.3 */
 const PortTypeNames = Object.freeze({
   0: 'Connection terminates in this device',
-  1: 'Reserved for compatibility with existing protocols (Backplane)',
+  // 1: 'Reserved for compatibility with existing protocols (Backplane)',
+  1: 'Backplane',
   2: 'ControlNet',
   3: 'ControlNet redundant',
   4: 'EtherNet/IP',
@@ -75,13 +76,14 @@ const InstanceAttribute = Object.freeze({
   Type: new CIPAttribute.Instance(1, 'Type', DataType.TRANSFORM(
     DataType.UINT,
     function(value) {
+      console.log('VALUE', value);
       return {
         code: value,
         name: PortTypeNames[value] || 'Unknown'
       }
     }
   )),
-  Number: new CIPAttribute.Instance(1, 'Number', DataType.UINT),
+  Number: new CIPAttribute.Instance(2, 'Number', DataType.UINT),
   Link: new CIPAttribute.Instance(3, 'Link', DataType.TRANSFORM(
     DataType.STRUCT([
       DataType.UINT,
