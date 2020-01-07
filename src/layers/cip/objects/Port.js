@@ -63,10 +63,6 @@ const ClassAttribute = Object.freeze({
         number: value[1]
       })
     ),
-    // DataType.STRUCT([
-    //   DataType.UINT, // Type
-    //   DataType.UINT  // Number
-    // ]),
     true
   ))
 });
@@ -75,13 +71,10 @@ const ClassAttribute = Object.freeze({
 const InstanceAttribute = Object.freeze({
   Type: new CIPAttribute.Instance(1, 'Type', DataType.TRANSFORM(
     DataType.UINT,
-    function(value) {
-      console.log('VALUE', value);
-      return {
-        code: value,
-        name: PortTypeNames[value] || 'Unknown'
-      }
-    }
+    value => ({
+      code: value,
+      name: PortTypeNames[value] || 'Unknown'
+    })
   )),
   Number: new CIPAttribute.Instance(2, 'Number', DataType.UINT),
   Link: new CIPAttribute.Instance(3, 'Link', DataType.TRANSFORM(
@@ -94,9 +87,7 @@ const InstanceAttribute = Object.freeze({
         }
       }
     ),
-    function(value) {
-      return value[1];
-    }
+    value => value[1]
   )),
   Name: new CIPAttribute.Instance(4, 'Name', DataType.SHORT_STRING),
   TypeName: new CIPAttribute.Instance(5, 'Type Name', DataType.SHORT_STRING),

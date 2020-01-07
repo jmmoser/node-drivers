@@ -418,8 +418,6 @@ function mergeOptionsWithDefaults(self, options) {
     new EPath.Segments.Logical.InstanceID(1)
   ]);
 
-  console.log(self.route);
-
   // self.options = Object.assign({
   //   vendorID: 0x1339,
   //   originatorSerialNumber: 42,
