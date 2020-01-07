@@ -58,7 +58,7 @@ const ClassAttribute = Object.freeze({
       value => ({
         type: {
           code: value[0],
-          name: PortTypeNames[value[0]]
+          name: PortTypeNames[value[0]] || 'Unknown'
         },
         number: value[1]
       })
