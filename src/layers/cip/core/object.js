@@ -42,6 +42,31 @@ const CommonClassAttribute = Object.freeze({
 const CommonClassAttributeGroup = new CIPFeatureGroup(Object.values(CommonClassAttribute));
 
 
+const CommonServices = Object.freeze({
+  GetAttributeSingle: function(attribute, instance = 0) {
+    let attributeID;
+    if (attribute instanceof CIPAttribute.Class) {
+      attributeID = ClassAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute);
+    } else if (attribute instanceof CIPAttribute.Instance) {
+      attributeID = InstanceAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute);
+    } else {
+      throw new Error(`Attribute must be a CIPClassAttribute or CIPInstanceAttribute`);
+    }
+    return new CIPRequest(
+      CommonServiceCodes.GetAttributeSingle,
+      EPath.Encode(true, [
+        new EPath.Segments.Logical.ClassID(classCode),
+        new EPath.Segments.Logical.InstanceID(instance),
+        new EPath.Segments.Logical.AttributeID(attributeID)
+      ]),
+      null,
+      (buffer, offset, cb) => {
+        return DecodeAttribute(buffer, offset, attribute, cb);
+      }
+    );
+  }
+});
+
 function CIPMetaObject(classCode, options) {
   options = options || {};
   const ClassAttributeGroup = options.ClassAttributeGroup || new CIPFeatureGroup([]);
@@ -165,6 +190,7 @@ function CIPMetaObject(classCode, options) {
   }
 
   CIPObject.CommonClassAttribute = CommonClassAttribute;
+  CIPObject.CommonServices = CommonServices;
 
   return CIPObject;
 }

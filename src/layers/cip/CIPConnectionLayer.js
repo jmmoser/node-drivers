@@ -230,6 +230,7 @@ function send(self, connected, internal, requestObj, contextOrCallback) {
     buffer.writeUInt16LE(sequenceCount, 0);
     request.copy(buffer, 2);
 
+
     self.send(buffer, self.sendInfo, false);
 
     startResend(self, buffer);
@@ -413,9 +414,17 @@ function mergeOptionsWithDefaults(self, options) {
   self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(self.networkConnectionParameters);
   self.TransportClassTrigger = buildTransportClassTriggerCode(self.transport);
 
-  self.route = options.route || EPath.Encode(true, [
+  // self.route = options.route || EPath.Encode(true, [
+  //   new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+  //   new EPath.Segments.Logical.InstanceID(1)
+  // ]);
+
+  options.route = options.route || [];
+
+  self.route = EPath.Encode(true, options.fullRoute || [
+    ...options.route,
     new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
-    new EPath.Segments.Logical.InstanceID(1)
+    new EPath.Segments.Logical.InstanceID(0x01)
   ]);
 
   // self.options = Object.assign({

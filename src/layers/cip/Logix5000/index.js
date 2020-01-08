@@ -70,11 +70,15 @@ class Logix5000 extends CIPLayer {
       maximumSize: 500
     }, options.networkConnectionParameters);
 
-    options.route = options.route || EPath.Encode(true, [
-      new EPath.Segments.Port(options.port, options.slot),
-      new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
-      new EPath.Segments.Logical.InstanceID(0x01)
-    ]);
+    // options.route = options.route || EPath.Encode(true, [
+    //   new EPath.Segments.Port(options.port, options.slot),
+    //   new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+    //   new EPath.Segments.Logical.InstanceID(0x01)
+    // ]);
+
+    options.route = options.route || [
+      new EPath.Segments.Port(options.port, options.slot)
+    ];
     
     super(lowerLayer, options, 'logix5000.cip');
 

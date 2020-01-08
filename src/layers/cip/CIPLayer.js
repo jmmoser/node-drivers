@@ -95,6 +95,7 @@ class CIPLayer extends Layer {
     let context;
     if (typeof callback === 'function') {
       context = layer.contextCallback((error, message) => {
+        console.log(request);
         if (error) {
           callback(error, message);
         } else {
