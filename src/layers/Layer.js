@@ -226,29 +226,6 @@ class Layer extends EventEmitter {
 
     return context;
   }
-  // contextCallback(callback, context, timeout) {
-  //   // caller can pass their own context (e.g. PCCCLayer passes the transaction)
-  //   if (typeof callback === 'function') {
-  //     if (context == null) {
-  //       // context = incrementContext(this);
-  //       context = this.contextGenerator(this);
-  //     }
-  //     this.__contextToCallback.set(context, callback);
-
-  //     if (timeout != null && timeout > 0) {
-  //       const timeoutHandle = setTimeout(() => {
-  //         this.__contextToCallback.delete(context);
-  //         callback('Timeout');
-  //       }, timeout);
-
-  //       this.__contextToCallbackTimeouts.set(context, timeoutHandle);
-  //     }
-  //   } else {
-  //     throw new Error(`callback must be a function, received: ${typeof callback}`);
-  //   }
-    
-  //   return context;
-  // }
 
   callbackForContext(context) {
     if (this.__contextToCallback.has(context)) {

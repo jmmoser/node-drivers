@@ -73,9 +73,7 @@ class MultiplexLayer extends Layer {
     [...this._layers].forEach(layer => {
       layer.destroy(error);
     });
-  }
-
-  
+  }  
 }
 
 module.exports = MultiplexLayer;
