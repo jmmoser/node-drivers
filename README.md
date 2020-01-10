@@ -89,7 +89,7 @@ await tcpLayer.close();
 ```
 
 
-### Find all EtherNet/IP devices in a subnet using the UDP broadcast address:
+### Find all EtherNet/IP devices in a subnet using the UDP broadcast address or by explicitly pinging each host:
 
 ```javascript
 const { UDP, CIP } = require('node-drivers').Layers;
@@ -97,21 +97,11 @@ const { UDP, CIP } = require('node-drivers').Layers;
 const udpLayer = new UDP('1.2.3.255');
 const eipLayer = new CIP.EIP(udpLayer);
 
+/** Broadcast */
 console.log(await eipLayer.listIdentity());
 
-await udpLayer.close();
-```
 
-
-### Find all EtherNet/IP devices in a subnet manually over UDP
-
-```javascript
-const { UDP, CIP } = require('node-drivers').Layers;
-
-/* host does not need to be specified if upper layer messages specify it */
-const udpLayer = new UDP();
-const eipLayer = new CIP.EIP(udpLayer);
-
+/** Explicitly */
 const hosts = [];
 for (let i = 1; i < 255; i++) {
   hosts.push(`1.2.3.${i}`);
@@ -124,7 +114,7 @@ await udpLayer.close();
 ```
 
 
-### List interfaces of EtherNet/IP device over TCP:
+### Retrieve information from an EtherNet/IP device over TCP:
 
 ```javascript
 const { TCP, CIP } = require('node-drivers').Layers;
@@ -133,6 +123,11 @@ const tcpLayer = new TCP('1.2.3.4');
 const eipLayer = new CIP.EIP(tcpLayer);
 
 console.log(await eipLayer.listInterfaces());
+
+console.log(await eipLayer.listServices());
+
+/** no response, used to test underlying transport layer */
+await eipLayer.nop();
 
 await tcpLayer.close();
 ```
