@@ -1,16 +1,16 @@
 'use strict';
 
-const CIPMetaObject = require('../core/object');
-const CIPAttribute = require('../core/attribute');
-const CIPFeatureGroup = require('../core/featuregroup');
+const CIPMetaObject = require('../object');
+const CIPAttribute = require('../attribute');
+const CIPFeatureGroup = require('../featuregroup');
 
 const {
   ClassCodes,
   VendorNames
-} = require('../core/constants');
+} = require('../constants');
 
 const { DataType } = require('../datatypes');
-const { getBits } = require('../../../utils');
+const { getBits } = require('../../../../utils');
 
 const ClassAttribute = Object.freeze({});
 

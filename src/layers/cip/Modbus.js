@@ -1,7 +1,7 @@
 'use strict';
 
 const { ClassCodes } = require('./core/constants');
-const EPath = require('./EPath');
+const EPath = require('./core/epath');
 const CIPLayer = require('./CIPLayer');
 const CIPRequest = require('./core/request');
 const { CallbackPromise } = require('../../utils');

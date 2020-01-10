@@ -1,11 +1,11 @@
 const {
   DataType,
-  DataTypeCodes,
+  // DataTypeCodes,
   Encode,
   Decode
-} = require('../src/layers/cip/datatypes');
+} = require('../src/layers/cip/core/datatypes');
 
-const EPath = require('../src/layers/cip/EPath');
+const EPath = require('../src/layers/cip/core/epath');
 
 
 describe('Encoding', () => {

@@ -1,12 +1,12 @@
 'use strict';
 
-const EPath = require('../epath');
+const EPath = require('./epath');
 const { CommonServiceCodes } = require('./constants');
 const CIPRequest = require('./request');
 const CIPAttribute = require('./attribute');
 const CIPFeatureGroup = require('./featuregroup');
-const { DataType } = require('../datatypes/types');
-const { Decode } = require('../datatypes/decoding');
+const { DataType } = require('./datatypes/types');
+const { Decode } = require('./datatypes/decoding');
 
 
 const CommonClassAttribute = Object.freeze({

@@ -12,7 +12,7 @@
 const {
   getBits,
   InvertKeyValues
-} = require('../../../../utils');
+} = require('../../../../../utils');
 
 const SubtypeCodes = Object.freeze({
   Schedule: 1,

@@ -1,6 +1,6 @@
 'use strict';
 
-const { getBits, InvertKeyValues } = require('../../../utils');
+const { getBits, InvertKeyValues } = require('../../../../utils');
 
 /** CIP Vol1 Table C-6.1 */
 const DataTypeCodes = Object.freeze({

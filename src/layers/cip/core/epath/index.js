@@ -1,6 +1,6 @@
 'use strict';
 
-const { getBits } = require('../../../utils');
+const { getBits } = require('../../../../utils');
 const Segments = require('./segments');
 
 

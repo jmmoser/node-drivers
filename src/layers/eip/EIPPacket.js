@@ -1,6 +1,6 @@
 'use strict';
 
-const CIPIdentity = require('../cip/objects/Identity');
+const CIPIdentity = require('../cip/core/objects/Identity');
 const { getBit, InvertKeyValues } = require('../../utils');
 
 /*

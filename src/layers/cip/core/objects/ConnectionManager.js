@@ -2,9 +2,9 @@
 
 // EIP-CIP-V1 3.5, page 3-53
 
-const { InvertKeyValues } = require('../../../utils');
-const { ClassCodes } = require('../core/constants');
-const CIPRequest = require('../core/request');
+const { InvertKeyValues } = require('../../../../utils');
+const { ClassCodes } = require('../constants');
+const CIPRequest = require('../request');
 const EPath = require('../epath');
 
 let ConnectionSerialNumberCounter = 0x0001;

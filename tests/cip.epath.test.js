@@ -1,4 +1,4 @@
-const EPath = require('../src/layers/cip/EPath');
+const EPath = require('../src/layers/cip/core/epath');
 
 
 describe('EPath Encode', () => {

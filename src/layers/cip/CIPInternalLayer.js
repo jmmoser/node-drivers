@@ -3,10 +3,10 @@
 const CIPRequest = require('./core/request');
 const { InvertKeyValues } = require('../../utils');
 const { /* CommonServiceCodes, */ GeneralStatusCodes, ClassCodes } = require('./core/constants');
-const { DataType } = require('./datatypes');
+const { DataType } = require('./core/datatypes');
 const Layer = require('../Layer');
-const ConnectionManager = require('./objects/ConnectionManager');
-const EPath = require('./epath');
+const ConnectionManager = require('./core/objects/ConnectionManager');
+const EPath = require('./core/epath');
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 

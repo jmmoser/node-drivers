@@ -3,18 +3,18 @@
 const CIPRequest = require('./core/request');
 const { CommonServiceCodes } = require('./core/constants');
 const { CallbackPromise } = require('../../utils');
-const EPath = require('./epath');
+const EPath = require('./core/epath');
 const Layer = require('../Layer');
-const ConnectionLayer = require('./CIPConnectionLayer');
+const ConnectionLayer = require('./CIPInternalLayer');
 
 
 class CIPLayer extends Layer {
-  constructor(lowerLayer, options) {
+  constructor(lowerLayer, options, name) {
     /** Inject Connection as lower layer */
     lowerLayer = new ConnectionLayer(lowerLayer, options);
 
-    const name = arguments.length === 3 ? arguments[2] : 'cip';
-    super(name, lowerLayer);
+    // const name = arguments.length === 3 ? arguments[2] : 'cip';
+    super(name || 'cip', lowerLayer);
   }
   
   sendRequest(connected, request, callback) {

@@ -17,9 +17,9 @@ const {
   decodeUnsignedInteger,
   unsignedIntegerSize,
   InvertKeyValues
-} = require('../../../../utils');
+} = require('../../../../../utils');
 
-const { ClassNames } = require('../../core/constants');
+const { ClassNames } = require('../../constants');
 
 
 const TypeCodes = Object.freeze({

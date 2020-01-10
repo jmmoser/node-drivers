@@ -2,7 +2,7 @@
 
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
-const EPath = require('../epath');
+const EPath = require('../core/epath');
 const CIPLayer = require('../CIPLayer');
 const CIPRequest = require('../core/request');
 
@@ -15,7 +15,7 @@ const CIPRequest = require('../core/request');
 
 const {
   CommonServiceCodes,
-  ClassCodes,
+  // ClassCodes,
   GeneralStatusCodes
 } = require('../core/constants');
 
@@ -26,7 +26,7 @@ const {
   EncodeSize,
   EncodeTo,
   Decode
-} = require('../datatypes');
+} = require('../core/datatypes');
 
 const {
   CallbackPromise,

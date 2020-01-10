@@ -4,7 +4,7 @@ const {
   DataType,
   DataTypeCodes,
   DataTypeNames
-} = require('../datatypes');
+} = require('../core/datatypes');
 
 
 const {

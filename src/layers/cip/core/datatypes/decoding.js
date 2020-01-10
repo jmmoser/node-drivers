@@ -2,8 +2,14 @@
 
 const EPath = require('../epath');
 const { DataTypeCodes, DataTypeNames } = require('./codes');
-const { getBits, unsignedIntegerSize, decodeUnsignedInteger } = require('../../../utils');
 const convertToObject = require('./convertToObject');
+
+const {
+  getBits,
+  unsignedIntegerSize,
+  decodeUnsignedInteger
+} = require('../../../../utils');
+
 
 
 function Decode(dataType, buffer, offset, cb, ctx) {

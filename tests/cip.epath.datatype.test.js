@@ -1,5 +1,5 @@
-const { DataTypeCodes, DataType } = require('../src/layers/cip/datatypes');
-const EPath = require('../src/layers/cip/EPath');
+const { DataTypeCodes, DataType } = require('../src/layers/cip/core/datatypes');
+const EPath = require('../src/layers/cip/core/epath');
 const DataTypeSegment = EPath.Segments.DataType;
 
 describe('Encoding', () => {

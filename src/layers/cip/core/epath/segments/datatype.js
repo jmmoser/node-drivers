@@ -4,7 +4,7 @@ const {
   decodeUnsignedInteger,
   unsignedIntegerSize,
   encodeUnsignedInteger
-} = require('../../../../utils');
+} = require('../../../../../utils');
 
 const convertDataTypeToObject = require('../../datatypes/convertToObject');
 const { DataTypeCodes, DataTypeNames } = require('../../datatypes/codes');

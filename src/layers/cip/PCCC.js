@@ -1,6 +1,6 @@
 'use strict';
 
-const EPath = require('./EPath');
+const EPath = require('./core/epath');
 const { ClassCodes } = require('./core/constants');
 const CIPLayer = require('./CIPLayer');
 const CIPRequest = require('./core/request');
@@ -11,7 +11,8 @@ const HEADER_LENGTH = 7;
 
 class PCCC extends CIPLayer {
   constructor(lowerLayer, options) {
-    super('cip.pccc', lowerLayer);
+    // super('cip.pccc', lowerLayer);
+    super(lowerLayer, null, 'pccc.cip')
 
     this.options = Object.assign({
       vendorID: 0xABCD,

@@ -29,7 +29,7 @@ const {
   getBits,
   unsignedIntegerSize,
   encodeUnsignedInteger
-} = require('../../../../utils');
+} = require('../../../../../utils');
 
 
 class PortSegment {

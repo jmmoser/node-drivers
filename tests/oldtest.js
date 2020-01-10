@@ -1,7 +1,7 @@
 'use strict';
 
 // const MessageRouter = require('./../src/layers/cip/objects/MessageRouter');
-const EPath = require('../src/layers/cip/EPath');
+const EPath = require('../src/layers/cip/core/epath');
 
 
 function assert(condition, message) {
@@ -113,7 +113,7 @@ function assert(condition, message) {
 
 
 // (() => {
-//   const PortSegment = require('../src/layers/cip/EPath/segments/port');
+//   const PortSegment = require('../src/layers/cip/core/epath/segments/port');
 
 //   assert(PortSegment.EncodeSize(2, Buffer.from([0x06])) === 2);
 //   assert(PortSegment.EncodeSize(2, 6) === 2);
@@ -316,7 +316,7 @@ function assert(condition, message) {
 
 
 (() => {
-  const EPath = require('../src/layers/cip/EPath');
+  const EPath = require('../src/layers/cip/core/epath');
 
   const symbol = 'n1.n2[1,2]';
   console.log(EPath.Encode(true, EPath.ConvertSymbolToSegments(symbol)));
@@ -378,7 +378,7 @@ function assert(condition, message) {
 
 (() => {
   const CIP = require('../src/layers/cip/objects/CIP');
-  const EPath = require('../src/layers/cip/EPath');
+  const EPath = require('../src/layers/cip/core/epath');
   // const MessageRouter = require('../src/layers/cip/objects/MessageRouter');
   // const ConnectionManager = require('../src/layers/cip/objects/ConnectionManager');
 

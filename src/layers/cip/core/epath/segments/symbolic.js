@@ -10,7 +10,7 @@
 const {
   getBits,
   unsignedIntegerSize
-} = require('../../../../utils');
+} = require('../../../../../utils');
 
 
 const ExtendedStringFormatCodes = Object.freeze({

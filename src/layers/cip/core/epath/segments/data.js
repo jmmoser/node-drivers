@@ -9,7 +9,7 @@
 
 const {
   getBits
-} = require('../../../../utils');
+} = require('../../../../../utils');
 
 const SubtypeCodes = Object.freeze({
   Simple: 0,
