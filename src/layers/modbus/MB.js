@@ -9,14 +9,20 @@ const Functions = Object.freeze({
   ReadInputRegisters: 0x04,
   WriteSingleCoil: 0x05,
   WriteSingleHoldingRegister: 0x06,
-  ReadExceptionStatus: 0x07,
   WriteMultipleCoils: 0x0F,
   WriteMultipleHoldingRegisters: 0x10,
-  ReportSlaveID: 0x11,
   MaskWriteRegister: 0x16,
   WriteAndReadRegisters: 0x17,
   ReadFIFOQueue: 0x18,
   EncapsulatedInterfaceTransport: 0x2B
+});
+
+const SearialLineFunctions = Object.freeze({
+  ReadExceptionStatus: 0x07,
+  Diagnostics: 0x08,
+  GetCommEventCounter: 0x0B,
+  GetCommEventLog: 0x0C,
+  ReportServerID: 0x11,
 });
 
 const FunctionNames = InvertKeyValues(Functions);

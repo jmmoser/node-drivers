@@ -8,7 +8,7 @@ const { CallbackPromise } = require('../../utils');
 
 class Modbus extends CIPLayer {
   constructor(lowerLayer) {
-    super('cip.modbus', lowerLayer);
+    super('modbus.cip', lowerLayer);
   }
 
   readDiscreteInputs(address, count, callback) {

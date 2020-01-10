@@ -62,11 +62,6 @@ const {
 class Logix5000 extends CIPLayer {
   constructor(lowerLayer, options) {
 
-    // if (arguments === 1 || !(lowerLayer instanceof Layer)) {
-    //   options = lowerLayer;
-    //   lowerLayer = null;
-    // }
-
     options = Object.assign({
       port: 1,
       slot: 0,

@@ -12,8 +12,6 @@ class CIPLayer extends Layer {
   constructor(lowerLayer, options, name) {
     /** Inject Connection as lower layer */
     lowerLayer = new ConnectionLayer(lowerLayer, options);
-
-    // const name = arguments.length === 3 ? arguments[2] : 'cip';
     super(name || 'cip', lowerLayer);
   }
   
@@ -39,16 +37,6 @@ class CIPLayer extends Layer {
     if (maxAttribute == null) {
       maxAttribute = 20;
     }
-
-    // return CallbackPromise(callback, async resolver => {
-    //   const service = CommonServiceCodes.GetAttributesAll;
-    //   const path = EPath.Encode(true [
-    //     new EPath.Segments.Logical.ClassID(classCode),
-    //     new EPath.Segments.Logical.InstanceID(instanceID)
-    //   ]);
-    //   const reply = await this.sendRequest(true, new CIPRequest(service, path));
-    //   resolver.resolve(reply.data);
-    // });
 
     return CallbackPromise(callback, async resolver => {
       const service = CommonServiceCodes.GetAttributeSingle;

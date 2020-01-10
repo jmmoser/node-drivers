@@ -1,8 +1,21 @@
 # Changelog
 
 ## 2.0.0-beta.7 (???)
+- Overall improvement of CIP core
 - EIP layer has been moved under Layers.CIP
-- Use of EIP layer is now optional when the base layer is TCP.  It is automatically inserted in the layer stack.
+- EIP layer is now automatically inserted in the layer stack by CIP layers when the base layer is TCP or UDP.
+  ```javascript
+  const { TCP, CIP } = require('node-drivers').Layers;
+
+  /** If access to EIP layer is necessary: */
+  const tcpLayer = new TCP('1.2.3.4');
+  const eipLayer = new CIP.EIP(tcpLayer);
+  const logix = new CIP.Logix5000(eipLayer);
+
+  /** If access to EIP layer is not necessary: */
+  const tcpLayer = new TCP('1.2.3.4');
+  const logix = new CIP.Logix5000(tcpLayer);
+  ```
 
 ## 2.0.0-beta.6 (2019-12-30)
 - Fixed CIPRequest handling response data when length is 0

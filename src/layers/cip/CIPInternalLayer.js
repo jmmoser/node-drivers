@@ -2,7 +2,7 @@
 
 const CIPRequest = require('./core/request');
 const { InvertKeyValues } = require('../../utils');
-const { /* CommonServiceCodes, */ GeneralStatusCodes, ClassCodes } = require('./core/constants');
+const { GeneralStatusCodes, ClassCodes } = require('./core/constants');
 const { DataType } = require('./core/datatypes');
 const Layer = require('../Layer');
 const ConnectionManager = require('./core/objects/ConnectionManager');
@@ -10,6 +10,7 @@ const EPath = require('./core/epath');
 
 const EIPLayer = require('./EIP');
 const TCPLayer = require('../tcp/TCPLayer');
+const UDPLayer = require('../udp/UDPLayer');
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 
@@ -56,11 +57,12 @@ const TransportDirectionCodes = Object.freeze({
 });
 
 
-class Connection extends Layer {
+class CIPInternalLayer extends Layer {
   constructor(lowerLayer, options) {
     if (lowerLayer == null) {
-      lowerLayer = new EIPLayer();
-    } else if (lowerLayer instanceof TCPLayer) {
+      // lowerLayer = new EIPLayer();
+      throw new Error('Lower layer is currently required to use ')
+    } else if (lowerLayer instanceof TCPLayer || lowerLayer instanceof UDPLayer) {
       lowerLayer = new EIPLayer(lowerLayer);
     }
 
@@ -99,12 +101,6 @@ class Connection extends Layer {
         if (err || res == null || res.status.code !== 0) {
           console.log('CIP connection unsuccessful close', err, res);
           this.destroy('Forward Close error');
-        } else {
-          // this._connectionState = 0;
-          // this._sequenceCount = 0;
-          // this.sendInfo = null;
-          // console.log('CIP Connection closed');
-          // console.log(res.value);
         }
         this._connectionState = 0;
         resolve();
@@ -142,10 +138,6 @@ class Connection extends Layer {
 
 
   handleData(data, info, context) {
-    // totalData += data.length;
-    // totalPackets += 1;
-    // console.log(`${totalPackets}: ${totalData}`);
-
     if (context != null) {
       /** Unconnected Message */
       handleUnconnectedMessage(this, data, info, context);
@@ -161,48 +153,9 @@ class Connection extends Layer {
     this._sequenceCount = 0;
     this.sendInfo = null;
   }
-
-
-  // static DecodeInstanceAttribute(attribute, data, offset, cb) {
-  //   const dataType = InstanceAttributeDataTypes[attribute];
-  //   if (!dataType) {
-  //     throw new Error(`Unknown instance attribute: ${attribute}`);
-  //   }
-
-  //   let value;
-  //   offset = Decode(dataType, data, offset, val => value = val);
-
-  //   switch (attribute) {
-  //     case InstanceAttributeCodes.State: {
-  //       value = {
-  //         code: value,
-  //         name: InstanceStateNames[value] || 'Unknown'
-  //       };
-  //       break;
-  //     }
-  //     case InstanceAttributeCodes.Type: {
-  //       value = {
-  //         code: value,
-  //         name: InstanceTypeNames[value] || 'Unknown'
-  //       }
-  //     }
-  //     default:
-  //       break;
-  //   }
-
-  //   if (typeof cb === 'function') {
-  //     cb({
-  //       code: attribute,
-  //       name: InstanceAttributeNames[attribute] || 'Unknown',
-  //       value
-  //     });
-  //   }
-
-  //   return offset;
-  // }
 }
 
-module.exports = Connection;
+module.exports = CIPInternalLayer;
 
 
 /**

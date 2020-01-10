@@ -6,7 +6,6 @@ const {
   DataTypeNames
 } = require('../core/datatypes');
 
-
 const {
   InvertKeyValues
 } = require('../../../utils');
@@ -14,12 +13,6 @@ const {
 const {
   getBits
 } = require('../../../utils');
-
-// const {
-//   Logix5000_DataType,
-//   Logix5000_DatatypeNames
-// } = require('./constants');
-
 
 const Logix5000_DataTypeCodes = Object.freeze({
   Program: 0x68,
@@ -65,8 +58,6 @@ const SymbolServiceCodes = Object.freeze({
   WriteTag: 0x4D,
   WriteTagFragmented: 0x53,
   ReadModifyWriteTag: 0x4E,
-  // MultipleServicePacket: 0x0A, // Common service defined by CIP
-
   GetInstanceAttributeList: 0x55
 });
 
