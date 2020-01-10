@@ -8,6 +8,9 @@ const Layer = require('../Layer');
 const ConnectionManager = require('./core/objects/ConnectionManager');
 const EPath = require('./core/epath');
 
+const EIPLayer = require('./EIP');
+const TCPLayer = require('../tcp/TCPLayer');
+
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 
 const MaximumLargeConnectionSize = 0xFFFF;
@@ -55,6 +58,12 @@ const TransportDirectionCodes = Object.freeze({
 
 class Connection extends Layer {
   constructor(lowerLayer, options) {
+    if (lowerLayer == null) {
+      lowerLayer = new EIPLayer();
+    } else if (lowerLayer instanceof TCPLayer) {
+      lowerLayer = new EIPLayer(lowerLayer);
+    }
+
     super('connection.cip', lowerLayer);
 
     mergeOptionsWithDefaults(this, options);

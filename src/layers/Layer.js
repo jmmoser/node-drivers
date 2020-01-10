@@ -123,6 +123,8 @@ class Layer extends EventEmitter {
       /** Do not bubble up since close has already bubbled up */
       internalDestroy(this, 'Close');
 
+      console.log(`Closed: ${this.name}`);
+
       resolver.resolve();
     });
   }

@@ -1,6 +1,3 @@
-
-- [ ] fix EPath capitalized folder name issue
-- [ ] Move EIP under cip
 - Logix5000
   - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
   - [ ] Optimize

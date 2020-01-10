@@ -1,7 +1,7 @@
 'use strict';
 
-const CIPIdentity = require('../cip/core/objects/Identity');
-const { getBit, InvertKeyValues } = require('../../utils');
+const CIPIdentity = require('../core/objects/Identity');
+const { getBit, InvertKeyValues } = require('../../../utils');
 
 /*
   Communication Profile Families
@@ -231,7 +231,7 @@ function DecodeCPFItems(buffer, offset, cb) {
 
     const lastOffset = offset;
     offset = 0;
-    
+
     switch (type) {
       case CPFItemTypeIDs.NullAddress:
         if (length !== 0) {

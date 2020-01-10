@@ -2,6 +2,7 @@
 
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
+const Layer = require('../../Layer');
 const EPath = require('../core/epath');
 const CIPLayer = require('../CIPLayer');
 const CIPRequest = require('../core/request');
@@ -60,6 +61,12 @@ const {
 
 class Logix5000 extends CIPLayer {
   constructor(lowerLayer, options) {
+
+    // if (arguments === 1 || !(lowerLayer instanceof Layer)) {
+    //   options = lowerLayer;
+    //   lowerLayer = null;
+    // }
+
     options = Object.assign({
       port: 1,
       slot: 0,

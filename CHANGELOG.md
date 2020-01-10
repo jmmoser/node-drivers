@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-beta.7 (???)
+- EIP layer has been moved under Layers.CIP
+- Use of EIP layer is now optional when the base layer is TCP.  It is automatically inserted in the layer stack.
+
 ## 2.0.0-beta.6 (2019-12-30)
 - Fixed CIPRequest handling response data when length is 0
 - EPath Port Segment now encodes the pad byte ensuring the pad byte is 0 and the buffer is large enough

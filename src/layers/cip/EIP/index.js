@@ -1,8 +1,9 @@
 'use strict';
 
-const { CallbackPromise, InfoError } = require('../../utils');
-const Layer = require('../Layer');
-const EIPPacket = require('./EIPPacket');
+const TCPLayer = require('../../tcp/TCPLayer');
+const { CallbackPromise, InfoError } = require('../../../utils');
+const Layer = require('../../Layer');
+const EIPPacket = require('./packet');
 // const CommandCodes = EIPPacket.Command;
 const {
   CommandCodes,
@@ -69,8 +70,12 @@ const DefaultOptions = {
 
 
 class EIPLayer extends Layer {
-  constructor(lowerLayer) {
-    super('eip', lowerLayer, null, DefaultOptions);
+  constructor(lowerLayer, options) {
+    if (lowerLayer == null) {
+      lowerLayer = new TCPLayer(options);
+    }
+
+    super('eip.cip', lowerLayer, null, DefaultOptions);
 
     this._sessionHandle = 0;
     this._context = Buffer.alloc(8);
@@ -93,7 +98,7 @@ class EIPLayer extends Layer {
 
   listServices(callback) {
     return CallbackPromise(callback, resolver => {
-      queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), null, function(error, reply) {
+      queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), null, function (error, reply) {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -219,7 +224,7 @@ class EIPLayer extends Layer {
       });
     });
   }
-  
+
 
   listInterfaces(callback) {
     return CallbackPromise(callback, resolver => {
@@ -276,7 +281,7 @@ class EIPLayer extends Layer {
 
             if (info.connectionID != null && info.responseID != null) {
               // // this._connectedContexts.set(info.responseID, request.context);
-              
+
               // this._connectedContexts.set(info.responseID, request.layer);
               this._connectedContexts.set(info.responseID, info.connectionID);
             }
@@ -419,7 +424,7 @@ function setupCallbacks(self) {
       const messageItem = packet.items.find(item => item.type.code === CPFItemTypeIDs.ConnectedMessage);
       // console.log(addressItem);
       // console.log(self._connectedContexts);
-      
+
       if (addressItem && messageItem) {
         const info = {
           connected: true,
