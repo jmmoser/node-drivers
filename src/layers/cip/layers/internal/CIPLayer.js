@@ -1,11 +1,14 @@
 'use strict';
 
-const CIPRequest = require('./core/request');
-const { CommonServiceCodes } = require('./core/constants');
-const { CallbackPromise } = require('../../utils');
-const EPath = require('./core/epath');
-const Layer = require('../Layer');
+const CIPRequest = require('../../core/request');
+const { CommonServiceCodes } = require('../../core/constants');
+const { CallbackPromise } = require('../../../../utils');
+const EPath = require('../../core/epath');
+const Layer = require('../../../Layer');
 const ConnectionLayer = require('./CIPInternalLayer');
+
+
+const PCCC = require('./pccc');
 
 
 class CIPLayer extends Layer {
@@ -13,8 +16,19 @@ class CIPLayer extends Layer {
     /** Inject Connection as lower layer */
     lowerLayer = new ConnectionLayer(lowerLayer, options);
     super(name || 'cip', lowerLayer);
+    this._options = options;
   }
   
+  layerAdded(layer) {
+    switch (layer.name) {
+      case 'pccc':
+        this._pccc = PCCC(this._options);
+        break;
+      default:
+        throw new Error('CIP layer currently only supports forwarding PCCC layer');
+    }
+  }
+
   sendRequest(connected, request, callback) {
     return CallbackPromise(callback, resolver => {
       CIPLayer.Send(this, connected, request, function (error, reply) {
@@ -67,15 +81,46 @@ class CIPLayer extends Layer {
   }
 
 
+  sendNextMessage() {
+    const request = this.getNextRequest();
+    if (request != null) {
+      if (request.layer.name === 'pccc') {
+        const req = this._pccc.request(request.message);
+        this.send(req.encode(), { connected: false }, false, {
+          type: 'pccc',
+          request: req,
+          info: request.info,
+          context: request.context,
+          internal: false
+        });
+      }
+      // else {
+      //   throw new Error('Currently only supports forwarding PCCC requests');
+      // }
+
+      setImmediate(() => this.sendNextMessage());
+    }
+  }
+
+
   handleData(data, info, context) {
+    if (context && context.internal === false) {
+      const response = context.request.response(data);
+      // console.log(response);
+      if (context.type === 'pccc') {
+        this.forward(response.data.slice(response.data.readUInt8(0)), context.info, context.context);
+        return;
+      }
+      // throw new Error('Currently only supports forwarding PCCC requests');
+    }
+
     const callback = this.callbackForContext(context);
     if (callback != null) {
       callback(null, data, info);
       return true;
     }
-    // console.log(arguments);
-    // console.log(`CIP layer unhandled data`);
-    return false;
+
+    this.forward(data, info, context);
   }
 
 

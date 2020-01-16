@@ -2,15 +2,11 @@
 
 const { CallbackPromise } = require('../../utils');
 const Layer = require('../Layer');
-const PCCCPacket = require('./PCCCPacket');
+const PCCCPacket = require('./packet');
 
 /*
   - Uses transactions to map responses to requests
 */
-
-const INFO = {
-  type: 'pccc'
-};
 
 class PCCCLayer extends Layer {
   constructor(lowerLayer) {
@@ -249,7 +245,7 @@ function send(self, internal, request, contextOrCallback) {
     request
   });
 
-  self.send(request.encode(), INFO, false);
+  self.send(request.encode(), null, false);
 }
 
 /*

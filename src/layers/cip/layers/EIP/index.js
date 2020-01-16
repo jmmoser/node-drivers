@@ -1,8 +1,8 @@
 'use strict';
 
-const TCPLayer = require('../../tcp/TCPLayer');
-const { CallbackPromise, InfoError } = require('../../../utils');
-const Layer = require('../../Layer');
+const TCPLayer = require('../../../tcp/TCPLayer');
+const { CallbackPromise, InfoError } = require('../../../../utils');
+const Layer = require('../../../Layer');
 const EIPPacket = require('./packet');
 // const CommandCodes = EIPPacket.Command;
 const {

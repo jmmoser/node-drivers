@@ -2,10 +2,10 @@
 
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
-const Layer = require('../../Layer');
-const EPath = require('../core/epath');
-const CIPLayer = require('../CIPLayer');
-const CIPRequest = require('../core/request');
+// const Layer = require('../../Layer');
+const CIPLayer = require('../internal/CIPLayer');
+const EPath = require('../../core/epath');
+const CIPRequest = require('../../core/request');
 
 // const RECORD_TYPES = {
 //   CONTROLLER_ATTRIBUTES: 1,
@@ -18,7 +18,7 @@ const {
   CommonServiceCodes,
   // ClassCodes,
   GeneralStatusCodes
-} = require('../core/constants');
+} = require('../../core/constants');
 
 const {
   DataType,
@@ -27,12 +27,12 @@ const {
   EncodeSize,
   EncodeTo,
   Decode
-} = require('../core/datatypes');
+} = require('../../core/datatypes');
 
 const {
   CallbackPromise,
   InfoError
-} = require('../../../utils');
+} = require('../../../../utils');
 
 // const path = require('path');
 // const DB = require('../../../db');

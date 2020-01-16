@@ -1,16 +1,16 @@
 'use strict';
 
-const CIPRequest = require('./core/request');
-const { InvertKeyValues } = require('../../utils');
-const { GeneralStatusCodes, ClassCodes } = require('./core/constants');
-const { DataType } = require('./core/datatypes');
-const Layer = require('../Layer');
-const ConnectionManager = require('./core/objects/ConnectionManager');
-const EPath = require('./core/epath');
+const CIPRequest = require('../../core/request');
+const { InvertKeyValues } = require('../../../../utils');
+const { GeneralStatusCodes, ClassCodes } = require('../../core/constants');
+const { DataType } = require('../../core/datatypes');
+const Layer = require('../../../Layer');
+const ConnectionManager = require('../../core/objects/ConnectionManager');
+const EPath = require('../../core/epath');
 
-const EIPLayer = require('./EIP');
-const TCPLayer = require('../tcp/TCPLayer');
-const UDPLayer = require('../udp/UDPLayer');
+const EIPLayer = require('../EIP');
+const TCPLayer = require('../../../tcp/TCPLayer');
+const UDPLayer = require('../../../udp/UDPLayer');
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 

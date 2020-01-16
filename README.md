@@ -73,8 +73,8 @@ await tcpLayer.close();
 const { TCP, CIP, PCCC } = require('node-drivers').Layers;
 
 const tcpLayer = new TCP('1.2.3.4');
-const cipPCCCLayer = new CIP.PCCC(tcpLayer);
-const pccc = new PCCC(cipPCCCLayer);
+const cipLayer = new CIP(tcpLayer);
+const pccc = new PCCC(cipLayer);
 
 /** Write an integer */
 console.log(await pccc.typedWrite('N10:47', 1000));

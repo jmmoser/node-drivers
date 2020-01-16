@@ -26,13 +26,6 @@ class Layer extends EventEmitter {
     this.contextGenerator = options.contextGenerator;
     this.handlesForwarding = options.handlesForwarding === true;
 
-    if (lowerLayer != null) {
-      if (lowerLayer.handlesForwarding !== true) {
-        lowerLayer.upperLayer = this;
-      }
-      lowerLayer.layerAdded(this);
-    }
-
     this.__name = name;
     this.__context = 0;
     this.__contextToCallback = new Map();
@@ -40,6 +33,13 @@ class Layer extends EventEmitter {
     this.__idContext = new Map();
 
     this._open = 0;
+
+    if (lowerLayer != null) {
+      if (lowerLayer.handlesForwarding !== true) {
+        lowerLayer.upperLayer = this;
+      }
+      lowerLayer.layerAdded(this);
+    }
 
     if (defaultOptions) {
       passDefaultOptionsDown(defaultOptions, this);
@@ -198,7 +198,7 @@ class Layer extends EventEmitter {
     if (timeout != null && timeout > 0) {
       const timeoutHandle = setTimeout(() => {
         this.__contextToCallback.delete(context);
-        callback('Timeout');
+        callback(`Timeout (${timeout}ms)`);
       }, timeout);
 
       this.__contextToCallbackTimeouts.set(context, timeoutHandle);

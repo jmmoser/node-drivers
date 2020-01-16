@@ -4,15 +4,15 @@ const {
   DataType,
   DataTypeCodes,
   DataTypeNames
-} = require('../core/datatypes');
+} = require('../../core/datatypes');
 
 const {
   InvertKeyValues
-} = require('../../../utils');
+} = require('../../../../utils');
 
 const {
   getBits
-} = require('../../../utils');
+} = require('../../../../utils');
 
 const Logix5000_DataTypeCodes = Object.freeze({
   Program: 0x68,
