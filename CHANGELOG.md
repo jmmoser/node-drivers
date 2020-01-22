@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0-beta.7 (???)
+## 2.0.0-beta.7 (2020-01-22)
 - The Layers object exported by the package has been removed.
   ```javascript
   /** Before */
@@ -50,7 +50,6 @@
   const CIPCore = require('node-drivers').CIP.Core;
   ```
 - Fixed EIP ListIdentity response data decoding
-- Fixed CIP core objects require paths
 
 ## 2.0.0-beta.6 (2019-12-30)
 - Fixed CIPRequest handling response data when length is 0
