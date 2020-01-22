@@ -75,22 +75,6 @@ function InvertKeyValues(obj) {
   }
   return inverted;
 }
-// function InvertKeyValues(obj) {
-//   let inverted;
-//   const type = Object.prototype.toString.call(obj);
-//   if (type === '[object Object]') {
-//     inverted = {};
-//     for (let [key, value] of Object.entries(obj)) {
-//       inverted[value] = key;
-//     }
-//   } else if (type === '[object Map]') {
-//     inverted = new Map();
-//     for (let [key, value] of obj.entries()) {
-//       inverted.set(value, key);
-//     }
-//   }
-//   return inverted;
-// }
 
 /**
  * https://stackoverflow.com/a/12713611/3055415
@@ -129,21 +113,6 @@ class InfoError extends Error {
 }
 
 
-// function InfoError(info, message) {
-//   Error.call(this, message);
-
-//   this.message = message;
-//   this.info = info;
-
-//   // hide custom error implementation details from end-users
-//   Error.captureStackTrace(this, this.constructor);
-// }
-
-// InfoError.prototype = Object.create(Error.prototype);
-// InfoError.prototype.constructor = InfoError;
-// InfoError.prototype.name = 'InfoError';
-
-
 function CallbackPromise(callback, func, timeout) {
   const hasCallback = typeof callback === 'function';
   return new Promise(async function (resolve, reject) {
@@ -151,7 +120,6 @@ function CallbackPromise(callback, func, timeout) {
     let active = true;
     const resolver = {
       resolve: function (res) {
-        // console.log(`resolve: ${res}, active: ${active}`);
         if (active) {
           active = false;
           clearTimeout(timeoutHandle);

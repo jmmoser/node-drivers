@@ -111,10 +111,6 @@ function Decode(dataType, buffer, offset, cb, ctx) {
         }, ctx);
       });
 
-      value = value.filter((val, idx) => {
-        return !(dataType.members[idx].code === DataTypeCodes.SMEMBER && dataType.members[idx].filter === true);
-      });
-
       break;
     }
     case DataTypeCodes.ARRAY: {
@@ -178,9 +174,6 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       offset += dataType.length;
       break;
     }
-    case DataTypeCodes.SMEMBER:
-      offset = Decode(dataType.member, buffer, offset, val => value = val);
-      break;
     case DataTypeCodes.TRANSFORM: {
       offset = Decode(dataType.dataType, buffer, offset, val => value = dataType.transform(val));
       break;

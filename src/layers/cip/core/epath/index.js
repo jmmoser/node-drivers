@@ -95,10 +95,6 @@ class EPath {
     }
 
     if (typeof cb === 'function') {
-      if (segments.length === 0) {
-        console.log(arguments);
-        console.log(new Error())
-      }
       if (lengthIsUnknown && segments.length === 1) {
         cb(segments[0]);
       } else {

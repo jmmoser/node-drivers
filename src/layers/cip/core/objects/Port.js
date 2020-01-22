@@ -22,10 +22,10 @@
  * section of physical media
  */
 
-const CIPMetaObject = require('../core/object');
-const CIPAttribute = require('../core/attribute');
-const CIPFeatureGroup = require('../core/featuregroup');
-const { ClassCodes } = require('../core/constants');
+const CIPMetaObject = require('../object');
+const CIPAttribute = require('../attribute');
+const CIPFeatureGroup = require('../featuregroup');
+const { ClassCodes } = require('../constants');
 const { DataType } = require('../datatypes');
 
 

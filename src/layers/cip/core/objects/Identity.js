@@ -98,7 +98,7 @@ class Identity extends CIPObject {}
 Identity.ClassAttribute = ClassAttribute;
 Identity.InstanceAttribute = InstanceAttribute;
 
-module.exports = Identity;
+
 
 // CIP Vol1 Table 5-2.2, Attribute ID 8, Semantics of Values
 const InstanceStateDescriptions = {
@@ -229,3 +229,7 @@ const DeviceTypeNames = {
 //     UserAppName [SHORT_STRING]
 //   */
 // }
+
+Identity.DeviceType = DeviceTypeCodes;
+
+module.exports = Identity;

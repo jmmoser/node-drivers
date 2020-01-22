@@ -1,8 +1,8 @@
 'use strict';
 
-const { CallbackPromise } = require('../../utils');
 const dgram = require('dgram');
 const Layer = require('../Layer');
+const { CallbackPromise } = require('../../utils');
 
 class UDPLayer extends Layer {
   constructor(options) {

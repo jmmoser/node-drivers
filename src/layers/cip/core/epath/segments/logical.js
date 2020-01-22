@@ -232,7 +232,6 @@ function validate(type, format, value) {
     case TypeCodes.ConnectionPoint:
     case TypeCodes.ServiceID:
       if (value != null && (!Number.isInteger(value) || value < 0)) {
-        console.log(value);
         throw new Error(`Logical Segment of type ${TypeNames[type]}`);
       }
       break;

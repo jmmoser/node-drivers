@@ -83,23 +83,7 @@ function CIPMetaObject(classCode, options) {
         ]),
         null,
         (buffer, offset, cb) => {
-          const attributeResults = [];
-          for (let i = 0; i < GetAttributesAllInstanceAttributes.length; i++) {
-            if (offset < buffer.length) {
-              offset = this.DecodeInstanceAttribute(
-                buffer,
-                offset,
-                GetAttributesAllInstanceAttributes[i],
-                val => attributeResults.push(val)
-              );
-            } else {
-              break;
-            }
-          }
-          if (typeof cb === 'function') {
-            cb(attributeResults);
-          }
-          return offset;
+          return this.DecodeInstanceAttributesAll(buffer, offset, cb);
         }
       );
     }
@@ -178,6 +162,26 @@ function CIPMetaObject(classCode, options) {
       } else {
         throw new Error('Unable to determine if attribute is for class or instance');
       }
+    }
+
+    static DecodeInstanceAttributesAll(buffer, offset, cb) {
+      const attributeResults = [];
+      for (let i = 0; i < GetAttributesAllInstanceAttributes.length; i++) {
+        if (offset < buffer.length) {
+          offset = this.DecodeInstanceAttribute(
+            buffer,
+            offset,
+            GetAttributesAllInstanceAttributes[i],
+            val => attributeResults.push(val)
+          );
+        } else {
+          break;
+        }
+      }
+      if (typeof cb === 'function') {
+        cb(attributeResults);
+      }
+      return offset;
     }
 
     static DecodeInstanceAttribute(buffer, offset, attribute, cb) {

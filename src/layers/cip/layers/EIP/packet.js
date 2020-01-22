@@ -269,8 +269,9 @@ function DecodeCPFItems(buffer, offset, cb) {
         value.socket = socket;
 
         offset = CIPIdentity.DecodeInstanceAttributesAll(data, offset, val => value.attributes = val);
+
         // offset = CIPIdentity.DecodeInstanceAttribute(CIPIdentity.InstanceAttribute.State, data, offset, val => item.attributes[CIPIdentity.InstanceAttribute.State] = val);
-        offset = CIPIdentity.DecodeInstanceAttribute(CIPIdentity.InstanceAttribute.State, data, offset, val => value.attributes.push(val));
+        offset = CIPIdentity.DecodeInstanceAttribute(data, offset, CIPIdentity.InstanceAttribute.State, val => value.attributes.push(val));
 
         item.value = value;
         break;

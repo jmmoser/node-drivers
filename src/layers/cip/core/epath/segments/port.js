@@ -171,7 +171,6 @@ function serializeAddress(address) {
 
 function validate(number, address) {
   if (!Number.isInteger(number) || number < 0 || number > 65535) {
-    console.log(new Error());
     throw new Error(`Port segment port number must be an integer between 0 and 65535. Received: ${number}`);
   }
 

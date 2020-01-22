@@ -4,17 +4,17 @@
     - [ ] persist processor information to file system
     - [ ] readTags/bulkReadTags, multiple service packet
 - CIP
-  - [ ] allow Skipping EIP layer if lowerlayer is TCP
+  - [ ] Update ConnectionManager to a CIPObject
+  - [ ] CIPLayer handle forwarding Modbus
+  - [ ] Explore adding internal datatype for specifying special encoding/decoding format
   - [ ] Add engineering unit codes
   - [ ] Connection handle duplicate connection
   - [ ] understand the difference between direct requests, Connection Manager Unconnected Send messages, Connected messages, and how routes to eni/controller
   - [ ] use UCMM to get identity and verify device type is programmable logic controller OR fix path routing
   - [ ] Only send packets up to the packet rate
-  - [ ] Consider making CIPLayer intelligent, uses upper layer to determine if it is forwarding PCCC, Modbus, etc.
   - [ ] Add I/O Connections
   - [ ] Connection object read attributes (attribute 2 is instance type)
   - [ ] Read CIP Vol 1 Chapter 10 regarding briding and routing
-  - [ ] Allow explicit unconnected sends even with connection
   - [ ] add encoding for STRINGI, STRINGN, BOOL
 - TCP Layer
   - [ ] create TLS layer or just use options.tls?

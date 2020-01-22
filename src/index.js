@@ -1,11 +1,10 @@
 'use strict';
 
 module.exports = {
-  Layers: {
-    TCP: require('./layers/tcp/TCPLayer'),
-    UDP: require('./layers/udp/UDPLayer'),
-    Modbus: require('./layers/modbus/MBLayer'),
-    PCCC: require('./layers/pccc'),
-    CIP: require('./layers/cip')
-  }
+  TCP: require('./layers/tcp'),
+  UDP: require('./layers/udp'),
+  Modbus: require('./layers/modbus'),
+  PCCC: require('./layers/pccc'),
+  CIP: require('./layers/cip'),
+  Extras: require('./layers/extras')
 };

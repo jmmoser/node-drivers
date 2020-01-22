@@ -1,11 +1,25 @@
 # Changelog
 
 ## 2.0.0-beta.7 (???)
-- Overall improvement of CIP core
-- EIP layer has been moved under Layers.CIP
-- EIP layer is now automatically inserted in the layer stack by CIP layers when the base layer is TCP or UDP.
+- The Layers object exported by the package has been removed.
   ```javascript
-  const { TCP, CIP } = require('node-drivers').Layers;
+  /** Before */
+  const { TCP } = require('node-drivers').Layers;
+
+  /** After */
+  const { TCP } = require('node-drivers');
+  ```
+- EIP layer has been moved under CIP
+  ```javascript
+  /** Before */
+  const EIPLayer = require('node-drivers').EIP;
+
+  /** After */
+  const EIPLayer = require('node-drivers').CIP.EIP;
+  ```
+- EIP layer is now automatically inserted in the layer stack by CIP layers when the lower layer is TCP or UDP.
+  ```javascript
+  const { TCP, CIP } = require('node-drivers');
 
   /** If access to EIP layer is necessary: */
   const tcpLayer = new TCP('1.2.3.4');
@@ -16,6 +30,27 @@
   const tcpLayer = new TCP('1.2.3.4');
   const logix = new CIP.Logix5000(tcpLayer);
   ```
+- CIP.PCCC and CIP.Modbus layers have been removed. CIP layer should now be directly used when forwarding PCCC embedded in CIP. Modbus over CIP will come soon.
+  ```javascript
+  const { TCP, CIP, PCCC } = require('node-drivers');
+
+  /** Before */
+  const tcpLayer = new TCP('1.2.3.4');
+  const cipPCCCLayer = new CIP.PCCC(tcpLayer); // CIP.PCCC has been removed
+  const pccc = new PCCC(cipPCCCLayer);
+
+  /** After */
+  const tcpLayer = new TCP('1.2.3.4');
+  const cipLayer = new CIP(tcpLayer); // Use CIP layer directly
+  const pcccLayer = new PCCC(cipLayer);
+  ```
+- Added CIPObject DecodeInstanceAttributesAll static method
+- Overall improvement of CIP core and added external access
+  ```javascript
+  const CIPCore = require('node-drivers').CIP.Core;
+  ```
+- Fixed EIP ListIdentity response data decoding
+- Fixed CIP core objects require paths
 
 ## 2.0.0-beta.6 (2019-12-30)
 - Fixed CIPRequest handling response data when length is 0

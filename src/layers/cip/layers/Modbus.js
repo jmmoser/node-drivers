@@ -142,7 +142,7 @@
 
 // /** Use driver specific error handling if exists */
 // function send(self, service, data, callback) {
-//   CIPLayer.Send(self, false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
+//   self.sendRequest(false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
 // }
 
 
@@ -299,7 +299,7 @@
 
 // // /** Use driver specific error handling if exists */
 // // function send(self, service, data, callback) {
-// //   CIPLayer.Send(self, false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
+// //   self.sendRequest(false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
 // // }
 
 

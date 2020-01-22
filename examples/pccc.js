@@ -1,9 +1,8 @@
-const { Layers } = require('node-drivers');
+const { TCP, CIP, PCCC } = require('node-drivers');
 
-const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
-const eipLayer = new Layers.EIP(tcpLayer);
-const cipPCCCLayer = new Layers.CIP.PCCC(eipLayer);
-const plc5 = new Layers.PCCC(cipPCCCLayer);
+const tcpLayer = new TCP({ host: '1.2.3.4', port: 44818 });
+const cipLayer = new CIP(tcpLayer);
+const plc5 = new PCCC(cipLayer);
 
 plc5.typedRead('N10:47', function(err, value) {
   if (err) {

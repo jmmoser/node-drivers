@@ -7,139 +7,9 @@ const {
   GeneralStatusDescriptions
 } = require('./constants');
 
-
-// const INTERNALS = Symbol('REQUEST_INTERNALS');
-
-
-// class CIPRequest {
-//   constructor(service, path, data, responseHandler) {
-//     this.service = service,
-//     this.path = path;
-//     this.data = data;
-//     this.handler = responseHandler;
-
-//     this._response = new Promise((resolve, reject) => {
-//       this._resolve = resolve;
-//       this._reject = reject;
-//     });
-//   }
-
-//   encodeSize() {
-//     if (this._encodeSize != null) {
-//       return this._encodeSize;
-//     }
-//     let size = 1;
-//     if (Buffer.isBuffer(this.path)) {
-//       size += 1 + this.path.length;
-//     }
-//     if (Buffer.isBuffer(this.data)) {
-//       size += this.data.length;
-//     }
-//     this._encodeSize = size;
-//     return size;
-//   }
-
-//   encode() {
-//     const buffer = Buffer.alloc(this.encodeSize());
-//     this.encodeTo(buffer, 0);
-//     return buffer;
-//   }
-
-//   encodeTo(buffer, offset = 0) {
-//     const startingOffset = offset;
-
-//     offset = buffer.writeUInt8(this.service, offset);
-
-//     if (Buffer.isBuffer(this.path)) {
-//       offset = buffer.writeUInt8(this.path.length / 2, offset);
-//       const copyLength = this.path.copy(buffer, offset);
-//       if (copyLength !== this.path.length) {
-//         throw new Error('buffer not large enough');
-//       }
-//       offset += copyLength;
-//     } else {
-//       offset = buffer.writeUInt8(0, offset);
-//     }
-
-//     if (Buffer.isBuffer(this.data)) {
-//       const copyLength = this.data.copy(buffer, offset);
-//       if (copyLength !== this.data.length) {
-//         throw new Error('buffer not large enough');
-//       }
-//       offset += copyLength;
-//     }
-
-//     this._request = buffer.slice(startingOffset, offset);
-
-//     return offset;
-//   }
-
-
-//   handleData(buffer, offset = 0) {
-//     const res = {};
-//     res.request = this._request;
-//     res.buffer = buffer.slice(offset);
-//     // res.service = buffer.readUInt8(offset); offset += 1;
-//     const service = buffer.readUInt8(offset) & 0x7F; offset += 1;
-
-//     if (service !== this.service) {
-//       throw new Error(`Invalid service. Expected ${this.service}, Received ${service}`);
-//     }
-
-//     res.service = {
-//       code: service,
-//       hex: `0x${service.toString(16)}`,
-//       name: CommonServiceNames[service] || 'Unknown'
-//     };
-
-//     offset += 1; // reserved
-
-//     const statusCode = buffer.readUInt8(offset); offset += 1;
-
-//     res.status = {};
-//     res.status.code = statusCode;
-//     res.status.name = GeneralStatusNames[statusCode] || '';
-//     res.status.description = GeneralStatusDescriptions[statusCode] || '';
-//     res.status.error = statusCode !== 0 && statusCode !== 6;
-
-//     const extendedStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
-//     res.status.extended = buffer.slice(offset, offset + 2 * extendedStatusSize);
-//     offset += 2 * extendedStatusSize;
-
-//     res.data = buffer.slice(offset);
-
-//     if (res.data.length > 0 && typeof this.handler === 'function') {
-//       if (this.handler.length === 4) {
-//         offset = this.handler(buffer, offset, res, function (val) {
-//           res.value = val;
-//         });
-//       } else {
-//         offset = this.handler(buffer, offset, function (val) {
-//           res.value = val;
-//         });
-//       }
-//     }
-
-//     this._resolve(res);
-    
-//     return offset;
-//     // return res;
-//   }
-
-//   async response() {
-//     return this._response;
-
-//     // if (this._response != null) {
-//     //   return this._response;
-//     // }
-
-//     // this._response = new Promise((resolve, reject) => {
-//     //   this._resolve = resolve;
-//     //   this._reject = reject;
-//     // });
-//   }
-// }
-
+const EncodeSizeSymbol = Symbol('encodeSize');
+const RequestMessageSymbol = Symbol('requestMessage');
+const ResponseDataHandlerSymbol = Symbol('responseDataHandler');
 
 
 class CIPRequest {
@@ -147,15 +17,15 @@ class CIPRequest {
     this.service = service,
     this.path = path;
     this.data = data;
-    this.handler = responseHandler;
+    this[ResponseDataHandlerSymbol] = responseHandler;
     this.options = Object.assign({
       acceptedServiceCodes: [service]
     }, options);
   }
 
   encodeSize() {
-    if (this._encodeSize != null) {
-      return this._encodeSize;
+    if (this[EncodeSizeSymbol] != null) {
+      return this[EncodeSizeSymbol];
     }
     let size = 1;
     if (Buffer.isBuffer(this.path)) {
@@ -164,7 +34,7 @@ class CIPRequest {
     if (Buffer.isBuffer(this.data)) {
       size += this.data.length;
     }
-    this._encodeSize = size;
+    this[EncodeSizeSymbol] = size;
     return size;
   }
 
@@ -198,7 +68,7 @@ class CIPRequest {
       offset += copyLength;
     }
 
-    this._request = buffer.slice(startingOffset, offset);
+    this[RequestMessageSymbol] = buffer.slice(startingOffset, offset);
 
     return offset;
   }
@@ -208,12 +78,9 @@ class CIPRequest {
   }
 
   response(buffer, offset = 0) {
-    return DecodeResponse(buffer, offset, this.options, this._request, this.handler);
+    return DecodeResponse(buffer, offset, this.options, this[RequestMessageSymbol], this[ResponseDataHandlerSymbol]);
   }
 }
-
-
-module.exports = CIPRequest;
 
 
 function DecodeResponse(buffer, offset, options, request, handler) {
@@ -227,6 +94,10 @@ function DecodeResponse(buffer, offset, options, request, handler) {
   res.buffer = buffer.slice(offset);
   // res.service = buffer.readUInt8(offset); offset += 1;
   const service = buffer.readUInt8(offset) & 0x7F; offset += 1;
+
+  if (options.acceptedServiceCodes && options.acceptedServiceCodes.indexOf(service) < 0) {
+    throw new Error(`Invalid service. Expected one of [${options.acceptedServiceCodes.join(',')}], Received ${service}`);
+  }
 
   res.service = {
     code: service,
@@ -257,10 +128,6 @@ function DecodeResponse(buffer, offset, options, request, handler) {
   offset += 2 * extendedStatusSize;
 
   res.data = buffer.slice(offset);
-
-  if (options.acceptedServiceCodes && options.acceptedServiceCodes.indexOf(res.service.code) < 0) {
-    throw new Error(`Invalid service. Expected ${options.acceptedServiceCodes.join('/')}, Received ${res.service.code}`);
-  }
 
   if (typeof options.statusHandler === 'function') {
     options.statusHandler(statusCode, res.status.extended, function (name, description, type) {
@@ -305,11 +172,15 @@ class CIPMultiServiceRequest extends CIPRequest {
   }
 
   encodeSize() {
+    if (this[EncodeSizeSymbol] != null) {
+      return this[EncodeSizeSymbol];
+    }
     const count = this.requests.length;
     let size = super.encodeSize() + 2 + 2 * count;
     for (let i = 0; i < count; i++) {
       size += this.requests[i].encodeSize();
     }
+    this[EncodeSizeSymbol] = size;
     return size;
   }
 
@@ -336,7 +207,7 @@ class CIPMultiServiceRequest extends CIPRequest {
       offset = request.encodeTo(buffer, offset);
     });
 
-    this._request = buffer.slice(startingOffset, offset);
+    this[RequestMessageSymbol] = buffer.slice(startingOffset, offset);
 
     return offset;
   }
@@ -361,3 +232,5 @@ class CIPMultiServiceRequest extends CIPRequest {
 
 
 CIPRequest.Multi = CIPMultiServiceRequest;
+
+module.exports = CIPRequest;

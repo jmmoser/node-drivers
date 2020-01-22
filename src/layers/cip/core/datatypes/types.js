@@ -171,10 +171,6 @@ const DataType = Object.freeze({
       upperBoundTag
     };
   },
-
-  SMEMBER(member, filter) {
-    return { type: DataType.SMEMBER, code: DataTypeCodes.SMEMBER, member, filter }
-  },
   PLACEHOLDER(resolve) {
     return {
       type: DataType.PLACEHOLDER,

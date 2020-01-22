@@ -1,7 +1,7 @@
-const { Layers } = require('node-drivers');
+const { TCP, Modbus } = require('node-drivers');
 
-const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 502 });
-const mbLayer = new Layers.ModbusTCP(tcpLayer);
+const tcpLayer = new TCP({ host: '1.2.3.4', port: 502 });
+const mbLayer = new Modbus(tcpLayer);
 
 // read holding register 40004 of unit 81
 mbLayer.readHoldingRegisters(81, 3, 1, function(err, values) {

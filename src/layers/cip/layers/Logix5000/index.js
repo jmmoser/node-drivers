@@ -3,7 +3,7 @@
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
 // const Layer = require('../../Layer');
-const CIPLayer = require('../internal/CIPLayer');
+const CIPLayer = require('../internal/CIPInternalLayer');
 const EPath = require('../../core/epath');
 const CIPRequest = require('../../core/request');
 
@@ -403,14 +403,6 @@ class Logix5000 extends CIPLayer {
               let value;
               offset = Decode(type, data, offset, val => value = val);
 
-              // switch (code) {
-              //   case SymbolInstanceAttributeCodes.Type:
-              //     value = new SymbolType(value);
-              //     break;
-              //   default:
-              //     break;
-              // }
-
               attributeResults.push({
                 name: SymbolInstanceAttributeNames[code] || 'Unknown',
                 code,
@@ -460,12 +452,11 @@ class Logix5000 extends CIPLayer {
             let offset = 0;
             const attributes = [];
 
-            function appendAttribute(code, modifier) {
+            function appendAttribute(code) {
               offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, val => {
                 attributes.push({
                   name: SymbolInstanceAttributeNames[code] || 'Unknown',
                   code,
-                  // value: typeof modifier === 'function' ? modifier(val) : val
                   val
                 });
               });
@@ -851,7 +842,7 @@ async function readTagFragmented(layer, path, elements) {
     } else if (reply.status.code === 0) {
       break;
     } else {
-      throw new InfoError(reply, getError(reply));
+      throw new InfoError(reply, reply.status.description);
     }
   }
 
@@ -990,19 +981,24 @@ function sendPromise(self, service, path, data, timeout) {
 }
 
 /** Use driver specific error handling if exists */
-function send(self, service, path, data, callback, timeout) {
-  const request = new CIPRequest(service, path, data);
-  return CIPLayer.Send(self, true, request, (error, reply) => {
-    if (error && reply) {
-      error = getError(reply);
-    }
-    /** Update the service name for Logix5000 specific services */
-    if (reply && SymbolServiceNames[reply.service.code]) {
-      reply.service.name = SymbolServiceNames[reply.service.code];
-    }
+async function send(self, service, path, data, callback, timeout) {
+  try {
+    const request = new CIPRequest(service, path, data, null, {
+      serviceNames: SymbolServiceNames,
+      statusHandler: statusHandler
+    });
 
-    callback(error, reply);
-  }, timeout);
+    const response = await self.sendRequest(true, request);
+    // console.log(response);
+    if (response.status.error) {
+      callback(response.status.description, response);
+    } else {
+      callback(null, response);
+    }
+  } catch (err) {
+    console.log(err);
+    callback(err.message);
+  }
 }
 
 
@@ -1132,22 +1128,25 @@ function parseTemplateNameInfo(data, offset, cb) {
 }
 
 
-function getError(reply) {
-  if (reply.status.description) {
-    return reply.status.description;
+function statusHandler(code, extended, cb) {
+  let error = GenericServiceStatusDescriptions[code];
+  if (typeof error === 'object' && Buffer.isBuffer(extended) && extended.length >= 0) {
+    error = error[extended.readUInt16LE(0)];
   }
-
-  let error = GenericServiceStatusDescriptions[reply.status.code];
-  if (typeof error === 'object') {
-    if (Buffer.isBuffer(reply.status.extended) && reply.status.extended.length >= 2) {
-      error = error[reply.status.extended.readUInt16LE(0)];
-    }
+  if (error) {
+    cb(null, error);
   }
-
-  reply.status.description = error || 'Unknown Logix5000 error';
-
-  return reply.status.description;
 }
+// function getError(code, extended) {
+//   let error = GenericServiceStatusDescriptions[code];
+//   if (typeof error === 'object') {
+//     if (Buffer.isBuffer(extended) && extended.length >= 2) {
+//       return error[extended.readUInt16LE(0)];
+//     }
+//   }
+
+//   return error;
+// }
 
 
 function scopedGenerator() {

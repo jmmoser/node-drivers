@@ -1,10 +1,9 @@
 'use strict';
 
-const TCPLayer = require('../../../tcp/TCPLayer');
 const { CallbackPromise, InfoError } = require('../../../../utils');
 const Layer = require('../../../Layer');
 const EIPPacket = require('./packet');
-// const CommandCodes = EIPPacket.Command;
+
 const {
   CommandCodes,
   CPFItemTypeIDs
@@ -72,7 +71,7 @@ const DefaultOptions = {
 class EIPLayer extends Layer {
   constructor(lowerLayer, options) {
     if (lowerLayer == null) {
-      lowerLayer = new TCPLayer(options);
+      throw new Error('EIP layer requires a lower layer')
     }
 
     super('eip.cip', lowerLayer, null, DefaultOptions);
@@ -204,7 +203,6 @@ class EIPLayer extends Layer {
         } else {
           if (Array.isArray(reply.items) && reply.items.length === 1) {
             identities.push(reply.items[0]);
-            // console.log(identities.length);
             clearTimeout(timeoutHandler);
             if (hostsSpecified) {
               timeoutHandler = setTimeout(finalizer, resetTimeout);

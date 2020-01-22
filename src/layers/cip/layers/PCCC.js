@@ -89,7 +89,6 @@
 
 // /** Use driver specific error handling if exists */
 // function send(self, service, data) {
-//   // return CIPLayer.Send(self, false, new CIPRequest(service, PCCC_EPATH, data));
 //   const request = new CIPRequest(service, PCCC_EPATH, data);
 //   self.send(request.encode(), { connected: false }, false, {
 //     request
@@ -187,7 +186,7 @@
 
 // // /** Use driver specific error handling if exists */
 // // function send(self, service, data) {
-// //   return CIPLayer.Send(self, false, new CIPRequest(service, PCCC_EPATH, data));
+// //   return self.sendRequest(false, new CIPRequest(service, PCCC_EPATH, data));
 // // }
 
 // // const ServiceCodes = Object.freeze({

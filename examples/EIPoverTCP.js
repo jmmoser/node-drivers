@@ -1,12 +1,11 @@
-const { Layers } = require('node-drivers');
+const { TCP, CIP } = require('node-drivers');
 
-const tcpLayer = new Layers.TCP({ host: '0.0.0.0', port: 44818 });
-const eipLayer = new Layers.EIP(tcpLayer);
+const tcpLayer = new TCP({ host: '1.2.3.4', port: 44818 });
+const eipLayer = new CIP.EIP(tcpLayer);
 
 (async () => {
   try {
-    const interfaces = await eipLayer.listInterfaces();
-    console.log(interfaces);
+    console.log(await eipLayer.listInterfaces());
   } catch (err) {
     console.log(err);
   }

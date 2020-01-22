@@ -5,9 +5,8 @@ const { getBits, InvertKeyValues } = require('../../../../utils');
 /** CIP Vol1 Table C-6.1 */
 const DataTypeCodes = Object.freeze({
   /** DATATYPES FROM EXTERNAL SOURCES CANNOT BE NEGATIVE BECAUSE CODE IS READ AS UNSIGNED */
-  TRANSFORM: -4,
-  PLACEHOLDER: -3, /** used when previously decoded data determines datatype */
-  SMEMBER: -2,
+  TRANSFORM: -3,
+  PLACEHOLDER: -2, /** used when previously decoded data determines datatype */
   UNKNOWN: -1,
 
   BOOL: 0xC1,

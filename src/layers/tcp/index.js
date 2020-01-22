@@ -1,8 +1,8 @@
 'use strict';
 
-const { CallbackPromise } = require('../../utils');
 const net = require('net');
 const Layer = require('../Layer');
+const { CallbackPromise } = require('../../utils');
 
 
 class TCPLayer extends Layer {
