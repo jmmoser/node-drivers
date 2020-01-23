@@ -14,7 +14,7 @@
   - CIPMultiServiceRequest (CIPRequest.Multi) now works
   - Here is an example of two requests inside of a multi service request inside of an unconnected send
   ```javascript
-  const { TCP, CIP } = require('../../src');
+  const { TCP, CIP } = require('node-drivers');
 
   const tcpLayer = new TCP('1.2.3.4');
   const cipLayer = new CIP(tcpLayer);
