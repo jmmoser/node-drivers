@@ -24,7 +24,6 @@
 
 const CIPMetaObject = require('../object');
 const CIPAttribute = require('../attribute');
-const CIPFeatureGroup = require('../featuregroup');
 const { ClassCodes } = require('../constants');
 const { DataType } = require('../datatypes');
 
@@ -101,10 +100,6 @@ const InstanceAttribute = Object.freeze({
 });
 
 
-const ClassAttributeGroup = new CIPFeatureGroup(Object.values(ClassAttribute))
-const InstanceAttributeGroup = new CIPFeatureGroup(Object.values(InstanceAttribute));
-
-
 const GetAttributesAllInstanceAttributes = Object.freeze([
   InstanceAttribute.Type,
   InstanceAttribute.Number,
@@ -115,8 +110,8 @@ const GetAttributesAllInstanceAttributes = Object.freeze([
 
 
 const CIPObject = CIPMetaObject(ClassCodes.Port, {
-  ClassAttributeGroup,
-  InstanceAttributeGroup,
+  ClassAttributes: ClassAttribute,
+  InstanceAttributes: InstanceAttribute,
   GetAttributesAllInstanceAttributes
 });
 

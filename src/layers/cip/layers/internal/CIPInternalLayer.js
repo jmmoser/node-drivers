@@ -37,15 +37,19 @@ class CIPInternalLayer extends Layer {
       const timeout = null;
 
       const context = this.contextCallback((error, message) => {
-        if (error) {
-          resolver.reject(error, message);
-        } else {
-          const res = request.response(message, 0);
-          if (res.status.error) {
-            resolver.reject(res.status.description, res);
+        try {
+          if (error) {
+            resolver.reject(error, message);
           } else {
-            resolver.resolve(res);
+            const res = request.response(message, 0);
+            if (res.status.error) {
+              resolver.reject(res.status.description, res);
+            } else {
+              resolver.resolve(res);
+            }
           }
+        } catch (err) {
+          resolver.reject(err);
         }
       }, null, timeout);
 

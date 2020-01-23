@@ -1,5 +1,48 @@
 # Changelog
 
+## 2.0.0-beta.8 (2020-01-23)
+- Added CIPAttribute.Get() as a helper method for creating a GetAttributeSingle service CIPRequest
+  ```javascript
+  /**
+   * Creates a GetAttributeSingle service CIPRequest for retrieving the device
+   * type of Identity object instance 1
+   */
+  const request = CIP.Core.Objects.Identity.InstanceAttribute.DeviceType.Get(1);
+  ```
+- Improved CIPRequest and CIPMultiServiceRequest
+  - A CIPRequest can be specified as the data handler for another CIPRequest (see ConnectionManager's UnconnectedSend method)
+  - CIPMultiServiceRequest (CIPRequest.Multi) now works
+  - Here is an example of two requests inside of a multi service request inside of an unconnected send
+  ```javascript
+  const { TCP, CIP } = require('../../src');
+
+  const tcpLayer = new TCP('1.2.3.4');
+  const cipLayer = new CIP(tcpLayer);
+
+  /** Create an Unconnected Send request */
+  const request = CIP.Core.Objects.ConnectionManager.UnconnectedSend(
+    /** multi service request */
+    new CIP.Core.Request.Multi([
+      /** two different GetAttributeSingle requests */
+      CIP.Core.Objects.MessageRouter.InstanceAttribute.ObjectList.Get(1),
+      CIP.Core.Objects.Port.InstanceAttribute.Name.Get(1)
+    ]),
+    /** routing out of port 1 to address 0 */
+    CIP.Core.EPath.Encode(true, [
+      new CIP.Core.EPath.Segments.Port(1, 0)
+    ])
+  );
+  
+  /** Use the CIP layer to send the unconnected message */
+  const res = await cipLayer.sendRequest(false, request);
+
+  /** res.value is an array of response objects (2 responses in this case) */
+  console.log(res.value);
+
+  await tcpLayer.close();
+  ```
+- Fixed CIP Layer sendRequest not propagating errors
+
 ## 2.0.0-beta.7 (2020-01-22)
 - The Layers object exported by the package has been removed.
   ```javascript
@@ -77,9 +120,13 @@
   ```javascript
   let i = 0;
   logix.listTags(function(tag) {
-    i++;
-    console.log(i, tag);
-    return i < 10; // return true to continue listing tags
+    if (tag != null) {
+      i++;
+      console.log(i, tag);
+      return i < 10; // return true to continue listing tags
+    } else {
+      // tag is null so listing is finished
+    }
   });
   ```
 - Improved EIP Layer listIdentities timeout handling, it should be much faster to resolve

@@ -2,7 +2,6 @@
 
 const CIPMetaObject = require('../object');
 const CIPAttribute = require('../attribute');
-const CIPFeatureGroup = require('../featuregroup');
 const { ClassCodes } = require('../constants');
 const { DataType } = require('../datatypes');
 const { getBits } = require('../../../../utils');
@@ -169,9 +168,6 @@ const InstanceAttribute = Object.freeze({
   // PortTrafficOverloadAlarm: new CIPAttribute.Instance(107, 'Port Traffic Overload Alarm', DataType.USINT)
 });
 
-const ClassAttributeGroup = new CIPFeatureGroup(Object.values(ClassAttribute));
-const InstanceAttributeGroup = new CIPFeatureGroup(Object.values(InstanceAttribute));
-
 
 const GetAttributesAllInstanceAttributes = Object.freeze([
   InstanceAttribute.InterfaceSpeed,
@@ -184,8 +180,8 @@ const GetAttributesAllInstanceAttributes = Object.freeze([
 
 
 const CIPObject = CIPMetaObject(ClassCodes.EthernetLink, {
-  ClassAttributeGroup,
-  InstanceAttributeGroup,
+  ClassAttributes: ClassAttribute,
+  InstanceAttributes: InstanceAttribute,
   GetAttributesAllInstanceAttributes
 });
 

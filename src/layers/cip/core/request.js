@@ -1,11 +1,16 @@
 'use strict';
 
 const {
+  ClassCodes,
   CommonServiceCodes,
   CommonServiceNames,
   GeneralStatusNames,
   GeneralStatusDescriptions
 } = require('./constants');
+
+const EPath = require('./epath');
+
+// const { deferred } = require('../../../utils');
 
 const EncodeSizeSymbol = Symbol('encodeSize');
 const RequestMessageSymbol = Symbol('requestMessage');
@@ -17,6 +22,12 @@ class CIPRequest {
     this.service = service,
     this.path = path;
     this.data = data;
+    
+    /** responseHandler can be a function(buffer, offset, cb) or a CIPRequest
+     * ConnectionManager's UnconnectedSend specifies the inner request as the handler */
+    if (responseHandler instanceof CIPRequest) {
+      responseHandler = responseHandler[ResponseDataHandlerSymbol];
+    }
     this[ResponseDataHandlerSymbol] = responseHandler;
     this.options = Object.assign({
       acceptedServiceCodes: [service]
@@ -165,9 +176,15 @@ function DecodeResponse(buffer, offset, options, request, handler) {
 }
 
 
+const MessageRouterPath = EPath.Encode(true, [
+  new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
+  new EPath.Segments.Logical.InstanceID(1)
+]);
+
+
 class CIPMultiServiceRequest extends CIPRequest {
-  constructor(path, requests) {
-    super(CommonServiceCodes.MultipleServicePacket, path);
+  constructor(requests, path) {
+    super(CommonServiceCodes.MultipleServicePacket, path ? path : MessageRouterPath, null, MultiCreateDataHandler(requests));
     this.requests = requests;
   }
 
@@ -211,22 +228,26 @@ class CIPMultiServiceRequest extends CIPRequest {
 
     return offset;
   }
+}
 
-  response(buffer, offset = 0) {
-    const res = super.response(buffer, offset);
+function MultiCreateDataHandler(requests) {
+  return function (buffer, offset, cb) {
+    const numberOfReplies = buffer.readUInt16LE(offset, 0); //offset += 2;
 
-    const numberOfReplies = res.data.readUInt16LE(offset, 0);
-
-    if (numberOfReplies !== this.requests.length) {
-      throw new Error(`CIP Multiple Service response expected ${this.requests.length} replies but only received ${numberOfReplies}`);
+    if (numberOfReplies !== requests.length) {
+      throw new Error(`CIP Multiple Service response expected ${requests.length} replies but only received ${numberOfReplies}`);
     }
+
+    const responses = [];
 
     for (let i = 0; i < numberOfReplies; i++) {
-      const request = this.requests[i];
-      request.response(res.data, res.data.readUInt16LE(2 + 2 * i));
+      // console.log(offset, i, buffer.readUInt16LE(offset + 2 + 2 * i), buffer);
+      responses.push(requests[i].response(buffer, buffer.readUInt16LE(offset + 2 + 2 * i) + offset));
     }
 
-    return res;
+    cb(responses);
+
+    return offset;
   }
 }
 

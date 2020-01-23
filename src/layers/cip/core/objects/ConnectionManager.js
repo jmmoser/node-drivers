@@ -54,7 +54,7 @@ class ConnectionManager {
       ServiceCodes.UnconnectedSend,
       ConnectionManager_EPath,
       buffer,
-      request.handler,
+      request,
       {
         acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service],
         statusHandler: function(statusCode, extendedBuffer, cb) {

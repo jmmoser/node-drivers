@@ -2,7 +2,6 @@
 
 const CIPMetaObject = require('../object');
 const CIPAttribute = require('../attribute');
-const CIPFeatureGroup = require('../featuregroup');
 
 const {
   ClassCodes,
@@ -43,12 +42,9 @@ const InstanceAttribute = Object.freeze({
 });
 
 
-const ClassAttributeGroup = new CIPFeatureGroup(Object.values(ClassAttribute))
-const InstanceAttributeGroup = new CIPFeatureGroup(Object.values(InstanceAttribute));
-
 const CIPObject = CIPMetaObject(ClassCodes.MessageRouter, {
-  ClassAttributeGroup,
-  InstanceAttributeGroup
+  ClassAttributes: ClassAttribute,
+  InstanceAttributes: InstanceAttribute
 });
 
 class MessageRouter extends CIPObject {}

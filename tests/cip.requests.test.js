@@ -15,7 +15,7 @@ describe('Encoding', () => {
 
   test('Encode Multi', () => {
     expect(
-      new CIPRequest.Multi(Buffer.from([0x20, 0x02, 0x24, 0x01]), [
+      new CIPRequest.Multi([
         new CIPRequest(
           0x4C,
           Buffer.from([0x91, 0x05, 0x70, 0x61, 0x72, 0x74, 0x73, 0x00]),
@@ -56,7 +56,7 @@ describe('Decoding', () => {
       Buffer.from([0x01, 0x00])
     );
 
-    const multiRequest = new CIPRequest.Multi(Buffer.from([0x20, 0x02, 0x24, 0x01]), [
+    const multiRequest = new CIPRequest.Multi([
       request1,
       request2
     ]);

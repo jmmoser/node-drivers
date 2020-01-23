@@ -69,8 +69,17 @@ const CommonServices = Object.freeze({
 
 function CIPMetaObject(classCode, options) {
   options = options || {};
-  const ClassAttributeGroup = options.ClassAttributeGroup || new CIPFeatureGroup([]);
-  const InstanceAttributeGroup = options.InstanceAttributeGroup || new CIPFeatureGroup([]);
+  // const ClassAttributeGroup = options.ClassAttributeGroup || new CIPFeatureGroup([]);
+  // const InstanceAttributeGroup = options.InstanceAttributeGroup || new CIPFeatureGroup([]);
+
+  const ClassAttributes = Array.isArray(options.ClassAttributes) ? options.ClassAttributes : Object.values(options.ClassAttributes || {});
+  const InstanceAttributes = Array.isArray(options.InstanceAttributes) ? options.InstanceAttributes : Object.values(options.InstanceAttributes || {});
+  
+  ClassAttributes.forEach(attribute => attribute.classCode = classCode);
+  InstanceAttributes.forEach(attribute => attribute.classCode = classCode);
+
+  const ClassAttributeGroup = new CIPFeatureGroup(ClassAttributes);
+  const InstanceAttributeGroup = new CIPFeatureGroup(InstanceAttributes);
   const GetAttributesAllInstanceAttributes = options.GetAttributesAllInstanceAttributes || [];
 
   class CIPObject {

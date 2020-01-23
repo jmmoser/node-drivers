@@ -2,7 +2,6 @@
 
 const CIPMetaObject = require('../object');
 const CIPAttribute = require('../attribute');
-const CIPFeatureGroup = require('../featuregroup');
 
 const {
   ClassCodes,
@@ -83,12 +82,10 @@ const GetAttributesAllInstanceAttributes = [
   InstanceAttribute.ProductName
 ];
 
-const ClassAttributeGroup = new CIPFeatureGroup(Object.values(ClassAttribute))
-const InstanceAttributeGroup = new CIPFeatureGroup(Object.values(InstanceAttribute));
 
 const CIPObject = CIPMetaObject(ClassCodes.Identity, {
-  ClassAttributeGroup,
-  InstanceAttributeGroup,
+  ClassAttributes: ClassAttribute,
+  InstanceAttributes: InstanceAttribute,
   GetAttributesAllInstanceAttributes
 });
 
