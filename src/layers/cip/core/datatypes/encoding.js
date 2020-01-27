@@ -60,6 +60,8 @@ function EncodeSize(dataType, value) {
         size += EncodeSize(dataType.members[i], value[i]);
       }
       return size;
+    case DataTypeCodes.TRANSFORM:
+      return EncodeSize(dataType.dataType, dataType.encodeTransform(value));
     case DataTypeCodes.UNKNOWN:
       return dataType.length;
     default:
@@ -160,7 +162,10 @@ function EncodeTo(buffer, offset, dataType, value) {
       for (let i = 0; i < dataType.members.length; i++) {
         offset = EncodeTo(buffer, offset, dataType.members[i], value[i]);
       }
-      return offset;
+      break;
+    case DataTypeCodes.TRANSFORM:
+      offset = EncodeTo(buffer, offset, dataType.dataType, dataType.encodeTransform(value));
+      break;
     case DataTypeCodes.BOOL:
       throw new Error(`Boolean encoding isn't currently supported, use BYTE instead`);
     default:

@@ -175,7 +175,7 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       break;
     }
     case DataTypeCodes.TRANSFORM: {
-      offset = Decode(dataType.dataType, buffer, offset, val => value = dataType.transform(val));
+      offset = Decode(dataType.dataType, buffer, offset, val => value = dataType.decodeTransform(val));
       break;
     }
     case DataTypeCodes.PLACEHOLDER:

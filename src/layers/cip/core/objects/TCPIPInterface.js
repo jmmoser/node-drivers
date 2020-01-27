@@ -19,7 +19,7 @@ const IPAddressDataType = DataType.TRANSFORM(
       (value & 255)
     );
   }
-)
+);
 
 
 const InstanceAttribute = Object.freeze({

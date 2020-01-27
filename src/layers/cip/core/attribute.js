@@ -9,11 +9,9 @@ const CIPRequest = require('./request');
 const CIPFeature = require('./feature');
 
 class CIPAttribute extends CIPFeature {
-  constructor(code, name, dataType, getable = true, setable = false) {
-    super(code, name);
+  constructor(code, name, dataType, classCode) {
+    super(code, name, classCode);
     this.dataType = dataType;
-    this.getable = getable;
-    this.setable = setable;
   }
 
   Get(instance) {
@@ -32,7 +30,11 @@ class CIPAttribute extends CIPFeature {
   }
 }
 
-CIPAttribute.Class = class CIPClassAttribute extends CIPAttribute { }
+CIPAttribute.Class = class CIPClassAttribute extends CIPAttribute {
+  Get(instance) {
+    return super.Get(instance == null ? 0 : instance);
+  }
+}
 CIPAttribute.Instance = class CIPInstanceAttribute extends CIPAttribute { }
 
 module.exports = CIPAttribute;

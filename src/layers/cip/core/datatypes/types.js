@@ -178,8 +178,12 @@ const DataType = Object.freeze({
       resolve: resolve || (dt => dt)
     }
   },
-  TRANSFORM(dataType, transform) {
-    return { type: DataType.TRANSFORM, code: DataTypeCodes.TRANSFORM, dataType, transform };
+  /**
+   * decodeTransform transforms from CIP data type to friendly data type
+   * encodeTransform transforms friendly data type to CIP data type
+   * */
+  TRANSFORM(dataType, decodeTransform, encodeTransform) {
+    return { type: DataType.TRANSFORM, code: DataTypeCodes.TRANSFORM, dataType, decodeTransform, encodeTransform };
   }
 });
 

@@ -96,6 +96,22 @@ describe('Encoding', () => {
   test('USINT[]', () => {
     expect(Encode(DataType.ARRAY(DataType.USINT, 0, 1), [1, 2])).toEqual(Buffer.from([0x01, 0x02]));
   });
+
+  test('TRANSFORM', () => {
+    const dt = DataType.TRANSFORM(
+      DataType.STRUCT([DataType.USINT, DataType.USINT]),
+      function(val) {
+        return {
+          major: val[0],
+          minor: val[1]
+        }
+      },
+      function(val) {
+        return [val.major, val.minor];
+      }
+    );
+    expect(Encode(dt, { major: 1, minor: 0})).toEqual(Buffer.from([0x01, 0x00]));
+  });
 });
 
 
@@ -264,6 +280,25 @@ describe('Decoding', () => {
   test('ARRAY USINT[]', () => {
     expect(Decode(DataType.ARRAY(DataType.USINT, 0, 1), Buffer.from([0x01, 0x02]), 0, val => {
       expect(val).toEqual([1, 2]);
+    })).toBe(2);
+  });
+
+  test('TRANSFORM', () => {
+    const dt = DataType.TRANSFORM(
+      DataType.STRUCT([DataType.USINT, DataType.USINT]),
+      function (val) {
+        return {
+          major: val[0],
+          minor: val[1]
+        }
+      },
+      function (val) {
+        return [val.major, val.minor];
+      }
+    );
+    
+    expect(Decode(dt, Buffer.from([0x01, 0x00]), 0, val => {
+      expect(val).toEqual({ major: 1, minor: 0 });
     })).toBe(2);
   });
 });
