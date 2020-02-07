@@ -631,7 +631,7 @@ function TypedReadParserDataInfo(data, offset = 0) {
   let typeID;
   let size;
 
-  if (getBit(flag, 7)) {
+  if (getBits(flag, 7, 8)) {
     const dataTypeBytes = getBits(flag, 4, 7);
     switch (dataTypeBytes) {
       case 1:
@@ -651,7 +651,7 @@ function TypedReadParserDataInfo(data, offset = 0) {
     typeID = getBits(flag, 4, 7);
   }
 
-  if (getBit(flag, 3)) {
+  if (getBits(flag, 3, 4)) {
     const dataTypeSizeBytes = getBits(flag, 0, 3);
     switch (dataTypeSizeBytes) {
       case 1:

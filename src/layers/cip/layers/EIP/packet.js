@@ -282,8 +282,8 @@ function DecodeCPFItems(buffer, offset, cb) {
         value.flags = {};
         const flags = data.readUInt16LE(offset); offset += 2;
         value.flags.code = flags;
-        value.flags.supportsCIPPacketEncapsulationViaTCP = !!getBit(flags, 5);
-        value.flags.supportsCIPClass0or1UDPBasedConnections = !!getBit(flags, 8);
+        value.flags.supportsCIPPacketEncapsulationViaTCP = !!getBits(flags, 5, 6);
+        value.flags.supportsCIPClass0or1UDPBasedConnections = !!getBits(flags, 8, 9);
 
         let nameLength;
         for (nameLength = 0; nameLength <= 16; nameLength++) {

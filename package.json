@@ -14,8 +14,8 @@
   "author": "Justin Moser",
   "license": "MIT",
   "devDependencies": {
-    "@types/jest": "^24.0.25",
-    "jest": "^24.9.0"
+    "@types/jest": "^25.1.2",
+    "jest": "^25.1.0"
   },
   "engines": {
     "node": ">=10.0.0"

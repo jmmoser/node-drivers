@@ -300,7 +300,7 @@ function DecodeElectronicKey(buffer, offset, cb) {
    * Major Revision, and Minor Revision shall match. If set, then any
    * key may be accepted which a device can emulate.
    * */
-  value.compatibility = getBit(majorRevisionByte, 7);
+  value.compatibility = getBits(majorRevisionByte, 7, 8);
   value.revision = {};
   value.revision.major = getBits(majorRevisionByte, 0, 7);
   value.revision.minor = buffer.readUInt8(offset); offset += 1;

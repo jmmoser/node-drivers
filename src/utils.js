@@ -5,10 +5,6 @@ function getBits(k, m, n) {
   return ((k >> m) & ((1 << (n - m)) - 1));
 }
 
-function getBit(k, n) {
-  return ((k) & (1 << n)) > 0 ? 1 : 0;
-}
-
 
 function unsignedIntegerSize(i) {
   if (i < 0x10000) {
@@ -192,7 +188,6 @@ function deferred() {
 
 module.exports = {
   getBits,
-  getBit,
   unsignedIntegerSize,
   encodeUnsignedInteger,
   decodeUnsignedInteger,

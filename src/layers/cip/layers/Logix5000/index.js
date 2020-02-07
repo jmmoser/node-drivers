@@ -1081,8 +1081,8 @@ function parseListTagsResponse(reply, attributes, tags, modifier) {
 
 // function parseTypeCode(code) {
 //   const res = {};
-//   res.atomic = getBit(code, 15) === 0;
-//   res.system = !!getBit(code, 12);
+//   res.atomic = getBits(code, 15, 16) === 0;
+//   res.system = !!getBits(code, 12, 13);
 //   res.dimensions = getBits(code, 13, 15);
 
 //   if (res.atomic) {
