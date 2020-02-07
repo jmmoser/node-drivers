@@ -5,8 +5,6 @@
     - [ ] readTags/bulkReadTags, multiple service packet
 - CIP
   - [ ] Update ConnectionManager to a CIPObject
-  - [ ] CIPLayer handle forwarding Modbus
-  - [ ] Explore adding internal datatype for specifying special encoding/decoding format
   - [ ] Add engineering unit codes
   - [ ] Connection handle duplicate connection
   - [ ] understand the difference between direct requests, Connection Manager Unconnected Send messages, Connected messages, and how routes to eni/controller
@@ -14,7 +12,6 @@
   - [ ] Only send packets up to the packet rate
   - [ ] Add I/O Connections
   - [ ] Connection object read attributes (attribute 2 is instance type)
-  - [ ] Read CIP Vol 1 Chapter 10 regarding briding and routing
   - [ ] add encoding for STRINGI, STRINGN, BOOL
 - TCP Layer
   - [ ] create TLS layer or just use options.tls?
