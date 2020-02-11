@@ -10,19 +10,32 @@ const readLine = require('readline');
 class DB {
   constructor(filePath) {
     this._filePath = filePath;
-    this._records = [];
+    this._records = null;
 
     this._writeStream = fs.createWriteStream(this._filePath, { flags: 'a', encoding: 'utf8' });
   }
 
   async clear() {
+    if (this._clearing != null) {
+      return this._clearing;
+    }
+
     await this._records;
     this._records = null;
-    
+
     this._clearing = fs.promises.truncate(this._filePath, 0);
     await this._clearing;
     this._clearing = null;
   }
+
+  // async clear() {
+  //   await this._records;
+  //   this._records = null;
+    
+  //   this._clearing = fs.promises.truncate(this._filePath, 0);
+  //   await this._clearing;
+  //   this._clearing = null;
+  // }
 
   async append(obj) {
     await this._clearing;

@@ -6,8 +6,6 @@ const CIPAttribute = require('../../../core/attribute');
 const { DataType } = require('../../../core/datatypes');
 
 
-
-
 const InstanceAttribute = Object.freeze({
   Name: new CIPAttribute.Instance(1, 'Name', DataType.STRING),
   Type: new CIPAttribute.Instance(2, 'Type', DataType.TRANSFORM(DataType.UINT, val => new SymbolType(val))),
@@ -26,8 +24,8 @@ const CIPObject = CIPMetaObject(0x6B, {
   InstanceAttributes: InstanceAttribute
 });
 
-class Symbol extends CIPObject { }
+class SymbolObject extends CIPObject { }
 
-Symbol.InstanceAttribute = InstanceAttribute;
+SymbolObject.InstanceAttribute = InstanceAttribute;
 
-module.exports = Symbol;
+module.exports = SymbolObject;
