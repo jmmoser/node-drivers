@@ -43,7 +43,7 @@ describe('Encoding', () => {
 });
 
 describe('Decoding', () => {
-  test('Decode STRUCT', () => {
+  test('Decode Multi', () => {
     const request1 = new CIPRequest(
       0x4C,
       Buffer.from([0x91, 0x05, 0x70, 0x61, 0x72, 0x74, 0x73, 0x00]),
@@ -78,13 +78,9 @@ describe('Decoding', () => {
     ]);
 
     const response = multiRequest.response(responseBuffer, 0);
-      
-    console.log(response);
-    expect(
-      1
-    ).toBe(1);
-    // expect(EPath.Decode(Buffer.from([0xA2, 0x03, 0xC1, 0xC7, 0xC4]), 0, true, false, segments => {
-    //   expect(segments).toEqual([new DataTypeSegment(DataType.STRUCT([DataType.BOOL, DataType.UINT, DataType.DINT]))]);
-    // })).toBe(5);
+
+    expect(response.service.code).toBe(10);
+    expect(response.status.code).toBe(0);
+    expect(response.value).toHaveLength(2);
   });
 });
