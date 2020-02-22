@@ -163,29 +163,6 @@ function CallbackPromise(callback, func, timeout) {
 }
 
 
-// class Deferred {
-//   constructor() {
-//     this.promise = new Promise((resolve, reject) => {
-//       this.reject = reject
-//       this.resolve = resolve
-//     });
-//   }
-// }
-
-function deferred() {
-  let _resolve, _reject;
-  const promise = new Promise((resolve, reject) => {
-    _resolve = resolve;
-    _reject = reject;
-  });
-
-  promise.resolve = _resolve;
-  promise.reject = _reject;
-
-  return promise;
-}
-
-
 module.exports = {
   getBits,
   unsignedIntegerSize,
@@ -194,7 +171,5 @@ module.exports = {
   once,
   InvertKeyValues,
   CallbackPromise,
-  InfoError,
-  // Deferred
-  deferred
+  InfoError
 };

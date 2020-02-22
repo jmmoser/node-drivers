@@ -10,8 +10,6 @@ const {
 
 const EPath = require('./epath');
 
-// const { deferred } = require('../../../utils');
-
 const EncodeSizeSymbol = Symbol('encodeSize');
 const RequestMessageSymbol = Symbol('requestMessage');
 const ResponseDataHandlerSymbol = Symbol('responseDataHandler');
