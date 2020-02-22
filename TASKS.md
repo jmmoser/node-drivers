@@ -1,5 +1,5 @@
 - Logix5000
-  - [ ] Figure out how to read multidimensional arrays (CIP Vol 1, Table C-5.20)
+  - [ ] Read multidimensional arrays (CIP Vol 1, Table C-5.20)
   - [ ] Optimize
     - [ ] persist processor information to file system
     - [ ] readTags/bulkReadTags, multiple service packet
@@ -7,7 +7,6 @@
   - [ ] Update ConnectionManager to a CIPObject
   - [ ] Add engineering unit codes
   - [ ] Connection handle duplicate connection
-  - [ ] understand the difference between direct requests, Connection Manager Unconnected Send messages, Connected messages, and how routes to eni/controller
   - [ ] use UCMM to get identity and verify device type is programmable logic controller OR fix path routing
   - [ ] Only send packets up to the packet rate
   - [ ] Add I/O Connections
