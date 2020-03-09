@@ -71,11 +71,6 @@ class TCPLayer extends Layer {
   }
 
 
-  // handleData(data) {
-  //   this.forward(data);
-  // }
-
-
   disconnect(callback) {
     const hasCallback = typeof callback === 'function';
 
@@ -137,7 +132,6 @@ class TCPLayer extends Layer {
 
   handleDestroy(error) {
     if (this.socket) {
-      // printSocketState(this.socket);
       if (!this.socket.destroyed) {
         this.socket.destroy();
       }
@@ -155,17 +149,6 @@ class TCPLayer extends Layer {
 module.exports = TCPLayer;
 
 
-// function printSocketState(socket) {
-//   if (socket) {
-//     console.log({
-//       connecting: socket.connecting,
-//       destroyed: socket.destroyed,
-//       pending: socket.pending
-//     });
-//   }
-// }
-
-
 const TCPStateCodes = {
   Disconnecting: -1,
   Disconnected: 0,
@@ -173,32 +156,12 @@ const TCPStateCodes = {
   Connected: 2
 };
 
-// const TCPStateNames = InvertKeyValues(TCPStateCodes);
-
 
 function setConnectionState(layer, state) {
   const previousState = layer._connectionState;
 
   if (previousState !== state) {
     layer._connectionState = state;
-
-    // console.log(`${previousState} => ${state}`);
-    // printSocketState(layer.socket);
-
-    /**
-     * 0 -> 1: nothing
-     * 1 -> 2: nothing
-     * 2 -> -1: nothing
-     * -1 -> 0: nothing
-     * -1 > 1: mark should reconnect after disconnect
-     * 1 -> 0: error occurred, force destroy socket
-     * 2 -> 0: error occurred, force destroy socket
-     * 1 -> -1: wait for timeout to occur or force destroy?
-     * 2 -> 1: this should never happen
-     * 0 -> 2: this should never happen
-     * 0 -> -1: this should never happen
-     * -1 > 2: this should never happen
-     */
 
     if (previousState === TCPStateCodes.Connecting && state === TCPStateCodes.Disconnecting) {
       throw new Error(`TCP layer error: attempted to immediately transition from connecting to disconnecting`);
@@ -211,11 +174,6 @@ function setConnectionState(layer, state) {
     } else if (previousState === TCPStateCodes.Disconnecting && state === TCPStateCodes.Connected) {
       throw new Error(`TCP layer error: attempted to immediately transition from disconnecting to connected`);
     }
-
-    // if (state === TCPStateCodes.Disconnected) {
-    //   console.log('TCP layer closed');
-    //   layer.destroy(error);
-    // }
   }
 }
 
@@ -223,7 +181,6 @@ function setConnectionState(layer, state) {
 function connect(layer) {
   if (layer._connectionState === TCPStateCodes.Connecting || layer._connectionState === TCPStateCodes.Connected) {
     /** currently connecting or connected */
-    // console.log('already connecting');
     return layer._connect;
   }
 
@@ -233,7 +190,6 @@ function connect(layer) {
   }
 
   layer._connect = new Promise(resolve => {
-    // console.log(layer.options);
     const socket = net.createConnection(layer.options, () => {
       // console.log('connected');
       /** sanity check to make sure connection state has not changed since started connecting */
