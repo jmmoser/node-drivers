@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.0 (2020-03-10)
+- Published
+
 ## 2.0.0-beta.9 (2020-03-10)
 - CIPAttribute.Get(instance) instance parameter sets to zero if instance is null/undefined and attribute is instanceof CIPClassAttribute
 - Added encoding support for internal CIP data type TRANSFORM
