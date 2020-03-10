@@ -268,7 +268,6 @@ describe('Decoding', () => {
             [
               'eng',
               new EPath.Segments.DataType(DataType.SHORT_STRING),
-              // DataTypeCodes.SHORT_STRING,
               1,
               'abc'
             ]
@@ -276,7 +275,7 @@ describe('Decoding', () => {
         ]);
       })
     ).toBe(buffer.length);
-  })
+  });
   test('ARRAY USINT[]', () => {
     expect(Decode(DataType.ARRAY(DataType.USINT, 0, 1), Buffer.from([0x01, 0x02]), 0, val => {
       expect(val).toEqual([1, 2]);

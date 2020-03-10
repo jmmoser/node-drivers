@@ -1,7 +1,7 @@
 'use strict';
 
 const EPath = require('../epath');
-const { DataTypeCodes } = require('./codes');
+const { DataTypeCodes, DataTypeNames } = require('./codes');
 const convertToObject = require('./convertToObject');
 
 

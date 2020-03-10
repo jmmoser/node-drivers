@@ -108,6 +108,7 @@ const DataType = Object.freeze({
               DataType.ARRAY(DataType.USINT, 0, 2), // First three characters of the ISO 639-2/T language
               val => Buffer.from(val).toString('ascii')
             ),
+
             DataType.EPATH(false), // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
             DataType.UINT, // Character set which the character string is based on,
             DataType.PLACEHOLDER() // Actual International character string
