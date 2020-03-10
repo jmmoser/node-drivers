@@ -6,9 +6,9 @@ const logix5000 = new CIP.Logix5000(tcpLayer);
 (async () => {
   try {
     console.log(await logix5000.readTag('R03:9:I.Ch1Data'));
-  } catch(err) {
+  } catch (err) {
     console.log(err);
+  } finally {
+    await tcpLayer.close();
   }
-
-  await tcpLayer.close();
 })();

@@ -11,7 +11,7 @@ const eipLayer = new CIP.EIP(udpLayer);
     console.log(await eipLayer.listIdentity());
   } catch (err) {
     console.log(err);
+  } finally {
+    await udpLayer.close();
   }
-
-  await udpLayer.close();
 })();

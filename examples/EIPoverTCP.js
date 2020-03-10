@@ -8,7 +8,7 @@ const eipLayer = new CIP.EIP(tcpLayer);
     console.log(await eipLayer.listInterfaces());
   } catch (err) {
     console.log(err);
+  } finally {
+    await tcpLayer.close();
   }
-
-  await tcpLayer.close();
 })();
