@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1 (2020-03-10)
+- Publishing again for release on github
+- Added keywords to package.json
+
 ## 2.0.0 (2020-03-10)
 - Published
 
