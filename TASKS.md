@@ -8,7 +8,6 @@
   - [ ] Add engineering unit codes
   - [ ] Connection handle duplicate connection
   - [ ] use UCMM to get identity and verify device type is programmable logic controller OR fix path routing
-  - [ ] Only send packets up to the packet rate
   - [ ] Add I/O Connections
   - [ ] Connection object read attributes (attribute 2 is instance type)
   - [ ] add encoding for STRINGI, STRINGN, BOOL
