@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.2 (2020-03-14)
+- Reinstall jest dev dependency to fix security issue https://npmjs.com/advisories/1488
+
 ## 2.0.1 (2020-03-10)
 - Publishing again for release on github
 - Added keywords to package.json
