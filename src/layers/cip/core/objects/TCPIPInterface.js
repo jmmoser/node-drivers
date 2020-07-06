@@ -4,6 +4,7 @@ const CIPMetaObject = require('../object');
 const CIPAttribute = require('../attribute');
 const { ClassCodes } = require('../constants');
 const { DataType } = require('../datatypes');
+const { getBits } = require('../../../../utils');
 
 
 const ClassAttribute = Object.freeze({});
@@ -22,26 +23,88 @@ const IPAddressDataType = DataType.TRANSFORM(
 );
 
 
+const InterfaceConfigurationStatusDescriptions = {
+  0: 'The Interface Configuration attribute has not been configured.',
+  1: 'The Interface Configuration attribute contains valid configuration.'
+};
+
+const ConfigurationControlStartupConfiguration = {
+  0: 'The device shall use the interface configuration values previously stored (for example, in non-volatile memory or via hardware switches, etc).',
+  1: 'The device shall obtain its interface configuration values via BOOTP.',
+  2: 'The device shall obtain its interface configuration values via DHCP upon start-up.'
+};
+
+
 const InstanceAttribute = Object.freeze({
+  /** CIP Vol 2, 5-3.2.2.1 */
   Status: new CIPAttribute.Instance(1, 'Status', DataType.TRANSFORM(
     DataType.DWORD,
     function (value) {
-      /** TODO: CIP Vol 2, 5-3.2.2.1 */
-      return value;
+      const interfaceConfigurationStatus = getBits(value, 0, 4);
+      return [
+        {
+          name: 'Interface Configuration Status',
+          value: interfaceConfigurationStatus,
+          description: InterfaceConfigurationStatusDescriptions[interfaceConfigurationStatus] || 'Reserved'
+        }
+      ];
     }
   )),
+  /** CIP Vol 2, 5-3.2.2.2 */
   ConfigurationCapability: new CIPAttribute.Instance(2, 'Configuration Capability', DataType.TRANSFORM(
     DataType.DWORD,
     function (value) {
-      /** TODO: CIP Vol 2, 5-3.2.2.2 */
-      return value;
+      const BOOTPClient = getBits(value, 0, 1);
+      const DNSClient = getBits(value, 1, 2);
+      const DHCPClient = getBits(value, 2, 3);
+      const DHCPDNSUpdate = getBits(value, 3, 4);
+      const ConfigurationSettable = getBits(value, 4, 5);
+      return [
+        {
+          name: 'BOOTP Client',
+          description: `The device is ${!BOOTPClient ? 'not' : ''} capable of obtaining its network configuration via BOOTP.`,
+          value: BOOTPClient
+        },
+        {
+          name: 'DNS Client',
+          description: `The device is ${!DNSClient ? 'not' : ''} capable of resolving host names by querying a DNS server.`,
+          value: DNSClient
+        },
+        {
+          name: 'DHCP Client',
+          description: `The device is ${!DHCPClient ? 'not' : ''} capable of obtaining its network configuration via DHCP.`,
+          value: DHCPClient
+        },
+        {
+          name: 'DHCP-DNS Update',
+          description: `the device is ${!DHCPDNSUpdate ? 'not' : ''} capable of sending its host name in the DHCP request as documented in Internet draft <draft-ietf-dhc-dhcp-dns-12.txt>.`,
+          value: DHCPDNSUpdate
+        },
+        {
+          name: 'Configuration Settable',
+          description: `The Interface Configuration attribute is ${!ConfigurationSettable ? 'not' : ''} settable.`,
+          value: ConfigurationSettable
+        }
+      ];
     }
   )),
+  /** CIP Vol 2, 5-3.2.2.3 */
   ConfigurationControl: new CIPAttribute.Instance(3, 'Configuration Control', DataType.TRANSFORM(
     DataType.DWORD,
     function (value) {
-      /** TODO: CIP Vol 2, 5-3.2.2.3 */
-      return value;
+      const startupConfiguration = getBits(value, 0, 4);
+      const DNSEnable = getBits(value, 4, 5);
+      return [
+        {
+          name: 'Startup Configuration',
+          description: ConfigurationControlStartupConfiguration[startupConfiguration] || 'Reserved',
+          value: startupConfiguration
+        },
+        {
+          name: 'DNS Enable',
+          description: `The device shall ${!DNSEnable ? 'not' : ''} resolve host names by querying a DNS server.`
+        }
+      ];
     }
   )),
   PhysicalLinkObject: new CIPAttribute(4, 'Physical Link Object', DataType.TRANSFORM(

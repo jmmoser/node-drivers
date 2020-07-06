@@ -12,7 +12,6 @@
  */
 
 const {
-  getBit,
   getBits,
   decodeUnsignedInteger,
   unsignedIntegerSize,

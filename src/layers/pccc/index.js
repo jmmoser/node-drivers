@@ -4,9 +4,9 @@ const { CallbackPromise } = require('../../utils');
 const Layer = require('../Layer');
 const PCCCPacket = require('./packet');
 
-/*
-  - Uses transactions to map responses to requests
-*/
+/**
+ * Uses transactions to map responses to requests
+ */
 
 class PCCCLayer extends Layer {
   constructor(lowerLayer) {
@@ -26,7 +26,11 @@ class PCCCLayer extends Layer {
     }
 
     return CallbackPromise(callback, resolver => {
-      const message = PCCCPacket.WordRangeReadRequest(incrementTransaction(this), address, words);
+      const message = PCCCPacket.WordRangeReadRequest(
+        incrementTransaction(this),
+        address,
+        words
+      );
 
       send(this, true, message, (error, reply) => {
         if (error) {
@@ -56,7 +60,11 @@ class PCCCLayer extends Layer {
         items = 1;
       }
 
-      const message = PCCCPacket.TypedReadRequest(incrementTransaction(this), address, items);
+      const message = PCCCPacket.TypedReadRequest(
+        incrementTransaction(this),
+        address,
+        items
+      );
 
       send(this, true, message, (error, reply) => {
         if (error) {
@@ -82,11 +90,13 @@ class PCCCLayer extends Layer {
         return resolver.reject(`Unable to write value: ${value}`);
       }
 
-      if (!Array.isArray(value)) {
-        value = [value];
-      }
+      value = Array.isArray(value) ? value : [value];
 
-      const message = PCCCPacket.TypedWriteRequest(incrementTransaction(this), address, value);
+      const message = PCCCPacket.TypedWriteRequest(
+        incrementTransaction(this),
+        address,
+        value
+      );
 
       send(this, true, message, (error, reply) => {
         if (error) {
@@ -100,15 +110,15 @@ class PCCCLayer extends Layer {
 
   // unprotectedRead(address, size, callback) {
   //   if (callback == null) return;
-  //
+  
   //   if (size === 0 || size % 2 !== 0) {
   //     callback('size must be an even number');
   //     return;
   //   }
-  //
+  
   //   let transaction = incrementTransaction(this);
   //   let message = PCCCPacket.UnprotectedReadRequest(transaction, address, size);
-  //
+  
   //   this.send(message, INFO, false, this.contextCallback(function(error, reply) {
   //     if (error) {
   //       callback(error);
@@ -120,7 +130,9 @@ class PCCCLayer extends Layer {
 
   diagnosticStatus(callback) {
     return CallbackPromise(callback, resolver => {
-      const message = PCCCPacket.DiagnosticStatusRequest(incrementTransaction(this));
+      const message = PCCCPacket.DiagnosticStatusRequest(
+        incrementTransaction(this)
+      );
       
       send(this, true, message, (error, reply) => {
         if (error) {
@@ -135,7 +147,10 @@ class PCCCLayer extends Layer {
 
   echo(data, callback) {
     return CallbackPromise(callback, resolver => {
-      const message = PCCCPacket.EchoRequest(incrementTransaction(this), data);
+      const message = PCCCPacket.EchoRequest(
+        incrementTransaction(this),
+        data
+      );
 
       send(this, true, message, (error, reply) => {
         if (error) {
