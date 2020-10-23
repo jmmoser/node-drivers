@@ -5,6 +5,7 @@ const {
   CommonServiceCodes,
   CommonServiceNames,
   GeneralStatusNames,
+  GeneralStatusCodes,
   GeneralStatusDescriptions
 } = require('./constants');
 
@@ -128,7 +129,7 @@ function DecodeResponse(buffer, offset, options, request, handler) {
 
   res.status = {};
   res.status.code = statusCode;
-  res.status.error = statusCode !== 0 && statusCode !== 6;
+  res.status.error = statusCode !== GeneralStatusCodes.Success && statusCode !== GeneralStatusCodes.PartialTransfer;
   res.status.name = GeneralStatusNames[statusCode] || '';
   res.status.description = GeneralStatusDescriptions[statusCode] || (res.status.error ? 'CIP Error' : '');
 

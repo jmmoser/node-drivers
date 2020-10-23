@@ -207,7 +207,7 @@ class Logix5000 extends CIPLayer {
         } else {
           let data;
           try {
-            data = reply.status.code !== 6 ? reply.data : await readTagFragmented(this, path, elements);
+            data = reply.status.code !== GeneralStatusCodes.PartialTransfer ? reply.data : await readTagFragmented(this, path, elements);
 
             if (data.length === 0) {
               const tagInfo = await getSymbolInfo(this, null, tag, [
@@ -571,7 +571,7 @@ class Logix5000 extends CIPLayer {
           const reply = await sendPromise(this, service, path, reqData, 5000);
           chunks.push(reply.data);
 
-          if (reply.status.code === 6) {
+          if (reply.status.code === GeneralStatusCodes.PartialTransfer) {
             reqOffset += reply.data.length;
           } else {
             break;
