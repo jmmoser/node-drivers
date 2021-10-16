@@ -1,21 +1,23 @@
 'use strict';
 
+/* eslint no-bitwise: ["off"] */
+
 // http://stackoverflow.com/a/10090443/3055415
 function getBits(k, m, n) {
   return ((k >> m) & ((1 << (n - m)) - 1));
 }
 
-
 function unsignedIntegerSize(i) {
   if (i < 0x10000) {
     if (i < 0x100) return 1;
-    else return 2;
-  } else {
-    if (i < 0x100000000/*L*/) return 4;
-    else return 8;
-  }
-}
 
+    return 2;
+  }
+
+  if (i < 0x100000000) return 4;
+
+  return 8;
+}
 
 function encodeUnsignedInteger(data, offset, value, size) {
   switch (size) {
@@ -47,24 +49,23 @@ function decodeUnsignedInteger(data, offset, size) {
   }
 }
 
-
 /**
- * @param {Object|Map} obj 
+ * @param {Object|Map} obj
  */
 function InvertKeyValues(obj) {
   let inverted;
   switch (Object.prototype.toString.call(obj)) {
     case '[object Object]':
       inverted = {};
-      for (let [key, value] of Object.entries(obj)) {
+      Object.entries(obj).forEach(([key, value]) => {
         inverted[value] = key;
-      }
+      });
       break;
     case '[object Map]':
       inverted = new Map();
-      for (let [key, value] of obj.entries()) {
+      obj.entries().forEach(([key, value]) => {
         inverted.set(value, key);
-      }
+      });
       break;
     default:
       break;
@@ -74,20 +75,19 @@ function InvertKeyValues(obj) {
 
 /**
  * https://stackoverflow.com/a/12713611/3055415
- * @param {Function} fn 
- * @param {*} context 
+ * @param {Function} fn
+ * @param {*} context
  */
 function once(fn, context) {
   let result;
-  return function() {
+  return () => {
     if (fn) {
-      result = fn.apply(context || this, arguments);
-      fn = null;
+      result = fn.apply(context || this, arguments); // eslint-disable-line prefer-rest-params
+      fn = null; // eslint-disable-line no-param-reassign
     }
     return result;
   };
 }
-
 
 /** https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error */
 class InfoError extends Error {
@@ -108,14 +108,13 @@ class InfoError extends Error {
   }
 }
 
-
 function CallbackPromise(callback, func, timeout) {
   const hasCallback = typeof callback === 'function';
-  return new Promise(async function (resolve, reject) {
+  return new Promise((resolve, reject) => {
     let timeoutHandle;
     let active = true;
     const resolver = {
-      resolve: function (res) {
+      resolve: (res) => {
         if (active) {
           active = false;
           clearTimeout(timeoutHandle);
@@ -125,43 +124,43 @@ function CallbackPromise(callback, func, timeout) {
           resolve(res);
         }
       },
-      reject: function (err, info) {
+      reject: (err, info) => {
         if (active) {
+          let error = err;
           if (typeof err === 'string') {
-            err = new InfoError(info, err);
+            error = new InfoError(info, err);
           } else if (err instanceof Error && info != null && err.info == null) {
-            err = new InfoError(info, err.message);
+            error = new InfoError(info, err.message);
           } else if (!(err instanceof Error)) {
-            err = new Error(err);
+            error = new Error(err);
           }
 
           active = false;
           clearTimeout(timeoutHandle);
           if (hasCallback) {
-            callback(err);
+            callback(error);
             resolve();
           } else {
-            reject(err);
+            reject(error);
           }
         }
-      }
+      },
     };
 
     if (Number.isFinite(timeout)) {
-      timeoutHandle = setTimeout(function () {
+      timeoutHandle = setTimeout(() => {
         resolver.reject('Timeout');
       }, timeout);
     }
 
     try {
-      return await func(resolver);
+      return func(resolver);
     } catch (err) {
       resolver.reject(err);
       return resolver;
     }
   });
 }
-
 
 module.exports = {
   getBits,
@@ -171,5 +170,5 @@ module.exports = {
   once,
   InvertKeyValues,
   CallbackPromise,
-  InfoError
+  InfoError,
 };

@@ -1,10 +1,41 @@
 'use strict';
 
+/* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
+
 const EventEmitter = require('events');
 const Queue = require('../queue');
 const Defragger = require('../defragger');
 const { CallbackPromise } = require('../utils');
 
+function incrementContext(self) {
+  self.__context = (self.__context + 1) % 0x100000000;
+  return self.__context;
+}
+
+function passDefaultOptionsDown(defaultOptions, upperLayer) {
+  let lowerLayer = upperLayer;
+  while ((lowerLayer = lowerLayer.lowerLayer)) {
+    const layerSpecificDefaultOptions = defaultOptions[lowerLayer.name];
+    if (layerSpecificDefaultOptions) {
+      lowerLayer.handleDefaultOptions(layerSpecificDefaultOptions, upperLayer);
+    }
+  }
+}
+
+function internalDestroy(layer, error) {
+  /** Clear all internal context callbacks */
+  layer.__contextToCallbackTimeouts.forEach(handle => clearTimeout(handle));
+  layer.__contextToCallbackTimeouts.clear();
+
+  layer.__contextToCallback.forEach(cb => cb(error));
+  layer.__contextToCallback.clear();
+
+  layer.__idContext.clear();
+
+  layer.clearRequestQueue();
+
+  layer.handleDestroy(error);
+}
 
 class Layer extends EventEmitter {
   constructor(name, lowerLayer, options, defaultOptions) {
@@ -14,10 +45,15 @@ class Layer extends EventEmitter {
 
     super();
 
-    options = Object.assign({
+    options = {
       handlesForwarding: false,
-      contextGenerator: incrementContext
-    }, options);
+      contextGenerator: incrementContext,
+      ...options,
+    };
+    // options = Object.assign({
+    //   handlesForwarding: false,
+    //   contextGenerator: incrementContext
+    // }, options);
 
     this._queue = new Queue();
 
@@ -62,7 +98,7 @@ class Layer extends EventEmitter {
 
   /** OVERRIDE IF NEEDED */
   disconnect(callback) {
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, (resolver) => {
       resolver.resolve();
     });
   }
@@ -94,11 +130,11 @@ class Layer extends EventEmitter {
   }
 
   close(callback) {
-    return CallbackPromise(callback, async resolver => {
+    return CallbackPromise(callback, async (resolver) => {
       if (this.upperLayer != null) {
         await this.upperLayer.close();
       }
-      
+
       await this.disconnect();
 
       /** Do not bubble up since close has already bubbled up */
@@ -117,11 +153,11 @@ class Layer extends EventEmitter {
     internalDestroy(this, error);
   }
 
-
   forward(data, info, context) {
     if (this.upperLayer != null) {
       return this.forwardTo(this.upperLayer, data, info, context);
     }
+    return undefined;
   }
 
   forwardTo(layer, data, info, context) {
@@ -158,9 +194,9 @@ class Layer extends EventEmitter {
   addMessageToQueue(requestingLayer, message, info, priority, context) {
     const obj = {
       layer: requestingLayer,
-      message: message,
       info: info || {},
-      context: context
+      message,
+      context,
     };
 
     this._queue.enqueue(obj, priority);
@@ -180,7 +216,8 @@ class Layer extends EventEmitter {
       throw new Error(`callback must be a function, received: ${typeof callback}`);
     }
 
-    let context, contextModifier;
+    let context;
+    let contextModifier;
     if (typeof contextOrModifier === 'function') {
       contextModifier = contextOrModifier;
     } else {
@@ -211,7 +248,7 @@ class Layer extends EventEmitter {
     if (this.__contextToCallback.has(context)) {
       const callback = this.__contextToCallback.get(context);
       this.__contextToCallback.delete(context);
-      
+
       if (this.__contextToCallbackTimeouts.has(context)) {
         const timeoutHandle = this.__contextToCallbackTimeouts.get(context);
         clearTimeout(timeoutHandle);
@@ -219,6 +256,7 @@ class Layer extends EventEmitter {
       }
       return callback;
     }
+    return undefined;
   }
 
   setContextForID(id, context) {
@@ -237,6 +275,7 @@ class Layer extends EventEmitter {
       }
       return context;
     }
+    return undefined;
   }
 
   clearContexts() {
@@ -246,38 +285,4 @@ class Layer extends EventEmitter {
   }
 }
 
-
 module.exports = Layer;
-
-
-function passDefaultOptionsDown(defaultOptions, upperLayer) {
-  let lowerLayer = upperLayer;
-  while ((lowerLayer = lowerLayer.lowerLayer)) {
-    const layerSpecificDefaultOptions = defaultOptions[lowerLayer.name];
-    if (layerSpecificDefaultOptions) {
-      lowerLayer.handleDefaultOptions(layerSpecificDefaultOptions, upperLayer);
-    }
-  }
-}
-
-
-function incrementContext(self) {
-  self.__context = (self.__context + 1) % 0x100000000;
-  return self.__context;
-}
-
-
-function internalDestroy(layer, error) {
-  /** Clear all internal context callbacks */
-  layer.__contextToCallbackTimeouts.forEach(handle => clearTimeout(handle));
-  layer.__contextToCallbackTimeouts.clear();
-
-  layer.__contextToCallback.forEach(cb => cb(error));
-  layer.__contextToCallback.clear();
-  
-  layer.__idContext.clear();
-
-  layer.clearRequestQueue();
-
-  layer.handleDestroy(error);
-}

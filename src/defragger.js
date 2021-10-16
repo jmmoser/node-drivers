@@ -1,5 +1,7 @@
 'use strict';
 
+/* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
+
 class Defragger {
   constructor(completeHandler, lengthHandler) {
     this._dataLength = 0;

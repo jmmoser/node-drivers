@@ -1,10 +1,17 @@
 'use strict';
 
+const TCP = require('./layers/tcp');
+const UDP = require('./layers/udp');
+const Modbus = require('./layers/modbus');
+const PCCC = require('./layers/pccc');
+const CIP = require('./layers/cip');
+const Extras = require('./layers/extras');
+
 module.exports = {
-  TCP: require('./layers/tcp'),
-  UDP: require('./layers/udp'),
-  Modbus: require('./layers/modbus'),
-  PCCC: require('./layers/pccc'),
-  CIP: require('./layers/cip'),
-  Extras: require('./layers/extras')
+  TCP,
+  UDP,
+  Modbus,
+  PCCC,
+  CIP,
+  Extras,
 };

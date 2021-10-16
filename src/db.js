@@ -1,5 +1,7 @@
 'use strict';
 
+/* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
+
 /**
  * Append-only JSON database
  */
@@ -26,12 +28,13 @@ class DB {
     this._clearing = fs.promises.truncate(this._filePath, 0);
     await this._clearing;
     this._clearing = null;
+
+    return undefined;
   }
 
   // async clear() {
   //   await this._records;
   //   this._records = null;
-    
   //   this._clearing = fs.promises.truncate(this._filePath, 0);
   //   await this._clearing;
   //   this._clearing = null;
@@ -42,8 +45,8 @@ class DB {
     const records = await this._records;
     records.push(obj);
 
-    await new Promise(function(resolve) {
-      this._writeStream.write(JSON.stringify(obj) + '\n', resolve);
+    await new Promise((resolve) => {
+      this._writeStream.write(`${JSON.stringify(obj)}\n`, resolve);
     });
   }
 
@@ -54,12 +57,12 @@ class DB {
 
     await this._clearing;
 
-    this._records = new Promise(function(resolve) {
+    this._records = new Promise((resolve) => {
       const readInterface = readLine.createInterface(fs.createReadStream(this._filePath, 'utf8'));
 
       const records = [];
 
-      readInterface.on('line', function(line) {
+      readInterface.on('line', (line) => {
         try {
           records.push(JSON.stringify(line));
         } catch (err) {
@@ -67,7 +70,7 @@ class DB {
         }
       });
 
-      readInterface.on('close', function() {
+      readInterface.on('close', () => {
         resolve(records);
       });
     });

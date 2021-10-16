@@ -1,8 +1,10 @@
 'use strict';
 
+/* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
+
 class Queue {
   constructor() {
-    this._queue = [];
+    this.queue = [];
     this._priorityQueue = [];
   }
 
@@ -24,17 +26,25 @@ class Queue {
   dequeue() {
     if (this._priorityQueue.length > 0) {
       return this._priorityQueue.shift();
-    } else if (this._queue.length > 0) {
+    }
+
+    if (this._queue.length > 0) {
       return this._queue.shift();
     }
+
+    return undefined;
   }
 
   peek() {
     if (this._priorityQueue.length > 0) {
       return this._priorityQueue[0];
-    } else if (this._queue.length > 0) {
+    }
+
+    if (this._queue.length > 0) {
       return this._queue[0];
     }
+
+    return undefined;
   }
 
   clear() {
@@ -42,22 +52,22 @@ class Queue {
     this._priorityQueue.length = 0;
   }
 
-  
   iterate(cb) {
     let finished = false;
 
     function iterator(queue) {
       let i = 0;
+      function consumer() {
+        queue.splice(i, 1);
+        i -= 1;
+      }
+
       while (i < queue.length) {
-        function consumer() {
-          queue.splice(i, 1);
-          i--;
-        }
         if (!cb(queue[i], consumer)) {
           finished = true;
           break;
         }
-        i++;
+        i += 1;
       }
     }
 
