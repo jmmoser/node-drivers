@@ -12,5 +12,10 @@ module.exports = {
   },
   rules: {
     strict: 'off',
+    'no-plusplus': 'off',
+    // 'no-underscore-dangle': ['error', { allowAfterThis: true }],
+    'no-underscore-dangle': 'off',
+    'no-param-reassign': ['error', { props: false }],
+    'no-bitwise': 'off',
   },
 };

@@ -11,9 +11,7 @@ const ClassAttribute = Object.freeze({});
 const InstanceAttribute = Object.freeze({
   InterfaceSpeed: new CIPAttribute.Instance(1, 'Interface Speed', DataType.TRANSFORM(
     DataType.UDINT,
-    function (value) {
-      return `${value} Mbps`;
-    }
+    (value) => `${value} Mbps`,
   )),
   /**
    * Bit 0 - Link Status
@@ -26,7 +24,7 @@ const InstanceAttribute = Object.freeze({
   // InterfaceFlags: new CIPAttribute.Instance(2, 'Interface Flags', DataType.DWORD),
   InterfaceFlags: new CIPAttribute.Instance(2, 'Interface Flags', DataType.TRANSFORM(
     DataType.DWORD,
-    function(value) {
+    (value) => {
       const linkStatusCode = getBits(value, 0, 1);
       const duplexCode = getBits(value, 1, 2);
       const negotiationStatusCode = getBits(value, 2, 5);
@@ -40,18 +38,16 @@ const InstanceAttribute = Object.freeze({
           1: 'Auto-negotiation and speed detection failed. Using default values for speed and duplex.',
           2: 'Auto-negotiation failed but detected speed. Duplex was defaulted (default is half duplex).',
           3: 'Successfully negotiated speed and duplex',
-          4: 'Auto-negotiation not attempted. Forced speed and duplex.'
+          4: 'Auto-negotiation not attempted. Forced speed and duplex.',
         })[negotiationStatusCode] || 'Unknown',
         manualSettingRequiresReset: manualSettingRequiresResetCode === 1,
-        localHardwareFault: localHardwareFaultCode === 1
+        localHardwareFault: localHardwareFaultCode === 1,
       };
-    }
+    },
   )),
   PhysicalAddress: new CIPAttribute.Instance(3, 'Physical Address', DataType.TRANSFORM(
     DataType.ABBREV_ARRAY(DataType.USINT, 6),
-    function(value) {
-      return value.map(v => v.toString(16).padStart(2, '0')).join(':');
-    }
+    (value) => value.map((v) => v.toString(16).padStart(2, '0')).join(':'),
   )),
   InterfaceCounters: new CIPAttribute.Instance(4, 'Interface Counters', DataType.TRANSFORM(
     DataType.STRUCT([
@@ -65,7 +61,7 @@ const InstanceAttribute = Object.freeze({
       DataType.UDINT, /** Outbound Unicast Packets */
       DataType.UDINT, /** Outbound Non-Unicast Packets */
       DataType.UDINT, /** Outbound Discarded Packets */
-      DataType.UDINT /** Outbound Error Packets */
+      DataType.UDINT, /** Outbound Error Packets */
     ]),
     (value) => ({
       inboundOctets: value[0],
@@ -78,12 +74,12 @@ const InstanceAttribute = Object.freeze({
       outboundUnicastPackets: value[7],
       outboundNonUnicastPackets: value[8],
       outboundDiscardedPackets: value[9],
-      outboundErrorPackets: value[10]
-    })
+      outboundErrorPackets: value[10],
+    }),
   )),
   MediaCounters: new CIPAttribute.Instance(5, 'Media Counters', DataType.TRANSFORM(
     DataType.STRUCT([
-      DataType.UDINT, /** Alignment Errors, Received frames that are not an integral number of octets in length */
+      DataType.UDINT, /** Alignment Errors */
       DataType.UDINT, /** FCS Errors */
       DataType.UDINT, /** Single Collisions */
       DataType.UDINT, /** Multiple Collisions */
@@ -94,7 +90,7 @@ const InstanceAttribute = Object.freeze({
       DataType.UDINT, /** MAC Transmit Errors */
       DataType.UDINT, /** Carrier Sense Errors */
       DataType.UDINT, /** Frame Too Long */
-      DataType.UDINT /** MAC Receive Errors */
+      DataType.UDINT, /** MAC Receive Errors */
     ]),
     (value) => ({
       alignmentErrors: value[0],
@@ -108,12 +104,12 @@ const InstanceAttribute = Object.freeze({
       macTransmitErrors: value[8],
       carrierSenseErrors: value[9],
       frameTooLong: value[10],
-      macReceiveErrors: value[11]
-    })
+      macReceiveErrors: value[11],
+    }),
   )),
   InterfaceControl: new CIPAttribute.Instance(6, 'Interface Control', DataType.TRANSFORM(
     DataType.STRUCT([
-      /** 
+      /**
        * Control Bits
        * Bit 0: Auto-Negotiate
        *  0: Force
@@ -124,34 +120,50 @@ const InstanceAttribute = Object.freeze({
        * Bit 2 to 15: Reserved, all zero
        */
       DataType.WORD,
-      /** 
+      /**
        * Forced Interface Speed
        * Speed at which the interface shall be forced to operate
        * */
-      DataType.UINT
+      DataType.UINT,
     ]),
-    function (value) {
+    (value) => {
       const autoNegotiationEnabled = getBits(value[0], 0, 1) === 1;
+      let forcedDuplexMode;
+      if (!autoNegotiationEnabled) {
+        forcedDuplexMode = getBits(value[0], 1, 2) ? 'half' : 'full';
+      }
       return {
         autoNegotiationEnabled,
-        forcedDuplexMode: !autoNegotiationEnabled ? (getBits(value[0], 1, 2) ? 'half' : 'full') : null,
-        forcedInterfaceSpeed: !autoNegotiationEnabled ? `${value[1]} Mbps` : null
+        forcedDuplexMode,
+        forcedInterfaceSpeed: !autoNegotiationEnabled ? `${value[1]} Mbps` : null,
       };
-    }
+    },
   )),
   InterfaceLabel: new CIPAttribute.Instance(10, 'Interface Label', DataType.SHORT_STRING),
-  // InterfacePortIndex: new CIPAttribute.Instance(100, 'Interface Port Index', DataType.UDINT),
-  // InterfacePortDescription: new CIPAttribute.Instance(101, 'Interface Port Description', DataType.STRING),
+  // InterfacePortIndex: new CIPAttribute.Instance(
+  //   100, 'Interface Port Index', DataType.UDINT,
+  // ),
+  // InterfacePortDescription: new CIPAttribute.Instance(
+  //   101, 'Interface Port Description', DataType.STRING,
+  // ),
   // /**
   //  * Value 0: Disabled Broadcast Storm Protection
   //  * Value 1: Enable Broadcast Storm Protection
   //  */
-  // BroadcastStormProtection: new CIPAttribute.Instance(102, 'Broadcast Storm Protection', DataType.USINT),
+  // BroadcastStormProtection: new CIPAttribute.Instance(
+  //   102, 'Broadcast Storm Protection', DataType.USINT,
+  // ),
 
-  // InterfaceUtilization: new CIPAttribute.Instance(103, 'Interface Utilization', DataType.USINT),
-  // UtilizationAlarmUpperThreshold: new CIPAttribute.Instance(104, 'Utilization Alarm Upper Threshold', DataType.USINT),
-  // UtilizationAlarmLowerThreshold: new CIPAttribute.Instance(105, 'Utilization Alarm Lower Threshold', DataType.USINT),
-  
+  // InterfaceUtilization: new CIPAttribute.Instance(
+  //   103, 'Interface Utilization', DataType.USINT,
+  // ),
+  // UtilizationAlarmUpperThreshold: new CIPAttribute.Instance(
+  //   104, 'Utilization Alarm Upper Threshold', DataType.USINT,
+  // ),
+  // UtilizationAlarmLowerThreshold: new CIPAttribute.Instance(
+  //   105, 'Utilization Alarm Lower Threshold', DataType.USINT,
+  // ),
+
   // /**
   //  * Value 0: Ignore
   //  * Value 1: On (Relay 1)
@@ -165,9 +177,10 @@ const InstanceAttribute = Object.freeze({
   //  * Value 1: Enable (Relay 1)
   //  * Value 2: Enable (Relay 2)
   //  */
-  // PortTrafficOverloadAlarm: new CIPAttribute.Instance(107, 'Port Traffic Overload Alarm', DataType.USINT)
+  // PortTrafficOverloadAlarm: new CIPAttribute.Instance(
+  //   107, 'Port Traffic Overload Alarm', DataType.USINT,
+  // ),
 });
-
 
 const GetAttributesAllInstanceAttributes = Object.freeze([
   InstanceAttribute.InterfaceSpeed,
@@ -175,14 +188,13 @@ const GetAttributesAllInstanceAttributes = Object.freeze([
   InstanceAttribute.PhysicalAddress,
   InstanceAttribute.InterfaceCounters,
   InstanceAttribute.MediaCounters,
-  InstanceAttribute.InterfaceControl
+  InstanceAttribute.InterfaceControl,
 ]);
-
 
 const CIPObject = CIPMetaObject(ClassCodes.EthernetLink, {
   ClassAttributes: ClassAttribute,
   InstanceAttributes: InstanceAttribute,
-  GetAttributesAllInstanceAttributes
+  GetAttributesAllInstanceAttributes,
 });
 
 class EthernetLink extends CIPObject {}

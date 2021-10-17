@@ -79,23 +79,19 @@ const GetAttributesAllInstanceAttributes = [
   InstanceAttribute.Revision,
   InstanceAttribute.Status,
   InstanceAttribute.SerialNumber,
-  InstanceAttribute.ProductName
+  InstanceAttribute.ProductName,
 ];
-
 
 const CIPObject = CIPMetaObject(ClassCodes.Identity, {
   ClassAttributes: ClassAttribute,
   InstanceAttributes: InstanceAttribute,
-  GetAttributesAllInstanceAttributes
+  GetAttributesAllInstanceAttributes,
 });
-
 
 class Identity extends CIPObject {}
 
 Identity.ClassAttribute = ClassAttribute;
 Identity.InstanceAttribute = InstanceAttribute;
-
-
 
 // CIP Vol1 Table 5-2.2, Attribute ID 8, Semantics of Values
 const InstanceStateDescriptions = {
@@ -105,7 +101,7 @@ const InstanceStateDescriptions = {
   3: 'Operational',
   4: 'Major recoverable fault',
   5: 'Major unrecoverable fault',
-  255: 'Default for Get_Attributes_All service'
+  255: 'Default for Get_Attributes_All service',
 };
 
 // CIP Vol1 Table 5-2.4

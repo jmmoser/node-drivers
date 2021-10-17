@@ -7,6 +7,26 @@ const { ClassCodes } = require('../constants');
 const CIPRequest = require('../request');
 const EPath = require('../epath');
 
+/** EIP-CIP-V1 3-5.5, page 3.56 */
+const ServiceCodes = {
+  ForwardClose: 0x4E, // Closes a connection
+  UnconnectedSend: 0x52, // Unconnected send service. Only originating devices and devices that route between links need to implement.
+  ForwardOpen: 0x54, // Opens a connection
+  GetConnectionData: 0x56, // For diagnostics of a connection
+  SearchConnectionData: 0x57, // For diagnostics of a connection
+  GetConnectionOwner: 0x5A, // Determine the owner of a redundant connection
+  LargeForwardOpen: 0x5B, // Opens a connection, maximum data size is 65535 bytes
+};
+
+const ServiceCodeSet = new Set(Object.values(ServiceCodes));
+
+const ServiceNames = InvertKeyValues(ServiceCodes);
+
+const ConnectionManager_EPath = EPath.Encode(true, [
+  new EPath.Segments.Logical.ClassID(ClassCodes.ConnectionManager),
+  new EPath.Segments.Logical.InstanceID(0x01),
+]);
+
 let ConnectionSerialNumberCounter = 0x0001;
 let OtoTNetworkConnectionIDCounter = 0x20000002;
 let TtoONetworkConnectionIDCounter = 0x20000001;
@@ -17,23 +37,34 @@ function incrementConnectionCounters() {
   TtoONetworkConnectionIDCounter++;
 }
 
+function encodeConnectionTiming(buffer, offset, tickTime, timeoutTicks) {
+  const priority = 0; // 1 is reserved, keep for future
+  offset = buffer.writeUInt8(((priority << 4) | (tickTime & 0b1111)), offset);
+  offset = buffer.writeUInt8(timeoutTicks, offset);
+  return offset;
+}
+
+function errorDataHandler(buffer, offset, res) {
+  if (res.status.type === 'routing') {
+    res.remainingPathSize = buffer.readUInt8(offset); offset += 1;
+
+    if (offset < buffer.length) {
+      if (buffer.readUInt8(offset) === 0) {
+        /** TODO: confirm possible pad byte? */
+        offset += 1;
+      }
+    }
+  }
+  return offset;
+}
 
 class ConnectionManager {
   static UnconnectedSend(request, route, options) {
-    options = Object.assign({
-      /**
-       * 2**7 * 0xE9 = 29824 ms total timeout
-       */
-      // tickTime: 7,
-      // timeoutTicks: 0xE9
-
-      // tickTime: 5,
-      // timeoutTicks = 247
-
-      /** total timeout = 9984 ms */
+    options = {
       tickTime: 6,
-      timeoutTicks: 156
-    }, options);
+      timeoutTicks: 156,
+      ...options,
+    };
 
     const requestSize = request.encodeSize();
 
@@ -57,7 +88,7 @@ class ConnectionManager {
       request,
       {
         acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service],
-        statusHandler: function(statusCode, extendedBuffer, cb) {
+        statusHandler: (statusCode, extendedBuffer, cb) => {
           switch (statusCode) {
             case 1:
               if (extendedBuffer.length === 2) {
@@ -89,23 +120,10 @@ class ConnectionManager {
               break;
           }
         },
-        errorDataHandler: function(buffer, offset, res) {
-          if (res.status.type === 'routing') {
-            res.remainingPathSize = buffer.readUInt8(offset); offset += 1;
-
-            if (offset < buffer.length) {
-              if (buffer.readUInt8(offset) === 0) {
-                /** TODO: confirm possible pad byte? */
-                offset += 1;
-              }
-            }
-          }
-          return offset;
-        }
-      }
+        errorDataHandler,
+      },
     );
   }
-  
 
   static ForwardOpen(connection, incrementCounters) {
     if (incrementCounters) {
@@ -116,9 +134,15 @@ class ConnectionManager {
     let offset = 0;
     const data = Buffer.alloc(36 + connection.route.length + (connection.large ? 4 : 0));
 
-    offset = encodeConnectionTiming(data, offset, connection.timing.tickTime, connection.timing.timeoutTicks);
-    offset = data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset); // Originator to Target Network Connection ID
-    offset = data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset); // Target to Originator Network Connection ID
+    offset = encodeConnectionTiming(
+      data,
+      offset,
+      connection.timing.tickTime,
+      connection.timing.timeoutTicks,
+    );
+
+    offset = data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset);
+    offset = data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset);
     offset = data.writeUInt16LE(ConnectionSerialNumberCounter, offset);
     offset = data.writeUInt16LE(connection.VendorID, offset);
     offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
@@ -128,7 +152,7 @@ class ConnectionManager {
     offset = data.writeUInt8(0, offset); /** Reserved */
     offset = data.writeUInt8(0, offset); /** Reserved */
 
-    offset = data.writeUInt32LE(connection.OtoTRPI, offset); // Originator to Target requested packet interval (rate), in microseconds
+    offset = data.writeUInt32LE(connection.OtoTRPI, offset);
     if (connection.large) {
       offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
     } else {
@@ -166,7 +190,10 @@ class ConnectionManager {
         res.TtoOActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
         const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
         offset += 1; // reserved
-        res.data = buffer.slice(offset, offset + applicationReplySize); offset += applicationReplySize;
+
+        res.data = buffer.slice(offset, offset + applicationReplySize);
+        offset += applicationReplySize;
+
         cb(res);
         return offset;
       }
@@ -179,8 +206,13 @@ class ConnectionManager {
     let offset = 0;
     const data = Buffer.allocUnsafe(12 + connection.route.length);
 
-    // offset = encodeConnectionTiming(data, offset, 1, 14);
-    offset = encodeConnectionTiming(data, offset, 2, 125);
+    offset = encodeConnectionTiming(
+      data,
+      offset,
+      connection.timing.tickTime,
+      connection.timing.timeoutTicks,
+    );
+
     offset = data.writeUInt16LE(connection.ConnectionSerialNumber, offset);
     offset = data.writeUInt16LE(connection.VendorID, offset);
     offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
@@ -208,10 +240,9 @@ class ConnectionManager {
         offset += applicationReplySize;
         cb(res);
         return offset;
-      }
+      },
     );
   }
-
 
   /** CIP Vol 1 3-5.5.5 */
   static GetConnectionData(connectionNumber) {
@@ -227,7 +258,6 @@ class ConnectionManager {
     );
   }
 
-
   /** CIP Vol1 3-5.5.6 */
   static SearchConnectionData(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
     let offset = 0;
@@ -241,10 +271,9 @@ class ConnectionManager {
       ServiceCodes.SearchConnectionData,
       ConnectionManager_EPath,
       data,
-      connectionDataResponse
+      connectionDataResponse,
     );
   }
-
 
   static TranslateResponse(response) {
     if (ServiceCodeSet.has(response.service.code)) {
@@ -269,22 +298,7 @@ class ConnectionManager {
   }
 }
 
-
 module.exports = ConnectionManager;
-
-const ConnectionManager_EPath = EPath.Encode(true, [
-  new EPath.Segments.Logical.ClassID(ClassCodes.ConnectionManager),
-  new EPath.Segments.Logical.InstanceID(0x01)
-]);
-
-
-function encodeConnectionTiming(buffer, offset, tickTime, timeoutTicks) {
-  const priority = 0; // 1 is reserved, keep for future
-  offset = buffer.writeUInt8(((priority << 4) | (tickTime & 0b1111)), offset);
-  offset = buffer.writeUInt8(timeoutTicks, offset);
-  return offset;
-}
-
 
 function connectionDataResponse(buffer, offset, cb) {
   const res = {};
@@ -310,22 +324,6 @@ function connectionDataResponse(buffer, offset, cb) {
   cb(res);
   return offset;
 }
-
-
-/** EIP-CIP-V1 3-5.5, page 3.56 */
-const ServiceCodes = {
-  ForwardClose: 0x4E, // Closes a connection
-  UnconnectedSend: 0x52, // Unconnected send service.  Only originating devices and devices that route between links need to implement.
-  ForwardOpen: 0x54, // Opens a connection
-  GetConnectionData: 0x56, // For diagnostics of a connection
-  SearchConnectionData: 0x57, // For diagnostics of a connection
-  GetConnectionOwner: 0x5A, // Determine the owner of a redundant connection
-  LargeForwardOpen: 0x5B // Opens a connection, maximum data size is 65535 bytes
-};
-
-const ServiceCodeSet = new Set(Object.values(ServiceCodes));
-
-const ServiceNames = InvertKeyValues(ServiceCodes);
 
 ConnectionManager.ServiceCodes = ServiceCodes;
 
@@ -402,5 +400,5 @@ const StatusDescriptions = {
   },
   0x09: 'Error in data segment',
   0x0C: 'Object state error',
-  0x10: 'Device state error'
+  0x10: 'Device state error',
 };

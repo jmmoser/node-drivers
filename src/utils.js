@@ -1,7 +1,5 @@
 'use strict';
 
-/* eslint no-bitwise: ["off"] */
-
 // http://stackoverflow.com/a/10090443/3055415
 function getBits(k, m, n) {
   return ((k >> m) & ((1 << (n - m)) - 1));
