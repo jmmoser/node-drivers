@@ -4,7 +4,7 @@
 
 class Queue {
   constructor() {
-    this.queue = [];
+    this._queue = [];
     this._priorityQueue = [];
   }
 
