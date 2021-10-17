@@ -4,6 +4,7 @@ const { CallbackPromise, once } = require('../../utils');
 const Layer = require('../Layer');
 const MB = require('./MB');
 const MBFrame = require('./MBFrame');
+const PDU = require('./PDU');
 
 const {
   ReadDiscreteInputs,
@@ -13,28 +14,55 @@ const {
   WriteSingleCoil,
   WriteMultipleCoils,
   WriteSingleHoldingRegister,
-  WriteMultipleHoldingRegisters
+  // WriteMultipleHoldingRegisters
 } = MB.Functions;
 
 // /** this needs to be improved */
 // const HoldingRegisterAddressRegex = /^0?4\d{4,5}/;
 
 const DefaultOptions = {
-  'tcp': {
-    port: 502
-  }
+  tcp: {
+    port: 502,
+  },
 };
+
+/**
+ * holding register numbers start with 4 and span from 40001 to 49999.
+ */
+// TODO
+function parseAddressingInput(fn, input) {
+  return {
+    address: parseInt(input, 10),
+  };
+}
+
+function readRequest(self, fn, input, count, callback) {
+  return CallbackPromise(callback, (resolver) => {
+    const addressing = parseAddressingInput(fn, input);
+    const data = self._frameClass.ReadRequest(addressing.input, count);
+    self._send(fn, data, {}, resolver);
+  });
+}
+
+function writeRequest(self, fn, address, values, callback) {
+  return CallbackPromise(callback, (resolver) => {
+    const data = self._frameClass.WriteRequest(address, values);
+    self._send(fn, data, {}, resolver);
+  });
+}
 
 class MBLayer extends Layer {
   constructor(lowerLayer, options) {
     super('modbus', lowerLayer, null, DefaultOptions);
 
     switch (lowerLayer.name) {
-      case 'tcp':
-        const cOpts = Object.assign({
+      case 'tcp': {
+        const cOpts = {
           unitID: 255,
-          protocolID: 0
-        }, options);
+          protocolID: 0,
+          ...options,
+        };
+
         this._transactionCounter = 0;
         this._frameClass = MBFrame.TCP;
         this._send = (fn, data, opts, resolver) => {
@@ -43,29 +71,29 @@ class MBLayer extends Layer {
           const unitID = opts.unitID || cOpts.unitID;
           const protocolID = opts.protocolID || cOpts.protocolID;
           const frame = new MBFrame.TCP(
-            new MBFrame.PDU(fn, data),
+            new PDU(fn, data),
             this._transactionCounter,
             unitID,
-            protocolID
+            protocolID,
           );
 
           const callback = this.contextCallback(
-            once(err => {
+            once((err) => {
               if (err) {
-                /** e.g. handle timeout error and return null*/
+                /** e.g. handle timeout error and return null */
                 resolver.reject(err);
                 return null;
-              } else {
-                return resolver;
               }
+              return resolver;
             }),
-            this._transactionCounter
+            this._transactionCounter,
           );
 
           this.send(frame.toBuffer(), null, false, callback);
-        }
+        };
         this.setDefragger(MBFrame.TCP.IsComplete, MBFrame.TCP.Length);
         break;
+      }
       default:
         break;
     }
@@ -88,7 +116,8 @@ class MBLayer extends Layer {
   }
 
   writeSingleCoil(inputAddressing, value, callback) {
-    return writeRequest(this, WriteSingleCoil, inputAddressing, [value ? 0x00FF : 0x0000], callback);
+    const values = [value ? 0x00FF : 0x0000];
+    return writeRequest(this, WriteSingleCoil, inputAddressing, values, callback);
   }
 
   writeMultipleCoils(inputAddressing, values, callback) {
@@ -103,7 +132,7 @@ class MBLayer extends Layer {
   }
 
   writeMultipleHoldingRegisters(inputAddressing, values, callback) {
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, (resolver) => {
       resolver.reject('Not supported yet');
     });
   }
@@ -116,18 +145,17 @@ class MBLayer extends Layer {
       /**
        * We were expecting this message but it may have already timed out.
        * If it has timed out, callback will return null
-       **/
+       * */
       const resolver = callback();
 
       if (resolver) {
-        const reply = packet.reply;
+        const { reply } = packet;
         if (reply.error) {
           resolver.reject(reply.error.message, reply);
         } else {
           resolver.resolve(reply.data);
         }
-      }
-      else {
+      } else {
         console.log(`Timed out message received`);
         console.log(packet);
       }
@@ -156,50 +184,21 @@ class MBLayer extends Layer {
 
 module.exports = MBLayer;
 
-
-function readRequest(self, fn, input, count, callback) {
-  return CallbackPromise(callback, resolver => {
-    const addressing = parseAddressingInput(fn, input);
-    const data = self._frameClass.ReadRequest(addressing.input, count);
-    self._send(fn, data, {}, resolver);
-  });
-}
-
-function writeRequest(self, fn, address, values, callback) {
-  return CallbackPromise(callback, resolver => {
-    const data = self._frameClass.WriteRequest(address, values);
-    self._send(fn, data, {}, resolver);
-  });
-}
-
-
 function send(self, fn, data, resolver, timeout) {
   const frame = self._createFrame(fn, data, null);
 
   const callback = self.contextCallback(
-    once(err => {
+    once((err) => {
       if (err) {
-        /** e.g. handle timeout error and return null*/
+        /** e.g. handle timeout error and return null */
         resolver.reject(err);
         return null;
-      } else {
-        return resolver;
       }
+      return resolver;
     }),
     transactionID,
-    timeout
+    timeout,
   );
 
   self.send(frame.toBuffer(), null, false, callback);
-}
-
-/**
- * holding register numbers start with 4 and span from 40001 to 49999.
- */
-// TODO
-function parseAddressingInput(fn, input) {
-  return {
-    address: parseInt(input, 10),
-    // type: 
-  };
 }

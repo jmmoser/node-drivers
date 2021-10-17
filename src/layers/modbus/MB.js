@@ -14,7 +14,7 @@ const Functions = Object.freeze({
   MaskWriteRegister: 0x16,
   WriteAndReadRegisters: 0x17,
   ReadFIFOQueue: 0x18,
-  EncapsulatedInterfaceTransport: 0x2B
+  EncapsulatedInterfaceTransport: 0x2B,
 });
 
 const SearialLineFunctions = Object.freeze({
@@ -26,7 +26,6 @@ const SearialLineFunctions = Object.freeze({
 });
 
 const FunctionNames = InvertKeyValues(Functions);
-
 
 const ErrorDescriptions = Object.freeze({
   0x01: 'Illegal function',
@@ -40,19 +39,18 @@ const ErrorDescriptions = Object.freeze({
   0x09: 'Not defined',
   0x0A: 'Gateway path',
   0x0B: 'Gateway target',
-  0x0C: 'Max'
+  0x0C: 'Max',
 });
-
 
 const MEITransportFunctions = Object.freeze({
   CANopenGeneralReference: 0x0D,
-  ReadDeviceIdentification: 0x0E
+  ReadDeviceIdentification: 0x0E,
 });
-
 
 module.exports = {
   Functions,
   FunctionNames,
   ErrorDescriptions,
-  MEITransportFunctions
+  MEITransportFunctions,
+  SearialLineFunctions,
 };

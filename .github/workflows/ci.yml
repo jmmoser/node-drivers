@@ -32,9 +32,22 @@ jobs:
         sudo setcap cap_net_raw+ep ./src/ports/POSIX/OpENer
         ./src/ports/POSIX/OpENer lo &
 
-    - run: node test/integration/test.js
-      working-directory: node-drivers
+    - working-directory: node-drivers
+      run: node test/integration/eip.js
+
+    - uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
     
+    - working-directory: node-drivers
+      run: |
+        pip install -U pymodbus
+        python ./test/integration/modbus/server.py &
+
+    - working-directory: node-drivers
+      run: node test/integration/modbus/client.js
+      
+
 
 
     

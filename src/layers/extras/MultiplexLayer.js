@@ -8,13 +8,36 @@
 const { CallbackPromise } = require('../../utils');
 const Layer = require('../Layer');
 
+function incrementContext(self) {
+  self.__context = (self.__context + 1) % 0x100000000;
+  return self.__context;
+}
+
+function layerContext(self, layer, context) {
+  if (layer != null) {
+    if (context == null) {
+      context = incrementContext(this); // eslint-disable-line no-param-reassign
+    }
+    self.__contextToLayer.set(context, layer);
+  }
+  return context;
+}
+
+function layerForContext(self, context) {
+  let layer = null;
+  if (self.__contextToLayer.has(context)) {
+    layer = self.__contextToLayer.get(context);
+    self.__contextToLayer.delete(context);
+  }
+  return layer;
+}
 
 class MultiplexLayer extends Layer {
   constructor(lowerLayer) {
     super('multiplex', lowerLayer, {
-      handlesForwarding
+      handlesForwarding: true,
     });
-    
+
     this._layers = new Set();
     this.__context = 0;
     this.__contextToLayer = new Map();
@@ -25,20 +48,19 @@ class MultiplexLayer extends Layer {
   }
 
   disconnect(callback) {
-    return CallbackPromise(callback, async resolver => {
+    return CallbackPromise(callback, async (resolver) => {
       if (this._disconnecting === 1) {
         resolver.resolve();
       }
 
       this._disconnecting = 1;
-      
+
       const disconnectTimeout = setTimeout(() => {
         this._disconnecting = 0;
-        console.log('disconnect timeout');
         resolver.resolve();
       }, 10000);
 
-      await Promise.all([...this._layers].map(layer => layer.disconnect()));
+      await Promise.all([...this._layers].map((layer) => layer.disconnect()));
 
       if (this._disconnecting === 1) {
         clearTimeout(disconnectTimeout);
@@ -62,7 +84,7 @@ class MultiplexLayer extends Layer {
       if (layer != null) {
         this.forwardTo(layer, data, info);
       } else {
-        throw new Error('MultiplexLayer Error: No layer for context: ' + context);
+        throw new Error(`MultiplexLayer Error: No layer for context: ${context}`);
       }
     } else {
       throw new Error('MultiplexLayer Error: No context');
@@ -70,35 +92,10 @@ class MultiplexLayer extends Layer {
   }
 
   handleDestroy(error) {
-    [...this._layers].forEach(layer => {
+    [...this._layers].forEach((layer) => {
       layer.destroy(error);
     });
-  }  
+  }
 }
 
 module.exports = MultiplexLayer;
-
-
-function layerContext(self, layer, context) {
-  if (layer != null) {
-    if (context == null) {
-      context = incrementContext(this);
-    }
-    self.__contextToLayer.set(context, layer);
-  }
-  return context;
-}
-
-function layerForContext(self, context) {
-  let layer = null;
-  if (self.__contextToLayer.has(context)) {
-    layer = self.__contextToLayer.get(context);
-    self.__contextToLayer.delete(context);
-  }
-  return layer;
-}
-
-function incrementContext(self) {
-  self.__context = (self.__context + 1) % 0x100000000;
-  return self.__context;
-}

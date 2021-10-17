@@ -1,22 +1,7 @@
 'use strict';
 
 const { Functions, FunctionNames, ErrorDescriptions } = require('./MB');
-
-
-class PDU {
-  constructor(fn, data) {
-    this.fn = fn;
-    this.data = data;
-  }
-
-  // get fn() {
-  //   return this._fn;
-  // }
-
-  // get data() {
-  //   return this._data;
-  // }
-}
+const PDU = require('./PDU');
 
 
 class TCP {
@@ -99,12 +84,12 @@ class TCP {
       const errorCode = data.readUInt8(0);
       reply.error = {
         code: errorCode,
-        message: ErrorDescriptions[errorCode] || 'Unknown error'
+        message: ErrorDescriptions[errorCode] || 'Unknown error',
       };
     } else {
       reply.fn = {
         code: fn,
-        name: FunctionNames[fn] || 'Unknown'
+        name: FunctionNames[fn] || 'Unknown',
       };
 
       reply.data = TCP.ParseReplyData(fn, data, 0);
@@ -114,8 +99,7 @@ class TCP {
   }
 
   toBuffer() {
-    const fn = this.pdu.fn;
-    const data = this.pdu.data;
+    const { fn, data } = this.pdu;
 
     const buffer = Buffer.alloc(8 + data.length);
     buffer.writeUInt16BE(this.transactionID, 0);
@@ -126,7 +110,6 @@ class TCP {
     data.copy(buffer, 8);
     return buffer;
   }
-
 
   static ParseReplyData(fn, buffer, offset) {
     switch (fn) {
@@ -155,13 +138,11 @@ class TCP {
         return buffer.readUInt16BE(offset + 2);
       }
       default:
-        break;
+        return undefined;
     }
   }
 }
 
-
 module.exports = {
-  PDU,
-  TCP
+  TCP,
 };
