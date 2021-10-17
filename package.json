@@ -16,8 +16,8 @@
     "udp"
   ],
   "scripts": {
-    "test": "jest tests --verbose --runInBand --coverage",
-    "test-watch": "jest tests --verbose --runInBand --coverage --watch"
+    "test": "jest --verbose --runInBand --coverage",
+    "test-watch": "jest --verbose --runInBand --coverage --watch"
   },
   "repository": {
     "type": "git",
