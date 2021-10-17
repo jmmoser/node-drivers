@@ -1,6 +1,4 @@
-const {
-  getBits
-} = require('../src/utils');
+const { getBits } = require('../../src/utils');
 
 describe('getBits', () => {
   test('getBits', () => {

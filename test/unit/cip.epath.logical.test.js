@@ -1,5 +1,6 @@
-const EPath = require('../src/layers/cip/core/epath');
-const Logical = EPath.Segments.Logical;
+const EPath = require('../../src/layers/cip/core/epath');
+
+const { Logical } = EPath.Segments;
 
 describe('Logical ClassID', () => {
   test('Padded Implicit 8-bit Format', () => {

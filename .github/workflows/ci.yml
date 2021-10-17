@@ -32,7 +32,7 @@ jobs:
         sudo setcap cap_net_raw+ep ./src/ports/POSIX/OpENer
         ./src/ports/POSIX/OpENer lo &
 
-    - run: node test.js
+    - run: node test/integration/test.js
       working-directory: node-drivers
     
 

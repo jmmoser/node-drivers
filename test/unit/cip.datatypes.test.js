@@ -1,12 +1,10 @@
 const {
   DataType,
-  // DataTypeCodes,
   Encode,
-  Decode
-} = require('../src/layers/cip/core/datatypes');
+  Decode,
+} = require('../../src/layers/cip/core/datatypes');
 
-const EPath = require('../src/layers/cip/core/epath');
-
+const EPath = require('../../src/layers/cip/core/epath');
 
 describe('Encoding', () => {
   test('SINT positive', () => {
@@ -285,18 +283,14 @@ describe('Decoding', () => {
   test('TRANSFORM', () => {
     const dt = DataType.TRANSFORM(
       DataType.STRUCT([DataType.USINT, DataType.USINT]),
-      function (val) {
-        return {
-          major: val[0],
-          minor: val[1]
-        }
-      },
-      function (val) {
-        return [val.major, val.minor];
-      }
+      (val) => ({
+        major: val[0],
+        minor: val[1],
+      }),
+      (val) => [val.major, val.minor],
     );
-    
-    expect(Decode(dt, Buffer.from([0x01, 0x00]), 0, val => {
+
+    expect(Decode(dt, Buffer.from([0x01, 0x00]), 0, (val) => {
       expect(val).toEqual({ major: 1, minor: 0 });
     })).toBe(2);
   });
@@ -305,7 +299,9 @@ describe('Decoding', () => {
 
 describe('Encoding EPATH', () => {
   test('Padded EPATH(Port)', () => {
-    expect(Encode(DataType.EPATH(true), [new EPath.Segments.Port(1, Buffer.from([0x00]))])).toEqual(Buffer.from([0x01, 0x00]));
+    expect(
+      Encode(DataType.EPATH(true), [new EPath.Segments.Port(1, Buffer.from([0x00]))]),
+    ).toEqual(Buffer.from([0x01, 0x00]));
   });
   test('Padded EPATH(Port,Logical,Logical)', () => {
     expect(Encode(DataType.EPATH(true), [
@@ -319,22 +315,22 @@ describe('Encoding EPATH', () => {
 
 describe('Decoding EPATH', () => {
   test('Padded EPATH(Port) Unknown Length', () => {
-    expect(Decode(DataType.EPATH(true), Buffer.from([0x01, 0x00]), 0, val => {
+    expect(Decode(DataType.EPATH(true), Buffer.from([0x01, 0x00]), 0, (val) => {
       expect(val).toEqual(new EPath.Segments.Port(1, Buffer.from([0x00])));
     })).toBe(2);
   });
   test('Padded EPATH(Port) Known Length', () => {
-    expect(Decode(DataType.EPATH(true, 2), Buffer.from([0x01, 0x00]), 0, val => {
+    expect(Decode(DataType.EPATH(true, 2), Buffer.from([0x01, 0x00]), 0, (val) => {
       expect(val).toEqual([new EPath.Segments.Port(1, Buffer.from([0x00]))]);
     })).toBe(2);
   });
   test('Padded EPATH(Port) Full Length', () => {
-    expect(Decode(DataType.EPATH(true, true), Buffer.from([0x01, 0x00]), 0, val => {
+    expect(Decode(DataType.EPATH(true, true), Buffer.from([0x01, 0x00]), 0, (val) => {
       expect(val).toEqual([new EPath.Segments.Port(1, Buffer.from([0x00]))]);
     })).toBe(2);
   });
   test('Padded EPATH(Port, Logical, Logical) Known Length', () => {
-    expect(Decode(DataType.EPATH(true, 6), Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01]), 0, val => {
+    expect(Decode(DataType.EPATH(true, 6), Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01]), 0, (val) => {
       expect(val).toEqual([
         new EPath.Segments.Port(1, Buffer.from([0x00])),
         new EPath.Segments.Logical.ClassID(2),
@@ -343,7 +339,7 @@ describe('Decoding EPATH', () => {
     })).toBe(6);
   });
   test('Padded EPATH(Port, Logical, Logical) Full Length', () => {
-    expect(Decode(DataType.EPATH(true, true), Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01]), 0, val => {
+    expect(Decode(DataType.EPATH(true, true), Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01]), 0, (val) => {
       expect(val).toEqual([
         new EPath.Segments.Port(1, Buffer.from([0x00])),
         new EPath.Segments.Logical.ClassID(2),
@@ -353,16 +349,15 @@ describe('Decoding EPATH', () => {
   });
 });
 
-
 describe('Constructed', () => {
   test('Attribute List Encoding', () => {
     const attributes = [1, 2, 3];
     const data = Encode(DataType.STRUCT([
       DataType.UINT,
-      DataType.ABBREV_ARRAY(DataType.UINT)
+      DataType.ABBREV_ARRAY(DataType.UINT),
     ]), [
       attributes.length,
-      attributes
+      attributes,
     ]);
 
     expect(data).toEqual(Buffer.from([0x03, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00]));

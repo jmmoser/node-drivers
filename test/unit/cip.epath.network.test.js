@@ -1,5 +1,6 @@
-const EPath = require('../src/layers/cip/core/epath');
-const Network = EPath.Segments.Network;
+const EPath = require('../../src/layers/cip/core/epath');
+
+const { Network } = EPath.Segments;
 
 describe('Network Segment Production Inhibit Time', () => {
   test('Encode', () => {

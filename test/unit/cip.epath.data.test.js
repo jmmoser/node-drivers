@@ -1,9 +1,12 @@
-const EPath = require('../src/layers/cip/core/epath');
-const Data = EPath.Segments.Data;
+const EPath = require('../../src/layers/cip/core/epath');
+
+const { Data } = EPath.Segments;
 
 describe('Simple Data Segment', () => {
   test('Encode', () => {
-    expect(new Data.Simple(Buffer.from([0x01, 0x00, 0x02, 0x00])).encode()).toEqual(Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02, 0x00]));
+    expect(
+      new Data.Simple(Buffer.from([0x01, 0x00, 0x02, 0x00])).encode(),
+    ).toEqual(Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02, 0x00]));
   });
   test('Invalid Encode', () => {
     expect(() => new Data.Simple(Buffer.from([0x01, 0x00, 0x02]))).toThrow();
@@ -17,12 +20,15 @@ describe('Simple Data Segment', () => {
   });
 
   test('Decode', () => {
-    expect(EPath.Decode(Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02, 0x00]), 0, true, false, segments => {
+    const buffer = Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02, 0x00]);
+    expect(EPath.Decode(buffer, 0, true, false, (segments) => {
       expect(segments).toEqual([new Data.Simple(Buffer.from([0x01, 0x00, 0x02, 0x00]))]);
     })).toBe(6);
   });
   test('Invalid Decode', () => {
-    expect(() => EPath.Decode(Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02]), 0, true, false, () => {})).toThrow();
+    expect(
+      () => EPath.Decode(Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02]), 0, true, false, () => {}),
+    ).toThrow();
   });
 });
 
@@ -42,18 +48,22 @@ describe('ANSI Extended Symbol Data Segment', () => {
   });
 
   test('Decode', () => {
-    expect(EPath.Decode(Buffer.from([0x91, 0x06, 0x73, 0x74, 0x61, 0x72, 0x74, 0x31]), 0, true, false, segments => {
+    const buffer = Buffer.from([0x91, 0x06, 0x73, 0x74, 0x61, 0x72, 0x74, 0x31]);
+    expect(EPath.Decode(buffer, 0, true, false, (segments) => {
       expect(segments).toEqual([new Data.ANSIExtendedSymbol('start1')]);
     })).toBe(8);
   });
   test('Decode With Pad Byte', () => {
-    expect(EPath.Decode(Buffer.from([0x91, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x00]), 0, true, false, segments => {
+    const buffer = Buffer.from([0x91, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x00]);
+    expect(EPath.Decode(buffer, 0, true, false, (segments) => {
       expect(segments).toEqual([new Data.ANSIExtendedSymbol('start')]);
     })).toBe(8);
   });
   test('Invalid Decode', () => {
     /** Pad byte must be 0x00 */
-    expect(() => EPath.Decode(Buffer.from([0x91, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x01]), 0, true, false, () => {})).toThrow();
+    expect(
+      () => EPath.Decode(Buffer.from([0x91, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x01]), 0, true, false, () => {}),
+    ).toThrow();
     /** Invalid length */
     expect(() => EPath.Decode(Buffer.from([0x91, 0x06, 0x73, 0x74, 0x61, 0x72, 0x74]), 0, true, false, () => { })).toThrow();
   });
