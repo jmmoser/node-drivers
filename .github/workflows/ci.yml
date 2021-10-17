@@ -1,0 +1,36 @@
+name: CI
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: node-drivers
+
+    - uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+
+    - run: npm install
+      working-directory: node-drivers
+
+    - run: npm run test
+      working-directory: node-drivers
+
+    - uses: actions/checkout@v2
+      with:
+        repository: jmmoser/OpENer
+        path: OpENer
+
+    - working-directory: OpENer/bin/posix
+      run: |
+        ./setup_posix.sh
+        make
+        sudo setcap cap_net_raw+ep ./src/ports/POSIX/OpENer
+        ./src/ports/POSIX/OpENer lo &
+    
+    
+
+
+    

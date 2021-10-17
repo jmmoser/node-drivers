@@ -10,7 +10,7 @@ const EPath = require('../epath');
 /** EIP-CIP-V1 3-5.5, page 3.56 */
 const ServiceCodes = {
   ForwardClose: 0x4E, // Closes a connection
-  UnconnectedSend: 0x52, // Unconnected send service. Only originating devices and devices that route between links need to implement.
+  UnconnectedSend: 0x52, // Unconnected send service
   ForwardOpen: 0x54, // Opens a connection
   GetConnectionData: 0x56, // For diagnostics of a connection
   SearchConnectionData: 0x57, // For diagnostics of a connection
@@ -22,7 +22,7 @@ const ServiceCodeSet = new Set(Object.values(ServiceCodes));
 
 const ServiceNames = InvertKeyValues(ServiceCodes);
 
-const ConnectionManager_EPath = EPath.Encode(true, [
+const ConnectionManagerEPath = EPath.Encode(true, [
   new EPath.Segments.Logical.ClassID(ClassCodes.ConnectionManager),
   new EPath.Segments.Logical.InstanceID(0x01),
 ]);
@@ -58,6 +58,31 @@ function errorDataHandler(buffer, offset, res) {
   return offset;
 }
 
+function connectionDataResponse(buffer, offset, cb) {
+  const res = {};
+  res.ConnectionNumber = buffer.readUInt16LE(offset); offset += 2;
+  res.ConnectionState = buffer.readUInt16LE(offset); offset += 2;
+  res.OriginatorPort = buffer.readUInt16LE(offset); offset += 2;
+  res.TargetPort = buffer.readUInt16LE(offset); offset += 2;
+  res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
+  res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
+  res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
+  res.OriginatorOtoTCID = buffer.readUInt32LE(offset); offset += 4;
+  res.TargetOtoTCID = buffer.readUInt32LE(offset); offset += 4;
+  res.ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offset); offset += 1;
+  offset += 3; // Reserved
+  res.OriginatorRPIOtoT = buffer.readUInt32LE(offset); offset += 4;
+  res.OriginatorAPIOtoT = buffer.readUInt32LE(offset); offset += 4;
+  res.OriginatorTtoOCID = buffer.readUInt32LE(offset); offset += 4;
+  res.TargetTtoOCID = buffer.readUInt32LE(offset); offset += 4;
+  res.ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offset); offset += 1;
+  offset += 3; // Reserved
+  res.OriginatorRPITtoO = buffer.readUInt32LE(offset); offset += 4;
+  res.OriginatorAPITtoO = buffer.readUInt32LE(offset); offset += 4;
+  cb(res);
+  return offset;
+}
+
 class ConnectionManager {
   static UnconnectedSend(request, route, options) {
     options = {
@@ -83,7 +108,7 @@ class ConnectionManager {
 
     return new CIPRequest(
       ServiceCodes.UnconnectedSend,
-      ConnectionManager_EPath,
+      ConnectionManagerEPath,
       buffer,
       request,
       {
@@ -177,7 +202,7 @@ class ConnectionManager {
 
     return new CIPRequest(
       connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
-      ConnectionManager_EPath,
+      ConnectionManagerEPath,
       data,
       (buffer, offset, cb) => {
         const res = {};
@@ -227,7 +252,7 @@ class ConnectionManager {
 
     return new CIPRequest(
       ServiceCodes.ForwardClose,
-      ConnectionManager_EPath,
+      ConnectionManagerEPath,
       data,
       (buffer, offset, cb) => {
         const res = {};
@@ -252,7 +277,7 @@ class ConnectionManager {
 
     return new CIPRequest(
       ServiceCodes.GetConnectionData,
-      ConnectionManager_EPath,
+      ConnectionManagerEPath,
       data,
       connectionDataResponse
     );
@@ -269,7 +294,7 @@ class ConnectionManager {
 
     return new CIPRequest(
       ServiceCodes.SearchConnectionData,
-      ConnectionManager_EPath,
+      ConnectionManagerEPath,
       data,
       connectionDataResponse,
     );
@@ -299,31 +324,6 @@ class ConnectionManager {
 }
 
 module.exports = ConnectionManager;
-
-function connectionDataResponse(buffer, offset, cb) {
-  const res = {};
-  res.ConnectionNumber = buffer.readUInt16LE(offset); offset += 2;
-  res.ConnectionState = buffer.readUInt16LE(offset); offset += 2;
-  res.OriginatorPort = buffer.readUInt16LE(offset); offset += 2;
-  res.TargetPort = buffer.readUInt16LE(offset); offset += 2;
-  res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
-  res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
-  res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-  res.OriginatorOtoTCID = buffer.readUInt32LE(offset); offset += 4;
-  res.TargetOtoTCID = buffer.readUInt32LE(offset); offset += 4;
-  res.ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offset); offset += 1;
-  offset += 3; // Reserved
-  res.OriginatorRPIOtoT = buffer.readUInt32LE(offset); offset += 4;
-  res.OriginatorAPIOtoT = buffer.readUInt32LE(offset); offset += 4;
-  res.OriginatorTtoOCID = buffer.readUInt32LE(offset); offset += 4;
-  res.TargetTtoOCID = buffer.readUInt32LE(offset); offset += 4;
-  res.ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offset); offset += 1;
-  offset += 3; // Reserved
-  res.OriginatorRPITtoO = buffer.readUInt32LE(offset); offset += 4;
-  res.OriginatorAPITtoO = buffer.readUInt32LE(offset); offset += 4;
-  cb(res);
-  return offset;
-}
 
 ConnectionManager.ServiceCodes = ServiceCodes;
 
