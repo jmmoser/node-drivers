@@ -18,6 +18,8 @@ jobs:
     - run: npm run test
       working-directory: node-drivers
 
+    - run: sudo apt-get install -y cmake binutils libcap-dev
+
     - uses: actions/checkout@v2
       with:
         repository: jmmoser/OpENer
