@@ -7,7 +7,8 @@ const mbLayer = new Modbus(tcpLayer);
 (async () => {
   try {
     /** reads holding register 40004 of unit 81 */
-    const value = await mbLayer.readHoldingRegisters(81, 3, 1);
+    // const value = await mbLayer.readHoldingRegisters(81, 3, 1);
+    const value = await mbLayer.readHoldingRegisters(0, 50);
     console.log({ value });
     assert.equal(value, 0, 'Holding register');
   } catch (err) {

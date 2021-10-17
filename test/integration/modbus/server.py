@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 """
-Pymodbus Asyncio Server Example
+Pymodbus Synchronous Server Example
 --------------------------------------------------------------------------
-The asyncio server is implemented in pure python without any third
+The synchronous server is implemented in pure python without any third
 party libraries (unless you need to use the serial protocols which require
-asyncio-pyserial). This is helpful in constrained or old environments where using
+pyserial). This is helpful in constrained or old environments where using
 twisted is just not feasible. What follows is an example of its use:
 """
 # --------------------------------------------------------------------------- #
 # import the various server implementations
 # --------------------------------------------------------------------------- #
-import asyncio
 from pymodbus.version import version
-from pymodbus.server.async_io import StartTcpServer
-from pymodbus.server.async_io import StartTlsServer
-from pymodbus.server.async_io import StartUdpServer
-from pymodbus.server.async_io import StartSerialServer
+from pymodbus.server.sync import StartTcpServer
+from pymodbus.server.sync import StartTlsServer
+from pymodbus.server.sync import StartUdpServer
+from pymodbus.server.sync import StartSerialServer
 
 from pymodbus.device import ModbusDeviceIdentification
 from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSparseDataBlock
@@ -33,7 +32,7 @@ log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 
 
-async def run_server():
+def run_server():
     # ----------------------------------------------------------------------- #
     # initialize your data store
     # ----------------------------------------------------------------------- #
@@ -91,7 +90,7 @@ async def run_server():
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [17]*100),
         co=ModbusSequentialDataBlock(0, [17]*100),
-        hr=ModbusSequentialDataBlock(0, [17]*100),
+        hr=ModbusSequentialDataBlock(0, [0, 1, 2, 3, 4, 5]*100),
         ir=ModbusSequentialDataBlock(0, [17]*100))
 
     context = ModbusServerContext(slaves=store, single=True)
@@ -113,41 +112,27 @@ async def run_server():
     # run the server you want
     # ----------------------------------------------------------------------- #
     # Tcp:
-    # immediately start serving:
-    # await StartTcpServer(context, identity=identity, address=("0.0.0.0", 5020), allow_reuse_address=True,
-    #                      defer_start=False)
-
-    # 	deferred start:
-    server = await StartTcpServer(context, identity=identity, address=("0.0.0.0", 5020),
-                                  allow_reuse_address=True, defer_start=True)
-
-    asyncio.get_event_loop().call_later(20, lambda: server.serve_forever)
-    await server.serve_forever()
-
+    StartTcpServer(context, identity=identity, address=("", 5020))
+    #
     # TCP with different framer
     # StartTcpServer(context, identity=identity,
     #                framer=ModbusRtuFramer, address=("0.0.0.0", 5020))
 
-    # Tls:
-    # await StartTlsServer(context, identity=identity, address=("localhost", 8020),
-    #                      certfile="server.crt", keyfile="server.key",
-    #                      allow_reuse_address=True, allow_reuse_port=True,
-    #                      defer_start=False)
+    # TLS
+    # StartTlsServer(context, identity=identity, certfile="server.crt",
+    #                keyfile="server.key", address=("0.0.0.0", 8020))
 
     # Udp:
-    # server = await StartUdpServer(context, identity=identity, address=("0.0.0.0", 5020),
-    #                               allow_reuse_address=True, defer_start=True)
-    # #
-    # await server.serve_forever()
+    # StartUdpServer(context, identity=identity, address=("0.0.0.0", 5020))
 
-    # !!! SERIAL SERVER NOT IMPLEMENTED !!!
+    # socat -d -d PTY,link=/tmp/ptyp0,raw,echo=0,ispeed=9600 PTY,link=/tmp/ttyp0,raw,echo=0,ospeed=9600
     # Ascii:
     # StartSerialServer(context, identity=identity,
     #                    port='/dev/ttyp0', timeout=1)
 
     # RTU:
     # StartSerialServer(context, framer=ModbusRtuFramer, identity=identity,
-    #                   port='/dev/ttyp0', timeout=.005, baudrate=9600)
+    #                   port='/tmp/ttyp0', timeout=.005, baudrate=9600)
 
     # Binary
     # StartSerialServer(context,
@@ -158,4 +143,4 @@ async def run_server():
 
 
 if __name__ == "__main__":
-    asyncio.run(run_server())
+    run_server()

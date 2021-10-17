@@ -78,9 +78,9 @@ function InvertKeyValues(obj) {
  */
 function once(fn, context) {
   let result;
-  return () => {
+  return (...args) => {
     if (fn) {
-      result = fn.apply(context || this, arguments); // eslint-disable-line prefer-rest-params
+      result = fn.apply(context || this, args);
       fn = null; // eslint-disable-line no-param-reassign
     }
     return result;

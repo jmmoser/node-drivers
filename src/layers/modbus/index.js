@@ -184,21 +184,21 @@ class MBLayer extends Layer {
 
 module.exports = MBLayer;
 
-function send(self, fn, data, resolver, timeout) {
-  const frame = self._createFrame(fn, data, null);
+// function send(self, fn, data, resolver, timeout) {
+//   const frame = self._createFrame(fn, data, null);
 
-  const callback = self.contextCallback(
-    once((err) => {
-      if (err) {
-        /** e.g. handle timeout error and return null */
-        resolver.reject(err);
-        return null;
-      }
-      return resolver;
-    }),
-    transactionID,
-    timeout,
-  );
+//   const callback = self.contextCallback(
+//     once((err) => {
+//       if (err) {
+//         /** e.g. handle timeout error and return null */
+//         resolver.reject(err);
+//         return null;
+//       }
+//       return resolver;
+//     }),
+//     transactionID,
+//     timeout,
+//   );
 
-  self.send(frame.toBuffer(), null, false, callback);
-}
+//   self.send(frame.toBuffer(), null, false, callback);
+// }

@@ -3,7 +3,6 @@
 const { Functions, FunctionNames, ErrorDescriptions } = require('./MB');
 const PDU = require('./PDU');
 
-
 class TCP {
   constructor(pdu, transactionID, unitID = 255, protocolID = 0, buffer, reply) {
     this.transactionID = transactionID;
@@ -50,7 +49,7 @@ class TCP {
     } else {
       throw new Error('Modbus TCP write request error: currently supports buffer, array of 2-byte buffers, or array of finite numbers');
     }
-    
+
     return buffer;
   }
 
