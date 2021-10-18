@@ -39,7 +39,7 @@ function parseAddressingInput(fn, input) {
 function readRequest(self, fn, input, count, callback) {
   return CallbackPromise(callback, (resolver) => {
     const addressing = parseAddressingInput(fn, input);
-    const data = self._frameClass.ReadRequest(addressing.input, count);
+    const data = self._frameClass.ReadRequest(addressing.address, count);
     self._send(fn, data, {}, resolver);
   });
 }

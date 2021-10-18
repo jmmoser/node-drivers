@@ -70,7 +70,6 @@ function connect(layer) {
     }
 
     socket.on('data', (data) => {
-      console.log('RX', data);
       layer.emit('data', data);
       layer.forward(data);
     });
@@ -216,7 +215,6 @@ class TCPLayer extends Layer {
     if (this._connectionState === 2) {
       const request = this.getNextRequest();
       if (request) {
-        console.log('TX', request.message);
         this.socket.write(request.message, (err) => {
           if (err) {
             console.log('TCP layer write error:');

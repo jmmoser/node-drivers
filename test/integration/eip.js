@@ -19,5 +19,7 @@ const eipLayer = new CIP.EIP(tcpLayer);
 
   if (error) {
     throw error;
+  } else {
+    console.log('eip success'); // eslint-disable-line no-console
   }
 })();
