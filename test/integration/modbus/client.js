@@ -5,16 +5,19 @@ const tcpLayer = new TCP({ host: '127.0.0.1', port: 5020 });
 const mbLayer = new Modbus(tcpLayer);
 
 (async () => {
+  let error;
   try {
     /** reads holding register 40004 of unit 81 */
     // const value = await mbLayer.readHoldingRegisters(81, 3, 1);
     const value = await mbLayer.readHoldingRegisters(0, 50);
-    console.log({ value });
-    assert.equal(value, 0, 'Holding register');
+    assert.strictEqual(value, 0, 'Holding register');
   } catch (err) {
-    console.log(err);
+    error = err;
   } finally {
     await tcpLayer.close();
-    console.log('done');
+  }
+
+  if (error) {
+    throw error;
   }
 })();
