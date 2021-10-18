@@ -2,9 +2,9 @@
 
 const { CallbackPromise, once } = require('../../utils');
 const Layer = require('../Layer');
-const MB = require('./MB');
-const MBFrame = require('./MBFrame');
-const PDU = require('./PDU');
+const MB = require('./constants');
+const Frames = require('./frames');
+const PDU = require('./pdu');
 
 const {
   ReadDiscreteInputs,
@@ -64,16 +64,16 @@ class MBLayer extends Layer {
         };
 
         this._transactionCounter = 0;
-        this._frameClass = MBFrame.TCP;
+        this._frameClass = Frames.TCP;
         this._send = (fn, data, opts, resolver) => {
           opts = opts || {};
           this._transactionCounter = (this._transactionCounter + 1) % 0x10000;
-          const unitID = opts.unitID || cOpts.unitID;
+          // const unitID = opts.unitID || cOpts.unitID;
           const protocolID = opts.protocolID || cOpts.protocolID;
-          const frame = new MBFrame.TCP(
+          const frame = new Frames.TCP(
             new PDU(fn, data),
             this._transactionCounter,
-            unitID,
+            // unitID,
             protocolID,
           );
 
@@ -91,7 +91,7 @@ class MBLayer extends Layer {
 
           this.send(frame.toBuffer(), null, false, callback);
         };
-        this.setDefragger(MBFrame.TCP.IsComplete, MBFrame.TCP.Length);
+        this.setDefragger(Frames.TCP.IsComplete, Frames.TCP.Length);
         break;
       }
       default:
@@ -111,7 +111,7 @@ class MBLayer extends Layer {
     return readRequest(this, ReadInputRegisters, inputAddressing, count, callback);
   }
 
-  readHoldingRegisters(inputAddressing, count, callback) {
+  readHoldingRegisters(inputAddressing, count = 1, callback) {
     return readRequest(this, ReadHoldingRegisters, inputAddressing, count, callback);
   }
 
@@ -131,11 +131,11 @@ class MBLayer extends Layer {
     return writeRequest(this, WriteSingleHoldingRegister, inputAddressing, values, callback);
   }
 
-  writeMultipleHoldingRegisters(inputAddressing, values, callback) {
-    return CallbackPromise(callback, (resolver) => {
-      resolver.reject('Not supported yet');
-    });
-  }
+  // writeMultipleHoldingRegisters(inputAddressing, values, callback) {
+  //   return CallbackPromise(callback, (resolver) => {
+  //     resolver.reject('Not supported yet');
+  //   });
+  // }
 
   handleData(data) {
     const packet = this._frameClass.FromBuffer(data);
@@ -156,12 +156,10 @@ class MBLayer extends Layer {
           resolver.resolve(reply.data);
         }
       } else {
-        console.log(`Timed out message received`);
-        console.log(packet);
+        console.log('Timed out message received', packet);
       }
     } else {
-      console.log('Unhandled Modbus packet:');
-      console.log(packet);
+      console.log('Unhandled Modbus packet:', packet);
       console.log(arguments);
     }
 

@@ -9,8 +9,8 @@ const mbLayer = new Modbus(tcpLayer);
   try {
     /** reads holding register 40004 of unit 81 */
     // const value = await mbLayer.readHoldingRegisters(81, 3, 1);
-    const value = await mbLayer.readHoldingRegisters(0, 50);
-    assert.strictEqual(value, 0, 'Holding register');
+    const value = await mbLayer.readHoldingRegisters(0, 6);
+    assert.deepStrictEqual(value, [0, 1, 2, 3, 4, 5], 'Holding register');
   } catch (err) {
     error = err;
   } finally {

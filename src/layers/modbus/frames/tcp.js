@@ -1,13 +1,12 @@
 'use strict';
 
-const { Functions, FunctionNames, ErrorDescriptions } = require('./MB');
-const PDU = require('./PDU');
+const { Functions, FunctionNames, ErrorDescriptions } = require('../constants');
+const PDU = require('../pdu');
 
 class TCP {
-  constructor(pdu, transactionID, unitID = 255, protocolID = 0, buffer, reply) {
+  constructor(pdu, transactionID, protocolID = 0, buffer, reply) {
     this.transactionID = transactionID;
     this.protocolID = protocolID;
-    this.unitID = unitID;
     this.pdu = pdu;
 
     if (buffer) {
@@ -73,7 +72,7 @@ class TCP {
 
     const transactionID = buffer.readUInt16BE(offset);
     const protocolID = buffer.readUInt16BE(offset + 2);
-    const unitID = buffer.readUInt8(offset + 6);
+    /** skip unit ID (offset + 6), assume it is 0xFF */
     const fn = buffer.readUInt8(offset + 7);
     const data = buffer.slice(offset + 8, offset + TCP.RemainingLength(buffer, offset) + 6);
 
@@ -94,7 +93,7 @@ class TCP {
       reply.data = TCP.ParseReplyData(fn, data, 0);
     }
 
-    return new TCP(new PDU(fn, data), transactionID, unitID, protocolID, buffer, reply);
+    return new TCP(new PDU(fn, data), transactionID, protocolID, buffer, reply);
   }
 
   toBuffer() {
@@ -104,7 +103,7 @@ class TCP {
     buffer.writeUInt16BE(this.transactionID, 0);
     buffer.writeUInt16BE(this.protocolID, 2);
     buffer.writeUInt16BE(data.length + 2, 4);
-    buffer.writeUInt8(this.unitID, 6);
+    buffer.writeUInt8(0xFF, 6); // Always use 0xFF for unit ID over TCP
     buffer.writeUInt8(fn, 7);
     data.copy(buffer, 8);
     return buffer;
@@ -142,6 +141,4 @@ class TCP {
   }
 }
 
-module.exports = {
-  TCP,
-};
+module.exports = TCP;

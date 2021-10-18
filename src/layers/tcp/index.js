@@ -70,6 +70,7 @@ function connect(layer) {
     }
 
     socket.on('data', (data) => {
+      console.log('RX', data);
       layer.emit('data', data);
       layer.forward(data);
     });
@@ -191,7 +192,7 @@ class TCPLayer extends Layer {
       return this._disconnect;
     }
 
-    this._disconnect = CallbackPromise(callback, async resolver => {
+    this._disconnect = CallbackPromise(callback, async (resolver) => {
       if (this._connectionState === TCPStateCodes.Connecting) {
         setConnectionState(this, TCPStateCodes.Disconnected);
         resolver.resolve();
@@ -215,9 +216,10 @@ class TCPLayer extends Layer {
     if (this._connectionState === 2) {
       const request = this.getNextRequest();
       if (request) {
-        this.socket.write(request.message, err => {
+        console.log('TX', request.message);
+        this.socket.write(request.message, (err) => {
           if (err) {
-            console.log('TCP layer write error:')
+            console.log('TCP layer write error:');
             console.log(err);
           }
           setImmediate(() => this.sendNextMessage());
@@ -229,7 +231,6 @@ class TCPLayer extends Layer {
     }
   }
 
-
   handleDestroy(error) {
     if (this.socket) {
       if (!this.socket.destroyed) {
@@ -240,7 +241,7 @@ class TCPLayer extends Layer {
 
     this._disconnect = null;
     if (Array.isArray(this._additionalDisconnectCallbacks)) {
-      this._additionalDisconnectCallbacks.forEach(callback => callback());
+      this._additionalDisconnectCallbacks.forEach((callback) => callback());
       this._additionalDisconnectCallbacks.length = 0;
     }
   }
