@@ -1,11 +1,14 @@
 'use strict';
 
-// const EPath = require('../../core/epath');
-// const CIPRequest = require('../../core/request');
-// const { CommonServiceCodes } = require('../../core/constants');
+const EPath = require('../../core/epath');
+const CIPRequest = require('../../core/request');
+const { CommonServiceCodes } = require('../../core/constants');
+
 const { CallbackPromise } = require('../../../../utils');
 const Layer = require('../../../Layer');
 const ConnectionLayer = require('./CIPConnectionLayer');
+
+const { OBJECTS } = require('../../core/objects');
 
 const PCCC = require('./pccc');
 
@@ -51,43 +54,44 @@ class CIPInternalLayer extends Layer {
     });
   }
 
-  // exploreAttributes(classCode, instanceID, maxAttribute, callback) {
-  //   if (typeof maxAttribute === 'function') {
-  //     callback = maxAttribute;
-  //     maxAttribute = null;
-  //   }
+  exploreAttributes(classCode, instanceID, maxAttribute, callback) {
+    if (typeof maxAttribute === 'function') {
+      callback = maxAttribute;
+      maxAttribute = null;
+    }
 
-  //   if (maxAttribute == null) {
-  //     maxAttribute = 20;
-  //   }
+    if (maxAttribute == null) {
+      maxAttribute = 20;
+    }
 
-  //   return CallbackPromise(callback, async resolver => {
-  //     const service = CommonServiceCodes.GetAttributeSingle;
+    return CallbackPromise(callback, async (resolver) => {
+      const service = CommonServiceCodes.GetAttributeSingle;
 
-  //     const attributes = [];
+      const attributes = [];
 
-  //     for (let i = 1; i < maxAttribute; i++) {
-  //       try {
-  //         const path = EPath.Encode(true, [
-  //           new EPath.Segments.Logical.ClassID(classCode),
-  //           new EPath.Segments.Logical.InstanceID(instanceID),
-  //           new EPath.Segments.Logical.AttributeID(i)
-  //         ]);
-  //         const reply = await this.sendRequest(true, new CIPRequest(service, path));
-  //         attributes.push({
-  //           code: i,
-  //           data: reply.data
-  //         });
-  //       } catch (err) {
-  //         if (!err.info || !err.info.status || err.info.status.code !== 20) {
-  //           return resolver.reject(err);
-  //         }
-  //       }
-  //     }
+      for (let i = 1; i < maxAttribute; i++) {
+        try {
+          const path = EPath.Encode(true, [
+            new EPath.Segments.Logical.ClassID(classCode),
+            new EPath.Segments.Logical.InstanceID(instanceID),
+            new EPath.Segments.Logical.AttributeID(i),
+          ]);
+          const reply = await this.sendRequest(true, new CIPRequest(service, path));
+          attributes.push({
+            code: i,
+            data: reply.data,
+          });
+        } catch (err) {
+          if (!err.info || !err.info.status || err.info.status.code !== 20) {
+            resolver.reject(err);
+            return;
+          }
+        }
+      }
 
-  //     resolver.resolve(attributes);
-  //   });
-  // }
+      resolver.resolve(attributes);
+    });
+  }
 
   sendNextMessage() {
     const request = this.getNextRequest();

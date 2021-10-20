@@ -1,11 +1,31 @@
 'use strict';
 
+const { ClassCodes } = require('../constants');
+
+const Identity = require('./Identity');
+const MessageRouter = require('./MessageRouter');
+const Port = require('./Port');
+const TCPIPInterface = require('./TCPIPInterface');
+const EthernetLink = require('./EthernetLink');
+const ConnectionManager = require('./ConnectionManager');
+
+const OBJECTS = {
+  [ClassCodes.Identity]: Identity,
+  [ClassCodes.MessageRouter]: MessageRouter,
+  [ClassCodes.Port]: Port,
+  [ClassCodes.TCPIPInterface]: TCPIPInterface,
+  [ClassCodes.EthernetLink]: EthernetLink,
+  [ClassCodes.ConnectionManager]: ConnectionManager,
+};
+
 module.exports = {
-  Identity: require('./Identity'),
-  MessageRouter: require('./MessageRouter'),
-  Port: require('./Port'),
-  TCPIPInterface: require('./TCPIPInterface'),
-  EthernetLink: require('./EthernetLink'),
+  OBJECTS,
+
+  Identity,
+  MessageRouter,
+  Port,
+  TCPIPInterface,
+  EthernetLink,
   // Connection: require('./Connection'),
-  ConnectionManager: require('./ConnectionManager')
+  ConnectionManager,
 };

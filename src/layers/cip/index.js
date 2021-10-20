@@ -2,7 +2,6 @@
 
 const CIPInternalLayer = require('./layers/internal/CIPInternalLayer');
 
-
 class CIPLayer extends CIPInternalLayer {}
 
 CIPLayer.EIP = require('./layers/EIP');

@@ -58,6 +58,14 @@ const {
   ControllerInstanceAttributeNames,
 } = require('./constants');
 
+function Logix5000DecodeDataType(buffer, offset, cb) {
+  const nextOffset = EPath.Decode(buffer, offset, null, false, cb);
+  if (nextOffset - offset < 2) {
+    return nextOffset + 1;
+  }
+  return nextOffset;
+}
+
 async function readTagFragmented(layer, path, elements) {
   const service = SymbolServiceCodes.ReadFragmented;
 
@@ -72,7 +80,7 @@ async function readTagFragmented(layer, path, elements) {
     const reply = await sendPromise(layer, service, path, reqData, 5000);
 
     /** remove the tag type bytes if already received */
-    const dataTypeOffset = Logix5000_DecodeDataType(reply.data, 0);
+    const dataTypeOffset = Logix5000DecodeDataType(reply.data, 0);
     chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
 
     if (reply.status.code === GeneralStatusCodes.PartialTransfer) {
@@ -154,7 +162,7 @@ async function parseReadTag(layer, scope, tag, elements, data) {
   }
 
   let typeInfo;
-  let offset = Logix5000_DecodeDataType(data, 0, (val) => { typeInfo = val.value; });
+  let offset = Logix5000DecodeDataType(data, 0, (val) => { typeInfo = val.value; });
 
   if (!typeInfo) {
     throw new Error('Unable to decode data type from read tag response data');
@@ -400,6 +408,50 @@ function scopedGenerator() {
   return () => preface + [...arguments].join(separator);
 }
 
+async function getSymbolInstanceID(layer, scope, tag) {
+  let tagName;
+  switch (typeof tag) {
+    case 'string':
+      tagName = tag;
+      // tagName = tag.split('.')[0];
+      break;
+    case 'number':
+      return tag;
+    case 'object':
+      return tag.id;
+    default:
+      throw new Error(`Tag must be a tag name, symbol instance number, or a tag object. Received: ${tag}`);
+  }
+
+  const createScopedSymbolName = scopedGenerator(scope);
+  const tagNameToSymbolInstanceIDKey = createScopedSymbolName(tagName);
+
+  if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
+    return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
+  }
+
+  let instanceID = -1;
+
+  const highestListedSymbolInstanceIDScope = scope || DEFAULT_SCOPE;
+  if (layer._highestListedSymbolInstanceIDs.has(highestListedSymbolInstanceIDScope)) {
+    instanceID = layer._highestListedSymbolInstanceIDs.get(highestListedSymbolInstanceIDScope);
+  }
+
+  for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true)) {
+    for (let i = 0; i < tags.length; i++) {
+      const tag = tags[i];
+      layer._tagNameToSymbolInstanceID.set(createScopedSymbolName(tag[SymbolInstanceAttributeCodes.Name]), tag.id);
+      layer._highestListedSymbolInstanceIDs.set(highestListedSymbolInstanceIDScope, tag.id);
+    }
+
+    if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
+      return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
+    }
+  }
+
+  return undefined;
+}
+
 /**
  * Allows getting the type of any tag/member
  * ((scope -> symbol) -> member)
@@ -457,48 +509,6 @@ async function getSymbolInfo(layer, scope, tagInput, attributes) {
   }
 
   return info;
-}
-
-async function getSymbolInstanceID(layer, scope, tag) {
-  let tagName;
-  switch (typeof tag) {
-    case 'string':
-      tagName = tag;
-      // tagName = tag.split('.')[0];
-      break;
-    case 'number':
-      return tag;
-    case 'object':
-      return tag.id;
-    default:
-      throw new Error(`Tag must be a tag name, symbol instance number, or a tag object. Received: ${tag}`);
-  }
-
-  const createScopedSymbolName = scopedGenerator(scope);
-  const tagNameToSymbolInstanceIDKey = createScopedSymbolName(tagName);
-
-  if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
-    return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
-  }
-
-  let instanceID = -1;
-
-  const highestListedSymbolInstanceIDScope = scope || DEFAULT_SCOPE;
-  if (layer._highestListedSymbolInstanceIDs.has(highestListedSymbolInstanceIDScope)) {
-    instanceID = layer._highestListedSymbolInstanceIDs.get(highestListedSymbolInstanceIDScope);
-  }
-
-  for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true)) {
-    for (let i = 0; i < tags.length; i++) {
-      const tag = tags[i];
-      layer._tagNameToSymbolInstanceID.set(createScopedSymbolName(tag[SymbolInstanceAttributeCodes.Name]), tag.id);
-      layer._highestListedSymbolInstanceIDs.set(highestListedSymbolInstanceIDScope, tag.id);
-    }
-
-    if (layer._tagNameToSymbolInstanceID.has(tagNameToSymbolInstanceIDKey)) {
-      return layer._tagNameToSymbolInstanceID.get(tagNameToSymbolInstanceIDKey);
-    }
-  }
 }
 
 async function* listTags(layer, attributes, scope, instance, shouldGroup, modifier) {
@@ -567,7 +577,7 @@ async function getSymbolSize(layer, scope, tag) {
       if (symbolParts.length === 1) {
         const [
           typeInfo,
-          arrayDimensionLengthsInfo
+          arrayDimensionLengthsInfo,
         ] = await layer.readSymbolAttributeList(scope, symbolParts[0], [
           SymbolInstanceAttributeCodes.Type,
           SymbolInstanceAttributeCodes.ArrayDimensionLengths,
@@ -650,26 +660,18 @@ async function getSymbolSize(layer, scope, tag) {
   return 1;
 }
 
-function Logix5000_DecodeDataType(buffer, offset, cb) {
-  const nextOffset = EPath.Decode(buffer, offset, null, false, cb);
-  if (nextOffset - offset < 2) {
-    return nextOffset + 1;
-  }
-  return nextOffset;
-}
-
 class Logix5000 extends CIPLayer {
   constructor(lowerLayer, options) {
-
-    options = Object.assign({
+    options = {
       port: 1,
       slot: 0,
-      optimize: false
-    }, options);
-
-    options.networkConnectionParameters = Object.assign({
-      maximumSize: 500
-    }, options.networkConnectionParameters);
+      optimize: false,
+      ...options,
+      networkConnectionParameters: {
+        maximumSize: 500,
+        ...options?.networkConnectionParameters,
+      },
+    };
 
     // options.route = options.route || EPath.Encode(true, [
     //   new EPath.Segments.Port(options.port, options.slot),

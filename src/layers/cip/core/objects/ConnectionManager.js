@@ -22,10 +22,92 @@ const ServiceCodeSet = new Set(Object.values(ServiceCodes));
 
 const ServiceNames = InvertKeyValues(ServiceCodes);
 
+/** CIP Vol 1 Table 3-5.29 */
+const StatusDescriptions = {
+  0x01: {
+    0x0100: 'Connection in use or duplicate forward open', // see 3-5.5.2
+    // 0x0101: 'Reserved',
+    // 0x0102: 'Reserved',
+    0x0103: 'Transport class and trigger combination not supported',
+    // 0x0104: 'Reserved',
+    // 0x0105: 'Reserved',
+    0x0106: 'Ownership conflict',
+    0x0107: 'Target connection not found',
+    0x0108: 'Invalid network connection parameter',
+    0x0109: 'Invalid connection size',
+    // 0x010A: 'Reserved',
+    // 0x010F: 'Reserved',
+    0x0110: 'Target for connection not configured',
+    0x0111: 'RPI not supported',
+    // 0x0112: 'Reserved'
+    0x0113: 'Out of connections',
+    0x0114: 'Vendor ID or product code mismatch',
+    0x0115: 'Product type mismatch',
+    0x0116: 'Revision mismatch',
+    0x0117: 'Invalid produced or consumed application path',
+    0x0118: 'Invalid or inconsistent configuration application path',
+    0x0119: 'Non-listen only connection not opened',
+    0x011A: 'Target object out of connections',
+    0x011B: 'RPI is smaller than the production inhibit time',
+    0x011C: 'Reserved',
+    0x0202: 'Reserved',
+    0x0203: 'Connection timed out',
+    0x0204: 'Unconnected request timed out',
+    0x0205: 'Parameter error in unconnected request service',
+    0x0206: 'Message too large for unconnected_send service',
+    0x0207: 'Unconnected acknowledge without reply',
+    // 0x0208: 'Reserved',
+    // 0x0300: 'Reserved',
+    0x0301: 'No buffer memory available',
+    0x0302: 'Network bandwidth not available for data',
+    0x0303: 'No consumed connection ID filter available',
+    0x0304: 'Not configured to send scheduled priority data',
+    0x0305: 'Schedule signature mismatch',
+    0x0306: 'Schedule signature validation not possible',
+    // 0x0307: 'Reserved',
+    // 0x0310: 'Reserved',
+    0x0311: 'Port not available',
+    0x0312: 'Link address not valid',
+    // 0x0313: 'Reserved',
+    // 0x0314: 'Reserved',
+    0x0315: 'Invalid segment in connection path',
+    0x0316: 'Error in forward close service connection path',
+    0x0317: 'Scheduling not specified',
+    0x0318: 'Link address to self invalid',
+    0x0319: 'Secondary resources unavailable',
+    0x031A: 'Rack connection already established',
+    0x031B: 'Module connection already established',
+    0x031C: 'Miscellaneous',
+    0x031D: 'Redundant connection mismatch',
+    0x031E: 'No more user configurable link consumer resources available in the producing module',
+    0x031F: 'No user configurable link consumer resources available in the producing module',
+    0x0320: 'Vendor specific',
+    0x07FF: 'Vendor specific',
+    0x0800: 'Network link in path to module is offline',
+    // 0x0801: 'Reserved',
+    // 0x080F: 'Reserved',
+    0x0810: 'No target application data available',
+    0x0811: 'No originator application data available',
+    0x0812: 'Node address has changed since the network was scheduled',
+    0x0813: 'Not configured for off-subnet multicast',
+    // 0x0814: 'Reserved',
+    // 0xFCFF: 'Reserved'
+  },
+  0x09: 'Error in data segment',
+  0x0C: 'Object state error',
+  0x10: 'Device state error',
+};
+
 const ConnectionManagerEPath = EPath.Encode(true, [
   new EPath.Segments.Logical.ClassID(ClassCodes.ConnectionManager),
   new EPath.Segments.Logical.InstanceID(0x01),
 ]);
+
+function ConnectionManagerCIPRequest(service, data, cb) {
+  return new CIPRequest(service, ConnectionManagerEPath, data, cb, {
+    serviceNames: ServiceNames,
+  });
+}
 
 let ConnectionSerialNumberCounter = 0x0001;
 let OtoTNetworkConnectionIDCounter = 0x20000002;
@@ -104,7 +186,7 @@ class ConnectionManager {
     }
     offset = buffer.writeUInt8(route.length / 2, offset);
     offset = buffer.writeUInt8(0, offset); /** Reserved */
-    offset += route.copy(buffer, offset);
+    route.copy(buffer, offset);
 
     return new CIPRequest(
       ServiceCodes.UnconnectedSend,
@@ -112,6 +194,7 @@ class ConnectionManager {
       buffer,
       request,
       {
+        serviceNames: ServiceNames,
         acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service],
         statusHandler: (statusCode, extendedBuffer, cb) => {
           switch (statusCode) {
@@ -139,7 +222,7 @@ class ConnectionManager {
               cb('Unconnected Send Error', 'Resource error. The CIP Router lacks the resources to fully process the Unconnected Send Request.', 'resource');
               break;
             case 4:
-              cb('Unconnected Send Error', 'Segment type error. The CIP Router experienced a parsing error when extracting the Explicit Messaging Request from the Unconnected Send Request Service Data.', 'parsing')
+              cb('Unconnected Send Error', 'Segment type error. The CIP Router experienced a parsing error when extracting the Explicit Messaging Request from the Unconnected Send Request Service Data.', 'parsing');
               break;
             default:
               break;
@@ -179,20 +262,25 @@ class ConnectionManager {
 
     offset = data.writeUInt32LE(connection.OtoTRPI, offset);
     if (connection.large) {
-      offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
+      offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParameters, offset);
     } else {
-      offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset); // Originator to Target netword connection parameters
+      offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset);
     }
 
-    offset = data.writeUInt32LE(connection.TtoORPI, offset); // Target to Originator requested packet interval (rate), in microseconds
+    // Target to Originator requested packet interval (rate), in microseconds
+    offset = data.writeUInt32LE(connection.TtoORPI, offset);
 
     if (connection.large) {
-      offset = data.writeUInt32LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
+      offset = data.writeUInt32LE(connection.TtoONetworkConnectionParameters, offset);
     } else {
-      offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset); // Target to Originator network connection parameters
+      offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset);
     }
 
-    offset = data.writeUInt8(connection.TransportClassTrigger, offset); // Transport type/trigger, 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+    /**
+     * Transport type/trigger
+     * 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
+     * */
+    offset = data.writeUInt8(connection.TransportClassTrigger, offset);
     offset = data.writeUInt8(connection.route.length / 2, offset); // Connection path size
     connection.route.copy(data, offset); offset += connection.route.length;
 
@@ -200,31 +288,29 @@ class ConnectionManager {
       throw new Error('offset does not match data length');
     }
 
-    return new CIPRequest(
+    return ConnectionManagerCIPRequest(
       connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
-      ConnectionManagerEPath,
       data,
-      (buffer, offset, cb) => {
+      (buffer, resOffset, cb) => {
         const res = {};
-        res.OtoTNetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
-        res.TtoONetworkConnectionID = buffer.readUInt32LE(offset); offset += 4;
-        res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
-        res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
-        res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-        res.OtoTActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
-        res.TtoOActualPacketRate = buffer.readUInt32LE(offset); offset += 4;
-        const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
-        offset += 1; // reserved
+        res.OtoTNetworkConnectionID = buffer.readUInt32LE(resOffset); resOffset += 4;
+        res.TtoONetworkConnectionID = buffer.readUInt32LE(resOffset); resOffset += 4;
+        res.ConnectionSerialNumber = buffer.readUInt16LE(resOffset); resOffset += 2;
+        res.OriginatorVendorID = buffer.readUInt16LE(resOffset); resOffset += 2;
+        res.OriginatorSerialNumber = buffer.readUInt32LE(resOffset); resOffset += 4;
+        res.OtoTActualPacketRate = buffer.readUInt32LE(resOffset); resOffset += 4;
+        res.TtoOActualPacketRate = buffer.readUInt32LE(resOffset); resOffset += 4;
+        const applicationReplySize = 2 * buffer.readUInt8(resOffset); resOffset += 1;
+        resOffset += 1; // reserved
 
-        res.data = buffer.slice(offset, offset + applicationReplySize);
-        offset += applicationReplySize;
+        res.data = buffer.slice(resOffset, resOffset + applicationReplySize);
+        resOffset += applicationReplySize;
 
         cb(res);
-        return offset;
-      }
+        return resOffset;
+      },
     );
   }
-
 
   /** CIP Vol 1 3-5.5.3 */
   static ForwardClose(connection) {
@@ -242,7 +328,8 @@ class ConnectionManager {
     offset = data.writeUInt16LE(connection.VendorID, offset);
     offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
 
-    offset = data.writeUInt8(connection.route.length / 2, offset); // connection path size, 16-bit words
+    // connection path size, 16-bit words
+    offset = data.writeUInt8(connection.route.length / 2, offset);
     offset = data.writeUInt8(0, offset); /** Reserved */
     connection.route.copy(data, offset); offset += connection.route.length;
 
@@ -250,51 +337,63 @@ class ConnectionManager {
       throw new Error('offset does not match data length');
     }
 
-    return new CIPRequest(
+    return ConnectionManagerCIPRequest(
       ServiceCodes.ForwardClose,
-      ConnectionManagerEPath,
       data,
-      (buffer, offset, cb) => {
+      (buffer, resOffset, cb) => {
         const res = {};
-        res.SerialNumber = buffer.readUInt16LE(offset); offset += 2;
-        res.VendorID = buffer.readUInt16LE(offset); offset += 2;
-        res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-        const applicationReplySize = 2 * buffer.readUInt8(offset); offset += 1;
-        offset += 1; /** Reserved */
-        res.data = buffer.slice(offset, offset + applicationReplySize);
-        offset += applicationReplySize;
+        res.SerialNumber = buffer.readUInt16LE(resOffset); resOffset += 2;
+        res.VendorID = buffer.readUInt16LE(resOffset); resOffset += 2;
+        res.OriginatorSerialNumber = buffer.readUInt32LE(resOffset); resOffset += 4;
+        const applicationReplySize = 2 * buffer.readUInt8(resOffset); resOffset += 1;
+        resOffset += 1; /** Reserved */
+        res.data = buffer.slice(resOffset, resOffset + applicationReplySize);
+        resOffset += applicationReplySize;
         cb(res);
-        return offset;
+        return resOffset;
       },
     );
   }
 
-  /** CIP Vol 1 3-5.5.5 */
+  /**
+   * CIP Vol 1 3-5.5.5
+   *
+   * This service shall return the parameters associated with a specified connection_number.
+   * The connection_number may be different from device to device even for the same connection.
+   * The connection_number corresponds to the offset into the Connection Manager attribute
+   * that enumerates the status of the connections.
+   * */
   static GetConnectionData(connectionNumber) {
     const data = Buffer.allocUnsafe(2);
 
     data.writeUInt16LE(connectionNumber, 0);
 
-    return new CIPRequest(
+    return ConnectionManagerCIPRequest(
       ServiceCodes.GetConnectionData,
-      ConnectionManagerEPath,
       data,
-      connectionDataResponse
+      connectionDataResponse,
     );
   }
 
-  /** CIP Vol1 3-5.5.6 */
+  /**
+   * CIP Vol1 3-5.5.6
+   *
+   * This service shall return the parameters associated with the specified
+   * connection serial number, originator vendor ID and originator serial number.
+   *
+   * The format of the Search_Connection_Data response shall be the same as
+   * the response from the Get_Connection_Data service.
+   * */
   static SearchConnectionData(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
     let offset = 0;
     const data = Buffer.allocUnsafe(8);
 
     offset = data.writeUInt16LE(connectionSerialNumber, offset);
     offset = data.writeUInt16LE(originatorVendorID, offset);
-    offset = data.writeUInt32LE(originatorSerialNumber, offset);
+    data.writeUInt32LE(originatorSerialNumber, offset);
 
-    return new CIPRequest(
+    return ConnectionManagerCIPRequest(
       ServiceCodes.SearchConnectionData,
-      ConnectionManagerEPath,
       data,
       connectionDataResponse,
     );
@@ -326,79 +425,3 @@ class ConnectionManager {
 module.exports = ConnectionManager;
 
 ConnectionManager.ServiceCodes = ServiceCodes;
-
-/** CIP Vol 1 Table 3-5.29 */
-const StatusDescriptions = {
-  0x01: {
-    0x0100: 'Connection in use or duplicate forward open', // see 3-5.5.2
-    // 0x0101: 'Reserved',
-    // 0x0102: 'Reserved',
-    0x0103: 'Transport class and trigger combination not supported',
-    // 0x0104: 'Reserved',
-    // 0x0105: 'Reserved',
-    0x0106: 'Ownership conflict',
-    0x0107: 'Target connection not found',
-    0x0108: 'Invalid network connection parameter',
-    0x0109: 'Invalid connection size',
-    // 0x010A: 'Reserved',
-    // 0x010F: 'Reserved',
-    0x0110: 'Target for connection not configured',
-    0x0111: 'RPI not supported',
-    // 0x0112: 'Reserved'
-    0x0113: 'Out of connections',
-    0x0114: 'Vendor ID or product code mismatch',
-    0x0115: 'Product type mismatch',
-    0x0116: 'Revision mismatch',
-    0x0117: 'Invalid produced or consumed application path',
-    0x0118: 'Invalid or inconsistent configuration application path',
-    0x0119: 'Non-listen only connection not opened',
-    0x011A: 'Target object out of connections',
-    0x011B: 'RPI is smaller than the production inhibit time',
-    0x011C: 'Reserved',
-    0x0202: 'Reserved',
-    0x0203: 'Connection timed out',
-    0x0204: 'Unconnected request timed out',
-    0x0205: 'Parameter error in unconnected request service',
-    0x0206: 'Message too large for unconnected_send service',
-    0x0207: 'Unconnected acknowledge without reply',
-    // 0x0208: 'Reserved',
-    // 0x0300: 'Reserved',
-    0x0301: 'No buffer memory available',
-    0x0302: 'Network bandwidth not available for data',
-    0x0303: 'No consumed connection ID filter available',
-    0x0304: 'Not configured to send scheduled priority data',
-    0x0305: 'Schedule signature mismatch',
-    0x0306: 'Schedule signature validation not possible',
-    // 0x0307: 'Reserved',
-    // 0x0310: 'Reserved',
-    0x0311: 'Port not available',
-    0x0312: 'Link address not valid',
-    // 0x0313: 'Reserved',
-    // 0x0314: 'Reserved',
-    0x0315: 'Invalid segment in connection path',
-    0x0316: 'Error in forward close service connection path',
-    0x0317: 'Scheduling not specified',
-    0x0318: 'Link address to self invalid',
-    0x0319: 'Secondary resources unavailable',
-    0x031A: 'Rack connection already established',
-    0x031B: 'Module connection already established',
-    0x031C: 'Miscellaneous',
-    0x031D: 'Redundant connection mismatch',
-    0x031E: 'No more user configurable link consumer resources available in the producing module',
-    0x031F: 'No user configurable link consumer resources available in the producing module',
-    0x0320: 'Vendor specific',
-    0x07FF: 'Vendor specific',
-    0x0800: 'Network link in path to module is offline',
-    // 0x0801: 'Reserved',
-    // 0x080F: 'Reserved',
-    0x0810: 'No target application data available',
-    0x0811: 'No originator application data available',
-    0x0812: 'Node address has changed since the network was scheduled',
-    0x0813: 'Not configured for off-subnet multicast',
-    // 0x0814: 'Reserved',
-    // 0xFCFF: 'Reserved'
-  },
-  0x09: 'Error in data segment',
-  0x0C: 'Object state error',
-  0x10: 'Device state error',
-};

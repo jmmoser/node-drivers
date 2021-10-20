@@ -420,7 +420,6 @@ class CIPConnectionLayer extends Layer {
 
       send(this, false, true, request, (err, res) => {
         clearTimeout(disconnectTimeout);
-
         if (err || res == null || res.status.code !== 0) {
           console.log('CIP connection unsuccessful close', err, res);
           this.destroy('Forward Close error');
