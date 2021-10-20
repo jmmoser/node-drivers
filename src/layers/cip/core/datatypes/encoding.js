@@ -4,8 +4,6 @@ const EPath = require('../epath');
 const { DataTypeCodes, DataTypeNames } = require('./codes');
 const convertToObject = require('./convertToObject');
 
-
-
 function EncodeSize(dataType, value) {
   dataType = convertToObject(dataType);
 
@@ -44,8 +42,11 @@ function EncodeSize(dataType, value) {
       return 8;
     case DataTypeCodes.EPATH:
       return EPath.EncodeSize(dataType.padded, value);
-    case DataTypeCodes.ARRAY:
-      return ((dataType.upperBound - dataType.lowerBound) + 1) * EncodeSize(dataType.itemType, value[0]);
+    case DataTypeCodes.ARRAY: {
+      const bounds = (dataType.upperBound - dataType.lowerBound) + 1;
+      const size = EncodeSize(dataType.itemType, value[0]);
+      return bounds * size;
+    }
     case DataTypeCodes.ABBREV_ARRAY:
       if (!Array.isArray(value)) {
         throw new Error(`Value must be an array to determine encoding size. Received ${typeof value}`);
@@ -54,12 +55,13 @@ function EncodeSize(dataType, value) {
         return 0;
       }
       return value.length * EncodeSize(dataType.itemType, value[0]);
-    case DataTypeCodes.STRUCT:
+    case DataTypeCodes.STRUCT: {
       let size = 0;
       for (let i = 0; i < dataType.members.length; i++) {
         size += EncodeSize(dataType.members[i], value[i]);
       }
       return size;
+    }
     case DataTypeCodes.TRANSFORM:
       return EncodeSize(dataType.dataType, dataType.encodeTransform(value));
     case DataTypeCodes.UNKNOWN:
@@ -68,14 +70,6 @@ function EncodeSize(dataType, value) {
       throw new Error(`Encoding size for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
 }
-
-
-function Encode(dataType, value) {
-  const buffer = Buffer.alloc(EncodeSize(dataType, value));
-  EncodeTo(buffer, 0, dataType, value);
-  return buffer;
-}
-
 
 function EncodeTo(buffer, offset, dataType, value) {
   if (dataType instanceof Function) dataType = dataType();
@@ -167,7 +161,7 @@ function EncodeTo(buffer, offset, dataType, value) {
       offset = EncodeTo(buffer, offset, dataType.dataType, dataType.encodeTransform(value));
       break;
     case DataTypeCodes.BOOL:
-      throw new Error(`Boolean encoding isn't currently supported, use BYTE instead`);
+      throw new Error("Boolean encoding isn't currently supported, use BYTE instead");
     default:
       throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
   }
@@ -175,9 +169,14 @@ function EncodeTo(buffer, offset, dataType, value) {
   return offset;
 }
 
+function Encode(dataType, value) {
+  const buffer = Buffer.alloc(EncodeSize(dataType, value));
+  EncodeTo(buffer, 0, dataType, value);
+  return buffer;
+}
 
 module.exports = {
   EncodeSize,
   Encode,
-  EncodeTo
+  EncodeTo,
 };

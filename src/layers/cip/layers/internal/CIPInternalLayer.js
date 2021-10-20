@@ -1,6 +1,5 @@
 'use strict';
 
-
 // const EPath = require('../../core/epath');
 // const CIPRequest = require('../../core/request');
 // const { CommonServiceCodes } = require('../../core/constants');
@@ -8,19 +7,15 @@ const { CallbackPromise } = require('../../../../utils');
 const Layer = require('../../../Layer');
 const ConnectionLayer = require('./CIPConnectionLayer');
 
-
 const PCCC = require('./pccc');
-
 
 class CIPInternalLayer extends Layer {
   constructor(lowerLayer, options, name) {
     /** Inject Connection as lower layer */
-    lowerLayer = new ConnectionLayer(lowerLayer, options);
-    super(name || 'cip', lowerLayer);
+    super(name || 'cip', new ConnectionLayer(lowerLayer, options));
     this._options = options;
   }
 
-  
   layerAdded(layer) {
     switch (layer.name) {
       case 'pccc':
@@ -31,9 +26,8 @@ class CIPInternalLayer extends Layer {
     }
   }
 
-
   sendRequest(connected, request, callback) {
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, (resolver) => {
       const timeout = null;
 
       const context = this.contextCallback((error, message) => {
@@ -56,7 +50,6 @@ class CIPInternalLayer extends Layer {
       this.send(request.encode(), { connected }, false, context);
     });
   }
-
 
   // exploreAttributes(classCode, instanceID, maxAttribute, callback) {
   //   if (typeof maxAttribute === 'function') {
@@ -96,7 +89,6 @@ class CIPInternalLayer extends Layer {
   //   });
   // }
 
-
   sendNextMessage() {
     const request = this.getNextRequest();
     if (request != null) {
@@ -107,7 +99,7 @@ class CIPInternalLayer extends Layer {
           request: req,
           info: request.info,
           context: request.context,
-          internal: false
+          internal: false,
         });
       }
       // else {
@@ -118,13 +110,16 @@ class CIPInternalLayer extends Layer {
     }
   }
 
-
   handleData(data, info, context) {
     if (context && context.internal === false) {
       const response = context.request.response(data);
       // console.log(response);
       if (context.type === 'pccc') {
-        this.forward(response.data.slice(response.data.readUInt8(0)), context.info, context.context);
+        this.forward(
+          response.data.slice(response.data.readUInt8(0)),
+          context.info,
+          context.context,
+        );
         return;
       }
       // throw new Error('Currently only supports forwarding PCCC requests');
@@ -133,12 +128,11 @@ class CIPInternalLayer extends Layer {
     const callback = this.callbackForContext(context);
     if (callback != null) {
       callback(null, data, info);
-      return true;
+      return;
     }
 
     this.forward(data, info, context);
   }
 }
-
 
 module.exports = CIPInternalLayer;

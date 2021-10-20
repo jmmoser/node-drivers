@@ -3,45 +3,12 @@
 const {
   decodeUnsignedInteger,
   unsignedIntegerSize,
-  encodeUnsignedInteger
+  encodeUnsignedInteger,
 } = require('../../../../../utils');
 
 const convertDataTypeToObject = require('../../datatypes/convertToObject');
 const { DataTypeCodes, DataTypeNames } = require('../../datatypes/codes');
 const { DataType } = require('../../datatypes/types');
-
-
-class DataTypeSegment {
-  constructor(value) {
-    this.value = convertDataTypeToObject(value);
-  }
-
-  encodeSize() {
-    return encodeSize(this.value);
-  }
-
-  encode() {
-    const buffer = Buffer.alloc(this.encodeSize());
-    this.encodeTo(buffer, 0);
-    return buffer;
-  }
-
-  encodeTo(buffer, offset) {
-    return encodeTo(buffer, offset, this.value);
-  }
-
-  static Decode(segmentCode, buffer, offset, padded, cb) {
-    return DecodeDataType(buffer, offset - 1, type => {
-      if (typeof cb === 'function') {
-        cb(new DataTypeSegment(type));
-      }
-    });
-  }
-}
-
-module.exports = DataTypeSegment;
-
-
 
 function DecodeDataType(buffer, offset, cb) {
   let type;
@@ -57,7 +24,7 @@ function DecodeDataType(buffer, offset, cb) {
     case DataTypeCodes.ABBREV_ARRAY: {
       /* const length = buffer.readUInt8(offset); */ offset += 1;
       let itemType;
-      offset = DecodeDataType(buffer, offset, items => itemType = items);
+      offset = DecodeDataType(buffer, offset, (items) => { itemType = items; });
       type = DataType.ABBREV_ARRAY(itemType);
       break;
     }
@@ -66,7 +33,7 @@ function DecodeDataType(buffer, offset, cb) {
       const members = [];
       const lastOffset = offset + length;
       while (offset < lastOffset) {
-        offset = DecodeDataType(buffer, offset, function (member) {
+        offset = DecodeDataType(buffer, offset, (member) => {
           members.push(member);
         });
       }
@@ -87,7 +54,7 @@ function DecodeDataType(buffer, offset, cb) {
       offset += upperBoundLength;
 
       let itemType;
-      offset = DecodeDataType(buffer, offset, items => itemType = items);
+      offset = DecodeDataType(buffer, offset, (items) => { itemType = items; });
       type = DataType.ARRAY(itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag);
       break;
     }
@@ -102,7 +69,6 @@ function DecodeDataType(buffer, offset, cb) {
 
   return offset;
 }
-
 
 function encodeSize(type) {
   type = convertDataTypeToObject(type);
@@ -129,7 +95,6 @@ function encodeSize(type) {
   return size;
 }
 
-
 function encodeTo(buffer, offset, type) {
   type = convertDataTypeToObject(type);
   offset = buffer.writeUInt8(type.code, offset);
@@ -145,7 +110,7 @@ function encodeTo(buffer, offset, type) {
       offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
       offset = buffer.writeUInt16LE(type.crc, offset);
       break;
-    case DataTypeCodes.ARRAY:
+    case DataTypeCodes.ARRAY: {
       offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
       offset = buffer.writeUInt8(type.lowerBoundTag, offset);
       const lowerSize = unsignedIntegerSize(type.lowerBound);
@@ -157,6 +122,7 @@ function encodeTo(buffer, offset, type) {
       offset = encodeUnsignedInteger(buffer, offset, type.upperBound, upperSize);
       offset = encodeTo(buffer, offset, type.itemType);
       break;
+    }
     case DataTypeCodes.ABBREV_ARRAY:
       offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
       offset = encodeTo(buffer, offset, type.itemType);
@@ -166,3 +132,33 @@ function encodeTo(buffer, offset, type) {
   }
   return offset;
 }
+
+class DataTypeSegment {
+  constructor(value) {
+    this.value = convertDataTypeToObject(value);
+  }
+
+  encodeSize() {
+    return encodeSize(this.value);
+  }
+
+  encode() {
+    const buffer = Buffer.alloc(this.encodeSize());
+    this.encodeTo(buffer, 0);
+    return buffer;
+  }
+
+  encodeTo(buffer, offset) {
+    return encodeTo(buffer, offset, this.value);
+  }
+
+  static Decode(segmentCode, buffer, offset, padded, cb) {
+    return DecodeDataType(buffer, offset - 1, (type) => {
+      if (typeof cb === 'function') {
+        cb(new DataTypeSegment(type));
+      }
+    });
+  }
+}
+
+module.exports = DataTypeSegment;

@@ -5,7 +5,6 @@ const CIPAttribute = require('../../../core/attribute');
 // const { ClassCodes } = require('../../../core/constants');
 const { DataType } = require('../../../core/datatypes');
 
-
 const InstanceAttribute = Object.freeze({
   Unknown1: new CIPAttribute.Instance(1, 'Unknown1', DataType.UINT),
   Unknown2: new CIPAttribute.Instance(2, 'Unknown2', DataType.UINT),
@@ -14,9 +13,8 @@ const InstanceAttribute = Object.freeze({
   Unknown10: new CIPAttribute.Instance(10, 'Unknown10', DataType.UDINT),
 });
 
-
 const CIPObject = CIPMetaObject(0xAC, {
-  InstanceAttributes: InstanceAttribute
+  InstanceAttributes: InstanceAttribute,
 });
 
 class Controller extends CIPObject {}

@@ -1,20 +1,18 @@
 'use strict';
 
-/* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
-
 const EventEmitter = require('events');
 const Queue = require('../queue');
 const Defragger = require('../defragger');
 const { CallbackPromise } = require('../utils');
 
 function incrementContext(self) {
-  self.__context = (self.__context + 1) % 0x100000000;
-  return self.__context;
+  self.__context = (self.__context + 1) % 0x100000000; // eslint-disable-line no-underscore-dangle
+  return self.__context; // eslint-disable-line no-underscore-dangle
 }
 
 function passDefaultOptionsDown(defaultOptions, upperLayer) {
   let lowerLayer = upperLayer;
-  while ((lowerLayer = lowerLayer.lowerLayer)) {
+  while ((lowerLayer = lowerLayer.lowerLayer)) { // eslint-disable-line no-cond-assign
     const layerSpecificDefaultOptions = defaultOptions[lowerLayer.name];
     if (layerSpecificDefaultOptions) {
       lowerLayer.handleDefaultOptions(layerSpecificDefaultOptions, upperLayer);
@@ -24,13 +22,14 @@ function passDefaultOptionsDown(defaultOptions, upperLayer) {
 
 function internalDestroy(layer, error) {
   /** Clear all internal context callbacks */
-  layer.__contextToCallbackTimeouts.forEach(handle => clearTimeout(handle));
-  layer.__contextToCallbackTimeouts.clear();
+  // eslint-disable-next-line no-underscore-dangle
+  layer.__contextToCallbackTimeouts.forEach((handle) => clearTimeout(handle));
+  layer.__contextToCallbackTimeouts.clear(); // eslint-disable-line no-underscore-dangle
 
-  layer.__contextToCallback.forEach(cb => cb(error));
-  layer.__contextToCallback.clear();
+  layer.__contextToCallback.forEach((cb) => cb(error)); // eslint-disable-line no-underscore-dangle
+  layer.__contextToCallback.clear(); // eslint-disable-line no-underscore-dangle
 
-  layer.__idContext.clear();
+  layer.__idContext.clear(); // eslint-disable-line
 
   layer.clearRequestQueue();
 
@@ -45,22 +44,18 @@ class Layer extends EventEmitter {
 
     super();
 
-    options = {
+    const opts = {
       handlesForwarding: false,
       contextGenerator: incrementContext,
       ...options,
     };
-    // options = Object.assign({
-    //   handlesForwarding: false,
-    //   contextGenerator: incrementContext
-    // }, options);
 
     this._queue = new Queue();
 
     this.lowerLayer = lowerLayer;
 
-    this.contextGenerator = options.contextGenerator;
-    this.handlesForwarding = options.handlesForwarding === true;
+    this.contextGenerator = opts.contextGenerator;
+    this.handlesForwarding = opts.handlesForwarding === true;
 
     this.__name = name;
     this.__context = 0;
@@ -92,42 +87,29 @@ class Layer extends EventEmitter {
   }
 
   /** OVERRIDE IF NEEDED */
-  handleDefaultOptions(defaultOptions, upperLayer) {
-
-  }
+  handleDefaultOptions(defaultOptions, upperLayer) {} // eslint-disable-line
 
   /** OVERRIDE IF NEEDED */
-  disconnect(callback) {
+  disconnect(callback) { // eslint-disable-line
     return CallbackPromise(callback, (resolver) => {
       resolver.resolve();
     });
   }
 
-  /** OVERRIDE IF NEEDED */
-  layerAdded(layer) {
-    // Use in lower layers to handle additions of upper layers
-    // Currently used in MultiplexLayer
-  }
+  /** OVERRIDE IF NEEDED, Use in lower layers to handle additions of upper layers */
+  layerAdded(layer) { } // eslint-disable-line
 
-  /** OVERRIDE IF NEEDED */
-  layerRemoved(layer) {
-    // Use in lower layers to handle removals of upper layers
-  }
+  /** OVERRIDE IF NEEDED, Use in lower layers to handle removals of upper layers */
+  layerRemoved(layer) { } // eslint-disable-line
 
   /** OVERRIDE */
-  sendNextMessage() {
-    
-  }
+  sendNextMessage() { } // eslint-disable-line
 
   /** OVERRIDE */
-  handleData(data) {
-
-  }
+  handleData(data) { } // eslint-disable-line
 
   /** OVERRIDE IF NEEDED */
-  handleDestroy(error) {
-
-  }
+  handleDestroy(error) { } // eslint-disable-line
 
   close(callback) {
     return CallbackPromise(callback, async (resolver) => {
@@ -155,18 +137,18 @@ class Layer extends EventEmitter {
 
   forward(data, info, context) {
     if (this.upperLayer != null) {
-      return this.forwardTo(this.upperLayer, data, info, context);
+      return Layer.forwardTo(this.upperLayer, data, info, context);
     }
     return undefined;
   }
 
-  forwardTo(layer, data, info, context) {
-    if (layer._defragger != null) {
-      data = layer._defragger.defrag(data);
+  static forwardTo(layer, data, info, context) {
+    if (layer._defragger != null) { // eslint-disable-line no-underscore-dangle
+      data = layer._defragger.defrag(data); // eslint-disable-line no-underscore-dangle
       if (data == null) return;
     }
     layer.emit('data', data, info, context);
-    return layer.handleData(data, info, context);
+    layer.handleData(data, info, context);
   }
 
   send(message, info, priority, context) {

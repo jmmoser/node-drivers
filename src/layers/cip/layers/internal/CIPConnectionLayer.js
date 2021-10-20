@@ -276,7 +276,7 @@ function handleConnectedMessage(self, data, info) {
     || self.sendInfo.responseID !== info.responseID
   ) {
     console.log(
-      `CIP Connection unhandled connected message, invalid Originator and/or Target connection identifiers`,
+      'CIP Connection unhandled connected message, invalid Originator and/or Target connection identifiers',
       data,
       info,
     );
@@ -329,7 +329,10 @@ function connect(self) {
         self._connectionState = 0;
 
         if (res) {
-          if (res.service.code === LARGE_FORWARD_OPEN_SERVICE && res.status.code === GeneralStatusCodes.ServiceNotSupported) {
+          if (
+            res.service.code === LARGE_FORWARD_OPEN_SERVICE
+            && res.status.code === GeneralStatusCodes.ServiceNotSupported
+          ) {
             self.networkConnectionParameters.maximumSize = 500;
             self.large = false;
             self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(
@@ -341,7 +344,7 @@ function connect(self) {
             console.log('Large forward open not supported. Attempting normal forward open');
             connect(self);
           } else {
-            // console.log('CIP Connection Error: Status is not successful or service is not correct:');
+            // console.log('CIPConnection Err: Status is not successful or service is not correct');
             ConnectionManager.TranslateResponse(res);
             self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
           }
@@ -374,13 +377,15 @@ function connect(self) {
       resolve();
     });
   });
+
+  return undefined;
 }
 
 class CIPConnectionLayer extends Layer {
   constructor(lowerLayer, options) {
     if (lowerLayer == null) {
       // lowerLayer = new EIPLayer();
-      throw new Error('Lower layer is currently required to use ')
+      throw new Error('Lower layer is currently required to use ');
     } else if (lowerLayer instanceof TCPLayer || lowerLayer instanceof UDPLayer) {
       lowerLayer = new EIPLayer(lowerLayer);
     }

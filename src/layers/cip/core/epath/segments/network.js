@@ -2,7 +2,7 @@
 
 /**
  * CIP Vol 1, Appendix C-1.4.3
- * 
+ *
  * The network segment shall be used to specify network parameters that may be required by a
  * node to transmit a message across a network. The network segment shall immediately precede
  * the port segment of the device to which it applies. In other words, the network segment shall
@@ -11,7 +11,7 @@
 
 const {
   getBits,
-  InvertKeyValues
+  InvertKeyValues,
 } = require('../../../../../utils');
 
 const SubtypeCodes = Object.freeze({
@@ -19,18 +19,16 @@ const SubtypeCodes = Object.freeze({
   FixedTag: 2,
   ProductionInhibitTime: 3,
   Safety: 16,
-  Extended: 31
+  Extended: 31,
 });
 
 const SubtypeNames = Object.freeze(InvertKeyValues(SubtypeCodes));
-
 
 class NetworkSegment {
   constructor(subtype, value) {
     this.subtype = subtype;
     this.value = value;
   }
-
 
   encodeSize() {
     switch (this.subtype) {
@@ -60,7 +58,7 @@ class NetworkSegment {
       default:
         throw new Error(`Network segment subtype ${this.subtype} not supported yet`);
     }
-    
+
     return offset;
   }
 
@@ -102,23 +100,22 @@ class NetworkSegment {
   }
 }
 
-
 NetworkSegment.Schedule = class ScheduleNetworkSegment extends NetworkSegment {
   constructor(value) {
     super(SubtypeCodes.Schedule, value);
   }
-}
+};
 
 NetworkSegment.FixedTag = class FixedTagNetworkSegment extends NetworkSegment {
   constructor(value) {
     super(SubtypeCodes.FixedTag, value);
   }
-}
+};
 
-NetworkSegment.ProductionInhibitTime = class ProductionInhibitTimeNetworkSegment extends NetworkSegment {
+NetworkSegment.ProductionInhibitTime = class ProductionInhibitTimeNetworkSegment extends NetworkSegment { // eslint-disable-line max-len
   constructor(value) {
     super(SubtypeCodes.ProductionInhibitTime, value);
   }
-}
+};
 
 module.exports = NetworkSegment;

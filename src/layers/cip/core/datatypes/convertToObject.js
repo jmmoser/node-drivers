@@ -3,11 +3,11 @@
 const { DataTypeNames } = require('./codes');
 const { DataType } = require('./types');
 
-module.exports = function (dt) {
+module.exports = (dt) => {
   if (typeof dt === 'object') {
     return dt;
   }
-  
+
   if (typeof dt === 'number') {
     dt = DataTypeNames[dt];
   }
@@ -19,4 +19,4 @@ module.exports = function (dt) {
   }
 
   return dt;
-}
+};

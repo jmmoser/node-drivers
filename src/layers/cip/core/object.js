@@ -8,7 +8,6 @@ const CIPFeatureGroup = require('./featuregroup');
 const { DataType } = require('./datatypes/types');
 const { Decode } = require('./datatypes/decoding');
 
-
 // const CommonClassAttribute = Object.freeze({
 //   Revision: new CIPAttribute.Class(1, 'Revision', DataType.UINT),
 //   MaxInstance: new CIPAttribute.Class(2, 'Max Instance ID', DataType.UINT),
@@ -41,14 +40,17 @@ const { Decode } = require('./datatypes/decoding');
 
 // const CommonClassAttributeGroup = new CIPFeatureGroup(Object.values(CommonClassAttribute));
 
-
 // const CommonServices = Object.freeze({
 //   GetAttributeSingle: function(attribute, instance = 0) {
 //     let attributeID;
 //     if (attribute instanceof CIPAttribute.Class) {
-//       attributeID = ClassAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute);
+//       attributeID = (
+//         ClassAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute)
+//       );
 //     } else if (attribute instanceof CIPAttribute.Instance) {
-//       attributeID = InstanceAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute);
+//       attributeID = (
+//         InstanceAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute)
+//       );
 //     } else {
 //       throw new Error(`Attribute must be a CIPClassAttribute or CIPInstanceAttribute`);
 //     }
@@ -67,6 +69,27 @@ const { Decode } = require('./datatypes/decoding');
 //   }
 // });
 
+function DecodeAttribute(buffer, offset, attribute, cb) {
+  const { dataType } = attribute;
+  if (!dataType) {
+    console.log(attribute);
+    throw new Error(`Unknown attribute: ${attribute}`);
+  }
+
+  let value;
+  offset = Decode(dataType, buffer, offset, (val) => {
+    value = val;
+  });
+
+  if (typeof cb === 'function') {
+    cb({
+      attribute,
+      value,
+    });
+  }
+  return offset;
+}
+
 function CIPMetaObject(classCode, options) {
   options = options || {};
 
@@ -77,37 +100,44 @@ function CIPMetaObject(classCode, options) {
     OptionalAttributeList: new CIPAttribute.Class(4, 'Optional Attribute List', DataType.TRANSFORM(
       DataType.STRUCT([
         DataType.UINT,
-        DataType.PLACEHOLDER(length => DataType.ABBREV_ARRAY(DataType.UINT, length))
-      ], function (members, dt) {
+        DataType.PLACEHOLDER((length) => DataType.ABBREV_ARRAY(DataType.UINT, length)),
+      ], (members, dt) => {
         if (members.length === 1) {
           return dt.resolve(members[0]);
         }
+        return undefined;
       }),
-      value => value[1]
+      (value) => value[1],
     )),
     OptionalServiceList: new CIPAttribute.Class(4, 'Optional Service List', DataType.TRANSFORM(
       DataType.STRUCT([
         DataType.UINT,
-        DataType.PLACEHOLDER(length => DataType.ABBREV_ARRAY(DataType.UINT, length))
-      ], function (members, dt) {
+        DataType.PLACEHOLDER((length) => DataType.ABBREV_ARRAY(DataType.UINT, length)),
+      ], (members, dt) => {
         if (members.length === 1) {
           return dt.resolve(members[0]);
         }
+        return undefined;
       }),
-      value => value[1]
+      (value) => value[1],
     )),
     MaxClassAttribute: new CIPAttribute.Class(6, 'Max Class Attribute ID', DataType.UINT),
     MaxInstanceAttribute: new CIPAttribute.Class(7, 'Max Instance Attribute ID', DataType.UINT),
   });
 
-  
   const CommonClassAttributes = Object.values(CommonClassAttribute);
-  const ClassAttributes = Array.isArray(options.ClassAttributes) ? options.ClassAttributes : Object.values(options.ClassAttributes || {});
-  const InstanceAttributes = Array.isArray(options.InstanceAttributes) ? options.InstanceAttributes : Object.values(options.InstanceAttributes || {});
-  
-  CommonClassAttributes.forEach(attribute => attribute.classCode = classCode);
-  ClassAttributes.forEach(attribute => attribute.classCode = classCode);
-  InstanceAttributes.forEach(attribute => attribute.classCode = classCode);
+
+  const ClassAttributes = Array.isArray(options.ClassAttributes)
+    ? options.ClassAttributes
+    : Object.values(options.ClassAttributes || {});
+
+  const InstanceAttributes = Array.isArray(options.InstanceAttributes)
+    ? options.InstanceAttributes
+    : Object.values(options.InstanceAttributes || {});
+
+  CommonClassAttributes.forEach((attribute) => { attribute.classCode = classCode; });
+  ClassAttributes.forEach((attribute) => { attribute.classCode = classCode; });
+  InstanceAttributes.forEach((attribute) => { attribute.classCode = classCode; });
 
   const CommonClassAttributeGroup = new CIPFeatureGroup(CommonClassAttributes);
   const ClassAttributeGroup = new CIPFeatureGroup(ClassAttributes);
@@ -120,47 +150,46 @@ function CIPMetaObject(classCode, options) {
         CommonServiceCodes.GetAttributesAll,
         EPath.Encode(true, [
           new EPath.Segments.Logical.ClassID(classCode),
-          new EPath.Segments.Logical.InstanceID(instanceID)
+          new EPath.Segments.Logical.InstanceID(instanceID),
         ]),
         null,
-        (buffer, offset, cb) => {
-          return this.DecodeInstanceAttributesAll(buffer, offset, cb);
-        }
+        (buffer, offset, cb) => this.DecodeInstanceAttributesAll(buffer, offset, cb),
       );
     }
 
     static GetClassAttribute(attribute) {
-      attribute = ClassAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute);
+      attribute = (
+        ClassAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute)
+      );
       return new CIPRequest(
         CommonServiceCodes.GetAttributeSingle,
         EPath.Encode(true, [
           new EPath.Segments.Logical.ClassID(classCode),
           new EPath.Segments.Logical.InstanceID(0),
-          new EPath.Segments.Logical.AttributeID(attribute)
+          new EPath.Segments.Logical.AttributeID(attribute),
         ]),
         null,
         (buffer, offset, cb) => {
           this.DecodeClassAttribute(buffer, offset, attribute, cb);
-        }
+        },
       );
     }
 
     static GetInstanceAttribute(instance, attribute) {
-      attribute = InstanceAttributeGroup.getCode(attribute);
+      const attributeCode = InstanceAttributeGroup.getCode(attribute);
       return new CIPRequest(
         CommonServiceCodes.GetAttributeSingle,
         EPath.Encode(true, [
           new EPath.Segments.Logical.ClassID(classCode),
           new EPath.Segments.Logical.InstanceID(instance),
-          new EPath.Segments.Logical.AttributeID(attribute)
+          new EPath.Segments.Logical.AttributeID(attributeCode),
         ]),
         null,
         (buffer, offset, cb) => {
-          this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
-        }
+          this.DecodeInstanceAttribute(buffer, offset, attributeCode, cb);
+        },
       );
     }
-
 
     static GetAttributeSingle(attribute, instance) {
       let attributeID;
@@ -169,7 +198,9 @@ function CIPMetaObject(classCode, options) {
         if (instance == null) {
           instance = 0;
         }
-        attributeID = ClassAttributeGroup.getCode(attribute) || CommonClassAttribute.getCode(attribute);
+        attributeID = (
+          ClassAttributeGroup.getCode(attribute) || CommonClassAttribute.getCode(attribute)
+        );
       } else {
         /** instance attribute */
         attributeID = InstanceAttributeGroup.getCode(attribute);
@@ -180,24 +211,25 @@ function CIPMetaObject(classCode, options) {
         EPath.Encode(true, [
           new EPath.Segments.Logical.ClassID(classCode),
           new EPath.Segments.Logical.InstanceID(instance),
-          new EPath.Segments.Logical.AttributeID(attributeID)
+          new EPath.Segments.Logical.AttributeID(attributeID),
         ]),
         null,
         (buffer, offset, cb) => {
           this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
-        }
+        },
       );
     }
-    
 
     static DecodeAttribute(buffer, offset, attribute, cb) {
       if (attribute instanceof CIPAttribute.Class) {
         return this.DecodeClassAttribute(buffer, offset, attribute, cb);
-      } else if (attribute instanceof CIPAttribute.Instance) {
-        return this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
-      } else {
-        throw new Error('Unable to determine if attribute is for class or instance');
       }
+
+      if (attribute instanceof CIPAttribute.Instance) {
+        return this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
+      }
+
+      throw new Error('Unable to determine if attribute is for class or instance');
     }
 
     static DecodeInstanceAttributesAll(buffer, offset, cb) {
@@ -208,7 +240,7 @@ function CIPMetaObject(classCode, options) {
             buffer,
             offset,
             GetAttributesAllInstanceAttributes[i],
-            val => attributeResults.push(val)
+            (val) => attributeResults.push(val),
           );
         } else {
           break;
@@ -225,7 +257,12 @@ function CIPMetaObject(classCode, options) {
     }
 
     static DecodeClassAttribute(buffer, offset, attribute, cb) {
-      return DecodeAttribute(buffer, offset, ClassAttributeGroup.get(attribute) || CommonClassAttributeGroup.get(attribute), cb);
+      return DecodeAttribute(
+        buffer,
+        offset,
+        ClassAttributeGroup.get(attribute) || CommonClassAttributeGroup.get(attribute),
+        cb,
+      );
     }
   }
 
@@ -235,26 +272,4 @@ function CIPMetaObject(classCode, options) {
   return CIPObject;
 }
 
-
 module.exports = CIPMetaObject;
-
-
-
-function DecodeAttribute(buffer, offset, attribute, cb) {
-  const dataType = attribute.dataType;
-  if (!dataType) {
-    console.log(attribute);
-    throw new Error(`Unknown attribute: ${attribute}`);
-  }
-
-  let value;
-  offset = Decode(dataType, buffer, offset, val => value = val);
-
-  if (typeof cb === 'function') {
-    cb({
-      attribute,
-      value
-    });
-  }
-  return offset;
-}

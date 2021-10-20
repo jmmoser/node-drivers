@@ -4,13 +4,13 @@ const { DataType } = require('./types');
 const { DataTypeCodes, DataTypeNames } = require('./codes');
 
 const {
-  Decode
+  Decode,
 } = require('./decoding');
 
 const {
   EncodeSize,
   Encode,
-  EncodeTo
+  EncodeTo,
 } = require('./encoding');
 
 module.exports = {
@@ -20,5 +20,5 @@ module.exports = {
   Decode,
   EncodeSize,
   Encode,
-  EncodeTo
+  EncodeTo,
 };

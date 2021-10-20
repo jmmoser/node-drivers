@@ -1,10 +1,17 @@
 'use strict';
 
+const Port = require('./port');
+const Logical = require('./logical');
+const Network = require('./network');
+const Symbolic = require('./symbolic');
+const Data = require('./data');
+const DataType = require('./datatype');
+
 module.exports = {
-  Port: require('./port'),
-  Logical: require('./logical'),
-  Network: require('./network'),
-  Symbolic: require('./symbolic'),
-  Data: require('./data'),
-  DataType: require('./datatype')
+  Port,
+  Logical,
+  Network,
+  Symbolic,
+  Data,
+  DataType,
 };

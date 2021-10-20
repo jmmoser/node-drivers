@@ -1,7 +1,7 @@
 'use strict';
 
 const CIPIdentity = require('../../core/objects/Identity');
-const { getBit, InvertKeyValues } = require('../../../../utils');
+const { getBits, InvertKeyValues } = require('../../../../utils');
 
 /*
   Communication Profile Families

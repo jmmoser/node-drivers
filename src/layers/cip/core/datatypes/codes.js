@@ -41,33 +41,38 @@ const DataTypeCodes = Object.freeze({
   STRINGI: 0xDE,
 
   /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
-  ABBREV_STRUCT: 0xA0, /* Data is an abbreviated struct type, i.e. a CRC of the actual type descriptor */
-  ABBREV_ARRAY: 0xA1, /* Data is an abbreviated array type. The limits are left off */
-  STRUCT: 0xA2, /* Data is a struct type descriptor */
-  ARRAY: 0xA3 /* Data is an array type descriptor */
+
+  /* Data is an abbreviated struct type, i.e. a CRC of the actual type descriptor */
+  ABBREV_STRUCT: 0xA0,
+
+  /* Data is an abbreviated array type. The limits are left off */
+  ABBREV_ARRAY: 0xA1,
+
+  /* Data is a struct type descriptor */
+  STRUCT: 0xA2,
+
+  /* Data is an array type descriptor */
+  ARRAY: 0xA3,
 });
 
 const DataTypeNames = InvertKeyValues(DataTypeCodes);
-
 
 /** ANS.1 */
 const DataTypeTagClassCodes = Object.freeze({
   Universal: 0,
   Application: 1,
   ContextSpecific: 2,
-  Private: 3
+  Private: 3,
 });
 
 const DataTypeTagClassNames = InvertKeyValues(DataTypeTagClassCodes);
 
-
 const DataTypeTagTypeCodes = Object.freeze({
   Primitive: 0,
-  Constructed: 1
+  Constructed: 1,
 });
 
 const DataTypeTagTypeNames = InvertKeyValues(DataTypeTagTypeCodes);
-
 
 function DecodeDataTypeTag(buffer, offset, cb) {
   const code = buffer.readUInt8(offset); offset += 1;
@@ -88,23 +93,22 @@ function DecodeDataTypeTag(buffer, offset, cb) {
     cb({
       tagClass: {
         code: tagClass,
-        name: DataTypeTagClassNames[tagClass] || 'Unknown'
+        name: DataTypeTagClassNames[tagClass] || 'Unknown',
       },
       type: {
         code: tagType,
-        name: DataTypeTagTypeNames[tagType] || 'Unknown'
+        name: DataTypeTagTypeNames[tagType] || 'Unknown',
       },
       id: tagID,
-      code
+      code,
     });
   }
   return offset;
 }
 
-
 module.exports = {
   DataTypeCodes,
   DataTypeNames,
   // DataTypeTag,
-  DecodeDataTypeTag
+  DecodeDataTypeTag,
 };

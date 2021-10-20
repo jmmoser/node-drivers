@@ -2,7 +2,6 @@
 
 const { getBits } = require('../../../../../utils');
 
-
 class SymbolType {
   constructor(code) {
     this.code = code;
@@ -28,7 +27,7 @@ class SymbolType {
     } else {
       const templateID = getBits(code, 0, 12);
       this.template = {
-        id: templateID
+        id: templateID,
       };
 
       dataType = DataType.ABBREV_STRUCT;
@@ -37,7 +36,6 @@ class SymbolType {
   }
 }
 
-
 module.exports = {
-  SymbolType
+  SymbolType,
 };

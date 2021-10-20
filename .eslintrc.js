@@ -15,7 +15,10 @@ module.exports = {
     'no-plusplus': 'off',
     // 'no-underscore-dangle': ['error', { allowAfterThis: true }],
     'no-underscore-dangle': 'off',
-    'no-param-reassign': ['error', { props: false }],
+    // 'no-param-reassign': ['error', { props: false }],
+    'no-param-reassign': 'off',
     'no-bitwise': 'off',
+    'prefer-rest-params': 'off',
+    'max-classes-per-file': 'off',
   },
 };

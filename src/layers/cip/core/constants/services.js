@@ -1,9 +1,8 @@
 'use strict';
 
 const {
-  InvertKeyValues
+  InvertKeyValues,
 } = require('../../../../utils');
-
 
 /** CIP Vol1 Appendix A */
 const CommonServiceCodes = Object.freeze({
@@ -28,13 +27,12 @@ const CommonServiceCodes = Object.freeze({
   SetMember: 0x19,
   InsertMember: 0x1A,
   RemoveMember: 0x1B,
-  GroupSync: 0x1C
+  GroupSync: 0x1C,
 });
 
 const CommonServiceNames = InvertKeyValues(CommonServiceCodes);
 
-
 module.exports = {
   CommonServiceCodes,
-  CommonServiceNames
+  CommonServiceNames,
 };

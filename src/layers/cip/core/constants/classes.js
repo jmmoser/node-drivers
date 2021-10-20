@@ -1,7 +1,7 @@
 'use strict';
 
 const {
-  InvertKeyValues
+  InvertKeyValues,
 } = require('../../../../utils');
 
 /**
@@ -104,13 +104,12 @@ const ClassCodes = Object.freeze({
   TCPIPInterface: 0xF5,
   EthernetLink: 0xF6,
   CompoNetLink: 0xF7,
-  CompoNetRepeater: 0xF8
+  CompoNetRepeater: 0xF8,
 });
 
 const ClassNames = InvertKeyValues(ClassCodes);
 
-
 module.exports = {
   ClassCodes,
-  ClassNames
+  ClassNames,
 };

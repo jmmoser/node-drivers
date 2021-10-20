@@ -3,15 +3,15 @@
 const {
   DataType,
   DataTypeCodes,
-  DataTypeNames
+  DataTypeNames,
 } = require('../../core/datatypes');
 
 const {
-  InvertKeyValues
+  InvertKeyValues,
 } = require('../../../../utils');
 
 const {
-  getBits
+  getBits,
 } = require('../../../../utils');
 
 const Logix5000_DataTypeCodes = Object.freeze({
@@ -19,7 +19,7 @@ const Logix5000_DataTypeCodes = Object.freeze({
   Map: 0x69,
   Routine: 0x6D,
   Task: 0x70,
-  Cxn: 0x7E
+  Cxn: 0x7E,
 });
 
 const Logix5000_DatatypeNames = InvertKeyValues(Logix5000_DataTypeCodes);
@@ -39,17 +39,14 @@ const Logix5000_DataType = Object.freeze({
   },
   Cxn() {
     return { type: Logix5000_DataType.Cxn, code: Logix5000_DataTypeCodes.Cxn };
-  }
+  },
 });
-
 
 const Logix5000_ClassCodes = Object.freeze({
   Symbol: 0x6B,
   Template: 0x6C,
-  Controller: 0xAC
+  Controller: 0xAC,
 });
-
-
 
 /** 1756-PM020, pg. 16 */
 const SymbolServiceCodes = Object.freeze({
@@ -58,11 +55,10 @@ const SymbolServiceCodes = Object.freeze({
   WriteTag: 0x4D,
   WriteTagFragmented: 0x53,
   ReadModifyWriteTag: 0x4E,
-  GetInstanceAttributeList: 0x55
+  GetInstanceAttributeList: 0x55,
 });
 
 const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
-
 
 const SymbolInstanceAttributeCodes = Object.freeze({
   Name: 0x01,
@@ -74,7 +70,7 @@ const SymbolInstanceAttributeCodes = Object.freeze({
   Unknown6: 6,
   Unknown9: 9,
   Unknown10: 10,
-  Unknown11: 11
+  Unknown11: 11,
 });
 
 const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
@@ -104,32 +100,29 @@ const SymbolInstanceAttributeDataTypes = Object.freeze({
   [SymbolInstanceAttributeCodes.Unknown11]: DataType.UNKNOWN(1)
 });
 
-
 const TemplateServiceCodes = Object.freeze({
-  Read: 0x4C
+  Read: 0x4C,
 });
-
 
 const TemplateInstanceAttributeCodes = Object.freeze({
   StructureHandle: 0x01, /** Calculated CRC value for members of the structure */
   MemberCount: 0x02, /** Number of members defined in the structure */
   DefinitionSize: 0x04, /** Size of the template definition structure */
-  StructureSize: 0x05 /** Number of bytes transferred on the wire when the structure is read using the Read Tag service */
+  StructureSize: 0x05, /** Number of bytes transferred on the wire when the structure is read using the Read Tag service */
 });
 
 const TemplateInstanceAttributeDataTypes = Object.freeze({
   [TemplateInstanceAttributeCodes.StructureHandle]: DataType.UINT,
   [TemplateInstanceAttributeCodes.MemberCount]: DataType.UINT,
   [TemplateInstanceAttributeCodes.DefinitionSize]: DataType.UDINT,
-  [TemplateInstanceAttributeCodes.StructureSize]: DataType.UDINT
+  [TemplateInstanceAttributeCodes.StructureSize]: DataType.UDINT,
 });
-
 
 const TemplateClassAttributeCodes = Object.freeze({
   Unknown1: 1,
   Unknown2: 2,
   Unknown3: 3,
-  Unknown8: 8
+  Unknown8: 8,
 });
 
 const TemplateClassAttributeDataTypes = Object.freeze({
@@ -139,13 +132,12 @@ const TemplateClassAttributeDataTypes = Object.freeze({
   [TemplateClassAttributeCodes.Unknown8]: DataType.UNKNOWN(4),
 });
 
-
 const ControllerInstanceAttributeCodes = Object.freeze({
   Unknown1: 1,
   Unknown2: 2,
   Unknown3: 3,
   Unknown4: 4,
-  Unknown10: 10
+  Unknown10: 10,
 });
 
 const ControllerInstanceAttributeNames = InvertKeyValues(ControllerInstanceAttributeCodes);
@@ -155,7 +147,7 @@ const ControllerInstanceAttributeDataTypes = Object.freeze({
   [ControllerInstanceAttributeCodes.Unknown2]: DataType.UINT,
   [ControllerInstanceAttributeCodes.Unknown3]: DataType.UDINT,
   [ControllerInstanceAttributeCodes.Unknown4]: DataType.UDINT,
-  [ControllerInstanceAttributeCodes.Unknown10]: DataType.UDINT
+  [ControllerInstanceAttributeCodes.Unknown10]: DataType.UDINT,
 });
 
 const GenericServiceStatusDescriptions = {
@@ -174,9 +166,8 @@ const GenericServiceStatusDescriptions = {
     0x2104: 'General Error: Offset is beyond end of the requested object',
     0x2105: 'General Error: Number of Elements extends beyond the end of the requested object',
     0x2107: 'General Error: Object type used in request does not match the target object\'s data type'
-  }
+  },
 };
-
 
 class SymbolType {
   constructor(code) {
@@ -203,7 +194,7 @@ class SymbolType {
     } else {
       const templateID = getBits(code, 0, 12);
       this.template = {
-        id: templateID
+        id: templateID,
       };
 
       dataType = DataType.ABBREV_STRUCT;
@@ -211,7 +202,6 @@ class SymbolType {
     this.dataType = dataType;
   }
 }
-
 
 class Member {
   constructor(typeCode, info, offset, name, host) {
@@ -222,7 +212,6 @@ class Member {
     this.host = !!host;
   }
 }
-
 
 module.exports = {
   Logix5000_DataTypeCodes,
@@ -246,5 +235,5 @@ module.exports = {
   SymbolType,
   ControllerInstanceAttributeCodes,
   ControllerInstanceAttributeDataTypes,
-  ControllerInstanceAttributeNames
+  ControllerInstanceAttributeNames,
 };

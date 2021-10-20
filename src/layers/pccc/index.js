@@ -4,6 +4,45 @@ const { CallbackPromise } = require('../../utils');
 const Layer = require('../Layer');
 const PCCCPacket = require('./packet');
 
+function incrementTransaction(self) {
+  self._transaction++;
+  return self._transaction % 0x10000;
+}
+
+function getError(status) {
+  if (status.code === 0) return null;
+
+  if (status.extended.description != null && status.extended.description.length > 0) {
+    return status.extended.description;
+  }
+
+  return status.description;
+}
+
+const Commands = Object.freeze({
+  Connected: 0x0A,
+  Unconnected: 0x0B,
+});
+
+function send(self, internal, request, contextOrCallback) {
+  let context;
+  if (internal) {
+    if (typeof contextOrCallback === 'function') {
+      context = self.contextCallback(contextOrCallback);
+    }
+  } else {
+    context = contextOrCallback;
+  }
+
+  self.setContextForID(request.transaction, {
+    context,
+    internal,
+    request,
+  });
+
+  self.send(request.encode(), null, false);
+}
+
 /**
  * Uses transactions to map responses to requests
  */
@@ -13,7 +52,6 @@ class PCCCLayer extends Layer {
     super('pccc', lowerLayer);
     this._transaction = 0;
   }
-
 
   wordRangeRead(address, words, callback) {
     if (callback == null && typeof words === 'function') {
@@ -25,11 +63,11 @@ class PCCCLayer extends Layer {
       words = 1;
     }
 
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, (resolver) => {
       const message = PCCCPacket.WordRangeReadRequest(
         incrementTransaction(this),
         address,
-        words
+        words,
       );
 
       send(this, true, message, (error, reply) => {
@@ -42,19 +80,19 @@ class PCCCLayer extends Layer {
     });
   }
 
-
   typedRead(address, items, callback) {
     if (callback == null && typeof items === 'function') {
       callback = items;
       items = undefined;
     }
 
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, (resolver) => {
       const itemsSpecified = items != null;
 
       if (itemsSpecified) {
         if ((!Number.isFinite(items) || items <= 0 || items > 0xFFFF)) {
-          return resolver.reject('If specified, items must be a positive integer between 1 and 65535');
+          resolver.reject('If specified, items must be a positive integer between 1 and 65535');
+          return;
         }
       } else {
         items = 1;
@@ -63,7 +101,7 @@ class PCCCLayer extends Layer {
       const message = PCCCPacket.TypedReadRequest(
         incrementTransaction(this),
         address,
-        items
+        items,
       );
 
       send(this, true, message, (error, reply) => {
@@ -85,9 +123,10 @@ class PCCCLayer extends Layer {
    * value argument can be an array of values
    */
   typedWrite(address, value, callback) {
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, (resolver) => {
       if (value == null) {
-        return resolver.reject(`Unable to write value: ${value}`);
+        resolver.reject(`Unable to write value: ${value}`);
+        return;
       }
 
       value = Array.isArray(value) ? value : [value];
@@ -95,7 +134,7 @@ class PCCCLayer extends Layer {
       const message = PCCCPacket.TypedWriteRequest(
         incrementTransaction(this),
         address,
-        value
+        value,
       );
 
       send(this, true, message, (error, reply) => {
@@ -110,15 +149,15 @@ class PCCCLayer extends Layer {
 
   // unprotectedRead(address, size, callback) {
   //   if (callback == null) return;
-  
+
   //   if (size === 0 || size % 2 !== 0) {
   //     callback('size must be an even number');
   //     return;
   //   }
-  
+
   //   let transaction = incrementTransaction(this);
   //   let message = PCCCPacket.UnprotectedReadRequest(transaction, address, size);
-  
+
   //   this.send(message, INFO, false, this.contextCallback(function(error, reply) {
   //     if (error) {
   //       callback(error);
@@ -129,11 +168,11 @@ class PCCCLayer extends Layer {
   // }
 
   diagnosticStatus(callback) {
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, (resolver) => {
       const message = PCCCPacket.DiagnosticStatusRequest(
-        incrementTransaction(this)
+        incrementTransaction(this),
       );
-      
+
       send(this, true, message, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
@@ -143,13 +182,12 @@ class PCCCLayer extends Layer {
       });
     });
   }
-  
 
   echo(data, callback) {
-    return CallbackPromise(callback, resolver => {
+    return CallbackPromise(callback, (resolver) => {
       const message = PCCCPacket.EchoRequest(
         incrementTransaction(this),
-        data
+        data,
       );
 
       send(this, true, message, (error, reply) => {
@@ -162,7 +200,6 @@ class PCCCLayer extends Layer {
     });
   }
 
-  
   /** For sending CIP requests over PCCC */
   sendNextMessage() {
     const request = this.getNextRequest();
@@ -196,7 +233,7 @@ class PCCCLayer extends Layer {
 
       send(this, false, packet, request.context);
 
-      setImmediate(() => this.sendNextMessage()); 
+      setImmediate(() => this.sendNextMessage());
     }
   }
 
@@ -223,46 +260,6 @@ class PCCCLayer extends Layer {
 
 module.exports = PCCCLayer;
 
-
-function incrementTransaction(self) {
-  self._transaction++;
-  return self._transaction % 0x10000;
-}
-
-function getError(status) {
-  if (status.code === 0) return null;
-
-  if (status.extended.description != null && status.extended.description.length > 0)
-    return status.extended.description;
-
-  return status.description;
-}
-
-const Commands = Object.freeze({
-  Connected: 0x0A,
-  Unconnected: 0x0B
-});
-
-
-function send(self, internal, request, contextOrCallback) {
-  let context;
-  if (internal) {
-    if (typeof contextOrCallback === 'function') {
-      context = self.contextCallback(contextOrCallback);
-    }
-  } else {
-    context = contextOrCallback;
-  }
-
-  self.setContextForID(request.transaction, {
-    context,
-    internal,
-    request
-  });
-
-  self.send(request.encode(), null, false);
-}
-
 /*
   PLC-2 Communication Commands
     -Uprotected Read
@@ -287,8 +284,6 @@ function send(self, internal, request, contextOrCallback) {
     -SLC Protected Typed Logical Write with 2 Address Fields
 */
 
-
-
 // /** Ref. CIP and PCCC v1, Appendix B, pg. 17 */
 // const FragmentationFunctions = Object.freeze({
 //   Only: 0x00,
@@ -301,7 +296,6 @@ function send(self, internal, request, contextOrCallback) {
 //   AckResponse: 0x07,
 //   NakResponse: 0x08
 // });
-
 
 // class Fragger {
 //   constructor(data, info) {

@@ -1,5 +1,3 @@
-
-
 // 'use strict';
 
 // // const Layer = require('../../Layer');
@@ -10,7 +8,6 @@
 // const { InvertKeyValues } = require('../../../utils');
 
 // const HEADER_LENGTH = 7;
-
 
 // class PCCC extends CIPLayer {
 //   constructor(lowerLayer, options) {
@@ -115,7 +112,6 @@
 // // const { InvertKeyValues } = require('../../../../utils');
 
 // // const HEADER_LENGTH = 7;
-
 
 // // class PCCC extends CIPLayer {
 // //   constructor(lowerLayer, options) {

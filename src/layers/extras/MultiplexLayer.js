@@ -82,7 +82,7 @@ class MultiplexLayer extends Layer {
     if (context != null) {
       const layer = layerForContext(this, context);
       if (layer != null) {
-        this.forwardTo(layer, data, info);
+        Layer.forwardTo(layer, data, info);
       } else {
         throw new Error(`MultiplexLayer Error: No layer for context: ${context}`);
       }

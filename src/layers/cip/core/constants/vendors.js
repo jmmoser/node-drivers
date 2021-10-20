@@ -1222,9 +1222,9 @@ const VendorNames = {
   1237: 'ACOREL SAS',
   1238: 'Global Engineering Solutions Co., Ltd.',
   1239: 'ALTE Transportation, S.L.',
-  1240: 'Penko Engineering B.V.'
+  1240: 'Penko Engineering B.V.',
 };
 
 module.exports = {
-  VendorNames
+  VendorNames,
 };

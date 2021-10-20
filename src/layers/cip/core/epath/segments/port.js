@@ -2,11 +2,11 @@
 
 /**
  * CIP Vol 1, Appendix C-1.4.1
- * 
+ *
  * The port segment shall indicate the communication port
  * through which to leave the node and the link address of
  * the next device in the routing path.
- * 
+ *
  * Examples:
  * ----
  * 0x02, 0x06
@@ -28,9 +28,37 @@
 const {
   getBits,
   unsignedIntegerSize,
-  encodeUnsignedInteger
+  encodeUnsignedInteger,
 } = require('../../../../../utils');
 
+function serializeAddress(address) {
+  if (Buffer.isBuffer(address)) {
+    return address;
+  }
+
+  if (Number.isInteger(address) && address >= 0) {
+    const addressSize = unsignedIntegerSize(address);
+    const buffer = Buffer.alloc(addressSize);
+    encodeUnsignedInteger(buffer, 0, address, addressSize);
+    return buffer;
+  }
+
+  if (typeof address === 'string') {
+    return Buffer.from(address, 'ascii');
+  }
+
+  throw new Error(`Unexpected port address, unable to serialize: ${address}`);
+}
+
+function validate(number, address) {
+  if (!Number.isInteger(number) || number < 0 || number > 65535) {
+    throw new Error(`Port segment port number must be an integer between 0 and 65535. Received: ${number}`);
+  }
+
+  if (!Buffer.isBuffer(address) || address.length < 1 || address.length > 255) {
+    throw new Error(`Port segment address should be a buffer with length ranging from 1 to 255. Received: ${address}`);
+  }
+}
 
 class PortSegment {
   constructor(number, address) {
@@ -41,7 +69,6 @@ class PortSegment {
     this.number = number;
     this.address = address;
   }
-
 
   encodeSize() {
     let size = 1;
@@ -61,13 +88,11 @@ class PortSegment {
     return size;
   }
 
-
   encode() {
     const buffer = Buffer.alloc(this.encodeSize());
     this.encodeTo(buffer, 0);
     return buffer;
   }
-
 
   encodeTo(buffer, offset) {
     const startingOffset = offset;
@@ -98,7 +123,7 @@ class PortSegment {
     const addressLengthCopied = this.address.copy(buffer, offset);
 
     if (addressLengthCopied < addressLength) {
-      throw new Error(`Buffer is not large enough`);
+      throw new Error('Buffer is not large enough');
     }
 
     offset += addressLength;
@@ -109,7 +134,6 @@ class PortSegment {
 
     return offset;
   }
-
 
   static Decode(segmentCode, buffer, offset, padded, cb) {
     const startingOffset = offset - 1; /** -1 because first byte of segment was already read */
@@ -130,7 +154,7 @@ class PortSegment {
     }
 
     if (buffer.length < offset + addressLength) {
-      throw new Error(`Port Segment decode buffer not long enough`);
+      throw new Error('Port Segment decode buffer not long enough');
     }
 
     const address = buffer.slice(offset, offset + addressLength); offset += addressLength;
@@ -152,29 +176,3 @@ class PortSegment {
 }
 
 module.exports = PortSegment;
-
-function serializeAddress(address) {
-  if (Buffer.isBuffer(address)) {
-    return address;
-  } else if (Number.isInteger(address) && address >= 0) {
-    const addressSize = unsignedIntegerSize(address);
-    const buffer = Buffer.alloc(addressSize);
-    encodeUnsignedInteger(buffer, 0, address, addressSize);
-    return buffer;
-  } else if (typeof address === 'string') {
-    return Buffer.from(address, 'ascii');
-  } else {
-    throw new Error(`Unexpected port address, unable to serialize: ${address}`);
-  }
-}
-
-
-function validate(number, address) {
-  if (!Number.isInteger(number) || number < 0 || number > 65535) {
-    throw new Error(`Port segment port number must be an integer between 0 and 65535. Received: ${number}`);
-  }
-
-  if (!Buffer.isBuffer(address) || address.length < 1 || address.length > 255) {
-    throw new Error(`Port segment address should be a buffer with length ranging from 1 to 255. Received: ${address}`);
-  }
-}

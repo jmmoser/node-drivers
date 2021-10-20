@@ -90,6 +90,7 @@ const DataType = Object.freeze({
     return { type: DataType.TIME, code: DataTypeCodes.TIME };
   },
   EPATH(padded, length) {
+    // eslint-disable-next-line object-curly-newline
     return { type: DataType.EPATH, code: DataTypeCodes.EPATH, padded, length };
   },
   ENGUNIT() {
@@ -103,26 +104,34 @@ const DataType = Object.freeze({
       itype: DataType.STRUCT([
         DataType.USINT, // Number of internationalized character strings
         DataType.PLACEHOLDER((length) => DataType.ARRAY(
-          DataType.STRUCT([
-            DataType.TRANSFORM(
-              DataType.ARRAY(DataType.USINT, 0, 2), // First three characters of the ISO 639-2/T language
-              val => Buffer.from(val).toString('ascii')
-            ),
-
-            DataType.EPATH(false), // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
-            DataType.UINT, // Character set which the character string is based on,
-            DataType.PLACEHOLDER() // Actual International character string
-          ], function (members, dt) {
-            if (members.length === 3) {
-              return dt.resolve(members[1].value);
-            }
-          }), 0, length - 1)
-        ),
-      ], function decodeCallback(members, dt) {
+          DataType.STRUCT(
+            [
+              DataType.TRANSFORM(
+                /* First three characters of the ISO 639-2/T language */
+                DataType.ARRAY(DataType.USINT, 0, 2),
+                (val) => Buffer.from(val).toString('ascii'),
+              ),
+              // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
+              DataType.EPATH(false),
+              DataType.UINT, // Character set which the character string is based on,
+              DataType.PLACEHOLDER(), // Actual International character string
+            ],
+            (members, dt) => {
+              if (members.length === 3) {
+                return dt.resolve(members[1].value);
+              }
+              return undefined;
+            },
+          ),
+          0,
+          length - 1,
+        )),
+      ], (members, dt) => {
         if (members.length === 1) {
           return dt.resolve(members[0]); // provides the length for the array
         }
-      })
+        return undefined;
+      }),
     };
   },
 
@@ -133,7 +142,7 @@ const DataType = Object.freeze({
       code: DataTypeCodes.ABBREV_STRUCT,
       constructed: true,
       abbreviated: true,
-      crc
+      crc,
     };
   },
   ABBREV_ARRAY(itemType, length) {
@@ -143,7 +152,7 @@ const DataType = Object.freeze({
       constructed: true,
       abbreviated: true,
       itemType,
-      length
+      length,
     };
   },
   /**
@@ -156,7 +165,7 @@ const DataType = Object.freeze({
       constructed: true,
       abbreviated: false,
       members,
-      decodeCallback
+      decodeCallback,
     };
   },
   ARRAY(itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag) {
@@ -169,25 +178,31 @@ const DataType = Object.freeze({
       lowerBound,
       upperBound,
       lowerBoundTag,
-      upperBoundTag
+      upperBoundTag,
     };
   },
   PLACEHOLDER(resolve) {
     return {
       type: DataType.PLACEHOLDER,
       code: DataTypeCodes.PLACEHOLDER,
-      resolve: resolve || (dt => dt)
-    }
+      resolve: resolve || ((dt) => dt),
+    };
   },
   /**
    * decodeTransform transforms from CIP data type to friendly data type
    * encodeTransform transforms friendly data type to CIP data type
    * */
   TRANSFORM(dataType, decodeTransform, encodeTransform) {
-    return { type: DataType.TRANSFORM, code: DataTypeCodes.TRANSFORM, dataType, decodeTransform, encodeTransform };
-  }
+    return {
+      type: DataType.TRANSFORM,
+      code: DataTypeCodes.TRANSFORM,
+      dataType,
+      decodeTransform,
+      encodeTransform,
+    };
+  },
 });
 
 module.exports = {
-  DataType
+  DataType,
 };

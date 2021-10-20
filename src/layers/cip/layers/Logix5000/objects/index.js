@@ -1,7 +1,11 @@
 'use strict';
 
+const Controller = require('./controller');
+const SymbolObject = require('./symbol');
+const Template = require('./template');
+
 module.exports = {
-  Controller: require('./controller'),
-  SymbolObject: require('./symbol'), // Symbol is a reserved word
-  Template: require('./template')
+  Controller,
+  SymbolObject, // Symbol is a reserved word
+  Template,
 };

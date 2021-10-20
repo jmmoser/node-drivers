@@ -7,10 +7,8 @@ const convertToObject = require('./convertToObject');
 const {
   getBits,
   unsignedIntegerSize,
-  decodeUnsignedInteger
+  decodeUnsignedInteger,
 } = require('../../../../utils');
-
-
 
 function Decode(dataType, buffer, offset, cb, ctx) {
   let value;
@@ -98,17 +96,15 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       /** Name of members is not known so use array to hold decoded member values */
       value = [];
 
-      const ctx = {};
+      const subCtx = {};
       if (typeof dataType.decodeCallback === 'function') {
-        ctx.dataTypeCallback = function (dt) {
-          return dataType.decodeCallback(value, dt, dataType);
-        };
+        subCtx.dataTypeCallback = (dt) => dataType.decodeCallback(value, dt, dataType);
       }
 
-      dataType.members.forEach(member => {
-        offset = Decode(member, buffer, offset, function (memberValue) {
+      dataType.members.forEach((member) => {
+        offset = Decode(member, buffer, offset, (memberValue) => {
           value.push(memberValue);
-        }, ctx);
+        }, subCtx);
       });
 
       break;
@@ -116,7 +112,8 @@ function Decode(dataType, buffer, offset, cb, ctx) {
     case DataTypeCodes.ARRAY: {
       value = [];
       for (let i = dataType.lowerBound; i <= dataType.upperBound; i++) {
-        offset = Decode(dataType.itemType, buffer, offset, function (item) {
+        // eslint-disable-next-line no-loop-func
+        offset = Decode(dataType.itemType, buffer, offset, (item) => {
           value.push(item);
         });
       }
@@ -127,47 +124,45 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       if (dataType.length === true) {
         const bufferLength = buffer.length;
         while (offset < bufferLength) {
-          const nextOffset = Decode(dataType.itemType, buffer, offset, function (item) {
+          // eslint-disable-next-line no-loop-func
+          const nextOffset = Decode(dataType.itemType, buffer, offset, (item) => {
             value.push(item);
           });
           /** Make sure nextOffset is greater than offset */
           if (nextOffset <= offset) {
-            throw new Error(`Unexpected offset while decoding abbreviated array`);
+            throw new Error('Unexpected offset while decoding abbreviated array');
           }
           offset = nextOffset;
         }
-      } else {
-        if (dataType.length === true) {
-          while (offset < buffer.length) {
-            offset = Decode(dataType.itemType, buffer, offset, function (item) {
-              value.push(item);
-            });
-          }
-        } else {
-          if (!Number.isInteger(dataType.length) || dataType.length < 0) {
-            throw new Error(`Abbreviate array length must be a non-negative integer to decode values. Received: ${dataType.length}`);
-          }
-          for (let i = 0; i < dataType.length; i++) {
-            offset = Decode(dataType.itemType, buffer, offset, function (item) {
-              value.push(item);
-            });
-          }
+      } else if (dataType.length === true) {
+        while (offset < buffer.length) {
+          // eslint-disable-next-line no-loop-func
+          offset = Decode(dataType.itemType, buffer, offset, (item) => {
+            value.push(item);
+          });
         }
-
-        // if (!Number.isInteger(dataType.length) || dataType.length < 0) {
-        //   throw new Error(`Abbreviate array length must be a non-negative integer to decode values. Received: ${dataType.length}`);
-        // }
-        // for (let i = 0; i < dataType.length; i++) {
-        //   offset = Decode(dataType.itemType, buffer, offset, function (item) {
-        //     value.push(item);
-        //   });
-        // }
+      } else {
+        if (!Number.isInteger(dataType.length) || dataType.length < 0) {
+          throw new Error(`Abbreviate array length must be a non-negative integer to decode values. Received: ${dataType.length}`);
+        }
+        for (let i = 0; i < dataType.length; i++) {
+          // eslint-disable-next-line no-loop-func
+          offset = Decode(dataType.itemType, buffer, offset, (item) => {
+            value.push(item);
+          });
+        }
       }
-      
+
       break;
     }
     case DataTypeCodes.EPATH:
-      offset = EPath.Decode(buffer, offset, dataType.length, dataType.padded, val => value = val);
+      offset = EPath.Decode(
+        buffer,
+        offset,
+        dataType.length,
+        dataType.padded,
+        (val) => { value = val; },
+      );
       break;
     case DataTypeCodes.UNKNOWN: {
       value = buffer.slice(offset, offset + dataType.length);
@@ -175,11 +170,16 @@ function Decode(dataType, buffer, offset, cb, ctx) {
       break;
     }
     case DataTypeCodes.TRANSFORM: {
-      offset = Decode(dataType.dataType, buffer, offset, val => value = dataType.decodeTransform(val));
+      offset = Decode(
+        dataType.dataType,
+        buffer,
+        offset,
+        (val) => { value = dataType.decodeTransform(val); },
+      );
       break;
     }
     case DataTypeCodes.PLACEHOLDER:
-      throw new Error(`Placeholder datatype should have been replaced before decoding`);
+      throw new Error('Placeholder datatype should have been replaced before decoding');
     default:
       throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataType.code] || dataType.code}`);
   }
@@ -191,7 +191,6 @@ function Decode(dataType, buffer, offset, cb, ctx) {
   return offset;
 }
 
-
 module.exports = {
-  Decode
+  Decode,
 };

@@ -2,29 +2,87 @@
 
 /**
  * CIP Vol 1, Appendix C-1.4.4
- * 
+ *
  * The symbolic segment contains an International String symbol which must be
  * interpreted by the device.
  */
 
 const {
   getBits,
-  unsignedIntegerSize
+  unsignedIntegerSize,
 } = require('../../../../../utils');
-
 
 const ExtendedStringFormatCodes = Object.freeze({
   DoubleByteCharacters: 1,
   TripleByteCharacters: 2,
-  Numeric: 6
+  Numeric: 6,
 });
 
 const ExtendedStringNumericTypeCodes = Object.freeze({
   USINT: 6,
   UINT: 7,
-  UDINT: 8
+  UDINT: 8,
 });
 
+function validate(value, extendedFormat, extendedSize) {
+  if (extendedFormat == null) {
+    if (typeof value !== 'string' && !Buffer.isBuffer(value)) {
+      throw new Error(`Non-extended Symbol segment value must be a string or buffer. Received ${value}`);
+    }
+
+    if (value.length < 1 || value.length > 31) {
+      throw new Error(`Non-extended Symbol segment value length must be between 1 and 31. Received ${value.length}`);
+    }
+  } else {
+    switch (extendedFormat) {
+      case ExtendedStringFormatCodes.DoubleByteCharacters: {
+        if (!Buffer.isBuffer(value)) {
+          throw new Error('Double-Byte Character Symbol Segment value must be a buffer');
+        }
+        if (value.length !== 2 * extendedSize) {
+          throw new Error('Double-Byte Character Symbol Segment value length does not match extended size');
+        }
+        break;
+      }
+      case ExtendedStringFormatCodes.TripleByteCharacters: {
+        if (!Buffer.isBuffer(value)) {
+          throw new Error('Triple-Byte Character Symbol Segment value must be a buffer');
+        }
+        if (value.length !== 3 * extendedSize) {
+          throw new Error('Triple-Byte Character Symbol Segment value length does not match extended size');
+        }
+        break;
+      }
+      case ExtendedStringFormatCodes.Numeric: {
+        if (!Number.isInteger(value)) {
+          throw new Error('Numeric Symbol Segment value must be an integer');
+        }
+        switch (extendedSize) {
+          case ExtendedStringNumericTypeCodes.USINT:
+            if (value < 0 || value > 0xFF) {
+              throw new Error('USINT Numeric Symbol Segment value must be an integer between 0 and 255');
+            }
+            break;
+          case ExtendedStringNumericTypeCodes.UINT:
+            if (value < 0 || value > 0xFFFF) {
+              throw new Error('USINT Numeric Symbol Segment value must be an integer between 0 and 65535');
+            }
+            break;
+          case ExtendedStringNumericTypeCodes.UDINT:
+            if (value < 0 || value > 0xFFFFFFFF) {
+              throw new Error('USINT Numeric Symbol Segment value must be an integer between 0 and 4294967295');
+            }
+            break;
+          default:
+            throw new Error('Invalid extended size');
+        }
+        break;
+      }
+      default:
+        throw new Error('Invalid extended format');
+    }
+  }
+}
 
 class SymbolicSegment {
   constructor(value, extendedFormat, extendedSize) {
@@ -102,7 +160,7 @@ class SymbolicSegment {
 
   encodeTo(buffer, offset) {
     if (buffer.length - offset < this.encodeSize()) {
-      throw new Error(`Buffer to encode symbolic segment is not large enough`);
+      throw new Error('Buffer to encode symbolic segment is not large enough');
     }
 
     let code = 0b01100000;
@@ -118,7 +176,10 @@ class SymbolicSegment {
         offset += buffer.write(this.value, offset, 'ascii');
       }
     } else {
-      offset = buffer.writeUInt8(((this.extendedFormat & 0b111) << 5) | (this.extendedSize & 0b11111), offset);
+      offset = buffer.writeUInt8(
+        ((this.extendedFormat & 0b111) << 5) | (this.extendedSize & 0b11111),
+        offset,
+      );
       switch (this.extendedFormat) {
         case ExtendedStringFormatCodes.DoubleByteCharacters:
           this.value.copy(buffer, offset);
@@ -148,13 +209,14 @@ class SymbolicSegment {
           break;
       }
     }
-    
+
     return offset;
   }
 
-
   static Decode(segmentCode, buffer, offset, padded, cb) {
-    let value, extendedFormat, extendedSize;
+    let value;
+    let extendedFormat;
+    let extendedSize;
     const size = getBits(segmentCode, 0, 5);
 
     if (size === 0) {
@@ -165,11 +227,9 @@ class SymbolicSegment {
       switch (extendedFormat) {
         case ExtendedStringFormatCodes.DoubleByteCharacters:
           value = buffer.slice(offset, offset + 2 * extendedSize); offset += 2 * extendedSize;
-          // value = buffer.toString('utf16le', offset, offset + 2 * extendedSize); offset += 2 * extendedSize;
           break;
         case ExtendedStringFormatCodes.TripleByteCharacters:
           value = buffer.slice(offset, offset + 3 * extendedSize); offset += 3 * extendedSize;
-          // value = buffer.toString('utf16le', offset, offset + 3 * extendedSize); offset += 3 * extendedSize;
           break;
         case ExtendedStringFormatCodes.Numeric: {
           switch (extendedSize) {
@@ -214,90 +274,24 @@ class SymbolicSegment {
   }
 }
 
-
-SymbolicSegment.Single = class SingleByteSymbolicSegment extends SymbolicSegment {
-  constructor(value) {
-    super(value);
-  }
-}
+SymbolicSegment.Single = class SingleByteSymbolicSegment extends SymbolicSegment {};
 
 SymbolicSegment.Double = class DoubleByteSymbolicSegment extends SymbolicSegment {
   constructor(value, extendedSize) {
     super(value, ExtendedStringFormatCodes.DoubleByteCharacters, extendedSize);
   }
-}
+};
 
 SymbolicSegment.Triple = class TripleByteSymbolicSegment extends SymbolicSegment {
   constructor(value, extendedSize) {
     super(value, ExtendedStringFormatCodes.TripleByteCharacters, extendedSize);
   }
-}
+};
 
 SymbolicSegment.Numeric = class NumericByteSymbolicSegment extends SymbolicSegment {
   constructor(value, extendedSize) {
     super(value, ExtendedStringFormatCodes.Numeric, extendedSize);
   }
-}
+};
 
 module.exports = SymbolicSegment;
-
-
-function validate(value, extendedFormat, extendedSize) {
-  if (extendedFormat == null) {
-    if (typeof value !== 'string' && !Buffer.isBuffer(value)) {
-      throw new Error(`Non-extended Symbol segment value must be a string or buffer. Received ${value}`);
-    }
-
-    if (value.length < 1 || value.length > 31) {
-      throw new Error(`Non-extended Symbol segment value length must be between 1 and 31. Received ${value.length}`)
-    }
-  } else {
-    switch (extendedFormat) {
-      case ExtendedStringFormatCodes.DoubleByteCharacters: {
-        if (!Buffer.isBuffer(value)) {
-          throw new Error(`Double-Byte Character Symbol Segment value must be a buffer`);
-        }
-        if (value.length !== 2 * extendedSize) {
-          throw new Error(`Double-Byte Character Symbol Segment value length does not match extended size`);
-        }
-        break;
-      }
-      case ExtendedStringFormatCodes.TripleByteCharacters: {
-        if (!Buffer.isBuffer(value)) {
-          throw new Error(`Triple-Byte Character Symbol Segment value must be a buffer`);
-        }
-        if (value.length !== 3 * extendedSize) {
-          throw new Error(`Triple-Byte Character Symbol Segment value length does not match extended size`);
-        }
-        break;
-      }
-      case ExtendedStringFormatCodes.Numeric: {
-        if (!Number.isInteger(value)) {
-          throw new Error(`Numeric Symbol Segment value must be an integer`);
-        }
-        switch (extendedSize) {
-          case ExtendedStringNumericTypeCodes.USINT:
-            if (value < 0 || value > 0xFF) {
-              throw new Error(`USINT Numeric Symbol Segment value must be an integer between 0 and 255`);
-            }
-            break;
-          case ExtendedStringNumericTypeCodes.UINT:
-            if (value < 0 || value > 0xFFFF) {
-              throw new Error(`USINT Numeric Symbol Segment value must be an integer between 0 and 65535`);
-            }
-            break;
-          case ExtendedStringNumericTypeCodes.UDINT:
-            if (value < 0 || value > 0xFFFFFFFF) {
-              throw new Error(`USINT Numeric Symbol Segment value must be an integer between 0 and 4294967295`);
-            }
-            break;
-          default:
-            throw new Error(`Invalid extended size`);
-        }
-        break;
-      }
-      default:
-        throw new Error('Invalid extended format');
-    }
-  }
-}

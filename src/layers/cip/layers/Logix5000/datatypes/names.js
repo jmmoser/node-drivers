@@ -1,7 +1,7 @@
 'use strict';
 
 const {
-  InvertKeyValues
+  InvertKeyValues,
 } = require('../../../../../utils');
 
 const DataTypeCodes = require('./codes');

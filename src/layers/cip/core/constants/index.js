@@ -2,24 +2,23 @@
 
 const {
   ClassCodes,
-  ClassNames
+  ClassNames,
 } = require('./classes');
 
 const {
   CommonServiceCodes,
-  CommonServiceNames
+  CommonServiceNames,
 } = require('./services');
 
 const {
   GeneralStatusCodes,
   GeneralStatusNames,
-  GeneralStatusDescriptions
+  GeneralStatusDescriptions,
 } = require('./statuses');
 
 const {
-  VendorNames
+  VendorNames,
 } = require('./vendors');
-
 
 module.exports = {
   ClassCodes,
@@ -29,5 +28,5 @@ module.exports = {
   GeneralStatusCodes,
   GeneralStatusNames,
   GeneralStatusDescriptions,
-  VendorNames
+  VendorNames,
 };

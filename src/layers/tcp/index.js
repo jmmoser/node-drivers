@@ -19,13 +19,21 @@ function setConnectionState(layer, state) {
 
     if (previousState === TCPStateCodes.Connecting && state === TCPStateCodes.Disconnecting) {
       throw new Error('TCP layer error: attempted to immediately transition from connecting to disconnecting');
-    } else if (previousState === TCPStateCodes.Connected && state === TCPStateCodes.Connecting) {
+    }
+
+    if (previousState === TCPStateCodes.Connected && state === TCPStateCodes.Connecting) {
       throw new Error('TCP layer error: attempted to immediately transition from connected to connecting');
-    } else if (previousState === TCPStateCodes.Disconnected && state === TCPStateCodes.Connected) {
+    }
+
+    if (previousState === TCPStateCodes.Disconnected && state === TCPStateCodes.Connected) {
       throw new Error('TCP layer error: attempted to immediately transition from disconnected to connected');
-    } else if (previousState === TCPStateCodes.Disconnected && state === TCPStateCodes.Disconnecting) {
+    }
+
+    if (previousState === TCPStateCodes.Disconnected && state === TCPStateCodes.Disconnecting) {
       throw new Error('TCP layer error: attempted to immediately transition from disconnected to disconnecting');
-    } else if (previousState === TCPStateCodes.Disconnecting && state === TCPStateCodes.Connected) {
+    }
+
+    if (previousState === TCPStateCodes.Disconnecting && state === TCPStateCodes.Connected) {
       throw new Error('TCP layer error: attempted to immediately transition from disconnecting to connected');
     }
   }
@@ -102,7 +110,7 @@ function connect(layer) {
 }
 
 function removeSocketListeners(socket) {
-  ['error', 'data', 'close', 'timeout', 'end'].map(eventName => {
+  ['error', 'data', 'close', 'timeout', 'end'].forEach((eventName) => {
     socket.removeAllListeners(eventName);
   });
 }
@@ -137,12 +145,11 @@ class TCPLayer extends Layer {
     this._desiredState = TCPStateCodes.Disconnected;
   }
 
-  handleDefaultOptions(defaultOptions, layer) {
+  handleDefaultOptions(defaultOptions) {
     if (this.options.port == null && defaultOptions.port != null) {
       this.options.port = defaultOptions.port;
     }
   }
-
 
   static async* Scan(hosts, ports) {
     for (let i = 0; i < hosts.length; i++) {
@@ -166,7 +173,7 @@ class TCPLayer extends Layer {
   }
 
   connected(callback) {
-    return CallbackPromise(callback, async resolver => {
+    return CallbackPromise(callback, async (resolver) => {
       resolver.resolve(await this._connect);
     });
   }
@@ -178,7 +185,7 @@ class TCPLayer extends Layer {
       if (hasCallback) {
         setImmediate(callback);
       }
-      return;
+      return undefined;
     }
 
     if (this._connectionState === TCPStateCodes.Disconnecting) {
@@ -210,7 +217,6 @@ class TCPLayer extends Layer {
     return this._disconnect;
   }
 
-
   sendNextMessage() {
     if (this._connectionState === 2) {
       const request = this.getNextRequest();
@@ -229,7 +235,7 @@ class TCPLayer extends Layer {
     }
   }
 
-  handleDestroy(error) {
+  handleDestroy() {
     if (this.socket) {
       if (!this.socket.destroyed) {
         this.socket.destroy();

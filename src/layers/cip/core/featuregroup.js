@@ -5,7 +5,7 @@ const CIPFeature = require('./feature');
 class CIPFeatureGroup {
   constructor(features) {
     this.features = Array.isArray(features) ? features : [];
-    this.featureCodeMap = new Map(this.features.map(feature => [feature.code, feature]));
+    this.featureCodeMap = new Map(this.features.map((feature) => [feature.code, feature]));
   }
 
   register(feature) {
@@ -22,17 +22,19 @@ class CIPFeatureGroup {
   }
 
   getCode(feature) {
-    feature = this.get(feature);
-    if (feature) {
-      return feature.code;
+    const featureObject = this.get(feature);
+    if (featureObject) {
+      return featureObject.code;
     }
+    return undefined;
   }
 
   getName(feature) {
-    feature = this.get(feature);
-    if (feature) {
-      return feature.name;
+    const featureObject = this.get(feature);
+    if (featureObject) {
+      return featureObject.name;
     }
+    return undefined;
   }
 }
 

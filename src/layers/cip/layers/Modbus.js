@@ -125,12 +125,10 @@
 
 // module.exports = Modbus;
 
-
 // const MODBUS_EPATH = EPath.Encode(true, [
 //   new EPath.Segments.Logical.ClassID(ClassCodes.Modbus),
 //   new EPath.Segments.Logical.InstanceID(0x01)
 // ]);
-
 
 // function createData(address, count) {
 //   const buffer = Buffer.allocUnsafe(4);
@@ -139,12 +137,10 @@
 //   return buffer;
 // }
 
-
 // /** Use driver specific error handling if exists */
 // function send(self, service, data, callback) {
 //   self.sendRequest(false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
 // }
-
 
 // const Services = Object.freeze({
 //   ReadDiscreteInputs: 0x4B,
@@ -155,7 +151,6 @@
 //   WriteHoldingRegisters: 0x50,
 //   Passthrough: 0x51
 // });
-
 
 // // 'use strict';
 
@@ -288,7 +283,6 @@
 // //   new EPath.Segments.Logical.InstanceID(0x01)
 // // ]);
 
-
 // // function createData(address, count) {
 // //   const buffer = Buffer.allocUnsafe(4);
 // //   buffer.writeUInt16LE(address, 0);
@@ -296,12 +290,10 @@
 // //   return buffer;
 // // }
 
-
 // // /** Use driver specific error handling if exists */
 // // function send(self, service, data, callback) {
 // //   self.sendRequest(false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
 // // }
-
 
 // // const Services = Object.freeze({
 // //   ReadDiscreteInputs: 0x4B,

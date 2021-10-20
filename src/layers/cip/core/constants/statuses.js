@@ -1,9 +1,8 @@
 'use strict';
 
 const {
-  InvertKeyValues
+  InvertKeyValues,
 } = require('../../../../utils');
-
 
 const GeneralStatusCodes = Object.freeze({
   Success: 0x00,
@@ -49,11 +48,10 @@ const GeneralStatusCodes = Object.freeze({
   InvalidMemberID: 0x28,
   MemberNotSettable: 0x29,
   Group2OnlyServerGeneralFailure: 0x2A,
-  UnknownModbusError: 0x2B
+  UnknownModbusError: 0x2B,
 });
 
 const GeneralStatusNames = InvertKeyValues(GeneralStatusCodes);
-
 
 // // CIP-V1-1.0 Appendix B-1. General status codes
 // const GeneralStatusNames = Object.freeze({
@@ -143,11 +141,11 @@ const GeneralStatusDescriptions = Object.freeze({
   0x28: 'The Member ID specified in the request does not exist in the specified Class/Instance/Attribute.',
   0x29: 'A request to modify a non-modifiable member was received.',
   0x2A: 'This error code may only be reported by DeviceNet group 2 only servers with 4K or less code space and only in place of Service not supported, Attribute not supported and Attribute not settable.',
-  [GeneralStatusCodes.UnknownModbusError]: 'A CIP to Modbus translator received an unknown Modbus Exception Code.'
+  [GeneralStatusCodes.UnknownModbusError]: 'A CIP to Modbus translator received an unknown Modbus Exception Code.',
 });
 
 module.exports = {
   GeneralStatusCodes,
   GeneralStatusNames,
-  GeneralStatusDescriptions
+  GeneralStatusDescriptions,
 };

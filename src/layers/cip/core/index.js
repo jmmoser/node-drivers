@@ -1,10 +1,17 @@
 'use strict';
 
+const Request = require('./request');
+const Objects = require('./objects');
+const EPath = require('./epath');
+const Constants = require('./constants');
+const DataTypes = require('./datatypes');
+const Attribute = require('./attribute');
+
 module.exports = {
-  Request: require('./request'),
-  Objects: require('./objects'),
-  EPath: require('./epath'),
-  Constants: require('./constants'),
-  DataTypes: require('./datatypes'),
-  Attribute: require('./attribute')
+  Request,
+  Objects,
+  EPath,
+  Constants,
+  DataTypes,
+  Attribute,
 };

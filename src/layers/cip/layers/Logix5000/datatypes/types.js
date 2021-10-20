@@ -17,7 +17,7 @@ const DataType = Object.freeze({
   },
   Cxn() {
     return { type: DataType.Cxn, code: DataTypeCodes.Cxn };
-  }
+  },
 });
 
 module.exports = DataType;
