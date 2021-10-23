@@ -346,7 +346,29 @@ function connect(self) {
           } else {
             // console.log('CIPConnection Err: Status is not successful or service is not correct');
             ConnectionManager.TranslateResponse(res);
-            self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
+
+            if (
+              res.status.code === 1
+              && Buffer.compare(res.status.extended, Buffer.from([0x00, 0x01])) === 0
+              && !self._closeAndReconnect
+            ) {
+              self._closeAndReconnect = true;
+              const closeRequest = ConnectionManager.ForwardClose(self);
+
+              send(self, false, true, closeRequest, (closeErr, closeRes) => {
+                if (closeErr || closeRes == null || closeRes.status.code !== 0) {
+                  console.log('CIP connection unsuccessful close', closeErr, closeRes);
+                  self.destroy('Forward Close error');
+                } else {
+                  self._closeAndReconnect = false;
+                  self._connectionState = 0;
+                  connect(self);
+                }
+              });
+            } else {
+              self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
+            }
+            // self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
           }
         }
       } else if (self._connectionState === 1) {

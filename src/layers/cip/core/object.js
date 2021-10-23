@@ -177,6 +177,10 @@ function CIPMetaObject(classCode, options) {
 
     static GetInstanceAttribute(instance, attribute) {
       const attributeCode = InstanceAttributeGroup.getCode(attribute);
+      if (!attributeCode) {
+        throw new Error(`Invalid or unsupported instance attribute: ${attribute}`);
+      }
+
       return new CIPRequest(
         CommonServiceCodes.GetAttributeSingle,
         EPath.Encode(true, [

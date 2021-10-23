@@ -39,6 +39,13 @@ CIPAttribute.Class = class CIPClassAttribute extends CIPAttribute {
   }
 };
 
-CIPAttribute.Instance = class CIPInstanceAttribute extends CIPAttribute { };
+CIPAttribute.Instance = class CIPInstanceAttribute extends CIPAttribute {
+  Get(instance) {
+    if (instance < 1) {
+      throw new Error(`Instance must be greater than 0. Supplied instance ${instance}`);
+    }
+    return super.Get(instance);
+  }
+};
 
 module.exports = CIPAttribute;

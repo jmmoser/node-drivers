@@ -4,6 +4,8 @@ const net = require('net');
 const Layer = require('../Layer');
 const { CallbackPromise } = require('../../utils');
 
+const LOG = false;
+
 const TCPStateCodes = {
   Disconnecting: -1,
   Disconnected: 0,
@@ -78,6 +80,11 @@ function connect(layer) {
     }
 
     socket.on('data', (data) => {
+      if (LOG) {
+        console.log('RX', data);
+        console.log('');
+      }
+
       layer.emit('data', data);
       layer.forward(data);
     });
@@ -221,6 +228,11 @@ class TCPLayer extends Layer {
     if (this._connectionState === 2) {
       const request = this.getNextRequest();
       if (request) {
+        if (LOG) {
+          console.log('TX', request.message);
+          console.log('');
+        }
+
         this.socket.write(request.message, (err) => {
           if (err) {
             console.log('TCP layer write error:');

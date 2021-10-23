@@ -8,7 +8,7 @@ const { CallbackPromise } = require('../../../../utils');
 const Layer = require('../../../Layer');
 const ConnectionLayer = require('./CIPConnectionLayer');
 
-const { OBJECTS } = require('../../core/objects');
+// const { OBJECTS } = require('../../core/objects');
 
 const PCCC = require('./pccc');
 
