@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+
 const { getBits } = require('../../src/utils');
 
 describe('getBits', () => {

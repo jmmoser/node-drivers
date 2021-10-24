@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+
 const { DataTypeCodes, DataType } = require('../../src/layers/cip/core/datatypes');
 const EPath = require('../../src/layers/cip/core/epath');
 

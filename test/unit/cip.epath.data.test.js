@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+
 const EPath = require('../../src/layers/cip/core/epath');
 
 const { Data } = EPath.Segments;
@@ -62,16 +64,27 @@ describe('ANSI Extended Symbol Data Segment', () => {
   test('Invalid Decode', () => {
     /** Pad byte must be 0x00 */
     expect(
-      () => EPath.Decode(Buffer.from([0x91, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x01]), 0, true, false, () => {}),
+      () => EPath.Decode(Buffer.from([
+        0x91, 0x05, 0x73, 0x74,
+        0x61, 0x72, 0x74, 0x01,
+      ]), 0, true, false, () => {}),
     ).toThrow();
     /** Invalid length */
-    expect(() => EPath.Decode(Buffer.from([0x91, 0x06, 0x73, 0x74, 0x61, 0x72, 0x74]), 0, true, false, () => { })).toThrow();
+    expect(
+      () => EPath.Decode(Buffer.from([
+        0x91, 0x06, 0x73, 0x74, 0x61, 0x72, 0x74,
+      ]), 0, true, false, () => { }),
+    ).toThrow();
   });
 });
 
 describe('Data Segment', () => {
   test('Invalid Subtype', () => {
     expect(() => new Data(-1, 1)).toThrow();
-    expect(() => EPath.Decode(Buffer.from([0x81, 0x02, 0x01, 0x00, 0x02, 0x00]), 0, true, false, () => { })).toThrow();
+    expect(
+      () => EPath.Decode(Buffer.from([
+        0x81, 0x02, 0x01, 0x00, 0x02, 0x00,
+      ]), 0, true, false, () => { }),
+    ).toThrow();
   });
 });

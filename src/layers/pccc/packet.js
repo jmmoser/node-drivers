@@ -94,7 +94,7 @@ function logicalASCIIAddressInfo(address) {
   return info;
 }
 
-function TypedReadParserDataInfo(data, offset = 0) {
+function DecodeDataDescriptor(data, offset = 0) {
   const flag = data.readUInt8(offset); offset += 1;
 
   let typeID;
@@ -164,7 +164,7 @@ function __TypedReadReplyParser(data, offset, info) {
       break;
     case PCCCDataType.Array: {
       value = [];
-      const arrayInfo = TypedReadParserDataInfo(data, offset);
+      const arrayInfo = DecodeDataDescriptor(data, offset);
       let currentOffset = arrayInfo.offset;
       const lastOffset = info.offset + info.size;
       while (currentOffset < lastOffset) {
@@ -458,7 +458,7 @@ class PCCCPacket {
   }
 
   static ParseTypedReadData(data, offset = 0) {
-    const info = TypedReadParserDataInfo(data, offset);
+    const info = DecodeDataDescriptor(data, offset);
     return __TypedReadReplyParser(data, info.offset, info);
   }
 
@@ -591,7 +591,7 @@ module.exports = PCCCPacket;
 //       break;
 //     case PCCCDataType.Array: {
 //       value = [];
-//       const arrayInfo = TypedReadParserDataInfo(data, offset);
+//       const arrayInfo = DecodeDataDescriptor(data, offset);
 //       let currentOffset = arrayInfo.offset;
 //       const lastOffset = info.offset + info.size;
 //       console.log({

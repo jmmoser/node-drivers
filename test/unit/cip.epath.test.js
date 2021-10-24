@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+
 const EPath = require('../../src/layers/cip/core/epath');
 
 describe('EPath Encode', () => {
