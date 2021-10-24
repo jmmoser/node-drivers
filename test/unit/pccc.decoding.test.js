@@ -3,7 +3,7 @@
 const { PCCCDataType } = require('../../src/layers/pccc/constants');
 const {
   DecodeDataDescriptor,
-  DecodeType,
+  DecodeTypedData,
 } = require('../../src/layers/pccc/decoding');
 
 const buffer1 = Buffer.from([
@@ -58,7 +58,7 @@ describe('DecodeType', () => {
     const offsetRef = { current: 0 };
     const descriptor = DecodeDataDescriptor(buffer1, offsetRef);
     expect(
-      DecodeType(buffer1, offsetRef, descriptor.type, descriptor.size),
+      DecodeTypedData(buffer1, offsetRef, descriptor.type, descriptor.size),
     ).toStrictEqual(
       [0, -2, 255],
     );

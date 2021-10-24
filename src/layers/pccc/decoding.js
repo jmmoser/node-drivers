@@ -1,7 +1,5 @@
 const {
   getBits,
-  // encodeUnsignedInteger,
-  // unsignedIntegerSize,
 } = require('../../utils');
 
 const {
@@ -60,7 +58,7 @@ function DecodeDataDescriptor(data, offsetRef) {
   };
 }
 
-function DecodeType(data, offsetRef, type, size) {
+function DecodeTypedData(data, offsetRef, type, size) {
   let value;
 
   switch (type) {
@@ -83,7 +81,7 @@ function DecodeType(data, offsetRef, type, size) {
       const lastOffset = offsetRef.current + size;
       const descriptor = DecodeDataDescriptor(data, offsetRef);
       while (offsetRef.current < lastOffset) {
-        value.push(DecodeType(data, offsetRef, descriptor.type, descriptor.size));
+        value.push(DecodeTypedData(data, offsetRef, descriptor.type, descriptor.size));
       }
       break;
     }
@@ -143,5 +141,5 @@ function DecodeType(data, offsetRef, type, size) {
 
 module.exports = {
   DecodeDataDescriptor,
-  DecodeType,
+  DecodeTypedData,
 };
