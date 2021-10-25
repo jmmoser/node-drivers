@@ -29,6 +29,8 @@ const {
   Decode,
 } = require('../../core/datatypes');
 
+const { DecodeTypedData } = require('../../core/datatypes/decoding');
+
 const {
   CallbackPromise,
   InfoError,
@@ -112,21 +114,20 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
     const member = members[i];
     if (member.type.atomic) {
       if (member.type.dimensions === 0) {
+        let iDataType;
         if (member.type.dataType.code === DataTypeCodes.BOOL) {
-          Decode(
-            member.type.dataType.type(member.info),
-            data,
-            offset + member.offset,
-            (val) => { structValues[member.name] = val; },
-          );
+          iDataType = member.type.dataType.type(member.info);
         } else {
-          Decode(
-            member.type.dataType,
-            data,
-            offset + member.offset,
-            (val) => { structValues[member.name] = val; },
-          );
+          iDataType = member.type.dataType;
         }
+
+        const offsetRef = { current: offset + member.offset };
+        structValues[member.name] = DecodeTypedData(
+          data,
+          offsetRef,
+          iDataType,
+        );
+        // offset = offsetRef.current;
       } else if (member.type.dimensions === 1) {
         const memberValues = [];
         let nextOffset = offset + member.offset;

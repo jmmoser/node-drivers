@@ -6,7 +6,7 @@ const CIPRequest = require('./request');
 const CIPAttribute = require('./attribute');
 const CIPFeatureGroup = require('./featuregroup');
 const { DataType } = require('./datatypes/types');
-const { Decode } = require('./datatypes/decoding');
+const { DecodeTypedData } = require('./datatypes/decoding');
 
 // const CommonClassAttribute = Object.freeze({
 //   Revision: new CIPAttribute.Class(1, 'Revision', DataType.UINT),
@@ -76,10 +76,8 @@ function DecodeAttribute(buffer, offset, attribute, cb) {
     throw new Error(`Unknown attribute: ${attribute}`);
   }
 
-  let value;
-  offset = Decode(dataType, buffer, offset, (val) => {
-    value = val;
-  });
+  const offsetRef = { current: offset };
+  const value = DecodeTypedData(buffer, offsetRef, dataType);
 
   if (typeof cb === 'function') {
     cb({
@@ -87,7 +85,8 @@ function DecodeAttribute(buffer, offset, attribute, cb) {
       value,
     });
   }
-  return offset;
+
+  return offsetRef.current;
 }
 
 function CIPMetaObject(classCode, options) {

@@ -2,7 +2,7 @@
 
 'use strict';
 
-const { Decode } = require('./datatypes/decoding');
+const { DecodeTypedData } = require('./datatypes/decoding');
 const { CommonServiceCodes } = require('./constants/services');
 const EPath = require('./epath');
 
@@ -27,7 +27,7 @@ class CIPAttribute extends CIPFeature {
       ]),
       null,
       (buffer, offset, cb) => {
-        Decode(this.dataType, buffer, offset, cb);
+        cb(DecodeTypedData(buffer, { current: offset }, this.dataType));
       },
     );
   }
