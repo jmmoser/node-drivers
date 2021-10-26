@@ -26,7 +26,6 @@ const {
   Encode,
   EncodeSize,
   EncodeTo,
-  Decode,
 } = require('../../core/datatypes');
 
 const { DecodeTypedData } = require('../../core/datatypes/decoding');
@@ -35,9 +34,6 @@ const {
   CallbackPromise,
   InfoError,
 } = require('../../../../utils');
-
-// const path = require('path');
-// const DB = require('../../../db');
 
 const {
   Logix5000_DataTypeCodes,
@@ -113,6 +109,8 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
   for (let i = 0; i < members.length; i++) {
     const member = members[i];
     if (member.type.atomic) {
+      const offsetRef = { current: offset + member.offset };
+
       if (member.type.dimensions === 0) {
         let iDataType;
         if (member.type.dataType.code === DataTypeCodes.BOOL) {
@@ -121,7 +119,6 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
           iDataType = member.type.dataType;
         }
 
-        const offsetRef = { current: offset + member.offset };
         structValues[member.name] = DecodeTypedData(
           data,
           offsetRef,
@@ -130,14 +127,8 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
         // offset = offsetRef.current;
       } else if (member.type.dimensions === 1) {
         const memberValues = [];
-        let nextOffset = offset + member.offset;
         for (let memberArrIndex = 0; memberArrIndex < member.info; memberArrIndex++) {
-          nextOffset = Decode(
-            member.type.dataType,
-            data,
-            nextOffset,
-            (val) => memberValues.push(val),
-          );
+          memberValues.push(DecodeTypedData(data, offsetRef, member.type.dataType));
         }
         structValues[member.name] = memberValues;
       } else {
@@ -163,17 +154,18 @@ async function parseReadTag(layer, scope, tag, elements, data) {
   }
 
   let typeInfo;
-  let offset = Logix5000DecodeDataType(data, 0, (val) => { typeInfo = val.value; });
+  const offset = Logix5000DecodeDataType(data, 0, (val) => { typeInfo = val.value; });
 
   if (!typeInfo) {
     throw new Error('Unable to decode data type from read tag response data');
   }
 
   const values = [];
+  const offsetRef = { current: offset };
 
   if (!typeInfo.constructed || typeInfo.abbreviated === false) {
     for (let i = 0; i < elements; i++) {
-      offset = Decode(typeInfo, data, offset, (val) => values.push(val));
+      values.push(DecodeTypedData(data, offsetRef, typeInfo));
     }
   } else {
     const tagSegments = tag.split('.');
@@ -221,7 +213,7 @@ async function parseReadTag(layer, scope, tag, elements, data) {
         break;
     }
 
-    values.push(await parseReadTagMemberStructure(layer, templateType, data, offset));
+    values.push(await parseReadTagMemberStructure(layer, templateType, data, offsetRef.current));
   }
 
   if (elements === 1) {
@@ -308,13 +300,13 @@ function parseListTagsResponse(reply, attributes, tags, modifier) {
 
   const hasModifier = typeof modifier === 'function';
 
-  let offset = 0;
+  const offsetRef = { current: 0 };
   let lastInstanceID = 0;
 
-  while (offset < length) {
+  while (offsetRef.current < length) {
     const tag = {};
 
-    offset = Decode(DataType.UDINT, data, offset, (val) => { tag.id = val; });
+    tag.id = DecodeTypedData(data, offsetRef, DataType.UDINT);
     lastInstanceID = tag.id;
 
     for (let i = 0; i < attributes.length; i++) {
@@ -323,7 +315,7 @@ function parseListTagsResponse(reply, attributes, tags, modifier) {
       if (!attributeDataType) {
         throw new Error(`Unknown attribute ${attribute}`);
       }
-      offset = Decode(attributeDataType, data, offset, (val) => { tag[attribute] = val; });
+      tag[attribute] = DecodeTypedData(data, offsetRef, attributeDataType);
     }
 
     if (hasModifier) {
@@ -696,44 +688,9 @@ class Logix5000 extends CIPLayer {
 
     // this._controllerAttributes = null;
 
-    // if (options.optimize) {
-    //   this.setupOptimizations(this, options.optimize);
-    // }
-
     /** GET PROCESSOR IDENTITY INFO */
     // this.sendRequest(false, )
   }
-
-  // async setupOptimizations(layer, optimization) {
-  //   layer._optimizing = new Promise(async function(resolve) {
-  //     try {
-  //       optimization = Object.assign({
-  //         dir: __dirname
-  //       }, optimization);
-
-  //       layer._db = new DB(path.join(optimization.dir));
-
-  //       const records = await layer._db.read();
-
-  //       records.forEach(record => {
-  //         switch (record.type) {
-  //           case 'controllerAttributes':
-  //             layer._controllerAttributes = record.payload;
-  //             break;
-  //           case 'templateInstanceAttributes':
-  //             layer._templateInstanceAttributes.set(record.payload.id, record.payload.data);
-  //             break;
-  //           default:
-  //             break;
-  //         }
-  //       });
-  //     } catch (err) {
-  //       console.log(err);
-  //     } finally {
-  //       resolve();
-  //     }
-  //   });
-  // }
 
   // async resetAllSaved(layer) {
   //   layer._tagNameToSymbolInstanceID = new Map();
@@ -783,15 +740,15 @@ class Logix5000 extends CIPLayer {
 
     return CallbackPromise(callback, async (resolver) => {
       if (!tag) {
-        return resolver.reject('Tag must be specified');
+        resolver.reject('Tag must be specified');
+        return;
       }
-
-      await this._optimizing;
 
       if (elements != null) {
         elements = parseInt(elements, 10);
         if (!Number.isFinite(elements) || elements <= 0 || elements > 0xFFFF) {
-          return resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
+          resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
+          return;
         }
       } else {
         elements = await getSymbolSize(this, null, tag);
@@ -799,9 +756,9 @@ class Logix5000 extends CIPLayer {
 
       const service = SymbolServiceCodes.Read;
       const path = encodeSymbolPath(tag);
-      const data = Encode(DataType.UINT, elements);
+      const requestData = Encode(DataType.UINT, elements);
 
-      send(this, service, path, data, async (error, reply) => {
+      send(this, service, path, requestData, async (error, reply) => {
         if (error) {
           console.log(tag);
           resolver.reject(error, reply);
@@ -859,7 +816,8 @@ class Logix5000 extends CIPLayer {
   writeTag(tag, value, callback) {
     return CallbackPromise(callback, async (resolver) => {
       if (!tag) {
-        return resolver.reject('tag must be specified');
+        resolver.reject('tag must be specified');
+        return;
       }
 
       const tagInfo = await getSymbolInfo(this, null, tag, [
@@ -867,13 +825,15 @@ class Logix5000 extends CIPLayer {
       ]);
 
       if (!tagInfo) {
-        return resolver.reject(`Invalid tag: ${tag}`);
+        resolver.reject(`Invalid tag: ${tag}`);
+        return;
       }
 
       const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
 
       if (tagType.atomic !== true) {
-        return resolver.reject('Writing to structure tags is not currently supported');
+        resolver.reject('Writing to structure tags is not currently supported');
+        return;
       }
 
       const service = SymbolServiceCodes.WriteTag;
@@ -900,29 +860,34 @@ class Logix5000 extends CIPLayer {
   readModifyWriteTag(tag, ORmasks, ANDmasks, callback) {
     return CallbackPromise(callback, (resolver) => {
       if (tag == null) {
-        return resolver.reject('tag must be specified');
+        resolver.reject('tag must be specified');
+        return;
       }
 
       if (
         (!Array.isArray(ORmasks) && !Buffer.isBuffer(ORmasks))
         || (!Array.isArray(ANDmasks) && !Buffer.isBuffer(ANDmasks))
       ) {
-        return resolver.reject('OR masks and AND masks must be either an array or a buffer');
+        resolver.reject('OR masks and AND masks must be either an array or a buffer');
+        return;
       }
 
       if (ORmasks.length !== ANDmasks.length) {
-        return resolver.reject('Length of OR masks must be equal to length of AND masks');
+        resolver.reject('Length of OR masks must be equal to length of AND masks');
+        return;
       }
 
       const sizeOfMasks = ORmasks.length;
 
       if ((new Set([1, 2, 4, 8, 12])).has(sizeOfMasks) === false) {
-        return resolver.reject('Size of masks is not valid. Valid lengths are 1, 2, 4, 8, and 12');
+        resolver.reject('Size of masks is not valid. Valid lengths are 1, 2, 4, 8, and 12');
+        return;
       }
 
       for (let i = 0; i < sizeOfMasks; i++) {
         if (ORmasks[i] < 0 || ORmasks > 0xFF || ANDmasks[i] < 0 || ANDmasks > 0xFF) {
-          return resolver.reject('Values in masks must be greater than or equal to zero and less than or equal to 255');
+          resolver.reject('Values in masks must be greater than or equal to zero and less than or equal to 255');
+          return;
         }
       }
 
@@ -973,38 +938,40 @@ class Logix5000 extends CIPLayer {
 
       const symbolID = await getSymbolInstanceID(this, scope, tag);
       if (symbolID == null) {
-        return resolver.reject(`Unable to determine symbol instance: ${scope ? `${scope}.` : ''}${tag}`);
+        resolver.reject(`Unable to determine symbol instance: ${scope ? `${scope}.` : ''}${tag}`);
+        return;
       }
 
       const path = encodeFullSymbolPath(scope, symbolID);
-      const data = encodeAttributes(attributes);
+      const requestData = encodeAttributes(attributes);
 
-      send(this, service, path, data, (error, reply) => {
+      send(this, service, path, requestData, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
           try {
             const { data } = reply;
 
-            let offset = 0;
-            const attributeCount = data.readUInt16LE(offset); offset += 2;
+            const offsetRef = { current: 0 };
+            const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
             const attributeResults = [];
 
             for (let i = 0; i < attributeCount; i++) {
-              const code = data.readUInt16LE(offset); offset += 2;
-              const status = data.readUInt16LE(offset); offset += 2;
+              const code = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+              const status = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
 
               if (status !== 0) {
-                return resolver.reject(`Status for attribute ${code} is ${status}`);
+                resolver.reject(`Status for attribute ${code} is ${status}`);
+                return;
               }
 
               const type = SymbolInstanceAttributeDataTypes[code];
               if (!type) {
-                return resolver.reject(`Unknown attribute received: ${code}`);
+                resolver.reject(`Unknown attribute received: ${code}`);
+                return;
               }
 
-              let value;
-              offset = Decode(type, data, offset, (val) => { value = val; });
+              const value = DecodeTypedData(data, offsetRef, type);
 
               attributeResults.push({
                 name: SymbolInstanceAttributeNames[code] || 'Unknown',
@@ -1040,7 +1007,8 @@ class Logix5000 extends CIPLayer {
 
       const symbolID = await getSymbolInstanceID(this, scope, tag);
       if (symbolID == null) {
-        return resolver.reject(`Unable to determine symbol instance: ${scope ? `${scope}.` : ''}${tag}`);
+        resolver.reject(`Unable to determine symbol instance: ${scope ? `${scope}.` : ''}${tag}`);
+        return;
       }
 
       const path = encodeFullSymbolPath(scope, symbolID);
@@ -1051,18 +1019,16 @@ class Logix5000 extends CIPLayer {
         } else {
           try {
             const { data } = reply;
-            let offset = 0;
+            const offsetRef = { current: 0 };
             const attributes = [];
 
-            function appendAttribute(code) {
-              offset = Decode(SymbolInstanceAttributeDataTypes[code], data, offset, (val) => {
-                attributes.push({
-                  name: SymbolInstanceAttributeNames[code] || 'Unknown',
-                  code,
-                  val,
-                });
+            const appendAttribute = (code) => {
+              attributes.push({
+                name: SymbolInstanceAttributeNames[code] || 'Unknown',
+                value: DecodeTypedData(data, offsetRef, SymbolInstanceAttributeDataTypes[code]),
+                code,
               });
-            }
+            };
 
             /** Attribute 2 */
             // appendAttribute(SymbolInstanceAttributeCodes.Type, code => new SymbolType(code));
@@ -1137,7 +1103,8 @@ class Logix5000 extends CIPLayer {
     return CallbackPromise(callback, async (resolver) => {
       try {
         if (this._templates.has(templateID)) {
-          return resolver.resolve(this._templates.get(templateID));
+          resolver.resolve(this._templates.get(templateID));
+          return;
         }
 
         const service = TemplateServiceCodes.Read;
@@ -1155,7 +1122,8 @@ class Logix5000 extends CIPLayer {
         }
 
         if (attributes == null) {
-          return resolver.reject(`Unable to read template attributes for template: ${templateID}`);
+          resolver.reject(`Unable to read template attributes for template: ${templateID}`);
+          return;
         }
 
         /** Documentation says the header is 23 bytes, I'm pretty sure it is only 20 bytes */
@@ -1247,15 +1215,13 @@ class Logix5000 extends CIPLayer {
 
       const { data } = reply;
 
-      let offset = 0;
-      const attributeCount = data.readUInt16LE(offset); offset += 2;
+      const offsetRef = { current: 0 };
+      const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
       const attributes = {};
 
       for (let i = 0; i < attributeCount; i++) {
-        let attribute;
-        let status;
-        offset = Decode(DataType.UINT, data, offset, (val) => { attribute = val; });
-        offset = Decode(DataType.UINT, data, offset, (val) => { status = val; });
+        const attribute = DecodeTypedData(data, offsetRef, DataType.UINT);
+        const status = DecodeTypedData(data, offsetRef, DataType.UINT);
 
         const attributeDataType = TemplateClassAttributeDataTypes[attribute];
 
@@ -1264,7 +1230,7 @@ class Logix5000 extends CIPLayer {
         }
 
         if (status === 0) {
-          offset = Decode(attributeDataType, data, offset, (val) => { attributes[attribute] = val; });
+          attributes[attribute] = DecodeTypedData(data, offsetRef, attributeDataType);
         } else {
           throw new Error(`Attribute ${attribute} has error status: ${GenericServiceStatusDescriptions[status] || 'Unknown'}`);
         }
@@ -1278,7 +1244,8 @@ class Logix5000 extends CIPLayer {
     return CallbackPromise(callback, (resolver) => {
       try {
         if (this._templateInstanceAttributes.has(templateID)) {
-          return resolver.resolve(this._templateInstanceAttributes.get(templateID));
+          resolver.resolve(this._templateInstanceAttributes.get(templateID));
+          return;
         }
 
         const service = CommonServiceCodes.GetAttributeList;
@@ -1288,29 +1255,27 @@ class Logix5000 extends CIPLayer {
           new EPath.Segments.Logical.InstanceID(templateID),
         ]);
 
-        const data = encodeAttributes([
+        const requestData = encodeAttributes([
           TemplateInstanceAttributeCodes.StructureHandle,
           TemplateInstanceAttributeCodes.MemberCount,
           TemplateInstanceAttributeCodes.DefinitionSize,
           TemplateInstanceAttributeCodes.StructureSize,
         ]);
 
-        send(this, service, path, data, (error, reply) => {
+        send(this, service, path, requestData, (error, reply) => {
           if (error) {
             resolver.reject(error, reply);
           } else {
             try {
               const { data } = reply;
 
-              let offset = 0;
-              const attributeCount = data.readUInt16LE(offset); offset += 2;
+              const offsetRef = { current: 0 };
+              const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
               const attributes = {};
 
               for (let i = 0; i < attributeCount; i++) {
-                let attribute;
-                let status;
-                offset = Decode(DataType.UINT, data, offset, (val) => { attribute = val; });
-                offset = Decode(DataType.UINT, data, offset, (val) => { status = val; });
+                const attribute = DecodeTypedData(data, offsetRef, DataType.UINT);
+                const status = DecodeTypedData(data, offsetRef, DataType.UINT);
 
                 const attributeDataType = TemplateInstanceAttributeDataTypes[attribute];
 
@@ -1319,11 +1284,7 @@ class Logix5000 extends CIPLayer {
                 }
 
                 if (status === 0) {
-                  offset = Decode(
-                    attributeDataType,
-                    data, offset,
-                    (val) => { attributes[attribute] = val; },
-                  );
+                  attributes[attribute] = DecodeTypedData(data, offsetRef, attributeDataType);
                 } else {
                   throw new Error(`Attribute ${attribute} has error status: ${GenericServiceStatusDescriptions[status] || 'Unknown'}`);
                 }
@@ -1356,7 +1317,7 @@ class Logix5000 extends CIPLayer {
         new EPath.Segments.Logical.InstanceID(0x01),
       ]);
 
-      const data = encodeAttributes([
+      const requestData = encodeAttributes([
         ControllerInstanceAttributeCodes.Unknown1,
         ControllerInstanceAttributeCodes.Unknown2,
         ControllerInstanceAttributeCodes.Unknown3,
@@ -1364,41 +1325,36 @@ class Logix5000 extends CIPLayer {
         ControllerInstanceAttributeCodes.Unknown10,
       ]);
 
-      send(this, service, path, data, (error, reply) => {
+      send(this, service, path, requestData, (error, reply) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
           try {
             const attributeResponses = [];
             const { data } = reply;
-            let offset = 0;
+            const offsetRef = { current: 0 };
 
-            const numberOfAttributes = data.readUInt16LE(offset); offset += 2;
+            const numberOfAttributes = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+
             for (let i = 0; i < numberOfAttributes; i++) {
-              const attributeNumber = data.readUInt16LE(offset); offset += 2;
-              const attributeStatus = data.readUInt16LE(offset); offset += 2;
+              const attribute = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+              const status = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
 
-              if (attributeStatus === GeneralStatusCodes.Success) {
-                const attributeDataType = ControllerInstanceAttributeDataTypes[attributeNumber];
+              if (status === GeneralStatusCodes.Success) {
+                const attributeDataType = ControllerInstanceAttributeDataTypes[attribute];
                 if (!attributeDataType) {
-                  throw new Error(`Invalid Controller Attribute ${attributeNumber}`);
+                  throw new Error(`Invalid Controller Attribute ${attribute}`);
                 }
 
-                let attributeValue;
-                offset = Decode(
-                  attributeDataType,
-                  data,
-                  offset,
-                  (val) => { attributeValue = val; },
-                );
+                const attributeValue = DecodeTypedData(data, offsetRef, attributeDataType);
 
                 attributeResponses.push({
-                  code: attributeNumber,
-                  name: ControllerInstanceAttributeNames[attributeNumber],
+                  code: attribute,
+                  name: ControllerInstanceAttributeNames[attribute],
                   value: attributeValue,
                 });
               } else {
-                throw new Error(`Status ${attributeStatus} received for controller attribute ${attributeNumber}`);
+                throw new Error(`Status ${status} received for controller attribute ${attribute}`);
               }
             }
 

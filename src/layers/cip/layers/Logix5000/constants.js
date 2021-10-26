@@ -78,18 +78,23 @@ const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCode
 /**
  * Possible remaining attributes:
  * - External Access
- *    Defines how an external application, such as an HMI, historian, or OPC data server, can access a tag. For arrays, this
- *    feature applies to the top level only; for user-defined structure, this feature applies to individual members. Possible
- *    values are:
+ *    Defines how an external application, such as an HMI, historian, or OPC data
+ *    server, can access a tag. For arrays, this feature applies to the top level
+ *    only; for user-defined structure, this feature applies to individual members.
+ *    Possible values are:
  *      - Read/Write: External applications can both read and modify the tag’s value
  *      - Read Only: External applications can read the tag’s value, but not modify it
  *      - None: External applications can neither read or write the tag’s value
  * - Constant
- *    Defines whether a tag value remains constant. Tags with this attribute set cannot be changed programmatically.)
+ *    Defines whether a tag value remains constant. Tags with this attribute
+ *    set cannot be changed programmatically.)
  */
 const SymbolInstanceAttributeDataTypes = Object.freeze({
   [SymbolInstanceAttributeCodes.Name]: DataType.STRING,
-  [SymbolInstanceAttributeCodes.Type]: DataType.TRANSFORM(DataType.UINT, val => new SymbolType(val)),
+  [SymbolInstanceAttributeCodes.Type]: DataType.TRANSFORM(
+    DataType.UINT,
+    (val) => new SymbolType(val),
+  ),
   [SymbolInstanceAttributeCodes.Bytes]: DataType.UINT,
   [SymbolInstanceAttributeCodes.ArrayDimensionLengths]: DataType.ARRAY(DataType.UDINT, 0, 2),
   [SymbolInstanceAttributeCodes.Unknown3]: DataType.UNKNOWN(4),
@@ -97,7 +102,7 @@ const SymbolInstanceAttributeDataTypes = Object.freeze({
   [SymbolInstanceAttributeCodes.Unknown6]: DataType.UNKNOWN(4),
   [SymbolInstanceAttributeCodes.Unknown9]: DataType.UNKNOWN(1),
   [SymbolInstanceAttributeCodes.Unknown10]: DataType.UNKNOWN(1),
-  [SymbolInstanceAttributeCodes.Unknown11]: DataType.UNKNOWN(1)
+  [SymbolInstanceAttributeCodes.Unknown11]: DataType.UNKNOWN(1),
 });
 
 const TemplateServiceCodes = Object.freeze({
@@ -156,7 +161,7 @@ const GenericServiceStatusDescriptions = {
   0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
   0x10: {
     0x2101: 'Device state conflict: keyswitch position: The requestor is attempting to change force information in HARD RUN mode',
-    0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified'
+    0x2802: 'Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified',
   },
   0x0A: 'Attribute list error, generally attribute not supported. The status of the unsupported attribute will be 0x14.',
   0x13: 'Insufficient Request Data: Data too short for expected parameters',
@@ -165,7 +170,7 @@ const GenericServiceStatusDescriptions = {
   0xFF: {
     0x2104: 'General Error: Offset is beyond end of the requested object',
     0x2105: 'General Error: Number of Elements extends beyond the end of the requested object',
-    0x2107: 'General Error: Object type used in request does not match the target object\'s data type'
+    0x2107: 'General Error: Object type used in request does not match the target object\'s data type',
   },
 };
 

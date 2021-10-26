@@ -11,6 +11,10 @@ const {
 } = require('../../../../utils');
 
 function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
+  if (Array.isArray(dataType)) {
+    return dataType.map((dataTypeItem) => DecodeTypedData(buffer, offsetRef, dataTypeItem, ctx));
+  }
+
   let value;
 
   dataType = convertToObject(dataType);
