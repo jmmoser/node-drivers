@@ -170,10 +170,6 @@ class EIPPacket {
     return (length >= EIPPacket.Length(buffer, startingOffsetRef));
   }
 
-  // static NextMessage(buffer) {
-  //   return buffer.slice(0, EIPPacket.Length(buffer));
-  // }
-
   static Command(buffer, startingOffsetRef) {
     return buffer.readUInt16LE(startingOffsetRef.current + FLAG_COMMAND);
   }

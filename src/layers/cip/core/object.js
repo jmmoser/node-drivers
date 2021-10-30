@@ -221,12 +221,16 @@ function CIPMetaObject(classCode, options) {
       const attributeResults = [];
       for (let i = 0; i < GetAttributesAllInstanceAttributes.length; i++) {
         if (offsetRef.current < buffer.length) {
+          const attribute = GetAttributesAllInstanceAttributes[i];
           const value = this.DecodeInstanceAttribute(
             buffer,
             offsetRef,
-            GetAttributesAllInstanceAttributes[i],
+            attribute,
           );
-          attributeResults.push(value);
+          attributeResults.push({
+            value,
+            attribute,
+          });
         } else {
           break;
         }
