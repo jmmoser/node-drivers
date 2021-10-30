@@ -23,14 +23,15 @@ const CPF = require('./cpf');
   CPF 16: SERCOS
 */
 
-const HEADER_LENGTH = 24;
-const FLAG_COMMAND = 0;
-const FLAG_DATA_LENGTH = 2;
-const FLAG_SESSION_HANDLE = 4;
-const FLAG_STATUS = 8;
-const FLAG_SENDER_CONTEXT = 12;
-const FLAG_OPTIONS = 20;
-const FLAG_DATA = HEADER_LENGTH;
+const OFFSET_COMMAND = 0;
+const OFFSET_DATA_LENGTH = 2;
+const OFFSET_SESSION_HANDLE = 4;
+const OFFSET_STATUS = 8;
+const OFFSET_SENDER_CONTEXT = 12;
+const OFFSET_OPTIONS = 20;
+const OFFSET_DATA = 24;
+
+const HEADER_LENGTH = OFFSET_DATA;
 
 const Command = Object.freeze({
   NOP: 0x0000,
@@ -80,6 +81,9 @@ const EIPStatusCodeDescriptions = Object.freeze({
 //   255: 'Default for Get Attribute All service'
 // };
 
+/**
+ * EIPPacket is defraggable
+ */
 class EIPPacket {
   constructor() {
     this.command = 0;
@@ -153,59 +157,50 @@ class EIPPacket {
   static Encode(command, sessionHandle, status, senderContext, options, data = []) {
     const dataLength = Buffer.isBuffer(data) ? data.length : 0;
     const buffer = Buffer.alloc(HEADER_LENGTH + dataLength);
-    buffer.writeUInt16LE(command, FLAG_COMMAND);
-    buffer.writeUInt16LE(dataLength, FLAG_DATA_LENGTH);
-    buffer.writeUInt32LE(sessionHandle, FLAG_SESSION_HANDLE);
-    buffer.writeUInt32LE(status.code, FLAG_STATUS);
-    (senderContext || NullSenderContext).copy(buffer, FLAG_SENDER_CONTEXT, 0, 8);
-    buffer.writeUInt32LE(options, FLAG_OPTIONS);
+    buffer.writeUInt16LE(command, OFFSET_COMMAND);
+    buffer.writeUInt16LE(dataLength, OFFSET_DATA_LENGTH);
+    buffer.writeUInt32LE(sessionHandle, OFFSET_SESSION_HANDLE);
+    buffer.writeUInt32LE(status.code, OFFSET_STATUS);
+    (senderContext || NullSenderContext).copy(buffer, OFFSET_SENDER_CONTEXT, 0, 8);
+    buffer.writeUInt32LE(options, OFFSET_OPTIONS);
     if (dataLength > 0) {
-      data.copy(buffer, FLAG_DATA);
+      data.copy(buffer, OFFSET_DATA);
     }
     return buffer;
   }
 
-  static IsComplete(buffer, startingOffsetRef, length) {
-    if (length < 24) return false;
-    return (length >= EIPPacket.Length(buffer, startingOffsetRef));
-  }
-
   static Command(buffer, startingOffsetRef) {
-    return buffer.readUInt16LE(startingOffsetRef.current + FLAG_COMMAND);
+    return buffer.readUInt16LE(startingOffsetRef.current + OFFSET_COMMAND);
   }
 
   static DataLength(buffer, startingOffsetRef) {
-    return buffer.readUInt16LE(startingOffsetRef.current + FLAG_DATA_LENGTH);
+    return buffer.readUInt16LE(startingOffsetRef.current + OFFSET_DATA_LENGTH);
   }
 
   static SessionHandle(buffer, startingOffsetRef) {
-    return buffer.readUInt32LE(startingOffsetRef.current + FLAG_SESSION_HANDLE);
+    return buffer.readUInt32LE(startingOffsetRef.current + OFFSET_SESSION_HANDLE);
   }
 
   static Status(buffer, startingOffsetRef) {
-    return buffer.readUInt32LE(startingOffsetRef.current + FLAG_STATUS);
+    return buffer.readUInt32LE(startingOffsetRef.current + OFFSET_STATUS);
   }
 
   static SenderContext(buffer, startingOffsetRef) {
     return buffer.slice(
-      startingOffsetRef.current + FLAG_SENDER_CONTEXT,
-      startingOffsetRef.current + FLAG_SENDER_CONTEXT + 8,
+      startingOffsetRef.current + OFFSET_SENDER_CONTEXT,
+      startingOffsetRef.current + OFFSET_SENDER_CONTEXT + 8,
     );
   }
 
   static Options(buffer, startingOffsetRef) {
-    return buffer.readUInt32LE(startingOffsetRef.current + FLAG_OPTIONS);
+    return buffer.readUInt32LE(startingOffsetRef.current + OFFSET_OPTIONS);
   }
 
   static Data(buffer, startingOffsetRef) {
     return buffer.slice(
-      startingOffsetRef.current + FLAG_DATA,
-      startingOffsetRef.current + FLAG_DATA + EIPPacket.DataLength(buffer, startingOffsetRef),
+      startingOffsetRef.current + OFFSET_DATA,
+      startingOffsetRef.current + OFFSET_DATA + EIPPacket.DataLength(buffer, startingOffsetRef),
     );
-  }
-
-  static Length(buffer, startingOffsetRef) {
-    return HEADER_LENGTH + EIPPacket.DataLength(buffer, startingOffsetRef);
   }
 
   static UnregisterSessionRequest(sessionHandle, senderContext) {
@@ -235,6 +230,15 @@ class EIPPacket {
 
   static IndicateStatusRequest() {
     return EIPPacket.Encode(Command.IndicateStatus, 0, 0, NullSenderContext, 0);
+  }
+
+  static Length(buffer, startingOffsetRef) {
+    return HEADER_LENGTH + EIPPacket.DataLength(buffer, startingOffsetRef);
+  }
+
+  static IsComplete(buffer, startingOffsetRef, length) {
+    if (length < 24) return false;
+    return (length >= EIPPacket.Length(buffer, startingOffsetRef));
   }
 }
 
