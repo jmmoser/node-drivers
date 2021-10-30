@@ -6,8 +6,9 @@ const EIPPacket = require('./packet');
 
 const {
   CommandCodes,
-  CPFItemTypeIDs,
 } = EIPPacket;
+
+const CPF = require('./cpf');
 
 function SendDataPacket(interfaceHandle, timeout, data) {
   const buffer = Buffer.allocUnsafe(data.length + 6);
@@ -17,50 +18,19 @@ function SendDataPacket(interfaceHandle, timeout, data) {
   return buffer;
 }
 
-function CPFUCMMPacket(data) {
-  const buffer = Buffer.allocUnsafe(10 + data.length);
-  buffer.writeUInt16LE(2, 0); // One address item and one data item
-  buffer.writeUInt16LE(CPFItemTypeIDs.NullAddress, 2); // AddressTypeID 0 to indicate a UCMM message
-  buffer.writeUInt16LE(0, 4); // AddressLength = 0 since UCMM messages use the NULL address item
-  buffer.writeUInt16LE(CPFItemTypeIDs.UnconnectedMessage, 6);
-  buffer.writeUInt16LE(data.length, 8);
-  data.copy(buffer, 10);
-  return buffer;
-}
-
-function CPFConnectedPacket(connectionIdentifier, data) {
-  const buffer = Buffer.allocUnsafe(14 + data.length);
-  buffer.writeUInt16LE(2, 0);
-  buffer.writeUInt16LE(CPFItemTypeIDs.ConnectedAddress, 2);
-  buffer.writeUInt16LE(4, 4);
-  buffer.writeUInt32LE(connectionIdentifier, 6);
-  buffer.writeUInt16LE(CPFItemTypeIDs.ConnectedMessage, 10);
-  buffer.writeUInt16LE(data.length, 12);
-  data.copy(buffer, 14);
-  return buffer;
-}
-
-function SendRRDataRequest(sessionHandle, senderContext, data) {
+function EncodeSendRRDataMessage(sessionHandle, senderContext, data) {
   // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
-  return EIPPacket.toBuffer(
-    CommandCodes.SendRRData,
-    sessionHandle,
-    0,
-    senderContext,
-    0,
-    SendDataPacket(0, 0, CPFUCMMPacket(data)),
-  );
+  const cpfMessage = CPF.Packet.EncodeUCMM(data);
+  const dataPacket = SendDataPacket(0, 0, cpfMessage);
+  return EIPPacket.Encode(CommandCodes.SendRRData, sessionHandle, 0, senderContext, 0, dataPacket);
 }
 
-function SendUnitDataRequest(sessionHandle, interfaceHandle, timeout, connectionIdentifier, data) {
-  return EIPPacket.toBuffer(
-    CommandCodes.SendUnitData,
-    sessionHandle,
-    0,
-    null,
-    0,
-    SendDataPacket(interfaceHandle, timeout, CPFConnectedPacket(connectionIdentifier, data)),
-  );
+function EncodeSendUnitDataMessage(
+  sessionHandle, interfaceHandle, timeout, connectionIdentifier, data,
+) {
+  const cpfMessage = CPF.Packet.EncodeConnected(connectionIdentifier, data);
+  const dataPacket = SendDataPacket(interfaceHandle, timeout, cpfMessage);
+  return EIPPacket.Encode(CommandCodes.SendUnitData, sessionHandle, 0, null, 0, dataPacket);
 }
 
 function setConnectionState(layer, state) {
@@ -139,7 +109,7 @@ function setupCallbacks(self) {
     }
 
     const messageItem = packet.items.find(
-      (item) => item.type.code === CPFItemTypeIDs.UnconnectedMessage,
+      (item) => item.type.code === CPF.ItemTypeIDs.UnconnectedMessage,
     );
     if (messageItem) {
       self.forward(messageItem.data, info, context);
@@ -151,13 +121,11 @@ function setupCallbacks(self) {
   self._callbacks.set(CommandCodes.SendUnitData, (packet) => {
     if (packet.status.code === 0) {
       const addressItem = packet.items.find(
-        (item) => item.type.code === CPFItemTypeIDs.ConnectedAddress,
+        (item) => item.type.code === CPF.ItemTypeIDs.ConnectedAddress,
       );
       const messageItem = packet.items.find(
-        (item) => item.type.code === CPFItemTypeIDs.ConnectedMessage,
+        (item) => item.type.code === CPF.ItemTypeIDs.ConnectedMessage,
       );
-      // console.log(addressItem);
-      // console.log(self._connectedContexts);
 
       if (addressItem && messageItem) {
         const info = {
@@ -186,7 +154,7 @@ function incrementContext(self) {
 }
 
 function queueUserRequest(self, message, info, callback) {
-  const command = EIPPacket.CommandFromBuffer(message);
+  const command = EIPPacket.Command(message, { current: 0 });
 
   if (callback) {
     /* No callback for NOP */
@@ -410,7 +378,7 @@ class EIPLayer extends Layer {
           let fullMessage = null;
 
           if (info && info.connectionID != null) {
-            fullMessage = SendUnitDataRequest(
+            fullMessage = EncodeSendUnitDataMessage(
               this._sessionHandle,
               0,
               0,
@@ -423,7 +391,7 @@ class EIPLayer extends Layer {
             }
           } else {
             incrementContext(this);
-            fullMessage = SendRRDataRequest(this._sessionHandle, this._context, message);
+            fullMessage = EncodeSendRRDataMessage(this._sessionHandle, this._context, message);
 
             if (request.context != null) {
               this._unconnectedContexts.set(this._context.toString('hex'), request.context);
@@ -440,7 +408,7 @@ class EIPLayer extends Layer {
 
   handleData(data /* , info, context */) {
     // console.log(data);
-    const packet = EIPPacket.fromBuffer(data);
+    const packet = EIPPacket.fromBuffer(data, { current: 0 });
     const { command } = packet;
 
     if (this._userCallbacks.has(command)) {
@@ -465,9 +433,7 @@ class EIPLayer extends Layer {
 
   handleDestroy(error) {
     this._userCallbacks.forEach((callbacks) => {
-      callbacks.forEach((cb) => {
-        cb(error);
-      });
+      callbacks.forEach((cb) => cb(error));
     });
     cleanup(this);
   }

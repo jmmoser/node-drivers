@@ -223,19 +223,19 @@ function encodeTo(buffer, offset, padded, type, format, value) {
   return offset;
 }
 
-function DecodeElectronicKey(buffer, offset, cb) {
+function DecodeElectronicKey(buffer, offsetRef) {
   /** STARTS AT THE KEY FORMAT */
-  const keyFormat = buffer.readUInt8(offset); offset += 1;
+  const keyFormat = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   if (keyFormat !== ElectronicKeyFormatCodes.Normal) {
     throw new Error(`Electronic Key Format of ${keyFormat} is reserved`);
   }
 
   const value = {};
   value.format = keyFormat;
-  value.vendorID = buffer.readUInt16LE(offset); offset += 2;
-  value.deviceType = buffer.readUInt16LE(offset); offset += 2;
-  value.productCode = buffer.readUInt16LE(offset); offset += 2;
-  const majorRevisionByte = buffer.readUInt8(offset); offset += 1;
+  value.vendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  value.deviceType = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  value.productCode = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const majorRevisionByte = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
   /**
    * Compatibility bit:
@@ -246,13 +246,9 @@ function DecodeElectronicKey(buffer, offset, cb) {
   value.compatibility = getBits(majorRevisionByte, 7, 8);
   value.revision = {};
   value.revision.major = getBits(majorRevisionByte, 0, 7);
-  value.revision.minor = buffer.readUInt8(offset); offset += 1;
+  value.revision.minor = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
-  if (typeof cb === 'function') {
-    cb(value);
-  }
-
-  return offset;
+  return value;
 }
 
 class LogicalSegment {
@@ -299,7 +295,7 @@ class LogicalSegment {
     return encodeTo(buffer, offset, padded, this.type.code, this.format.code, this.value);
   }
 
-  static Decode(segmentCode, buffer, offset, padded, cb) {
+  static Decode(buffer, offsetRef, segmentCode, padded) {
     const type = getBits(segmentCode, 2, 5);
     const format = getBits(segmentCode, 0, 2);
 
@@ -309,7 +305,7 @@ class LogicalSegment {
         throw new Error(`Special Logical Type with format ${format} is reserved for future use`);
       }
       /** Electronic Key Segment, no pad byte */
-      offset = DecodeElectronicKey(buffer, offset, (val) => { value = val; });
+      value = DecodeElectronicKey(buffer, offsetRef);
     } else {
       const valueSize = LogicalFormatSizes[format];
       if (valueSize == null) {
@@ -319,21 +315,35 @@ class LogicalSegment {
       if (valueSize > 1 && padded) {
         // offset += 1; /** Pad byte */
         /** make sure pad byte is 0 */
-        const padByte = buffer.readUInt8(offset); offset += 1;
+        const padByte = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
         if (padByte !== 0) {
           throw new Error(`Padded EPath Logical Segment pad byte is not zero. Received: ${padByte}`);
         }
       }
 
-      value = decodeUnsignedInteger(buffer, offset, valueSize);
-      offset += valueSize;
+      value = decodeUnsignedInteger(buffer, offsetRef.current, valueSize);
+      offsetRef.current += valueSize;
     }
 
-    if (typeof cb === 'function') {
-      cb(new LogicalSegment(type, format, value));
+    switch (type) {
+      case TypeCodes.ClassID:
+        return new LogicalSegment.ClassID(value, format);
+      case TypeCodes.InstanceID:
+        return new LogicalSegment.InstanceID(value, format);
+      case TypeCodes.AttributeID:
+        return new LogicalSegment.AttributeID(value, format);
+      case TypeCodes.MemberID:
+        return new LogicalSegment.MemberID(value, format);
+      case TypeCodes.ServiceID:
+        return new LogicalSegment.ServiceID(value, format);
+      case TypeCodes.Special:
+        return new LogicalSegment.Special(value, format);
+      case TypeCodes.ConnectionPoint:
+        return new LogicalSegment.ConnectionPoint(value, format);
+      default:
+        throw new Error(`Invalid logical segment type: ${type}`);
     }
-
-    return offset;
+    // return new LogicalSegment(type, format, value);
   }
 
   /** Helper function for the only kind of Special Logical Segment */

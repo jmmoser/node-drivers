@@ -213,34 +213,36 @@ class SymbolicSegment {
     return offset;
   }
 
-  static Decode(segmentCode, buffer, offset, padded, cb) {
+  static Decode(buffer, offsetRef, segmentCode /* , padded */) {
     let value;
     let extendedFormat;
     let extendedSize;
     const size = getBits(segmentCode, 0, 5);
 
     if (size === 0) {
-      const extendedFormatCode = buffer.readUInt8(offset); offset += 1;
+      const extendedFormatCode = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
       extendedFormat = getBits(extendedFormatCode, 5, 8);
       extendedSize = getBits(extendedFormatCode, 0, 5);
 
       switch (extendedFormat) {
         case ExtendedStringFormatCodes.DoubleByteCharacters:
-          value = buffer.slice(offset, offset + 2 * extendedSize); offset += 2 * extendedSize;
+          value = buffer.slice(offsetRef.current, offsetRef.current + 2 * extendedSize);
+          offsetRef.current += 2 * extendedSize;
           break;
         case ExtendedStringFormatCodes.TripleByteCharacters:
-          value = buffer.slice(offset, offset + 3 * extendedSize); offset += 3 * extendedSize;
+          value = buffer.slice(offsetRef.current, offsetRef.current + 3 * extendedSize);
+          offsetRef.current += 3 * extendedSize;
           break;
         case ExtendedStringFormatCodes.Numeric: {
           switch (extendedSize) {
             case ExtendedStringNumericTypeCodes.USINT:
-              value = buffer.readUInt8(offset); offset += 1;
+              value = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
               break;
             case ExtendedStringNumericTypeCodes.UINT:
-              value = buffer.readUInt16LE(offset); offset += 2;
+              value = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
               break;
             case ExtendedStringNumericTypeCodes.UDINT:
-              value = buffer.readUInt32LE(offset); offset += 4;
+              value = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
               break;
             default:
               throw new Error(`Symbol segment numeric format reserved: ${extendedSize}`);
@@ -251,26 +253,20 @@ class SymbolicSegment {
           throw new Error(`Symbol segment unknown extended string format: ${extendedFormat}`);
       }
     } else {
-      value = buffer.toString('ascii', offset, offset + size); offset += size;
+      value = buffer.toString('ascii', offsetRef.current, offsetRef.current + size);
+      offsetRef.current += size;
     }
 
-    if (typeof cb === 'function') {
-      switch (extendedFormat) {
-        case ExtendedStringFormatCodes.DoubleByteCharacters:
-          cb(new SymbolicSegment.Double(value));
-          break;
-        case ExtendedStringFormatCodes.TripleByteCharacters:
-          cb(new SymbolicSegment.Triple(value, extendedSize));
-          break;
-        case ExtendedStringFormatCodes.Numeric:
-          cb(new SymbolicSegment.Numeric(value, extendedSize));
-          break;
-        default:
-          cb(new SymbolicSegment.Single(value, extendedSize));
-      }
+    switch (extendedFormat) {
+      case ExtendedStringFormatCodes.DoubleByteCharacters:
+        return new SymbolicSegment.Double(value);
+      case ExtendedStringFormatCodes.TripleByteCharacters:
+        return new SymbolicSegment.Triple(value, extendedSize);
+      case ExtendedStringFormatCodes.Numeric:
+        return new SymbolicSegment.Numeric(value, extendedSize);
+      default:
+        return new SymbolicSegment.Single(value, extendedSize);
     }
-
-    return offset;
   }
 }
 

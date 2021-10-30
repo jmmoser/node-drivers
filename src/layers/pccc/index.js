@@ -238,7 +238,7 @@ class PCCCLayer extends Layer {
   }
 
   handleData(data, info, context) {
-    const packet = PCCCPacket.fromBufferReply(data);
+    const packet = PCCCPacket.fromBufferReply(data, { current: 0 });
 
     const savedContext = this.getContextForID(packet.transaction);
     if (!savedContext) {

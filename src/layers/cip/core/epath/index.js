@@ -71,9 +71,9 @@ class EPath {
     return segments;
   }
 
-  static Decode(buffer, offset, length, padded, cb) {
+  static Decode(buffer, offsetRef, length, padded) {
     if (length === true) {
-      length = buffer.length - offset; // eslint-disable-line no-param-reassign
+      length = buffer.length - offsetRef.current; // eslint-disable-line no-param-reassign
     }
 
     const lengthIsUnknown = length == null;
@@ -82,46 +82,44 @@ class EPath {
       length = 1; // eslint-disable-line no-param-reassign
     }
 
-    const startingOffset = offset;
+    const startingOffset = offsetRef.current;
     const segments = [];
-    while (offset - startingOffset < length) {
-      const code = buffer.readUInt8(offset); offset += 1;
+    while (offsetRef.current - startingOffset < length) {
+      const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
       const segmentType = getBits(code, 5, 8);
+      let segment;
 
       switch (segmentType) {
         case 0:
-          offset = Segments.Port.Decode(code, buffer, offset, padded, (v) => segments.push(v));
+          segment = Segments.Port.Decode(buffer, offsetRef, code, padded);
           break;
         case 1:
-          offset = Segments.Logical.Decode(code, buffer, offset, padded, (v) => segments.push(v));
+          segment = Segments.Logical.Decode(buffer, offsetRef, code, padded);
           break;
         case 2:
-          offset = Segments.Network.Decode(code, buffer, offset, padded, (v) => segments.push(v));
+          segment = Segments.Network.Decode(buffer, offsetRef, code, padded);
           break;
         case 3:
-          offset = Segments.Symbolic.Decode(code, buffer, offset, padded, (v) => segments.push(v));
+          segment = Segments.Symbolic.Decode(buffer, offsetRef, code, padded);
           break;
         case 4:
-          offset = Segments.Data.Decode(code, buffer, offset, padded, (v) => segments.push(v));
+          segment = Segments.Data.Decode(buffer, offsetRef, code, padded);
           break;
         case 5:
         case 6:
-          offset = Segments.DataType.Decode(code, buffer, offset, padded, (v) => segments.push(v));
+          segment = Segments.DataType.Decode(buffer, offsetRef, code, padded);
           break;
         default:
           throw new Error(`Unexpected segment: ${segmentType}`);
       }
+      segments.push(segment);
     }
 
-    if (typeof cb === 'function') {
-      if (lengthIsUnknown && segments.length === 1) {
-        cb(segments[0]);
-      } else {
-        cb(segments);
-      }
+    if (lengthIsUnknown && segments.length === 1) {
+      return segments[0];
     }
 
-    return offset;
+    return segments;
   }
 
   static EncodeSize(padded, segments) {

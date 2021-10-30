@@ -3,8 +3,9 @@
 const {
   DataType,
   Encode,
-  Decode,
 } = require('../../src/layers/cip/core/datatypes');
+
+const { DecodeTypedData } = require('../../src/layers/cip/core/datatypes/decoding');
 
 const EPath = require('../../src/layers/cip/core/epath');
 
@@ -138,173 +139,191 @@ describe('Encoding', () => {
 
 describe('Decoding', () => {
   test('SINT positive', () => {
-    expect(Decode(DataType.SINT, Buffer.from([0x01]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(1);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0x01]), offsetRef, DataType.SINT)).toBe(1);
+    expect(offsetRef.current).toBe(1);
   });
   test('SINT negative', () => {
-    expect(Decode(DataType.SINT, Buffer.from([0xFF]), 0, (val) => {
-      expect(val).toBe(-1);
-    })).toBe(1);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0xFF]), offsetRef, DataType.SINT)).toBe(-1);
+    expect(offsetRef.current).toBe(1);
   });
   test('USINT', () => {
-    expect(Decode(DataType.USINT, Buffer.from([0x01]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(1);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0x01]), offsetRef, DataType.USINT)).toBe(1);
+    expect(offsetRef.current).toBe(1);
   });
   test('BYTE', () => {
-    expect(Decode(DataType.BYTE, Buffer.from([0x01]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(1);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0x01]), offsetRef, DataType.BYTE)).toBe(1);
+    expect(offsetRef.current).toBe(1);
   });
   test('INT positive', () => {
-    expect(Decode(DataType.INT, Buffer.from([0x01, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0x01, 0x00]), offsetRef, DataType.INT)).toBe(1);
+    expect(offsetRef.current).toBe(2);
   });
   test('INT negative', () => {
-    expect(Decode(DataType.INT, Buffer.from([0xFF, 0xFF]), 0, (val) => {
-      expect(val).toBe(-1);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0xFF, 0xFF]), offsetRef, DataType.INT)).toBe(-1);
+    expect(offsetRef.current).toBe(2);
   });
   test('ITIME positive', () => {
-    expect(Decode(DataType.ITIME, Buffer.from([0x01, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0x01, 0x00]), offsetRef, DataType.ITIME)).toBe(1);
+    expect(offsetRef.current).toBe(2);
   });
   test('ITIME negative', () => {
-    expect(Decode(DataType.ITIME, Buffer.from([0xFF, 0xFF]), 0, (val) => {
-      expect(val).toBe(-1);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0xFF, 0xFF]), offsetRef, DataType.ITIME)).toBe(-1);
+    expect(offsetRef.current).toBe(2);
   });
   test('UINT', () => {
-    expect(Decode(DataType.UINT, Buffer.from([0x01, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0x01, 0x00]), offsetRef, DataType.UINT)).toBe(1);
+    expect(offsetRef.current).toBe(2);
   });
   test('WORD', () => {
-    expect(Decode(DataType.WORD, Buffer.from([0x01, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    expect(DecodeTypedData(Buffer.from([0x01, 0x00]), offsetRef, DataType.WORD)).toBe(1);
+    expect(offsetRef.current).toBe(2);
   });
   test('DINT positive', () => {
-    expect(Decode(DataType.DINT, Buffer.from([0x01, 0x00, 0x00, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x00, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.DINT)).toBe(1);
+    expect(offsetRef.current).toBe(4);
   });
   test('DINT negative', () => {
-    expect(Decode(DataType.DINT, Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]), 0, (val) => {
-      expect(val).toBe(-1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.DINT)).toBe(-1);
+    expect(offsetRef.current).toBe(4);
   });
   test('TIME positive', () => {
-    expect(Decode(DataType.TIME, Buffer.from([0x01, 0x00, 0x00, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x00, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.TIME)).toBe(1);
+    expect(offsetRef.current).toBe(4);
   });
   test('TIME negative', () => {
-    expect(Decode(DataType.TIME, Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]), 0, (val) => {
-      expect(val).toBe(-1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.TIME)).toBe(-1);
+    expect(offsetRef.current).toBe(4);
   });
   test('FTIME positive', () => {
-    expect(Decode(DataType.FTIME, Buffer.from([0x01, 0x00, 0x00, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x00, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.FTIME)).toBe(1);
+    expect(offsetRef.current).toBe(4);
   });
   test('FTIME negative', () => {
-    expect(Decode(DataType.FTIME, Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]), 0, (val) => {
-      expect(val).toBe(-1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.FTIME)).toBe(-1);
+    expect(offsetRef.current).toBe(4);
   });
   test('UDINT', () => {
-    expect(Decode(DataType.UDINT, Buffer.from([0x01, 0x00, 0x00, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x00, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.UDINT)).toBe(1);
+    expect(offsetRef.current).toBe(4);
   });
   test('DWORD', () => {
-    expect(Decode(DataType.DWORD, Buffer.from([0x01, 0x00, 0x00, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x00, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.DWORD)).toBe(1);
+    expect(offsetRef.current).toBe(4);
   });
   test('DATE', () => {
-    expect(Decode(DataType.DATE, Buffer.from([0x01, 0x00, 0x00, 0x00]), 0, (val) => {
-      expect(val).toBe(1);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x00, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.DATE)).toBe(1);
+    expect(offsetRef.current).toBe(4);
   });
   test('REAL', () => {
-    expect(Decode(DataType.REAL, Buffer.from([0x00, 0x00, 0xB0, 0x40]), 0, (val) => {
-      expect(val).toBeCloseTo(5.5);
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x00, 0x00, 0xB0, 0x40]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.REAL)).toBeCloseTo(5.5);
+    expect(offsetRef.current).toBe(4);
   });
   test('LINT positive', () => {
-    expect(Decode(DataType.LINT, Buffer.from([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), 0, (val) => {
-      expect(val).toBe(BigInt(1));
-    })).toBe(8);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.LINT)).toBe(BigInt(1));
+    expect(offsetRef.current).toBe(8);
   });
   test('LINT negative', () => {
-    expect(Decode(DataType.LINT, Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 0, (val) => {
-      expect(val).toBe(BigInt(-1));
-    })).toBe(8);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.LINT)).toBe(BigInt(-1));
+    expect(offsetRef.current).toBe(8);
   });
   test('LTIME positive', () => {
-    expect(Decode(DataType.LTIME, Buffer.from([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]), 0, (val) => {
-      expect(val).toBe(BigInt(1));
-    })).toBe(8);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.LTIME)).toBe(BigInt(1));
+    expect(offsetRef.current).toBe(8);
   });
   test('LTIME negative', () => {
-    expect(Decode(DataType.LTIME, Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]), 0, (val) => {
-      expect(val).toBe(BigInt(-1));
-    })).toBe(8);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.LTIME)).toBe(BigInt(-1));
+    expect(offsetRef.current).toBe(8);
   });
   test('LREAL', () => {
-    expect(Decode(DataType.LREAL, Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x40]), 0, (val) => {
-      expect(val).toBeCloseTo(5.5);
-    })).toBe(8);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0x40]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.LREAL)).toBeCloseTo(5.5);
+    expect(offsetRef.current).toBe(8);
   });
   test('STRING', () => {
-    expect(Decode(DataType.STRING, Buffer.from([0x03, 0x00, 0x61, 0x62, 0x63]), 0, (val) => {
-      expect(val).toBe('abc');
-    })).toBe(5);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x03, 0x00, 0x61, 0x62, 0x63]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.STRING)).toBe('abc');
+    expect(offsetRef.current).toBe(5);
   });
   test('SHORT_STRING', () => {
-    expect(Decode(DataType.SHORT_STRING, Buffer.from([0x03, 0x61, 0x62, 0x63]), 0, (val) => {
-      expect(val).toBe('abc');
-    })).toBe(4);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x03, 0x61, 0x62, 0x63]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.SHORT_STRING)).toBe('abc');
+    expect(offsetRef.current).toBe(4);
   });
   test('STRING2 ascii only', () => {
-    expect(Decode(DataType.STRING2, Buffer.from([0x03, 0x00, 0x61, 0x00, 0x62, 0x00, 0x63, 0x00]), 0, (val) => {
-      expect(val).toBe('abc');
-    })).toBe(8);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x03, 0x00, 0x61, 0x00, 0x62, 0x00, 0x63, 0x00]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.STRING2)).toBe('abc');
+    expect(offsetRef.current).toBe(8);
   });
   test('STRINGI', () => {
-    const buffer = Buffer.from(
-      [0x01, 0x65, 0x6e, 0x67, 0xDA, 0x01, 0x00, 0x03, 0x61, 0x62, 0x63]
-    );
-    expect(
-      Decode(DataType.STRINGI, buffer, 0, (val) => {
-        expect(val).toEqual([
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x65, 0x6e, 0x67, 0xDA, 0x01, 0x00, 0x03, 0x61, 0x62, 0x63]);
+    expect(DecodeTypedData(buffer, offsetRef, DataType.STRINGI)).toStrictEqual([
+      1,
+      [
+        [
+          'eng',
+          new EPath.Segments.DataType(DataType.SHORT_STRING),
           1,
-          [
-            [
-              'eng',
-              new EPath.Segments.DataType(DataType.SHORT_STRING),
-              1,
-              'abc',
-            ],
-          ],
-        ]);
-      }),
-    ).toBe(buffer.length);
+          'abc',
+        ],
+      ],
+    ]);
+    expect(offsetRef.current).toBe(buffer.length);
   });
   test('ARRAY USINT[]', () => {
-    expect(Decode(DataType.ARRAY(DataType.USINT, 0, 1), Buffer.from([0x01, 0x02]), 0, (val) => {
-      expect(val).toEqual([1, 2]);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x02]);
+    const dataType = DataType.ARRAY(DataType.USINT, 0, 1);
+    expect(DecodeTypedData(buffer, offsetRef, dataType)).toStrictEqual([1, 2]);
+    expect(offsetRef.current).toBe(2);
   });
 
   test('TRANSFORM', () => {
-    const dt = DataType.TRANSFORM(
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00]);
+    const dataType = DataType.TRANSFORM(
       DataType.STRUCT([DataType.USINT, DataType.USINT]),
       (val) => ({
         major: val[0],
@@ -312,13 +331,12 @@ describe('Decoding', () => {
       }),
       (val) => [val.major, val.minor],
     );
-
-    expect(Decode(dt, Buffer.from([0x01, 0x00]), 0, (val) => {
-      expect(val).toEqual({ major: 1, minor: 0 });
-    })).toBe(2);
+    expect(DecodeTypedData(buffer, offsetRef, dataType)).toStrictEqual({
+      major: 1, minor: 0,
+    });
+    expect(offsetRef.current).toBe(2);
   });
 });
-
 
 describe('Encoding EPATH', () => {
   test('Padded EPATH(Port)', () => {
@@ -335,40 +353,54 @@ describe('Encoding EPATH', () => {
   });
 });
 
-
 describe('Decoding EPATH', () => {
   test('Padded EPATH(Port) Unknown Length', () => {
-    expect(Decode(DataType.EPATH(true), Buffer.from([0x01, 0x00]), 0, (val) => {
-      expect(val).toEqual(new EPath.Segments.Port(1, Buffer.from([0x00])));
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00]);
+    const dataType = DataType.EPATH(true);
+    const output = new EPath.Segments.Port(1, Buffer.from([0x00]));
+    expect(DecodeTypedData(buffer, offsetRef, dataType)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(2);
   });
   test('Padded EPATH(Port) Known Length', () => {
-    expect(Decode(DataType.EPATH(true, 2), Buffer.from([0x01, 0x00]), 0, (val) => {
-      expect(val).toEqual([new EPath.Segments.Port(1, Buffer.from([0x00]))]);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00]);
+    const dataType = DataType.EPATH(true, 2);
+    const output = [new EPath.Segments.Port(1, Buffer.from([0x00]))];
+    expect(DecodeTypedData(buffer, offsetRef, dataType)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(2);
   });
   test('Padded EPATH(Port) Full Length', () => {
-    expect(Decode(DataType.EPATH(true, true), Buffer.from([0x01, 0x00]), 0, (val) => {
-      expect(val).toEqual([new EPath.Segments.Port(1, Buffer.from([0x00]))]);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00]);
+    const dataType = DataType.EPATH(true, true);
+    const output = [new EPath.Segments.Port(1, Buffer.from([0x00]))];
+    expect(DecodeTypedData(buffer, offsetRef, dataType)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(2);
   });
   test('Padded EPATH(Port, Logical, Logical) Known Length', () => {
-    expect(Decode(DataType.EPATH(true, 6), Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01]), 0, (val) => {
-      expect(val).toEqual([
-        new EPath.Segments.Port(1, Buffer.from([0x00])),
-        new EPath.Segments.Logical.ClassID(2),
-        new EPath.Segments.Logical.InstanceID(1),
-      ]);
-    })).toBe(6);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01]);
+    const dataType = DataType.EPATH(true, 6);
+    const output = [
+      new EPath.Segments.Port(1, Buffer.from([0x00])),
+      new EPath.Segments.Logical.ClassID(2),
+      new EPath.Segments.Logical.InstanceID(1),
+    ];
+    expect(DecodeTypedData(buffer, offsetRef, dataType)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(6);
   });
   test('Padded EPATH(Port, Logical, Logical) Full Length', () => {
-    expect(Decode(DataType.EPATH(true, true), Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01]), 0, (val) => {
-      expect(val).toEqual([
-        new EPath.Segments.Port(1, Buffer.from([0x00])),
-        new EPath.Segments.Logical.ClassID(2),
-        new EPath.Segments.Logical.InstanceID(1),
-      ]);
-    })).toBe(6);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x01, 0x00, 0x20, 0x02, 0x24, 0x01]);
+    const dataType = DataType.EPATH(true, true);
+    const output = [
+      new EPath.Segments.Port(1, Buffer.from([0x00])),
+      new EPath.Segments.Logical.ClassID(2),
+      new EPath.Segments.Logical.InstanceID(1),
+    ];
+    expect(DecodeTypedData(buffer, offsetRef, dataType)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(6);
   });
 });
 

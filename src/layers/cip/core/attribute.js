@@ -26,9 +26,7 @@ class CIPAttribute extends CIPFeature {
         new LogicalSegment.AttributeID(this.code),
       ]),
       null,
-      (buffer, offset, cb) => {
-        cb(DecodeTypedData(buffer, { current: offset }, this.dataType));
-      },
+      (buffer, offsetRef) => DecodeTypedData(buffer, offsetRef, this.dataType),
     );
   }
 }

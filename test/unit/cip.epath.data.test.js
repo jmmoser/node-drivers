@@ -22,14 +22,17 @@ describe('Simple Data Segment', () => {
   });
 
   test('Decode', () => {
+    const offsetRef = { current: 0 };
     const buffer = Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02, 0x00]);
-    expect(EPath.Decode(buffer, 0, true, false, (segments) => {
-      expect(segments).toEqual([new Data.Simple(Buffer.from([0x01, 0x00, 0x02, 0x00]))]);
-    })).toBe(6);
+    const output = [new Data.Simple(Buffer.from([0x01, 0x00, 0x02, 0x00]))];
+    expect(EPath.Decode(buffer, offsetRef, true, false)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(6);
   });
   test('Invalid Decode', () => {
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02]);
     expect(
-      () => EPath.Decode(Buffer.from([0x80, 0x02, 0x01, 0x00, 0x02]), 0, true, false, () => {}),
+      () => EPath.Decode(buffer, offsetRef, true, false, () => {}),
     ).toThrow();
   });
 });
@@ -50,30 +53,35 @@ describe('ANSI Extended Symbol Data Segment', () => {
   });
 
   test('Decode', () => {
+    const offsetRef = { current: 0 };
     const buffer = Buffer.from([0x91, 0x06, 0x73, 0x74, 0x61, 0x72, 0x74, 0x31]);
-    expect(EPath.Decode(buffer, 0, true, false, (segments) => {
-      expect(segments).toEqual([new Data.ANSIExtendedSymbol('start1')]);
-    })).toBe(8);
+    const output = [new Data.ANSIExtendedSymbol('start1')];
+    expect(EPath.Decode(buffer, offsetRef, true, false)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(8);
   });
   test('Decode With Pad Byte', () => {
+    const offsetRef = { current: 0 };
     const buffer = Buffer.from([0x91, 0x05, 0x73, 0x74, 0x61, 0x72, 0x74, 0x00]);
-    expect(EPath.Decode(buffer, 0, true, false, (segments) => {
-      expect(segments).toEqual([new Data.ANSIExtendedSymbol('start')]);
-    })).toBe(8);
+    const output = [new Data.ANSIExtendedSymbol('start')];
+    expect(EPath.Decode(buffer, offsetRef, true, false)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(8);
   });
   test('Invalid Decode', () => {
     /** Pad byte must be 0x00 */
+    const offsetRef = { current: 0 };
     expect(
       () => EPath.Decode(Buffer.from([
         0x91, 0x05, 0x73, 0x74,
         0x61, 0x72, 0x74, 0x01,
-      ]), 0, true, false, () => {}),
+      ]), offsetRef, true, false, () => {}),
     ).toThrow();
     /** Invalid length */
+
+    offsetRef.current = 0;
     expect(
       () => EPath.Decode(Buffer.from([
         0x91, 0x06, 0x73, 0x74, 0x61, 0x72, 0x74,
-      ]), 0, true, false, () => { }),
+      ]), offsetRef, true, false, () => { }),
     ).toThrow();
   });
 });
@@ -81,10 +89,12 @@ describe('ANSI Extended Symbol Data Segment', () => {
 describe('Data Segment', () => {
   test('Invalid Subtype', () => {
     expect(() => new Data(-1, 1)).toThrow();
+
+    const offsetRef = { current: 0 };
     expect(
       () => EPath.Decode(Buffer.from([
         0x81, 0x02, 0x01, 0x00, 0x02, 0x00,
-      ]), 0, true, false, () => { }),
+      ]), offsetRef, true, false, () => { }),
     ).toThrow();
   });
 });

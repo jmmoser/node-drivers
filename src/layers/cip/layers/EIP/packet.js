@@ -1,7 +1,6 @@
 'use strict';
 
-const CIPIdentity = require('../../core/objects/Identity');
-const { getBits, InvertKeyValues } = require('../../../../utils');
+const CPF = require('./cpf');
 
 /*
   Communication Profile Families
@@ -23,6 +22,15 @@ const { getBits, InvertKeyValues } = require('../../../../utils');
   CPF 15: Modbus-RTPS (Modbus-RTPS, Modbus TCP)
   CPF 16: SERCOS
 */
+
+const HEADER_LENGTH = 24;
+const FLAG_COMMAND = 0;
+const FLAG_DATA_LENGTH = 2;
+const FLAG_SESSION_HANDLE = 4;
+const FLAG_STATUS = 8;
+const FLAG_SENDER_CONTEXT = 12;
+const FLAG_OPTIONS = 20;
+const FLAG_DATA = HEADER_LENGTH;
 
 const Command = Object.freeze({
   NOP: 0x0000,
@@ -49,12 +57,6 @@ const CPFItemTypeIDs = Object.freeze({
   SequencedAddress: 0x8002, // address (with sequence)
 });
 
-const CPFItemTypeIDNames = InvertKeyValues(CPFItemTypeIDs);
-
-const SocketFamilyNames = Object.freeze({
-  2: 'AF_INET',
-});
-
 const NullSenderContext = Buffer.alloc(8);
 
 const EIPStatusCodeDescriptions = Object.freeze({
@@ -78,143 +80,6 @@ const EIPStatusCodeDescriptions = Object.freeze({
 //   255: 'Default for Get Attribute All service'
 // };
 
-function toBuffer(command, handle, status, context, options = 0, data) {
-  const length = Buffer.isBuffer(data) ? data.length : 0;
-  const buffer = Buffer.alloc(24 + length);
-  buffer.writeUInt16LE(command, 0);
-  buffer.writeUInt16LE(length, 2);
-  buffer.writeUInt32LE(handle, 4);
-  buffer.writeUInt32LE(status, 8);
-  (context || NullSenderContext).copy(buffer, 12, 0, 8);
-  buffer.writeUInt32LE(options, 20);
-  if (length > 0) {
-    data.copy(buffer, 24);
-  }
-  return buffer;
-}
-
-function DecodeCPFItems(buffer, offset, cb) {
-  const items = [];
-  const itemCount = buffer.readUInt16LE(offset); offset += 2;
-
-  for (let i = 0; i < itemCount; i++) {
-    const item = {};
-    const type = buffer.readUInt16LE(offset); offset += 2;
-    item.type = {
-      code: type,
-      name: CPFItemTypeIDNames[type] || 'Reserved',
-    };
-    const length = buffer.readUInt16LE(offset); offset += 2;
-    const data = buffer.slice(offset, offset + length); offset += length;
-    item.data = data;
-
-    const lastOffset = offset;
-    offset = 0;
-
-    switch (type) {
-      case CPFItemTypeIDs.NullAddress:
-        if (length !== 0) {
-          console.log(buffer);
-          throw new Error('EIP CPF Null Address type item received with non-zero data length');
-        }
-        break;
-      case CPFItemTypeIDs.ConnectedAddress: {
-        if (length === 4) {
-          // item.data = data.readUInt32LE(offset); offset += 4;
-          item.address = data.readUInt32LE(offset); offset += 4;
-        } else {
-          throw new Error(`EIP Connected Address CPF item expected length 4, received: ${length}`, item);
-        }
-        break;
-      }
-      case CPFItemTypeIDs.ListIdentity: {
-        const value = {};
-
-        value.encapsulationProtocolVersion = data.readUInt16LE(offset); offset += 2;
-
-        const socket = {};
-        const familyCode = data.readInt16BE(offset); offset += 2;
-        socket.family = {
-          code: familyCode,
-          name: SocketFamilyNames[familyCode] || 'Unknown',
-        };
-        socket.port = data.readUInt16BE(offset); offset += 2;
-
-        socket.address = [
-          data.readUInt8(offset + 0).toString(),
-          data.readUInt8(offset + 1).toString(),
-          data.readUInt8(offset + 2).toString(),
-          data.readUInt8(offset + 3).toString(),
-        ].join('.'); offset += 4;
-
-        socket.zero = data.slice(offset, offset + 8); offset += 8;
-        value.socket = socket;
-
-        offset = CIPIdentity.DecodeInstanceAttributesAll(
-          data,
-          offset,
-          (val) => { value.attributes = val; },
-        );
-
-        offset = CIPIdentity.DecodeInstanceAttribute(
-          data,
-          offset,
-          CIPIdentity.InstanceAttribute.State,
-          (val) => value.attributes.push(val),
-        );
-
-        item.value = value;
-        break;
-      }
-      case CPFItemTypeIDs.ListServices: {
-        const value = {};
-        value.version = data.readUInt16LE(offset); offset += 2;
-        value.flags = {};
-        const flags = data.readUInt16LE(offset); offset += 2;
-        value.flags.code = flags;
-        value.flags.supportsCIPPacketEncapsulationViaTCP = !!getBits(flags, 5, 6);
-        value.flags.supportsCIPClass0or1UDPBasedConnections = !!getBits(flags, 8, 9);
-
-        let nameLength;
-        for (nameLength = 0; nameLength <= 16; nameLength++) {
-          if (data[offset + nameLength] === 0) {
-            break;
-          }
-        }
-        value.name = data.toString('ascii', offset, offset + nameLength); offset += 16;
-
-        item.value = value;
-        break;
-      }
-      case CPFItemTypeIDs.SequencedAddress: {
-        if (length === 8) {
-          const connectionID = data.readUInt32LE(0);
-          const sequenceNumber = data.readUInt32LE(4);
-          item.address = {
-            connectionID,
-            sequenceNumber,
-          };
-        } else {
-          throw new Error(`EIP Sequenced Address CPF item expected length 8, received: ${length}`, item);
-        }
-        break;
-      }
-      default:
-        break;
-    }
-
-    offset = lastOffset;
-
-    items.push(item);
-  }
-
-  if (typeof cb === 'function') {
-    cb(items);
-  }
-
-  return offset;
-}
-
 class EIPPacket {
   constructor() {
     this.command = 0;
@@ -230,29 +95,27 @@ class EIPPacket {
   }
 
   toBuffer() {
-    const dataLength = Buffer.isBuffer(this.data) ? this.data.length : 0;
-    const buffer = Buffer.allocUnsafe(24 + dataLength);
-    buffer.writeUInt16LE(this.command, 0);
-    buffer.writeUInt16LE(dataLength, 2);
-    buffer.writeUInt32LE(this.sessionHandle, 4);
-    buffer.writeUInt32LE(this.status.code, 8);
-    this.senderContext.copy(buffer, 12, 0, 8);
-    buffer.writeUInt32LE(this.options, 20);
-    if (dataLength > 0) {
-      this.data.copy(buffer, 24);
-    }
-    return buffer;
+    return EIPPacket.Encode(
+      this.command,
+      this.sessionHandle,
+      this.status.code,
+      this.senderContext,
+      this.options,
+      this.data,
+    );
   }
 
-  static fromBuffer(buffer) {
+  static fromBuffer(buffer, offsetRef) {
     const packet = new EIPPacket();
-    packet.command = buffer.readUInt16LE(0);
-    packet.dataLength = EIPPacket.DataLength(buffer);
-    packet.sessionHandle = buffer.readUInt32LE(4);
-    packet.status.code = buffer.readUInt32LE(8);
-    packet.senderContext = buffer.slice(12, 20);
-    packet.options = buffer.readUInt32LE(20);
-    packet.data = buffer.slice(24);
+    packet.command = EIPPacket.Command(buffer, offsetRef);
+    packet.dataLength = EIPPacket.DataLength(buffer, offsetRef);
+    packet.sessionHandle = EIPPacket.SessionHandle(buffer, offsetRef);
+    packet.status.code = EIPPacket.Status(buffer, offsetRef);
+    packet.senderContext = EIPPacket.SenderContext(buffer, offsetRef);
+    packet.options = EIPPacket.Options(buffer, offsetRef);
+    packet.data = EIPPacket.Data(buffer, offsetRef);
+
+    offsetRef.current += HEADER_LENGTH;
 
     if (EIPStatusCodeDescriptions[packet.status.code]) {
       packet.status.description = EIPStatusCodeDescriptions[packet.status.code] || '';
@@ -263,17 +126,21 @@ class EIPPacket {
         case Command.ListServices:
         case Command.ListIdentity:
         case Command.ListInterfaces:
-          DecodeCPFItems(packet.data, 0, (items) => { packet.items = items; });
+          packet.items = CPF.Packet.Decode(buffer, offsetRef);
           break;
         case Command.RegisterSession:
-          packet.protocol = packet.data.readUInt16LE(0);
-          packet.flags = packet.data.readUInt16LE(2);
+          packet.protocol = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+          packet.flags = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
           break;
         case Command.SendRRData:
         case Command.SendUnitData:
-          packet.interfaceHandle = packet.data.readUInt32LE(0); // shall be 0 for CIP
-          packet.timeout = packet.data.readUInt16LE(4); // not used for reply
-          DecodeCPFItems(packet.data, 6, (items) => { packet.items = items; });
+          // shall be 0 for CIP
+          packet.interfaceHandle = buffer.readUInt32LE(offsetRef.current);
+          offsetRef.current += 4;
+          // not used for reply
+          packet.timeout = buffer.readUInt16LE(offsetRef.current);
+          offsetRef.current += 2;
+          packet.items = CPF.Packet.Decode(buffer, offsetRef);
           break;
         default:
           console.log('EIPPacket Error: Unrecognized command:', Buffer.from([packet.command]));
@@ -283,64 +150,95 @@ class EIPPacket {
     return packet;
   }
 
-  static toBuffer(command, handle, status, context, options, data = []) {
-    return toBuffer(command, handle, status, context, options, data);
+  static Encode(command, sessionHandle, status, senderContext, options, data = []) {
+    const dataLength = Buffer.isBuffer(data) ? data.length : 0;
+    const buffer = Buffer.alloc(HEADER_LENGTH + dataLength);
+    buffer.writeUInt16LE(command, FLAG_COMMAND);
+    buffer.writeUInt16LE(dataLength, FLAG_DATA_LENGTH);
+    buffer.writeUInt32LE(sessionHandle, FLAG_SESSION_HANDLE);
+    buffer.writeUInt32LE(status.code, FLAG_STATUS);
+    (senderContext || NullSenderContext).copy(buffer, FLAG_SENDER_CONTEXT, 0, 8);
+    buffer.writeUInt32LE(options, FLAG_OPTIONS);
+    if (dataLength > 0) {
+      data.copy(buffer, FLAG_DATA);
+    }
+    return buffer;
   }
 
-  static IsComplete(buffer, length) {
+  static IsComplete(buffer, startingOffsetRef, length) {
     if (length < 24) return false;
-    return (length >= EIPPacket.Length(buffer));
+    return (length >= EIPPacket.Length(buffer, startingOffsetRef));
   }
 
   // static NextMessage(buffer) {
   //   return buffer.slice(0, EIPPacket.Length(buffer));
   // }
 
-  static Length(buffer) {
-    return 24 + EIPPacket.DataLength(buffer);
+  static Command(buffer, startingOffsetRef) {
+    return buffer.readUInt16LE(startingOffsetRef.current + FLAG_COMMAND);
   }
 
-  static DataLength(buffer) {
-    return buffer.readUInt16LE(2);
+  static DataLength(buffer, startingOffsetRef) {
+    return buffer.readUInt16LE(startingOffsetRef.current + FLAG_DATA_LENGTH);
   }
 
-  static CommandFromBuffer(buffer, offset = 0) {
-    return buffer.readUInt16LE(offset);
+  static SessionHandle(buffer, startingOffsetRef) {
+    return buffer.readUInt32LE(startingOffsetRef.current + FLAG_SESSION_HANDLE);
   }
 
-  static UnregisterSessionRequest(sessionHandle, senderContext) {
-    return toBuffer(Command.UnregisterSession, sessionHandle, 0, senderContext, 0, []);
+  static Status(buffer, startingOffsetRef) {
+    return buffer.readUInt32LE(startingOffsetRef.current + FLAG_STATUS);
   }
 
-  static RegisterSessionRequest(senderContext) {
-    return toBuffer(
-      Command.RegisterSession,
-      0,
-      0,
-      senderContext,
-      0,
-      Buffer.from([0x01, 0x00, 0x00, 0x00]), // Protocol Version
+  static SenderContext(buffer, startingOffsetRef) {
+    return buffer.slice(
+      startingOffsetRef.current + FLAG_SENDER_CONTEXT,
+      startingOffsetRef.current + FLAG_SENDER_CONTEXT + 8,
     );
   }
 
+  static Options(buffer, startingOffsetRef) {
+    return buffer.readUInt32LE(startingOffsetRef.current + FLAG_OPTIONS);
+  }
+
+  static Data(buffer, startingOffsetRef) {
+    return buffer.slice(
+      startingOffsetRef.current + FLAG_DATA,
+      startingOffsetRef.current + FLAG_DATA + EIPPacket.DataLength(buffer, startingOffsetRef),
+    );
+  }
+
+  static Length(buffer, startingOffsetRef) {
+    return HEADER_LENGTH + EIPPacket.DataLength(buffer, startingOffsetRef);
+  }
+
+  static UnregisterSessionRequest(sessionHandle, senderContext) {
+    return EIPPacket.Encode(Command.UnregisterSession, sessionHandle, 0, senderContext, 0, []);
+  }
+
+  static RegisterSessionRequest(senderContext) {
+    const protocolVersion = Buffer.from([0x01, 0x00, 0x00, 0x00]);
+    return EIPPacket.Encode(Command.RegisterSession, 0, 0, senderContext, 0, protocolVersion);
+  }
+
   static ListIdentityRequest() {
-    return toBuffer(Command.ListIdentity, 0, 0, NullSenderContext, 0);
+    return EIPPacket.Encode(Command.ListIdentity, 0, 0, NullSenderContext, 0);
   }
 
   static ListServicesRequest(senderContext) {
-    return toBuffer(Command.ListServices, 0, 0, senderContext, 0);
+    return EIPPacket.Encode(Command.ListServices, 0, 0, senderContext, 0);
   }
 
   static ListInterfacesRequest() {
-    return toBuffer(Command.ListInterfaces, 0, 0, NullSenderContext, 0);
+    return EIPPacket.Encode(Command.ListInterfaces, 0, 0, NullSenderContext, 0);
   }
 
   static NOPRequest() {
-    return toBuffer(Command.NOP, 0, 0, NullSenderContext, 0);
+    return EIPPacket.Encode(Command.NOP, 0, 0, NullSenderContext, 0);
   }
 
   static IndicateStatusRequest() {
-    return toBuffer(Command.IndicateStatus, 0, 0, NullSenderContext, 0);
+    return EIPPacket.Encode(Command.IndicateStatus, 0, 0, NullSenderContext, 0);
   }
 }
 

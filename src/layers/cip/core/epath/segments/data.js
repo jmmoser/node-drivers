@@ -95,28 +95,30 @@ class DataSegment {
     return offset;
   }
 
-  static Decode(segmentCode, buffer, offset, padded, cb) {
+  static Decode(buffer, offsetRef, segmentCode /* , padded */) {
     const subtype = getBits(segmentCode, 0, 5);
-    const length = buffer.readUInt8(offset); offset += 1;
+    const length = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
     let segment;
     switch (subtype) {
       case SubtypeCodes.Simple:
-        if (buffer.length < offset + 2 * length) {
+        if (buffer.length < offsetRef.current + 2 * length) {
           throw new Error('Simple Data Segment decode buffer not long enough');
         }
-        segment = new DataSegment.Simple(buffer.slice(offset, offset + 2 * length));
-        offset += 2 * length;
+        segment = new DataSegment.Simple(
+          buffer.slice(offsetRef.current, offsetRef.current + 2 * length),
+        );
+        offsetRef.current += 2 * length;
         break;
       case SubtypeCodes.ANSIExtendedSymbol:
-        if (buffer.length < offset + length) {
+        if (buffer.length < offsetRef.current + length) {
           throw new Error('ANSI Extended Symbol Data Segment decode buffer not long enough');
         }
-        segment = new DataSegment.ANSIExtendedSymbol(buffer.toString('ascii', offset, offset + length));
-        offset += length;
+        segment = new DataSegment.ANSIExtendedSymbol(buffer.toString('ascii', offsetRef.current, offsetRef.current + length));
+        offsetRef.current += length;
         if (length % 2 > 0) {
           /** make sure pad byte is 0 */
-          const padByte = buffer.readUInt8(offset); offset += 1;
+          const padByte = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
           if (padByte !== 0) {
             throw new Error(`ANSI Extended Symbol Data Segment pad byte is not zero. Received: ${padByte}`);
           }
@@ -126,11 +128,7 @@ class DataSegment {
         throw new Error(`Data segment subtype ${subtype} reserved for future use`);
     }
 
-    if (typeof cb === 'function') {
-      cb(segment);
-    }
-
-    return offset;
+    return segment;
   }
 }
 

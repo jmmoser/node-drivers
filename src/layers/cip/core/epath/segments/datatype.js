@@ -10,51 +10,47 @@ const convertDataTypeToObject = require('../../datatypes/convertToObject');
 const { DataTypeCodes, DataTypeNames } = require('../../datatypes/codes');
 const { DataType } = require('../../datatypes/types');
 
-function DecodeDataType(buffer, offset, cb) {
+function DecodeDataType(buffer, offsetRef) {
   let type;
-  const code = buffer.readUInt8(offset); offset += 1;
+  const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   switch (code) {
     case DataTypeCodes.ABBREV_STRUCT: {
-      const length = buffer.readUInt8(offset); offset += 1;
-      const crc = decodeUnsignedInteger(buffer, offset, length);
-      offset += length;
+      const length = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+      const crc = decodeUnsignedInteger(buffer, offsetRef.current, length);
+      offsetRef.current += length;
       type = DataType.ABBREV_STRUCT(crc);
       break;
     }
     case DataTypeCodes.ABBREV_ARRAY: {
-      /* const length = buffer.readUInt8(offset); */ offset += 1;
-      let itemType;
-      offset = DecodeDataType(buffer, offset, (items) => { itemType = items; });
+      /* const length = buffer.readUInt8(offset); */ offsetRef.current += 1;
+      const itemType = DecodeDataType(buffer, offsetRef);
       type = DataType.ABBREV_ARRAY(itemType);
       break;
     }
     case DataTypeCodes.STRUCT: {
-      const length = buffer.readUInt8(offset); offset += 1;
+      const length = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
       const members = [];
-      const lastOffset = offset + length;
-      while (offset < lastOffset) {
-        offset = DecodeDataType(buffer, offset, (member) => {
-          members.push(member);
-        });
+      const lastOffset = offsetRef.current + length;
+      while (offsetRef.current < lastOffset) {
+        members.push(DecodeDataType(buffer, offsetRef));
       }
       type = DataType.STRUCT(members);
       break;
     }
     case DataTypeCodes.ARRAY: {
-      /* const length = buffer.readUInt8(offset); */ offset += 1;
+      /* const length = buffer.readUInt8(offset); */ offsetRef.current += 1;
 
-      const lowerBoundTag = buffer.readUInt8(offset); offset += 1;
-      const lowerBoundLength = buffer.readUInt8(offset); offset += 1;
-      const lowerBound = decodeUnsignedInteger(buffer, offset, lowerBoundLength);
-      offset += lowerBoundLength;
+      const lowerBoundTag = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+      const lowerBoundLength = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+      const lowerBound = decodeUnsignedInteger(buffer, offsetRef.current, lowerBoundLength);
+      offsetRef.current += lowerBoundLength;
 
-      const upperBoundTag = buffer.readUInt8(offset); offset += 1;
-      const upperBoundLength = buffer.readUInt8(offset); offset += 1;
-      const upperBound = decodeUnsignedInteger(buffer, offset, upperBoundLength);
-      offset += upperBoundLength;
+      const upperBoundTag = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+      const upperBoundLength = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+      const upperBound = decodeUnsignedInteger(buffer, offsetRef.current, upperBoundLength);
+      offsetRef.current += upperBoundLength;
 
-      let itemType;
-      offset = DecodeDataType(buffer, offset, (items) => { itemType = items; });
+      const itemType = DecodeDataType(buffer, offsetRef);
       type = DataType.ARRAY(itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag);
       break;
     }
@@ -63,11 +59,7 @@ function DecodeDataType(buffer, offset, cb) {
       break;
   }
 
-  if (typeof cb === 'function') {
-    cb(type);
-  }
-
-  return offset;
+  return type;
 }
 
 function encodeSize(type) {
@@ -152,12 +144,9 @@ class DataTypeSegment {
     return encodeTo(buffer, offset, this.value);
   }
 
-  static Decode(segmentCode, buffer, offset, padded, cb) {
-    return DecodeDataType(buffer, offset - 1, (type) => {
-      if (typeof cb === 'function') {
-        cb(new DataTypeSegment(type));
-      }
-    });
+  static Decode(buffer, offsetRef /* , segmentCode, padded */) {
+    offsetRef.current -= 1;
+    return new DataTypeSegment(DecodeDataType(buffer, offsetRef));
   }
 }
 

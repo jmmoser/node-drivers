@@ -245,7 +245,7 @@ function handleUnconnectedMessage(self, data, info, context) {
   if (context.internal === true) {
     const callback = self.callbackForContext(context.context);
     if (callback) {
-      const response = context.request.response(data);
+      const response = context.request.response(data, { current: 0 });
 
       callback(
         response.status.error ? response.status.description || 'CIP Error' : null,

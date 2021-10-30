@@ -103,8 +103,8 @@ const ConnectionManagerEPath = EPath.Encode(true, [
   new EPath.Segments.Logical.InstanceID(0x01),
 ]);
 
-function ConnectionManagerCIPRequest(service, data, cb) {
-  return new CIPRequest(service, ConnectionManagerEPath, data, cb, {
+function ConnectionManagerCIPRequest(service, data, responseDecoder) {
+  return new CIPRequest(service, ConnectionManagerEPath, data, responseDecoder, {
     serviceNames: ServiceNames,
   });
 }
@@ -126,43 +126,41 @@ function encodeConnectionTiming(buffer, offset, tickTime, timeoutTicks) {
   return offset;
 }
 
-function errorDataHandler(buffer, offset, res) {
+function errorDataHandler(buffer, offsetRef, res) {
   if (res.status.type === 'routing') {
-    res.remainingPathSize = buffer.readUInt8(offset); offset += 1;
+    res.remainingPathSize = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
-    if (offset < buffer.length) {
-      if (buffer.readUInt8(offset) === 0) {
+    if (offsetRef.current < buffer.length) {
+      if (buffer.readUInt8(offsetRef.current) === 0) {
         /** TODO: confirm possible pad byte? */
-        offset += 1;
+        offsetRef.current += 1;
       }
     }
   }
-  return offset;
 }
 
-function connectionDataResponse(buffer, offset, cb) {
+function connectionDataResponse(buffer, offsetRef) {
   const res = {};
-  res.ConnectionNumber = buffer.readUInt16LE(offset); offset += 2;
-  res.ConnectionState = buffer.readUInt16LE(offset); offset += 2;
-  res.OriginatorPort = buffer.readUInt16LE(offset); offset += 2;
-  res.TargetPort = buffer.readUInt16LE(offset); offset += 2;
-  res.ConnectionSerialNumber = buffer.readUInt16LE(offset); offset += 2;
-  res.OriginatorVendorID = buffer.readUInt16LE(offset); offset += 2;
-  res.OriginatorSerialNumber = buffer.readUInt32LE(offset); offset += 4;
-  res.OriginatorOtoTCID = buffer.readUInt32LE(offset); offset += 4;
-  res.TargetOtoTCID = buffer.readUInt32LE(offset); offset += 4;
-  res.ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offset); offset += 1;
-  offset += 3; // Reserved
-  res.OriginatorRPIOtoT = buffer.readUInt32LE(offset); offset += 4;
-  res.OriginatorAPIOtoT = buffer.readUInt32LE(offset); offset += 4;
-  res.OriginatorTtoOCID = buffer.readUInt32LE(offset); offset += 4;
-  res.TargetTtoOCID = buffer.readUInt32LE(offset); offset += 4;
-  res.ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offset); offset += 1;
-  offset += 3; // Reserved
-  res.OriginatorRPITtoO = buffer.readUInt32LE(offset); offset += 4;
-  res.OriginatorAPITtoO = buffer.readUInt32LE(offset); offset += 4;
-  cb(res);
-  return offset;
+  res.ConnectionNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  res.ConnectionState = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  res.OriginatorPort = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  res.TargetPort = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  res.ConnectionSerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  res.OriginatorVendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  res.OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  res.OriginatorOtoTCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  res.TargetOtoTCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  res.ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+  offsetRef.current += 3; // Reserved
+  res.OriginatorRPIOtoT = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  res.OriginatorAPIOtoT = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  res.OriginatorTtoOCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  res.TargetTtoOCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  res.ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+  offsetRef.current += 3; // Reserved
+  res.OriginatorRPITtoO = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  res.OriginatorAPITtoO = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  return res;
 }
 
 class ConnectionManager {
@@ -291,23 +289,22 @@ class ConnectionManager {
     return ConnectionManagerCIPRequest(
       connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
       data,
-      (buffer, resOffset, cb) => {
-        const res = {};
-        res.OtoTNetworkConnectionID = buffer.readUInt32LE(resOffset); resOffset += 4;
-        res.TtoONetworkConnectionID = buffer.readUInt32LE(resOffset); resOffset += 4;
-        res.ConnectionSerialNumber = buffer.readUInt16LE(resOffset); resOffset += 2;
-        res.OriginatorVendorID = buffer.readUInt16LE(resOffset); resOffset += 2;
-        res.OriginatorSerialNumber = buffer.readUInt32LE(resOffset); resOffset += 4;
-        res.OtoTActualPacketRate = buffer.readUInt32LE(resOffset); resOffset += 4;
-        res.TtoOActualPacketRate = buffer.readUInt32LE(resOffset); resOffset += 4;
-        const applicationReplySize = 2 * buffer.readUInt8(resOffset); resOffset += 1;
-        resOffset += 1; // reserved
+      (buffer, offsetRef) => {
+        const r = {};
+        r.OtoTNetworkConnectionID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        r.TtoONetworkConnectionID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        r.ConnectionSerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        r.OriginatorVendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        r.OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        r.OtoTActualPacketRate = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        r.TtoOActualPacketRate = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        const appReplySize = 2 * buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+        offsetRef.current += 1; // reserved
 
-        res.data = buffer.slice(resOffset, resOffset + applicationReplySize);
-        resOffset += applicationReplySize;
+        r.data = buffer.slice(offsetRef.current, offsetRef.current + appReplySize);
+        offsetRef.current += appReplySize;
 
-        cb(res);
-        return resOffset;
+        return r;
       },
     );
   }
@@ -340,17 +337,16 @@ class ConnectionManager {
     return ConnectionManagerCIPRequest(
       ServiceCodes.ForwardClose,
       data,
-      (buffer, resOffset, cb) => {
+      (buffer, offsetRef) => {
         const res = {};
-        res.SerialNumber = buffer.readUInt16LE(resOffset); resOffset += 2;
-        res.VendorID = buffer.readUInt16LE(resOffset); resOffset += 2;
-        res.OriginatorSerialNumber = buffer.readUInt32LE(resOffset); resOffset += 4;
-        const applicationReplySize = 2 * buffer.readUInt8(resOffset); resOffset += 1;
-        resOffset += 1; /** Reserved */
-        res.data = buffer.slice(resOffset, resOffset + applicationReplySize);
-        resOffset += applicationReplySize;
-        cb(res);
-        return resOffset;
+        res.SerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        res.VendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        res.OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        const appReplySize = 2 * buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+        offsetRef.current += 1; /** Reserved */
+        res.data = buffer.slice(offsetRef.current, offsetRef.current + appReplySize);
+        offsetRef.current += appReplySize;
+        return res;
       },
     );
   }

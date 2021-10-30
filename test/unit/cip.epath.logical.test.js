@@ -76,7 +76,6 @@ describe('Logical ClassID', () => {
   });
 });
 
-
 describe('Logical InstanceID', () => {
   test('Padded Implicit 8-bit Format', () => {
     const segment = new Logical.InstanceID(1);
@@ -189,7 +188,6 @@ describe('Logical InstanceID', () => {
     expect(segment.encode(false)).toEqual(Buffer.from([0x26, 0x01, 0x00, 0x00, 0x00]));
   });
 });
-
 
 describe('Logical AttributeID', () => {
   test('Padded Implicit 8-bit Format', () => {

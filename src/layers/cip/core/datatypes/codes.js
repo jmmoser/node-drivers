@@ -74,36 +74,34 @@ const DataTypeTagTypeCodes = Object.freeze({
 
 const DataTypeTagTypeNames = InvertKeyValues(DataTypeTagTypeCodes);
 
-function DecodeDataTypeTag(buffer, offset, cb) {
-  const code = buffer.readUInt8(offset); offset += 1;
+function DecodeDataTypeTag(buffer, offsetRef) {
+  const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   const tagClass = getBits(code, 6, 8);
   const tagType = getBits(code, 5, 6);
   let tagID = getBits(code, 0, 5);
   if (tagID === 0b11111) {
     let length = 1;
-    while (getBits(buffer.readUInt8(offset + length - 1), 7, 8) === 1) {
+    while (getBits(buffer.readUInt8(offsetRef.current + length - 1), 7, 8) === 1) {
       length += 1;
     }
     tagID = 0;
     for (let i = 0; i < length; i++) {
-      tagID |= (buffer.readUInt8(offset + i) & 0b1111111) << (7 * (length - i - 1));
+      tagID |= (buffer.readUInt8(offsetRef.current + i) & 0b1111111) << (7 * (length - i - 1));
     }
   }
-  if (typeof cb === 'function') {
-    cb({
-      tagClass: {
-        code: tagClass,
-        name: DataTypeTagClassNames[tagClass] || 'Unknown',
-      },
-      type: {
-        code: tagType,
-        name: DataTypeTagTypeNames[tagType] || 'Unknown',
-      },
-      id: tagID,
-      code,
-    });
-  }
-  return offset;
+
+  return {
+    tagClass: {
+      code: tagClass,
+      name: DataTypeTagClassNames[tagClass] || 'Unknown',
+    },
+    type: {
+      code: tagType,
+      name: DataTypeTagTypeNames[tagType] || 'Unknown',
+    },
+    id: tagID,
+    code,
+  };
 }
 
 module.exports = {

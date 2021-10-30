@@ -16,8 +16,8 @@ class Defragger {
     this._dataLength += data.length;
     this._data = Buffer.concat([this._data, data], this._dataLength);
 
-    while (this._dataLength > 0 && this._completeHandler(this._data, this._dataLength)) {
-      const length = this._lengthHandler(this._data);
+    while (this._dataLength > 0 && this._completeHandler(this._data, { current: 0 }, this._dataLength)) {
+      const length = this._lengthHandler(this._data, { current: 0 });
       defraggedData = this._data.slice(0, length);
       this._dataLength -= length;
       this._data = this._data.slice(length);

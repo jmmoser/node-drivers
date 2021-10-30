@@ -62,31 +62,19 @@ const { DecodeTypedData } = require('./datatypes/decoding');
 //         new EPath.Segments.Logical.AttributeID(attributeID)
 //       ]),
 //       null,
-//       (buffer, offset, cb) => {
-//         return DecodeAttribute(buffer, offset, attribute, cb);
-//       }
+//       (buffer, offsetRef) => DecodeAttribute(buffer, offsetRef, attribute),
 //     );
 //   }
 // });
 
-function DecodeAttribute(buffer, offset, attribute, cb) {
+function DecodeAttribute(buffer, offsetRef, attribute) {
   const { dataType } = attribute;
   if (!dataType) {
     console.log(attribute);
     throw new Error(`Unknown attribute: ${attribute}`);
   }
 
-  const offsetRef = { current: offset };
-  const value = DecodeTypedData(buffer, offsetRef, dataType);
-
-  if (typeof cb === 'function') {
-    cb({
-      attribute,
-      value,
-    });
-  }
-
-  return offsetRef.current;
+  return DecodeTypedData(buffer, offsetRef, dataType);
 }
 
 function CIPMetaObject(classCode, options) {
@@ -152,7 +140,7 @@ function CIPMetaObject(classCode, options) {
           new EPath.Segments.Logical.InstanceID(instanceID),
         ]),
         null,
-        (buffer, offset, cb) => this.DecodeInstanceAttributesAll(buffer, offset, cb),
+        (buffer, offsetRef) => this.DecodeInstanceAttributesAll(buffer, offsetRef),
       );
     }
 
@@ -168,9 +156,7 @@ function CIPMetaObject(classCode, options) {
           new EPath.Segments.Logical.AttributeID(attribute),
         ]),
         null,
-        (buffer, offset, cb) => {
-          this.DecodeClassAttribute(buffer, offset, attribute, cb);
-        },
+        (buffer, offsetRef) => this.DecodeClassAttribute(buffer, offsetRef, attribute),
       );
     }
 
@@ -188,9 +174,7 @@ function CIPMetaObject(classCode, options) {
           new EPath.Segments.Logical.AttributeID(attributeCode),
         ]),
         null,
-        (buffer, offset, cb) => {
-          this.DecodeInstanceAttribute(buffer, offset, attributeCode, cb);
-        },
+        (buffer, offsetRef) => this.DecodeInstanceAttribute(buffer, offsetRef, attributeCode),
       );
     }
 
@@ -217,54 +201,48 @@ function CIPMetaObject(classCode, options) {
           new EPath.Segments.Logical.AttributeID(attributeID),
         ]),
         null,
-        (buffer, offset, cb) => {
-          this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
-        },
+        (buffer, offsetRef) => this.DecodeInstanceAttribute(buffer, offsetRef, attribute),
       );
     }
 
-    static DecodeAttribute(buffer, offset, attribute, cb) {
+    static DecodeAttribute(buffer, offsetRef, attribute) {
       if (attribute instanceof CIPAttribute.Class) {
-        return this.DecodeClassAttribute(buffer, offset, attribute, cb);
+        return this.DecodeClassAttribute(buffer, offsetRef, attribute);
       }
 
       if (attribute instanceof CIPAttribute.Instance) {
-        return this.DecodeInstanceAttribute(buffer, offset, attribute, cb);
+        return this.DecodeInstanceAttribute(buffer, offsetRef, attribute);
       }
 
       throw new Error('Unable to determine if attribute is for class or instance');
     }
 
-    static DecodeInstanceAttributesAll(buffer, offset, cb) {
+    static DecodeInstanceAttributesAll(buffer, offsetRef) {
       const attributeResults = [];
       for (let i = 0; i < GetAttributesAllInstanceAttributes.length; i++) {
-        if (offset < buffer.length) {
-          offset = this.DecodeInstanceAttribute(
+        if (offsetRef.current < buffer.length) {
+          const value = this.DecodeInstanceAttribute(
             buffer,
-            offset,
+            offsetRef,
             GetAttributesAllInstanceAttributes[i],
-            (val) => attributeResults.push(val),
           );
+          attributeResults.push(value);
         } else {
           break;
         }
       }
-      if (typeof cb === 'function') {
-        cb(attributeResults);
-      }
-      return offset;
+      return attributeResults;
     }
 
-    static DecodeInstanceAttribute(buffer, offset, attribute, cb) {
-      return DecodeAttribute(buffer, offset, InstanceAttributeGroup.get(attribute), cb);
+    static DecodeInstanceAttribute(buffer, offsetRef, attribute) {
+      return DecodeAttribute(buffer, offsetRef, InstanceAttributeGroup.get(attribute));
     }
 
-    static DecodeClassAttribute(buffer, offset, attribute, cb) {
+    static DecodeClassAttribute(buffer, offsetRef, attribute) {
       return DecodeAttribute(
         buffer,
-        offset,
+        offsetRef,
         ClassAttributeGroup.get(attribute) || CommonClassAttributeGroup.get(attribute),
-        cb,
       );
     }
   }

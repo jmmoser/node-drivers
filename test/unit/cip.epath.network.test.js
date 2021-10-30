@@ -9,8 +9,12 @@ describe('Network Segment Production Inhibit Time', () => {
     expect(new Network.ProductionInhibitTime(5).encode()).toEqual(Buffer.from([0x43, 0x05]));
   });
   test('Decode', () => {
-    expect(EPath.Decode(Buffer.from([0x43, 0x05]), 0, true, false, (segments) => {
-      expect(segments).toEqual([new Network.ProductionInhibitTime(5)]);
-    })).toBe(2);
+    const offsetRef = { current: 0 };
+    const buffer = Buffer.from([0x43, 0x05]);
+    const output = [
+      new Network.ProductionInhibitTime(5),
+    ];
+    expect(EPath.Decode(buffer, offsetRef, true, false)).toStrictEqual(output);
+    expect(offsetRef.current).toBe(2);
   });
 });

@@ -56,12 +56,14 @@ const {
   ControllerInstanceAttributeNames,
 } = require('./constants');
 
-function Logix5000DecodeDataType(buffer, offset, cb) {
-  const nextOffset = EPath.Decode(buffer, offset, null, false, cb);
-  if (nextOffset - offset < 2) {
-    return nextOffset + 1;
+function Logix5000DecodeDataType(buffer, offsetRef, cb) {
+  const startingOffset = offsetRef.current;
+  const type = EPath.Decode(buffer, offsetRef, null, false, cb);
+  /** TODO: Why is this necessary? */
+  if (offsetRef.current - startingOffset < 2) {
+    offsetRef.current += 1;
   }
-  return nextOffset;
+  return type;
 }
 
 async function readTagFragmented(layer, path, elements) {
@@ -70,19 +72,20 @@ async function readTagFragmented(layer, path, elements) {
   const reqData = Buffer.allocUnsafe(6);
   reqData.writeUInt16LE(elements, 0);
 
-  let offset = 0;
+  const offsetRef = { current: 0 };
   const chunks = [];
 
   while (true) {
-    reqData.writeUInt32LE(offset, 2);
+    reqData.writeUInt32LE(offsetRef.current, 2);
     const reply = await sendPromise(layer, service, path, reqData, 5000);
 
     /** remove the tag type bytes if already received */
-    const dataTypeOffset = Logix5000DecodeDataType(reply.data, 0);
+    Logix5000DecodeDataType(reply.data, offsetRef);
+    const dataTypeOffset = offsetRef.current;
     chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
 
     if (reply.status.code === GeneralStatusCodes.PartialTransfer) {
-      offset = reply.data.length - dataTypeOffset;
+      offsetRef.current = reply.data.length - dataTypeOffset;
     } else if (reply.status.code === 0) {
       break;
     } else {
@@ -223,12 +226,22 @@ async function parseReadTag(layer, scope, tag, elements, data) {
   return values;
 }
 
+function statusHandler(code, extended, cb) {
+  let error = GenericServiceStatusDescriptions[code];
+  if (typeof error === 'object' && Buffer.isBuffer(extended) && extended.length >= 0) {
+    error = error[extended.readUInt16LE(0)];
+  }
+  if (error) {
+    cb(null, error);
+  }
+}
+
 /** Use driver specific error handling if exists */
-async function send(self, service, path, data, callback, timeout) {
+async function send(self, service, path, data, callback /* , timeout */) {
   try {
     const request = new CIPRequest(service, path, data, null, {
       serviceNames: SymbolServiceNames,
-      statusHandler: statusHandler
+      statusHandler,
     });
 
     const response = await self.sendRequest(true, request);
@@ -365,7 +378,7 @@ function parseTemplateMemberName(data, offset, cb) {
 }
 
 function parseTemplateNameInfo(data, offset, cb) {
-  return parseTemplateMemberName(data, offset, fullname => {
+  return parseTemplateMemberName(data, offset, (fullname) => {
     const parts = fullname.split(';');
     cb({
       name: parts.length > 0 ? parts[0] : '',
@@ -374,15 +387,6 @@ function parseTemplateNameInfo(data, offset, cb) {
   });
 }
 
-function statusHandler(code, extended, cb) {
-  let error = GenericServiceStatusDescriptions[code];
-  if (typeof error === 'object' && Buffer.isBuffer(extended) && extended.length >= 0) {
-    error = error[extended.readUInt16LE(0)];
-  }
-  if (error) {
-    cb(null, error);
-  }
-}
 // function getError(code, extended) {
 //   let error = GenericServiceStatusDescriptions[code];
 //   if (typeof error === 'object') {
@@ -396,7 +400,7 @@ function statusHandler(code, extended, cb) {
 
 function scopedGenerator() {
   const separator = '::';
-  const args = [...arguments].filter(arg => !!arg);
+  const args = [...arguments].filter((arg) => !!arg);
   const preface = args.length > 0 ? args.join(separator) + separator : '';
   return () => preface + [...arguments].join(separator);
 }

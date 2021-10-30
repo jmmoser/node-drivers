@@ -137,7 +137,7 @@ const InstanceAttribute = Object.freeze({
   VendorID: new CIPAttribute.Instance(1, 'Vendor ID', DataType.TRANSFORM(
     DataType.UINT,
     (value) => ({
-      id: value,
+      code: value,
       name: VendorNames[value] || 'Unknown',
     }),
   )),

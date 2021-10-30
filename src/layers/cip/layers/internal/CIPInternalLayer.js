@@ -38,7 +38,7 @@ class CIPInternalLayer extends Layer {
           if (error) {
             resolver.reject(error, message);
           } else {
-            const res = request.response(message, 0);
+            const res = request.response(message, { current: 0 });
             if (res.status.error) {
               resolver.reject(res.status.description, res);
             } else {

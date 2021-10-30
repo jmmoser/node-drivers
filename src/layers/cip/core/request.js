@@ -17,7 +17,7 @@ const EncodeSizeSymbol = Symbol('encodeSize');
 const RequestMessageSymbol = Symbol('requestMessage');
 const ResponseDataHandlerSymbol = Symbol('responseDataHandler');
 
-function DecodeResponse(buffer, offset, options, request, handler) {
+function DecodeResponse(buffer, offsetRef, options, request, handler) {
   const opts = options || {};
 
   const res = {};
@@ -25,9 +25,9 @@ function DecodeResponse(buffer, offset, options, request, handler) {
   if (request) {
     res.request = request;
   }
-  res.buffer = buffer.slice(offset);
+  res.buffer = buffer.slice(offsetRef.current);
   // res.service = buffer.readUInt8(offset); offset += 1;
-  const service = buffer.readUInt8(offset) & 0x7F; offset += 1;
+  const service = buffer.readUInt8(offsetRef.current) & 0x7F; offsetRef.current += 1;
 
   if (opts.acceptedServiceCodes && opts.acceptedServiceCodes.indexOf(service) < 0) {
     throw new Error(`Invalid service. Expected one of [${opts.acceptedServiceCodes.join(',')}], Received ${service}`);
@@ -47,9 +47,9 @@ function DecodeResponse(buffer, offset, options, request, handler) {
     }
   }
 
-  offset += 1; // reserved
+  offsetRef.current += 1; // reserved
 
-  const statusCode = buffer.readUInt8(offset); offset += 1;
+  const statusCode = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
   res.status = {};
   res.status.code = statusCode;
@@ -60,11 +60,12 @@ function DecodeResponse(buffer, offset, options, request, handler) {
   res.status.name = GeneralStatusNames[statusCode] || '';
   res.status.description = GeneralStatusDescriptions[statusCode] || (res.status.error ? 'CIP Error' : '');
 
-  const extendedStatusSize = buffer.readUInt8(offset); offset += 1; // number of 16 bit words
-  res.status.extended = buffer.slice(offset, offset + 2 * extendedStatusSize);
-  offset += 2 * extendedStatusSize;
+  /** Number of 16 bit words */
+  const extendedStatusSize = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+  res.status.extended = buffer.slice(offsetRef.current, offsetRef.current + 2 * extendedStatusSize);
+  offsetRef.current += 2 * extendedStatusSize;
 
-  res.data = buffer.slice(offset);
+  res.data = buffer.slice(offsetRef.current);
 
   if (typeof opts.statusHandler === 'function') {
     opts.statusHandler(statusCode, res.status.extended, (name, description, type) => {
@@ -83,18 +84,14 @@ function DecodeResponse(buffer, offset, options, request, handler) {
   if (res.data.length > 0) {
     if (res.status.error === false && typeof handler === 'function') {
       if (handler.length === 4) {
-        offset = handler(buffer, offset, res, (val) => {
-          res.value = val;
-        });
+        res.value = handler(buffer, offsetRef, res);
       } else {
-        offset = handler(buffer, offset, (val) => {
-          res.value = val;
-        });
+        res.value = handler(buffer, offsetRef);
       }
     }
 
     if (res.status.error && typeof opts.errorDataHandler === 'function') {
-      offset = opts.errorDataHandler(buffer, offset, res);
+      opts.errorDataHandler(buffer, offsetRef, res);
     }
   }
 
@@ -107,7 +104,7 @@ class CIPRequest {
     this.path = path;
     this.data = data;
 
-    /** responseHandler can be a function(buffer, offset, cb) or a CIPRequest
+    /** responseHandler can be a function(buffer, offsetRef) or a CIPRequest
      * ConnectionManager's UnconnectedSend specifies the inner request as the handler */
     if (responseHandler instanceof CIPRequest) {
       // eslint-disable-next-line no-param-reassign
@@ -172,14 +169,14 @@ class CIPRequest {
     return offset;
   }
 
-  static Response(buffer, offset = 0, options) {
-    return DecodeResponse(buffer, offset, options);
+  static Response(buffer, offsetRef, options) {
+    return DecodeResponse(buffer, offsetRef, options);
   }
 
-  response(buffer, offset = 0) {
+  response(buffer, offsetRef) {
     return DecodeResponse(
       buffer,
-      offset,
+      offsetRef,
       this.options,
       this[RequestMessageSymbol],
       this[ResponseDataHandlerSymbol],
@@ -193,8 +190,8 @@ const MessageRouterPath = EPath.Encode(true, [
 ]);
 
 function MultiCreateDataHandler(requests) {
-  return (buffer, offset, cb) => {
-    const numberOfReplies = buffer.readUInt16LE(offset, 0); // offset += 2;
+  return (buffer, offsetRef) => {
+    const numberOfReplies = buffer.readUInt16LE(offsetRef.current, 0); // offsetRef.current += 2;
 
     if (numberOfReplies !== requests.length) {
       throw new Error(`CIP Multiple Service response expected ${requests.length} replies but only received ${numberOfReplies}`);
@@ -202,16 +199,21 @@ function MultiCreateDataHandler(requests) {
 
     const responses = [];
 
+    let lastOffset = offsetRef.current;
+
     for (let i = 0; i < numberOfReplies; i++) {
-      // console.log(offset, i, buffer.readUInt16LE(offset + 2 + 2 * i), buffer);
+      const requestOffsetRef = {
+        current: buffer.readUInt16LE(offsetRef.current + 2 + 2 * i) + offsetRef.current,
+      };
       responses.push(
-        requests[i].response(buffer, buffer.readUInt16LE(offset + 2 + 2 * i) + offset),
+        requests[i].response(buffer, requestOffsetRef),
       );
+      lastOffset = requestOffsetRef.current;
     }
 
-    cb(responses);
+    offsetRef.current = lastOffset;
 
-    return offset;
+    return responses;
   };
 }
 

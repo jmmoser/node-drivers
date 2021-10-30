@@ -62,7 +62,7 @@ class NetworkSegment {
     return offset;
   }
 
-  static Decode(segmentCode, buffer, offset, padded, cb) {
+  static Decode(buffer, offsetRef, segmentCode /* , padded */) {
     const subtype = getBits(segmentCode, 0, 5);
 
     let value;
@@ -70,7 +70,7 @@ class NetworkSegment {
       case SubtypeCodes.Schedule:
       case SubtypeCodes.FixedTag:
       case SubtypeCodes.ProductionInhibitTime:
-        value = buffer.readUInt8(offset); offset += 1;
+        value = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
         break;
       case SubtypeCodes.Safety:
       case SubtypeCodes.Extended:
@@ -80,23 +80,16 @@ class NetworkSegment {
         throw new Error(`Reserved Network segment subtype ${subtype}`);
     }
 
-    if (typeof cb === 'function') {
-      switch (subtype) {
-        case SubtypeCodes.Schedule:
-          cb(new NetworkSegment.Schedule(value));
-          break;
-        case SubtypeCodes.FixedTag:
-          cb(new NetworkSegment.FixedTag(value));
-          break;
-        case SubtypeCodes.ProductionInhibitTime:
-          cb(new NetworkSegment.ProductionInhibitTime(value));
-          break;
-        default:
-          throw new Error('Invalid subtype');
-      }
+    switch (subtype) {
+      case SubtypeCodes.Schedule:
+        return new NetworkSegment.Schedule(value);
+      case SubtypeCodes.FixedTag:
+        return new NetworkSegment.FixedTag(value);
+      case SubtypeCodes.ProductionInhibitTime:
+        return new NetworkSegment.ProductionInhibitTime(value);
+      default:
+        throw new Error('Invalid subtype');
     }
-
-    return offset;
   }
 }
 

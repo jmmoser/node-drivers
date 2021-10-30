@@ -135,12 +135,13 @@ class PortSegment {
     return offset;
   }
 
-  static Decode(segmentCode, buffer, offset, padded, cb) {
-    const startingOffset = offset - 1; /** -1 because first byte of segment was already read */
+  static Decode(buffer, offsetRef, segmentCode /* , padded */) {
+    /** -1 because first byte of segment was already read */
+    const startingOffset = offsetRef.current - 1;
 
     let addressLength;
     if (getBits(segmentCode, 4, 5)) {
-      addressLength = buffer.readUInt8(offset); offset += 1;
+      addressLength = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
     } else {
       addressLength = 1;
     }
@@ -148,30 +149,27 @@ class PortSegment {
     let number;
     const tempNumber = getBits(segmentCode, 0, 4);
     if (tempNumber === 15) {
-      number = buffer.readUInt16LE(offset); offset += 2;
+      number = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
     } else {
       number = tempNumber;
     }
 
-    if (buffer.length < offset + addressLength) {
+    if (buffer.length < offsetRef.current + addressLength) {
       throw new Error('Port Segment decode buffer not long enough');
     }
 
-    const address = buffer.slice(offset, offset + addressLength); offset += addressLength;
+    const address = buffer.slice(offsetRef.current, offsetRef.current + addressLength);
+    offsetRef.current += addressLength;
 
-    if (addressLength > 1 && (offset - startingOffset) % 2 > 0) {
+    if (addressLength > 1 && (offsetRef.current - startingOffset) % 2 > 0) {
       /** make sure pad byte is 0 */
-      const padByte = buffer.readUInt8(offset); offset += 1;
+      const padByte = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
       if (padByte !== 0) {
         throw new Error(`Port Segment pad byte is not zero. Received: ${padByte}`);
       }
     }
 
-    if (typeof cb === 'function') {
-      cb(new PortSegment(number, address));
-    }
-
-    return offset;
+    return new PortSegment(number, address);
   }
 }
 
