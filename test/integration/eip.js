@@ -8,7 +8,7 @@ const eipLayer = new CIP.EIP(tcpLayer);
   let error;
   try {
     const identityResponse = await eipLayer.listIdentity();
-    assert.strictEqual(identityResponse.value.attributes[0].value.id, 1, 'Vendor ID');
+    assert.strictEqual(identityResponse.value.attributes[0].value.code, 1, 'Vendor ID');
     assert.strictEqual(identityResponse.value.attributes[1].value.code, 12, 'Device Type');
     assert.strictEqual(identityResponse.value.attributes[2].value, 65001, 'Product Code');
   } catch (err) {
