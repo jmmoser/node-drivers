@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * Definitions
  *
@@ -22,10 +20,10 @@
  * section of physical media
  */
 
-const CIPMetaObject = require('../object');
-const CIPAttribute = require('../attribute');
-const { ClassCodes } = require('../constants');
-const { DataType } = require('../datatypes');
+import CIPMetaObject from '../object.js';
+import CIPAttribute from '../attribute.js';
+import { ClassCodes } from '../constants/index.js';
+import { DataType } from '../datatypes/index.js';
 
 /** CIP Vol 3 Chapter 3-7.3 */
 const PortTypeNames = Object.freeze({
@@ -116,4 +114,4 @@ class Port extends CIPObject {}
 Port.ClassAttribute = ClassAttribute;
 Port.InstanceAttribute = InstanceAttribute;
 
-module.exports = Port;
+export default Port;

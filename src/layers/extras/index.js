@@ -1,7 +1,5 @@
-'use strict';
+import MultiplexLayer from './MultiplexLayer.js';
 
-const MultiplexLayer = require('./MultiplexLayer');
-
-module.exports = {
+export default {
   Multiplex: MultiplexLayer,
 };

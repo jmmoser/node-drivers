@@ -1,6 +1,4 @@
-'use strict';
-
-module.exports = Object.freeze({
+export default Object.freeze({
   Program: 0x68,
   Map: 0x69,
   Routine: 0x6D,

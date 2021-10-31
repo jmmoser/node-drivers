@@ -1,4 +1,4 @@
-const PCCCDataType = {
+export const PCCCDataType = {
   Binary: 0x01,
   BitString: 0x02,
   Byte: 0x03,
@@ -17,7 +17,7 @@ const PCCCDataType = {
   BlockTransfer: 0x20,
 };
 
-const STSCodeDescriptions = {
+export const STSCodeDescriptions = {
   0: 'Success',
 
   1: 'Local: DST node is out of buffer space',
@@ -45,7 +45,7 @@ const STSCodeDescriptions = {
 };
 
 /** DF1 Manual, p. 8-4 */
-const EXTSTSCodeDescriptionsCMDF0 = {
+export const EXTSTSCodeDescriptionsCMDF0 = {
   // 0: 'Not Used',
   1: 'A field has an illegal value',
   2: 'Less levels specified in address than minimum for any address',
@@ -82,10 +82,4 @@ const EXTSTSCodeDescriptionsCMDF0 = {
   34: 'Remote rack fault',
   35: 'Timeout',
   36: 'Unknown error',
-};
-
-module.exports = {
-  PCCCDataType,
-  STSCodeDescriptions,
-  EXTSTSCodeDescriptionsCMDF0,
 };

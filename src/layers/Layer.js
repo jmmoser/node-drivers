@@ -1,9 +1,7 @@
-'use strict';
-
-const EventEmitter = require('events');
-const Queue = require('../queue');
-const Defragger = require('../defragger');
-const { CallbackPromise } = require('../utils');
+import EventEmitter from 'events';
+import Queue from '../queue.js';
+import Defragger from '../defragger.js';
+import { CallbackPromise } from '../utils.js';
 
 function incrementContext(self) {
   self.__context = (self.__context + 1) % 0x100000000; // eslint-disable-line no-underscore-dangle
@@ -36,7 +34,7 @@ function internalDestroy(layer, error) {
   layer.handleDestroy(error);
 }
 
-class Layer extends EventEmitter {
+export default class Layer extends EventEmitter {
   constructor(name, lowerLayer, options, defaultOptions) {
     if (!name || typeof name !== 'string') {
       throw new Error('Layer name must be a non-empty string');
@@ -266,5 +264,3 @@ class Layer extends EventEmitter {
     return entries;
   }
 }
-
-module.exports = Layer;

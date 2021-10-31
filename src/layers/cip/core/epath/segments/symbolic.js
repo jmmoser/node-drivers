@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * CIP Vol 1, Appendix C-1.4.4
  *
@@ -7,10 +5,10 @@
  * interpreted by the device.
  */
 
-const {
+import {
   getBits,
   unsignedIntegerSize,
-} = require('../../../../../utils');
+} from '../../../../../utils.js';
 
 const ExtendedStringFormatCodes = Object.freeze({
   DoubleByteCharacters: 1,
@@ -290,4 +288,4 @@ SymbolicSegment.Numeric = class NumericByteSymbolicSegment extends SymbolicSegme
   }
 };
 
-module.exports = SymbolicSegment;
+export default SymbolicSegment;

@@ -1,11 +1,9 @@
-'use strict';
-
-const {
+import {
   InvertKeyValues,
-} = require('../../../../utils');
+} from '../../../../utils.js';
 
 /** CIP Vol1 Appendix A */
-const CommonServiceCodes = Object.freeze({
+export const CommonServiceCodes = Object.freeze({
   GetAttributesAll: 0x01,
   SetAttributesAll: 0x02,
   GetAttributeList: 0x03,
@@ -30,9 +28,4 @@ const CommonServiceCodes = Object.freeze({
   GroupSync: 0x1C,
 });
 
-const CommonServiceNames = InvertKeyValues(CommonServiceCodes);
-
-module.exports = {
-  CommonServiceCodes,
-  CommonServiceNames,
-};
+export const CommonServiceNames = InvertKeyValues(CommonServiceCodes);

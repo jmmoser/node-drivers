@@ -1,9 +1,6 @@
-'use strict';
-
-const CIPMetaObject = require('../../../core/object');
-const CIPAttribute = require('../../../core/attribute');
-// const { ClassCodes } = require('../../../core/constants');
-const { DataType } = require('../../../core/datatypes');
+import CIPMetaObject from '../../../core/object';
+import CIPAttribute from '../../../core/attribute';
+import { DataType } from '../../../core/datatypes';
 
 const InstanceAttribute = Object.freeze({
   StructureHandle: new CIPAttribute.Instance(1, 'StructureHandle', DataType.UINT), /** Calculated CRC value for members of the structure */
@@ -29,4 +26,4 @@ class Template extends CIPObject { }
 Template.InstanceAttribute = InstanceAttribute;
 Template.ClassAttribute = ClassAttribute;
 
-module.exports = Template;
+export default Template;

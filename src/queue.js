@@ -1,8 +1,6 @@
-'use strict';
-
 /* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
 
-class Queue {
+export default class Queue {
   constructor() {
     this._queue = [];
     this._priorityQueue = [];
@@ -80,5 +78,3 @@ class Queue {
     }
   }
 }
-
-module.exports = Queue;

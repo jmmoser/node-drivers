@@ -1,4 +1,4 @@
-// 'use strict';
+// 
 
 // // const Layer = require('../../Layer');
 // const CIPLayer = require('../layers/internal/CIPLayer');
@@ -152,7 +152,7 @@
 //   Passthrough: 0x51
 // });
 
-// // 'use strict';
+// // 
 
 // // const { ClassCodes } = require('../../core/constants');
 // // const EPath = require('../../core/epath');

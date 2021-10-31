@@ -1,16 +1,14 @@
-'use strict';
+import CIPMetaObject from '../object.js';
+import CIPAttribute from '../attribute.js';
 
-const CIPMetaObject = require('../object');
-const CIPAttribute = require('../attribute');
-
-const {
+import {
   ClassCodes,
   ClassNames,
-} = require('../constants');
+} from '../constants/index.js';
 
-const {
+import {
   DataType,
-} = require('../datatypes');
+} from '../datatypes/index.js';
 
 const ClassAttribute = Object.freeze({});
 
@@ -49,4 +47,4 @@ class MessageRouter extends CIPObject {}
 MessageRouter.ClassAttribute = ClassAttribute;
 MessageRouter.InstanceAttribute = InstanceAttribute;
 
-module.exports = MessageRouter;
+export default MessageRouter;

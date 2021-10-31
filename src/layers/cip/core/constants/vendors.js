@@ -1,5 +1,3 @@
-'use strict';
-
 /** https://github.com/boundary/wireshark/blob/07eade8124fd1d5386161591b52e177ee6ea849f/epan/dissectors/packet-cip.c#L1174 */
 const VendorNames = {
   0: 'Reserved',
@@ -1225,6 +1223,6 @@ const VendorNames = {
   1240: 'Penko Engineering B.V.',
 };
 
-module.exports = {
+export default {
   VendorNames,
 };

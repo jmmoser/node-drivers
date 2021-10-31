@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * CIP Vol 1, Appendix C-1.4.3
  *
@@ -9,10 +7,10 @@
  * be the first item in the path that the device receives.
  */
 
-const {
+import {
   getBits,
   InvertKeyValues,
-} = require('../../../../../utils');
+} from '../../../../../utils.js';
 
 const SubtypeCodes = Object.freeze({
   Schedule: 1,
@@ -111,4 +109,4 @@ NetworkSegment.ProductionInhibitTime = class ProductionInhibitTimeNetworkSegment
   }
 };
 
-module.exports = NetworkSegment;
+export default NetworkSegment;

@@ -1,8 +1,6 @@
-'use strict';
-
-const { CallbackPromise } = require('../../utils');
-const Layer = require('../Layer');
-const PCCCPacket = require('./packet');
+import { CallbackPromise } from '../../utils.js';
+import Layer from '../Layer.js';
+import PCCCPacket from './packet.js';
 
 function incrementTransaction(self) {
   self._transaction++;
@@ -47,7 +45,7 @@ function send(self, internal, request, contextOrCallback) {
  * Uses transactions to map responses to requests
  */
 
-class PCCCLayer extends Layer {
+export default class PCCCLayer extends Layer {
   constructor(lowerLayer) {
     super('pccc', lowerLayer);
     this._transaction = 0;
@@ -257,8 +255,6 @@ class PCCCLayer extends Layer {
     this.forward(packet.data, info, savedContext.context);
   }
 }
-
-module.exports = PCCCLayer;
 
 /*
   PLC-2 Communication Commands

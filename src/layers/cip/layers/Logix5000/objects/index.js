@@ -1,10 +1,8 @@
-'use strict';
+import Controller from './controller';
+import SymbolObject from './symbol';
+import Template from './template';
 
-const Controller = require('./controller');
-const SymbolObject = require('./symbol');
-const Template = require('./template');
-
-module.exports = {
+export default {
   Controller,
   SymbolObject, // Symbol is a reserved word
   Template,

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * CIP Vol 1, Appendix C-1.4.2
  *
@@ -11,14 +9,14 @@
  * (the 8-bit format is identical to the Packed Path). The pad byte shall be set to zero.
  */
 
-const {
+import {
   getBits,
   decodeUnsignedInteger,
   unsignedIntegerSize,
   InvertKeyValues,
-} = require('../../../../../utils');
+} from '../../../../../utils.js';
 
-const { ClassNames } = require('../../constants');
+import { ClassNames } from '../../constants/index.js';
 
 const TypeCodes = Object.freeze({
   ClassID: 0,
@@ -421,4 +419,4 @@ LogicalSegment.Special = class Special extends LogicalSegment {
   }
 };
 
-module.exports = LogicalSegment;
+export default LogicalSegment;

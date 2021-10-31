@@ -1,15 +1,13 @@
 /* eslint-disable max-classes-per-file */
 
-'use strict';
+import { DecodeTypedData } from './datatypes/decoding.js';
+import { CommonServiceCodes } from './constants/services.js';
+import EPath from './epath/index.js';
 
-const { DecodeTypedData } = require('./datatypes/decoding');
-const { CommonServiceCodes } = require('./constants/services');
-const EPath = require('./epath');
+import CIPRequest from './request.js';
+import CIPFeature from './feature.js';
 
 const LogicalSegment = EPath.Segments.Logical;
-
-const CIPRequest = require('./request');
-const CIPFeature = require('./feature');
 
 class CIPAttribute extends CIPFeature {
   constructor(code, name, dataType, classCode) {
@@ -46,4 +44,4 @@ CIPAttribute.Instance = class CIPInstanceAttribute extends CIPAttribute {
   }
 };
 
-module.exports = CIPAttribute;
+export default CIPAttribute;

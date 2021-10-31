@@ -1,9 +1,7 @@
-'use strict';
-
-const {
+import {
   InvertKeyValues,
-} = require('../../../../../utils');
+} from '../../../../../utils';
 
-const DataTypeCodes = require('./codes');
+import DataTypeCodes from './codes';
 
-module.exports = InvertKeyValues(DataTypeCodes);
+export default InvertKeyValues(DataTypeCodes);

@@ -1,12 +1,12 @@
-const {
+import {
   getBits,
-} = require('../../utils');
+} from '../../utils.js';
 
-const {
+import {
   PCCCDataType,
-} = require('./constants');
+} from './constants.js';
 
-function DecodeDataDescriptor(data, offsetRef) {
+export function DecodeDataDescriptor(data, offsetRef) {
   const flag = data.readUInt8(offsetRef.current); offsetRef.current += 1;
 
   let type;
@@ -58,7 +58,7 @@ function DecodeDataDescriptor(data, offsetRef) {
   };
 }
 
-function DecodeTypedData(data, offsetRef, type, size) {
+export function DecodeTypedData(data, offsetRef, type, size) {
   let value;
 
   switch (type) {
@@ -138,8 +138,3 @@ function DecodeTypedData(data, offsetRef, type, size) {
 
   return value;
 }
-
-module.exports = {
-  DecodeDataDescriptor,
-  DecodeTypedData,
-};

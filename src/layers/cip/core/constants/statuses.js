@@ -1,10 +1,8 @@
-'use strict';
-
-const {
+import {
   InvertKeyValues,
-} = require('../../../../utils');
+} from '../../../../utils.js';
 
-const GeneralStatusCodes = Object.freeze({
+export const GeneralStatusCodes = Object.freeze({
   Success: 0x00,
   ConnectionFailure: 0x01,
   ResourceUnavailable: 0x02,
@@ -51,7 +49,7 @@ const GeneralStatusCodes = Object.freeze({
   UnknownModbusError: 0x2B,
 });
 
-const GeneralStatusNames = InvertKeyValues(GeneralStatusCodes);
+export const GeneralStatusNames = InvertKeyValues(GeneralStatusCodes);
 
 // // CIP-V1-1.0 Appendix B-1. General status codes
 // const GeneralStatusNames = Object.freeze({
@@ -100,7 +98,7 @@ const GeneralStatusNames = InvertKeyValues(GeneralStatusCodes);
 // });
 
 // CIP-V1-1.0 Appendix B-1. General status codes
-const GeneralStatusDescriptions = Object.freeze({
+export const GeneralStatusDescriptions = Object.freeze({
   0x01: 'A connection related service failed along the connection path.',
   0x02: 'Resources needed for the object to perform the requested service were unavailable.',
   0x03: 'See Status Code 0x20, which is the preferred value to use for this condition.',
@@ -143,9 +141,3 @@ const GeneralStatusDescriptions = Object.freeze({
   0x2A: 'This error code may only be reported by DeviceNet group 2 only servers with 4K or less code space and only in place of Service not supported, Attribute not supported and Attribute not settable.',
   [GeneralStatusCodes.UnknownModbusError]: 'A CIP to Modbus translator received an unknown Modbus Exception Code.',
 });
-
-module.exports = {
-  GeneralStatusCodes,
-  GeneralStatusNames,
-  GeneralStatusDescriptions,
-};

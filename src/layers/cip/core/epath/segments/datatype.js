@@ -1,14 +1,12 @@
-'use strict';
-
-const {
+import {
   decodeUnsignedInteger,
   unsignedIntegerSize,
   encodeUnsignedInteger,
-} = require('../../../../../utils');
+} from '../../../../../utils.js';
 
-const convertDataTypeToObject = require('../../datatypes/convertToObject');
-const { DataTypeCodes, DataTypeNames } = require('../../datatypes/codes');
-const { DataType } = require('../../datatypes/types');
+import convertDataTypeToObject from '../../datatypes/convertToObject.js';
+import { DataTypeCodes, DataTypeNames } from '../../datatypes/codes.js';
+import { DataType } from '../../datatypes/types.js';
 
 function DecodeDataType(buffer, offsetRef) {
   let type;
@@ -150,4 +148,4 @@ class DataTypeSegment {
   }
 }
 
-module.exports = DataTypeSegment;
+export default DataTypeSegment;

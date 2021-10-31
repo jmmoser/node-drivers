@@ -1,9 +1,6 @@
-'use strict';
-
-const CIPMetaObject = require('../../../core/object');
-const CIPAttribute = require('../../../core/attribute');
-// const { ClassCodes } = require('../../../core/constants');
-const { DataType } = require('../../../core/datatypes');
+import CIPMetaObject from '../../../core/object';
+import CIPAttribute from '../../../core/attribute';
+import { DataType } from '../../../core/datatypes';
 
 const InstanceAttribute = Object.freeze({
   Unknown1: new CIPAttribute.Instance(1, 'Unknown1', DataType.UINT),
@@ -21,4 +18,4 @@ class Controller extends CIPObject {}
 
 Controller.InstanceAttribute = InstanceAttribute;
 
-module.exports = Controller;
+export default Controller;

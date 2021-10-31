@@ -1,20 +1,15 @@
-'use strict';
-
-const {
+import {
   DataType,
   DataTypeCodes,
   DataTypeNames,
-} = require('../../core/datatypes');
+} from '../../core/datatypes/index.js';
 
-const {
-  InvertKeyValues,
-} = require('../../../../utils');
-
-const {
+import {
   getBits,
-} = require('../../../../utils');
+  InvertKeyValues,
+} from '../../../../utils.js';
 
-const Logix5000_DataTypeCodes = Object.freeze({
+const Logix5000DataTypeCodes = Object.freeze({
   Program: 0x68,
   Map: 0x69,
   Routine: 0x6D,
@@ -22,27 +17,27 @@ const Logix5000_DataTypeCodes = Object.freeze({
   Cxn: 0x7E,
 });
 
-const Logix5000_DatatypeNames = InvertKeyValues(Logix5000_DataTypeCodes);
+const Logix5000DatatypeNames = InvertKeyValues(Logix5000DataTypeCodes);
 
-const Logix5000_DataType = Object.freeze({
+const Logix5000DataType = Object.freeze({
   Program() {
-    return { type: Logix5000_DataType.Program, code: Logix5000_DataTypeCodes.Program };
+    return { type: Logix5000DataType.Program, code: Logix5000DataTypeCodes.Program };
   },
   Map() {
-    return { type: Logix5000_DataType.Map, code: Logix5000_DataTypeCodes.Map };
+    return { type: Logix5000DataType.Map, code: Logix5000DataTypeCodes.Map };
   },
   Routine() {
-    return { type: Logix5000_DataType.Routine, code: Logix5000_DataTypeCodes.Routine };
+    return { type: Logix5000DataType.Routine, code: Logix5000DataTypeCodes.Routine };
   },
   Task() {
-    return { type: Logix5000_DataType.Task, code: Logix5000_DataTypeCodes.Task };
+    return { type: Logix5000DataType.Task, code: Logix5000DataTypeCodes.Task };
   },
   Cxn() {
-    return { type: Logix5000_DataType.Cxn, code: Logix5000_DataTypeCodes.Cxn };
+    return { type: Logix5000DataType.Cxn, code: Logix5000DataTypeCodes.Cxn };
   },
 });
 
-const Logix5000_ClassCodes = Object.freeze({
+const Logix5000ClassCodes = Object.freeze({
   Symbol: 0x6B,
   Template: 0x6C,
   Controller: 0xAC,
@@ -188,9 +183,9 @@ class SymbolType {
       if (dataTypeCode === DataTypeCodes.BOOL) {
         dataType = DataType.BOOL(getBits(code, 8, 11));
       } else {
-        const dataTypeName = DataTypeNames[dataTypeCode] || Logix5000_DatatypeNames[dataTypeCode] || 'Unknown';
+        const dataTypeName = DataTypeNames[dataTypeCode] || Logix5000DatatypeNames[dataTypeCode] || 'Unknown';
         if (dataTypeName) {
-          dataType = DataType[dataTypeName] || Logix5000_DataType[dataTypeName];
+          dataType = DataType[dataTypeName] || Logix5000DataType[dataTypeName];
           if (typeof dataType === 'function') {
             dataType = dataType();
           }
@@ -218,11 +213,11 @@ class Member {
   }
 }
 
-module.exports = {
-  Logix5000_DataTypeCodes,
-  Logix5000_DatatypeNames,
-  Logix5000_DataType,
-  Logix5000_ClassCodes,
+export default {
+  Logix5000DataTypeCodes,
+  Logix5000DatatypeNames,
+  Logix5000DataType,
+  Logix5000ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,
   SymbolInstanceAttributeCodes,

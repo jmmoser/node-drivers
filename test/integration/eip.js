@@ -1,5 +1,5 @@
-const assert = require('assert');
-const { TCP, CIP } = require('../../src/index');
+import assert from 'assert';
+import { TCP, CIP } from '../../src/index';
 
 const tcpLayer = new TCP({ host: '127.0.0.1', port: 44818 });
 const eipLayer = new CIP.EIP(tcpLayer);

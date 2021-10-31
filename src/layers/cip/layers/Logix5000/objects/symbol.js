@@ -1,9 +1,7 @@
-'use strict';
-
-const CIPMetaObject = require('../../../core/object');
-const CIPAttribute = require('../../../core/attribute');
-// const { ClassCodes } = require('../../../core/constants');
-const { DataType } = require('../../../core/datatypes');
+import CIPMetaObject from '../../../core/object';
+import CIPAttribute from '../../../core/attribute';
+import { DataType } from '../../../core/datatypes';
+import { SymbolType } from './__shared';
 
 const InstanceAttribute = Object.freeze({
   Name: new CIPAttribute.Instance(1, 'Name', DataType.STRING),
@@ -26,4 +24,4 @@ class SymbolObject extends CIPObject { }
 
 SymbolObject.InstanceAttribute = InstanceAttribute;
 
-module.exports = SymbolObject;
+export default SymbolObject;

@@ -1,4 +1,4 @@
-// 'use strict';
+// 
 
 // // const Layer = require('../../Layer');
 // const CIPLayer = require('../layers/internal/CIPLayer');
@@ -103,7 +103,7 @@
 
 
 
-// // 'use strict';
+// // 
 
 // // const EPath = require('../../core/epath');
 // // const { ClassCodes } = require('../../core/constants');

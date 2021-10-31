@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * CIP Vol 1, Appendix C-1.4.1
  *
@@ -25,11 +23,11 @@
  * -----
  */
 
-const {
+import {
   getBits,
   unsignedIntegerSize,
   encodeUnsignedInteger,
-} = require('../../../../../utils');
+} from '../../../../../utils.js';
 
 function serializeAddress(address) {
   if (Buffer.isBuffer(address)) {
@@ -173,4 +171,4 @@ class PortSegment {
   }
 }
 
-module.exports = PortSegment;
+export default PortSegment;

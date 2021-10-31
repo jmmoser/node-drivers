@@ -1,6 +1,4 @@
-'use strict';
-
-const PDU = require('../pdu');
+import PDU from '../pdu.js';
 
 const OFFSET_TRANSACTION_ID = 0;
 const OFFSET_PROTOCOL_ID = 2;
@@ -13,7 +11,7 @@ const MBAP_HEADER_LENGTH = OFFSET_PDU;
 /**
  * ModbusTCP is defraggable
  */
-class TCP {
+export default class TCP {
   static Decode(buffer, offsetRef) {
     const transactionID = TCP.TransactionID(buffer, offsetRef);
     const protocolID = TCP.ProtocolID(buffer, offsetRef);
@@ -74,5 +72,3 @@ class TCP {
     return (length >= TCP.Length(buffer, offsetRef));
   }
 }
-
-module.exports = TCP;

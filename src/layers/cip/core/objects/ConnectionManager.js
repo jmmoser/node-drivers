@@ -1,11 +1,9 @@
-'use strict';
-
 // EIP-CIP-V1 3.5, page 3-53
 
-const { InvertKeyValues } = require('../../../../utils');
-const { ClassCodes } = require('../constants');
-const CIPRequest = require('../request');
-const EPath = require('../epath');
+import { InvertKeyValues } from '../../../../utils.js';
+import { ClassCodes } from '../constants/index.js';
+import CIPRequest from '../request.js';
+import EPath from '../epath/index.js';
 
 /** EIP-CIP-V1 3-5.5, page 3.56 */
 const ServiceCodes = {
@@ -418,6 +416,6 @@ class ConnectionManager {
   }
 }
 
-module.exports = ConnectionManager;
-
 ConnectionManager.ServiceCodes = ServiceCodes;
+
+export default ConnectionManager;

@@ -1,13 +1,11 @@
-'use strict';
+import { ClassCodes } from '../constants/index.js';
 
-const { ClassCodes } = require('../constants');
-
-const Identity = require('./Identity');
-const MessageRouter = require('./MessageRouter');
-const Port = require('./Port');
-const TCPIPInterface = require('./TCPIPInterface');
-const EthernetLink = require('./EthernetLink');
-const ConnectionManager = require('./ConnectionManager');
+import Identity from './Identity.js';
+import MessageRouter from './MessageRouter.js';
+import Port from './Port.js';
+import TCPIPInterface from './TCPIPInterface.js';
+import EthernetLink from './EthernetLink.js';
+import ConnectionManager from './ConnectionManager.js';
 
 const OBJECTS = {
   [ClassCodes.Identity]: Identity,
@@ -18,7 +16,7 @@ const OBJECTS = {
   [ClassCodes.ConnectionManager]: ConnectionManager,
 };
 
-module.exports = {
+export default {
   OBJECTS,
 
   Identity,

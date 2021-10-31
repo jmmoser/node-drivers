@@ -1,10 +1,8 @@
-'use strict';
-
-const { CallbackPromise, once } = require('../../utils');
-const Layer = require('../Layer');
-const MB = require('./constants');
-const Frames = require('./frames');
-const PDU = require('./pdu');
+import { CallbackPromise, once } from '../../utils.js';
+import Layer from '../Layer.js';
+import * as MB from '../../core/modbus/constants.js';
+import Frames from '../../core/modbus/frames/index.js';
+import PDU from '../../core/modbus/pdu.js';
 
 const {
   ReadDiscreteInputs,
@@ -35,7 +33,7 @@ function writeRequest(self, fn, address, values, callback) {
   });
 }
 
-class MBLayer extends Layer {
+export default class Modbus extends Layer {
   constructor(lowerLayer, options) {
     super('modbus', lowerLayer, null, DefaultOptions);
 
@@ -145,5 +143,3 @@ class MBLayer extends Layer {
     }
   }
 }
-
-module.exports = MBLayer;

@@ -1,14 +1,12 @@
-'use strict';
+import EPath from '../epath/index.js';
+import { DataTypeCodes, DataTypeNames } from './codes.js';
+import convertToObject from './convertToObject.js';
 
-const EPath = require('../epath');
-const { DataTypeCodes, DataTypeNames } = require('./codes');
-const convertToObject = require('./convertToObject');
-
-const {
+import {
   getBits,
   unsignedIntegerSize,
   decodeUnsignedInteger,
-} = require('../../../../utils');
+} from '../../../../utils.js';
 
 function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
   if (Array.isArray(dataType)) {
@@ -169,6 +167,6 @@ function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
   return value;
 }
 
-module.exports = {
+export default {
   DecodeTypedData,
 };

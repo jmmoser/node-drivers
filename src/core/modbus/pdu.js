@@ -1,10 +1,8 @@
-'use strict';
-
-const {
+import {
   Functions,
   FunctionNames,
   ErrorDescriptions,
-} = require('./constants');
+} from './constants.js';
 
 const OFFSET_FN = 0;
 const OFFSET_DATA = 1;
@@ -22,7 +20,7 @@ const OFFSET_DATA = 1;
 //   };
 // }
 
-class PDU {
+export default class PDU {
   static EncodeReadRequest(fn, address, count) {
     const buffer = Buffer.allocUnsafe(5);
     buffer.writeUInt8(fn, 0);
@@ -146,5 +144,3 @@ class PDU {
     return buffer.slice(offsetRef.current + OFFSET_DATA);
   }
 }
-
-module.exports = PDU;

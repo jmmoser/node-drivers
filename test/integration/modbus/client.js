@@ -1,5 +1,5 @@
-const assert = require('assert');
-const { TCP, Modbus } = require('../../../src/index');
+import assert from 'assert';
+import { TCP, Modbus } from '../../../src/index.js';
 
 const tcpLayer = new TCP({ host: '127.0.0.1', port: 5020 });
 const mbLayer = new Modbus(tcpLayer);

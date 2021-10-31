@@ -1,10 +1,8 @@
-'use strict';
-
-const CIPMetaObject = require('../object');
-const CIPAttribute = require('../attribute');
-const { ClassCodes } = require('../constants');
-const { DataType } = require('../datatypes');
-const { getBits } = require('../../../../utils');
+import CIPMetaObject from '../object.js';
+import CIPAttribute from '../attribute.js';
+import { ClassCodes } from '../constants/index.js';
+import { DataType } from '../datatypes/index.js';
+import { getBits } from '../../../../utils.js';
 
 const ClassAttribute = Object.freeze({});
 
@@ -142,4 +140,4 @@ class TCPIPInterface extends CIPObject {}
 TCPIPInterface.ClassAttribute = ClassAttribute;
 TCPIPInterface.InstanceAttribute = InstanceAttribute;
 
-module.exports = TCPIPInterface;
+export default TCPIPInterface;

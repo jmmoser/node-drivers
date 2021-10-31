@@ -1,10 +1,8 @@
-'use strict';
+import { InvertKeyValues } from '../../../../utils.js';
 
-const { InvertKeyValues } = require('../../../../utils');
-
-const CIPRequest = require('../../core/request');
-const EPath = require('../../core/epath');
-const { ClassCodes } = require('../../core/constants');
+import CIPRequest from '../../core/request.js';
+import EPath from '../../core/epath/index.js';
+import { ClassCodes } from '../../core/constants/index.js';
 
 const ServiceCodes = Object.freeze({
   ExecutePCCC: 0x4B,
@@ -17,7 +15,7 @@ const PCCC_EPATH = EPath.Encode(true, [
   new EPath.Segments.Logical.InstanceID(0x01),
 ]);
 
-module.exports = (options) => {
+export default (options) => {
   const opts = {
     vendorID: 0xABCD,
     serialNumber: 0x12345678,

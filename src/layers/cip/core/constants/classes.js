@@ -1,15 +1,13 @@
-'use strict';
-
-const {
+import {
   InvertKeyValues,
-} = require('../../../../utils');
+} from '../../../../utils.js';
 
 /**
  * References:
  *  - CIP Vol 1 Table 5.1
  *  - https://github.com/boundary/wireshark/blob/07eade8124fd1d5386161591b52e177ee6ea849f/epan/dissectors/packet-cip.c#L2448
  */
-const ClassCodes = Object.freeze({
+export const ClassCodes = Object.freeze({
   Identity: 0x01,
   MessageRouter: 0x02,
   DeviceNet: 0x03,
@@ -107,9 +105,4 @@ const ClassCodes = Object.freeze({
   CompoNetRepeater: 0xF8,
 });
 
-const ClassNames = InvertKeyValues(ClassCodes);
-
-module.exports = {
-  ClassCodes,
-  ClassNames,
-};
+export const ClassNames = InvertKeyValues(ClassCodes);

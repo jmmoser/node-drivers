@@ -1,19 +1,17 @@
-'use strict';
+import { DataType } from './types.js';
+import { DataTypeCodes, DataTypeNames } from './codes.js';
 
-const { DataType } = require('./types');
-const { DataTypeCodes, DataTypeNames } = require('./codes');
-
-const {
+import {
   Decode,
-} = require('./decoding');
+} from './decoding.js';
 
-const {
+import {
   EncodeSize,
   Encode,
   EncodeTo,
-} = require('./encoding');
+} from './encoding.js';
 
-module.exports = {
+export default {
   DataType,
   DataTypeNames,
   DataTypeCodes,

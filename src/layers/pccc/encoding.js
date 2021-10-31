@@ -1,13 +1,13 @@
-const {
+import {
   encodeUnsignedInteger,
   unsignedIntegerSize,
-} = require('../../utils');
+} from '../../utils.js';
 
-const {
+import {
   PCCCDataType,
-} = require('./constants');
+} from './constants.js';
 
-function EncodeCommand(command, status, transaction, data = []) {
+export function EncodeCommand(command, status, transaction, data = []) {
   const buffer = Buffer.allocUnsafe(4 + data.length);
   buffer.writeUInt8(command, 0);
   buffer.writeUInt8(status, 1);
@@ -18,7 +18,7 @@ function EncodeCommand(command, status, transaction, data = []) {
   return buffer;
 }
 
-function EncodeLogicalASCIIAddress(buffer, offsetRef, address) {
+export function EncodeLogicalASCIIAddress(buffer, offsetRef, address) {
   offsetRef.current = buffer.writeUInt8(0x00, offsetRef.current);
   offsetRef.current = buffer.writeUInt8(0x24, offsetRef.current);
   offsetRef.current += buffer.write(address, offsetRef.current, 'ascii');
@@ -32,7 +32,7 @@ function dataTypeAttributeAdditionalEncodingLength(value) {
   return unsignedIntegerSize(value);
 }
 
-function DataTypeEncodingLength(id, size) {
+export function DataTypeEncodingLength(id, size) {
   const idLength = dataTypeAttributeAdditionalEncodingLength(id);
   const sizeLength = dataTypeAttributeAdditionalEncodingLength(size);
 
@@ -55,7 +55,7 @@ function DataTypeEncodingLength(id, size) {
   throw new Error(`Unable to encode data type with id ${id} and size ${size}`);
 }
 
-function EncodeDataDescriptor(data, offsetRef, id, size) {
+export function EncodeDataDescriptor(data, offsetRef, id, size) {
   const idLength = dataTypeAttributeAdditionalEncodingLength(id);
   const sizeLength = dataTypeAttributeAdditionalEncodingLength(size);
 
@@ -89,7 +89,7 @@ function EncodeDataDescriptor(data, offsetRef, id, size) {
   throw new Error(`Unable to encode data type with id ${id} and size ${size}`);
 }
 
-function EncodeTypedData(buffer, offsetRef, type, value) {
+export function EncodeTypedData(buffer, offsetRef, type, value) {
   switch (type) {
     case PCCCDataType.Binary:
     case PCCCDataType.Byte:
@@ -110,11 +110,3 @@ function EncodeTypedData(buffer, offsetRef, type, value) {
       throw new Error(`Unable to encode value of type: ${type}`);
   }
 }
-
-module.exports = {
-  EncodeCommand,
-  EncodeLogicalASCIIAddress,
-  EncodeDataDescriptor,
-  EncodeTypedData,
-  DataTypeEncodingLength,
-};

@@ -1,16 +1,14 @@
-'use strict';
+import CIPRequest from '../../core/request.js';
+import { InvertKeyValues } from '../../../../utils.js';
+import { GeneralStatusCodes, ClassCodes } from '../../core/constants/index.js';
+import { DataType } from '../../core/datatypes/index.js';
+import Layer from '../../../Layer.js';
+import ConnectionManager from '../../core/objects/ConnectionManager.js';
+import EPath from '../../core/epath/index.js';
 
-const CIPRequest = require('../../core/request');
-const { InvertKeyValues } = require('../../../../utils');
-const { GeneralStatusCodes, ClassCodes } = require('../../core/constants');
-const { DataType } = require('../../core/datatypes');
-const Layer = require('../../../Layer');
-const ConnectionManager = require('../../core/objects/ConnectionManager');
-const EPath = require('../../core/epath');
-
-const EIPLayer = require('../EIP');
-const TCPLayer = require('../../../tcp');
-const UDPLayer = require('../../../udp');
+import EIPLayer from '../EIP/index.js';
+import TCPLayer from '../../../tcp/index.js';
+import UDPLayer from '../../../udp/index.js';
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 
@@ -496,7 +494,7 @@ class CIPConnectionLayer extends Layer {
   }
 }
 
-module.exports = CIPConnectionLayer;
+export default CIPConnectionLayer;
 
 // /** CIP Vol1 Table 3-4.2 */
 // const ClassServices = Object.freeze({

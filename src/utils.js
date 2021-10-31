@@ -1,11 +1,9 @@
-'use strict';
-
 // http://stackoverflow.com/a/10090443/3055415
-function getBits(k, m, n) {
+export function getBits(k, m, n) {
   return ((k >> m) & ((1 << (n - m)) - 1));
 }
 
-function unsignedIntegerSize(i) {
+export function unsignedIntegerSize(i) {
   if (i < 0x10000) {
     if (i < 0x100) return 1;
 
@@ -17,7 +15,7 @@ function unsignedIntegerSize(i) {
   return 8;
 }
 
-function encodeUnsignedInteger(data, offset, value, size) {
+export function encodeUnsignedInteger(data, offset, value, size) {
   switch (size) {
     case 1:
       return data.writeUInt8(value, offset);
@@ -32,7 +30,7 @@ function encodeUnsignedInteger(data, offset, value, size) {
   }
 }
 
-function decodeUnsignedInteger(data, offset, size) {
+export function decodeUnsignedInteger(data, offset, size) {
   switch (size) {
     case 1:
       return data.readUInt8(offset);
@@ -50,7 +48,7 @@ function decodeUnsignedInteger(data, offset, size) {
 /**
  * @param {Object|Map} obj
  */
-function InvertKeyValues(obj) {
+export function InvertKeyValues(obj) {
   let inverted;
   switch (Object.prototype.toString.call(obj)) {
     case '[object Object]':
@@ -76,7 +74,7 @@ function InvertKeyValues(obj) {
  * @param {Function} fn
  * @param {*} context
  */
-function once(fn, context) {
+export function once(fn, context) {
   let result;
   return (...args) => {
     if (fn) {
@@ -88,7 +86,7 @@ function once(fn, context) {
 }
 
 /** https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error */
-class InfoError extends Error {
+export class InfoError extends Error {
   constructor(info, err, ...params) {
     // Pass remaining arguments (including vendor specific ones) to parent constructor
     if (typeof err === 'object' && err.message) {
@@ -106,7 +104,7 @@ class InfoError extends Error {
   }
 }
 
-function CallbackPromise(callback, func, timeout) {
+export function CallbackPromise(callback, func, timeout) {
   const hasCallback = typeof callback === 'function';
   return new Promise((resolve, reject) => {
     let timeoutHandle;
@@ -159,14 +157,3 @@ function CallbackPromise(callback, func, timeout) {
     }
   });
 }
-
-module.exports = {
-  getBits,
-  unsignedIntegerSize,
-  encodeUnsignedInteger,
-  decodeUnsignedInteger,
-  once,
-  InvertKeyValues,
-  CallbackPromise,
-  InfoError,
-};

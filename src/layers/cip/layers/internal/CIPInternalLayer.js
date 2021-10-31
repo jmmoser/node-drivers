@@ -1,16 +1,14 @@
-'use strict';
+import EPath from '../../core/epath/index.js';
+import CIPRequest from '../../core/request.js';
+import { CommonServiceCodes } from '../../core/constants/index.js';
 
-const EPath = require('../../core/epath');
-const CIPRequest = require('../../core/request');
-const { CommonServiceCodes } = require('../../core/constants');
+import { CallbackPromise } from '../../../../utils.js';
+import Layer from '../../../Layer.js';
+import ConnectionLayer from './CIPConnectionLayer.js';
 
-const { CallbackPromise } = require('../../../../utils');
-const Layer = require('../../../Layer');
-const ConnectionLayer = require('./CIPConnectionLayer');
+// import { OBJECTS } from '../../core/objects';
 
-// const { OBJECTS } = require('../../core/objects');
-
-const PCCC = require('./pccc');
+import PCCC from './pccc.js';
 
 class CIPInternalLayer extends Layer {
   constructor(lowerLayer, options, name) {
@@ -139,4 +137,4 @@ class CIPInternalLayer extends Layer {
   }
 }
 
-module.exports = CIPInternalLayer;
+export default CIPInternalLayer;

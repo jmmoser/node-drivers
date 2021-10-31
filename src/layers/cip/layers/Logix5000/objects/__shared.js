@@ -1,6 +1,7 @@
-'use strict';
-
-const { getBits } = require('../../../../../utils');
+import { getBits } from '../../../../../utils';
+import Logix5000DataType from '../datatypes/codes';
+import Logix5000DatatypeNames from '../datatypes/names';
+import { DataType, DataTypeCodes, DataTypeNames } from '../../../core/datatypes';
 
 class SymbolType {
   constructor(code) {
@@ -16,9 +17,9 @@ class SymbolType {
       if (dataTypeCode === DataTypeCodes.BOOL) {
         dataType = DataType.BOOL(getBits(code, 8, 11));
       } else {
-        const dataTypeName = DataTypeNames[dataTypeCode] || Logix5000_DatatypeNames[dataTypeCode] || 'Unknown';
+        const dataTypeName = DataTypeNames[dataTypeCode] || Logix5000DatatypeNames[dataTypeCode] || 'Unknown';
         if (dataTypeName) {
-          dataType = DataType[dataTypeName] || Logix5000_DataType[dataTypeName];
+          dataType = DataType[dataTypeName] || Logix5000DataType[dataTypeName];
           if (typeof dataType === 'function') {
             dataType = dataType();
           }
@@ -36,6 +37,6 @@ class SymbolType {
   }
 }
 
-module.exports = {
+export default {
   SymbolType,
 };

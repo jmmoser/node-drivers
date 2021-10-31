@@ -1,23 +1,21 @@
-'use strict';
-
-const {
+import {
   PCCCDataType,
   STSCodeDescriptions,
   EXTSTSCodeDescriptionsCMDF0,
-} = require('./constants');
+} from './constants.js';
 
-const {
+import {
   DecodeDataDescriptor,
   DecodeTypedData,
-} = require('./decoding');
+} from './decoding.js';
 
-const {
+import {
   EncodeCommand,
   EncodeLogicalASCIIAddress,
   EncodeTypedData,
   EncodeDataDescriptor,
   DataTypeEncodingLength,
-} = require('./encoding');
+} from './encoding.js';
 
 // Help from https://github.com/plcpeople/nodepccc/blob/00b4824972baec636deb0906454f841d8b832797/nodePCCC.js
 function logicalASCIIAddressInfo(address) {
@@ -76,7 +74,7 @@ function logicalASCIIAddressInfo(address) {
   return info;
 }
 
-class PCCCPacket {
+export default class PCCCPacket {
   constructor(command = 0, status = 0, transaction = 0, data) {
     this.command = command;
     this.transaction = transaction;
@@ -310,8 +308,6 @@ class PCCCPacket {
   //   return new PCCCPacket(0x0F, 0, transaction, Buffer.from([0x55]));
   // }
 }
-
-module.exports = PCCCPacket;
 
 // const PCCCDataTypes = {
 //   1: 'bit',

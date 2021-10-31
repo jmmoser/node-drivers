@@ -1,12 +1,10 @@
 /* eslint-disable max-classes-per-file */
 
-'use strict';
-
-const CIPFeature = require('./feature');
+import CIPFeature from './feature';
 
 class CIPService extends CIPFeature {}
 
 CIPService.Class = class CIPClassService extends CIPService { };
 CIPService.Instance = class CIPInstanceService extends CIPService { };
 
-module.exports = CIPService;
+export default CIPService;

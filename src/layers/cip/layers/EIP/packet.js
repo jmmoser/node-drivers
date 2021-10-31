@@ -1,6 +1,4 @@
-'use strict';
-
-const CPF = require('./cpf');
+import CPF from './cpf.js';
 
 /*
   Communication Profile Families
@@ -84,7 +82,7 @@ const EIPStatusCodeDescriptions = Object.freeze({
 /**
  * EIPPacket is defraggable
  */
-class EIPPacket {
+export default class EIPPacket {
   constructor() {
     this.command = 0;
     this.dataLength = 0;
@@ -244,5 +242,3 @@ class EIPPacket {
 
 EIPPacket.CommandCodes = Command;
 EIPPacket.CPFItemTypeIDs = CPFItemTypeIDs;
-
-module.exports = EIPPacket;

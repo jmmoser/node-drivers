@@ -1,14 +1,12 @@
-'use strict';
+import { CallbackPromise, InfoError } from '../../../../utils.js';
+import Layer from '../../../Layer.js';
+import EIPPacket from './packet.js';
 
-const { CallbackPromise, InfoError } = require('../../../../utils');
-const Layer = require('../../../Layer');
-const EIPPacket = require('./packet');
+import CPF from './cpf.js';
 
 const {
   CommandCodes,
 } = EIPPacket;
-
-const CPF = require('./cpf');
 
 function SendDataPacket(interfaceHandle, timeout, data) {
   const buffer = Buffer.allocUnsafe(data.length + 6);
@@ -183,7 +181,7 @@ const DefaultOptions = {
   },
 };
 
-class EIPLayer extends Layer {
+export default class EIPLayer extends Layer {
   constructor(lowerLayer, options) {
     if (lowerLayer == null) {
       throw new Error('EIP layer requires a lower layer');
@@ -438,5 +436,3 @@ class EIPLayer extends Layer {
     cleanup(this);
   }
 }
-
-module.exports = EIPLayer;

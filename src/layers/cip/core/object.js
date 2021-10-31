@@ -1,12 +1,10 @@
-'use strict';
-
-const EPath = require('./epath');
-const { CommonServiceCodes } = require('./constants');
-const CIPRequest = require('./request');
-const CIPAttribute = require('./attribute');
-const CIPFeatureGroup = require('./featuregroup');
-const { DataType } = require('./datatypes/types');
-const { DecodeTypedData } = require('./datatypes/decoding');
+import EPath from './epath/index.js';
+import { CommonServiceCodes } from './constants/index.js';
+import CIPRequest from './request.js';
+import CIPAttribute from './attribute.js';
+import CIPFeatureGroup from './featuregroup.js';
+import { DataType } from './datatypes/types.js';
+import { DecodeTypedData } from './datatypes/decoding.js';
 
 // const CommonClassAttribute = Object.freeze({
 //   Revision: new CIPAttribute.Class(1, 'Revision', DataType.UINT),
@@ -77,7 +75,7 @@ function DecodeAttribute(buffer, offsetRef, attribute) {
   return DecodeTypedData(buffer, offsetRef, dataType);
 }
 
-function CIPMetaObject(classCode, options) {
+export default function CIPMetaObject(classCode, options) {
   options = options || {};
 
   const CommonClassAttribute = Object.freeze({
@@ -256,5 +254,3 @@ function CIPMetaObject(classCode, options) {
 
   return CIPObject;
 }
-
-module.exports = CIPMetaObject;

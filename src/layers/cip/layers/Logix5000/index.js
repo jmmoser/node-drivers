@@ -1,11 +1,6 @@
-'use strict';
-
-const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
-
-// const Layer = require('../../Layer');
-const CIPLayer = require('../internal/CIPInternalLayer');
-const EPath = require('../../core/epath');
-const CIPRequest = require('../../core/request');
+import CIPLayer from '../internal/CIPInternalLayer.js';
+import EPath from '../../core/epath/index.js';
+import CIPRequest from '../../core/request.js';
 
 // const RECORD_TYPES = {
 //   CONTROLLER_ATTRIBUTES: 1,
@@ -14,28 +9,28 @@ const CIPRequest = require('../../core/request');
 //   TAG: 4
 // };
 
-const {
+import {
   CommonServiceCodes,
   // ClassCodes,
   GeneralStatusCodes,
-} = require('../../core/constants');
+} from '../../core/constants/index.js';
 
-const {
+import {
   DataType,
   DataTypeCodes,
   Encode,
   EncodeSize,
   EncodeTo,
-} = require('../../core/datatypes');
+} from '../../core/datatypes/index.js';
 
-const { DecodeTypedData } = require('../../core/datatypes/decoding');
+import { DecodeTypedData } from '../../core/datatypes/decoding.js';
 
-const {
+import {
   CallbackPromise,
   InfoError,
-} = require('../../../../utils');
+} from '../../../../utils.js';
 
-const {
+import {
   Logix5000_DataTypeCodes,
   Logix5000_DatatypeNames,
   Logix5000_ClassCodes,
@@ -54,7 +49,9 @@ const {
   ControllerInstanceAttributeCodes,
   ControllerInstanceAttributeDataTypes,
   ControllerInstanceAttributeNames,
-} = require('./constants');
+} from './constants.js';
+
+const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
 function Logix5000DecodeDataType(buffer, offsetRef, cb) {
   const startingOffset = offsetRef.current;
@@ -657,7 +654,7 @@ async function getSymbolSize(layer, scope, tag) {
   return 1;
 }
 
-class Logix5000 extends CIPLayer {
+export default class Logix5000 extends CIPLayer {
   constructor(lowerLayer, options) {
     options = {
       port: 1,
@@ -1385,5 +1382,3 @@ class Logix5000 extends CIPLayer {
     }
   }
 }
-
-module.exports = Logix5000;

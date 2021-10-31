@@ -1,13 +1,11 @@
-'use strict';
+import TCP from './layers/tcp/index.js';
+import UDP from './layers/udp/index.js';
+import Modbus from './layers/modbus/index.js';
+import PCCC from './layers/pccc/index.js';
+import CIP from './layers/cip/index.js';
+import Extras from './layers/extras/index.js';
 
-const TCP = require('./layers/tcp');
-const UDP = require('./layers/udp');
-const Modbus = require('./layers/modbus');
-const PCCC = require('./layers/pccc');
-const CIP = require('./layers/cip');
-const Extras = require('./layers/extras');
-
-module.exports = {
+export default {
   TCP,
   UDP,
   Modbus,

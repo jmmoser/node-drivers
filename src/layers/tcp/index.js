@@ -1,8 +1,6 @@
-'use strict';
-
-const net = require('net');
-const Layer = require('../Layer');
-const { CallbackPromise } = require('../../utils');
+import net from 'net';
+import Layer from '../Layer.js';
+import { CallbackPromise } from '../../utils.js';
 
 const LOG = false;
 
@@ -122,7 +120,7 @@ function removeSocketListeners(socket) {
   });
 }
 
-class TCPLayer extends Layer {
+export default class TCPLayer extends Layer {
   constructor(options) {
     super('tcp');
 
@@ -262,5 +260,3 @@ class TCPLayer extends Layer {
     }
   }
 }
-
-module.exports = TCPLayer;

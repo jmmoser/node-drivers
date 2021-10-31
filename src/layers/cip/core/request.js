@@ -1,17 +1,15 @@
 /* eslint-disable max-classes-per-file */
 
-'use strict';
-
-const {
+import {
   ClassCodes,
   CommonServiceCodes,
   CommonServiceNames,
   GeneralStatusNames,
   GeneralStatusCodes,
   GeneralStatusDescriptions,
-} = require('./constants');
+} from './constants/index.js';
 
-const EPath = require('./epath');
+import EPath from './epath/index.js';
 
 const EncodeSizeSymbol = Symbol('encodeSize');
 const RequestMessageSymbol = Symbol('requestMessage');
@@ -98,7 +96,7 @@ function DecodeResponse(buffer, offsetRef, options, request, handler) {
   return res;
 }
 
-class CIPRequest {
+export default class CIPRequest {
   constructor(service, path, data, responseHandler, options) {
     this.service = service;
     this.path = path;
@@ -272,5 +270,3 @@ class CIPMultiServiceRequest extends CIPRequest {
 }
 
 CIPRequest.Multi = CIPMultiServiceRequest;
-
-module.exports = CIPRequest;

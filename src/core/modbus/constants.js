@@ -1,8 +1,6 @@
-'use strict';
+import { InvertKeyValues } from '../../utils.js';
 
-const { InvertKeyValues } = require('../../utils');
-
-const Functions = Object.freeze({
+export const Functions = Object.freeze({
   ReadCoils: 0x01,
   ReadDiscreteInputs: 0x02,
   ReadHoldingRegisters: 0x03,
@@ -17,7 +15,7 @@ const Functions = Object.freeze({
   EncapsulatedInterfaceTransport: 0x2B,
 });
 
-const SearialLineFunctions = Object.freeze({
+export const SearialLineFunctions = Object.freeze({
   ReadExceptionStatus: 0x07,
   Diagnostics: 0x08,
   GetCommEventCounter: 0x0B,
@@ -25,9 +23,9 @@ const SearialLineFunctions = Object.freeze({
   ReportServerID: 0x11,
 });
 
-const FunctionNames = InvertKeyValues(Functions);
+export const FunctionNames = InvertKeyValues(Functions);
 
-const ErrorDescriptions = Object.freeze({
+export const ErrorDescriptions = Object.freeze({
   0x01: 'Illegal function',
   0x02: 'Illegal data address',
   0x03: 'Illegal data value',
@@ -42,15 +40,7 @@ const ErrorDescriptions = Object.freeze({
   0x0C: 'Max',
 });
 
-const MEITransportFunctions = Object.freeze({
+export const MEITransportFunctions = Object.freeze({
   CANopenGeneralReference: 0x0D,
   ReadDeviceIdentification: 0x0E,
 });
-
-module.exports = {
-  Functions,
-  FunctionNames,
-  ErrorDescriptions,
-  MEITransportFunctions,
-  SearialLineFunctions,
-};

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * CIP Vol 1, Appendix C-1.4.5
  *
@@ -7,9 +5,9 @@
  * during connection establishment, or at any other time as defined by the application.
  */
 
-const {
+import {
   getBits,
-} = require('../../../../../utils');
+} from '../../../../../utils.js';
 
 const SubtypeCodes = Object.freeze({
   Simple: 0,
@@ -144,4 +142,4 @@ DataSegment.ANSIExtendedSymbol = class ANSIExtendedSymbolDataSegment extends Dat
   }
 };
 
-module.exports = DataSegment;
+export default DataSegment;

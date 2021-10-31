@@ -1,26 +1,23 @@
-'use strict';
-
-const {
+import {
   ClassCodes,
   ClassNames,
-} = require('./classes');
+} from './classes.js';
 
-const {
+import {
   CommonServiceCodes,
   CommonServiceNames,
-} = require('./services');
+} from './services.js';
 
-const {
+import {
   GeneralStatusCodes,
   GeneralStatusNames,
   GeneralStatusDescriptions,
-} = require('./statuses');
+} from './statuses.js';
 
-const {
-  VendorNames,
-} = require('./vendors');
+import * as Vendors from './vendors.js';
+// asdf.default.VendorNames
 
-module.exports = {
+export default {
   ClassCodes,
   ClassNames,
   CommonServiceCodes,
@@ -28,5 +25,5 @@ module.exports = {
   GeneralStatusCodes,
   GeneralStatusNames,
   GeneralStatusDescriptions,
-  VendorNames,
+  VendorNames: Vendors.default.VendorNames,
 };

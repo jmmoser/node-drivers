@@ -1,9 +1,7 @@
-'use strict';
+import { DataTypeNames } from './codes.js';
+import { DataType } from './types.js';
 
-const { DataTypeNames } = require('./codes');
-const { DataType } = require('./types');
-
-module.exports = (dt) => {
+export default (dt) => {
   if (typeof dt === 'object') {
     return dt;
   }

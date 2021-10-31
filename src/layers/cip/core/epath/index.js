@@ -1,7 +1,5 @@
-'use strict';
-
-const { getBits } = require('../../../../utils');
-const Segments = require('./segments');
+import { getBits } from '../../../../utils.js';
+import Segments from './segments/index.js';
 
 function encodeSize(padded, segments) {
   if (!Array.isArray(segments)) {
@@ -143,4 +141,4 @@ class EPath {
 
 EPath.Segments = Segments;
 
-module.exports = EPath;
+export default EPath;

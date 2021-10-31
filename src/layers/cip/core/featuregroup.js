@@ -1,8 +1,6 @@
-'use strict';
+import CIPFeature from './feature.js';
 
-const CIPFeature = require('./feature');
-
-class CIPFeatureGroup {
+export default class CIPFeatureGroup {
   constructor(features) {
     this.features = Array.isArray(features) ? features : [];
     this.featureCodeMap = new Map(this.features.map((feature) => [feature.code, feature]));
@@ -37,5 +35,3 @@ class CIPFeatureGroup {
     return undefined;
   }
 }
-
-module.exports = CIPFeatureGroup;

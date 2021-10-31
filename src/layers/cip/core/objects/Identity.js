@@ -1,15 +1,13 @@
-'use strict';
+import CIPMetaObject from '../object.js';
+import CIPAttribute from '../attribute.js';
 
-const CIPMetaObject = require('../object');
-const CIPAttribute = require('../attribute');
-
-const {
+import {
   ClassCodes,
   VendorNames,
-} = require('../constants');
+} from '../constants/index.js';
 
-const { DataType } = require('../datatypes');
-const { getBits } = require('../../../../utils');
+import { DataType } from '../datatypes/index.js';
+import { getBits } from '../../../../utils.js';
 
 // CIP Vol1 Table 5-2.2, Attribute ID 8, Semantics of Values
 const InstanceStateDescriptions = {
@@ -224,4 +222,4 @@ Identity.InstanceAttribute = InstanceAttribute;
 
 Identity.DeviceType = DeviceTypeCodes;
 
-module.exports = Identity;
+export default Identity;

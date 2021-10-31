@@ -1,13 +1,11 @@
-'use strict';
+import Port from './port.js';
+import Logical from './logical.js';
+import Network from './network.js';
+import Symbolic from './symbolic.js';
+import Data from './data.js';
+import DataType from './datatype.js';
 
-const Port = require('./port');
-const Logical = require('./logical');
-const Network = require('./network');
-const Symbolic = require('./symbolic');
-const Data = require('./data');
-const DataType = require('./datatype');
-
-module.exports = {
+export default {
   Port,
   Logical,
   Network,

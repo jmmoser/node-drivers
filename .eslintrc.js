@@ -11,7 +11,7 @@ module.exports = {
     ecmaVersion: 12,
   },
   rules: {
-    strict: 'off',
+    // strict: 'off',
     'no-plusplus': 'off',
     // 'no-underscore-dangle': ['error', { allowAfterThis: true }],
     'no-underscore-dangle': 'off',

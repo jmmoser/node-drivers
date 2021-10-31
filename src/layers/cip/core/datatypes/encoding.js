@@ -1,10 +1,8 @@
-'use strict';
+import EPath from '../epath/index.js';
+import { DataTypeCodes, DataTypeNames } from './codes.js';
+import convertToObject from './convertToObject.js';
 
-const EPath = require('../epath');
-const { DataTypeCodes, DataTypeNames } = require('./codes');
-const convertToObject = require('./convertToObject');
-
-function EncodeSize(dataType, value) {
+export function EncodeSize(dataType, value) {
   dataType = convertToObject(dataType);
 
   const dataTypeCode = dataType.code != null ? dataType.code : dataType;
@@ -71,7 +69,7 @@ function EncodeSize(dataType, value) {
   }
 }
 
-function EncodeTo(buffer, offset, dataType, value) {
+export function EncodeTo(buffer, offset, dataType, value) {
   if (dataType instanceof Function) dataType = dataType();
 
   const dataTypeCode = dataType.code != null ? dataType.code : dataType;
@@ -169,14 +167,8 @@ function EncodeTo(buffer, offset, dataType, value) {
   return offset;
 }
 
-function Encode(dataType, value) {
+export function Encode(dataType, value) {
   const buffer = Buffer.alloc(EncodeSize(dataType, value));
   EncodeTo(buffer, 0, dataType, value);
   return buffer;
 }
-
-module.exports = {
-  EncodeSize,
-  Encode,
-  EncodeTo,
-};

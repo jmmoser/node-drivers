@@ -1,8 +1,6 @@
-'use strict';
-
-const dgram = require('dgram');
-const Layer = require('../Layer');
-const { CallbackPromise } = require('../../utils');
+import dgram from 'dgram';
+import Layer from '../Layer.js';
+import { CallbackPromise } from '../../utils.js';
 
 async function setup(layer) {
   /** Only await layer._settingUp if not null */
@@ -52,7 +50,7 @@ function removeSocketListeners(socket) {
   });
 }
 
-class UDPLayer extends Layer {
+export default class UDPLayer extends Layer {
   constructor(options) {
     super('udp');
 
@@ -148,5 +146,3 @@ class UDPLayer extends Layer {
     }
   }
 }
-
-module.exports = UDPLayer;

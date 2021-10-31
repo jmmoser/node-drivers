@@ -1,6 +1,4 @@
-'use strict';
-
-const DataTypeCodes = require('./codes');
+import DataTypeCodes from './codes';
 
 const DataType = Object.freeze({
   Program() {
@@ -20,4 +18,4 @@ const DataType = Object.freeze({
   },
 });
 
-module.exports = DataType;
+export default DataType;

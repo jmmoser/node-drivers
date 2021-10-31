@@ -1,9 +1,7 @@
-'use strict';
-
-const { getBits, InvertKeyValues } = require('../../../../utils');
+import { getBits, InvertKeyValues } from '../../../../utils.js';
 
 /** CIP Vol1 Table C-6.1 */
-const DataTypeCodes = Object.freeze({
+export const DataTypeCodes = Object.freeze({
   /** DATATYPES FROM EXTERNAL SOURCES CANNOT BE NEGATIVE BECAUSE CODE IS READ AS UNSIGNED */
   TRANSFORM: -3,
   PLACEHOLDER: -2, /** used when previously decoded data determines datatype */
@@ -55,26 +53,26 @@ const DataTypeCodes = Object.freeze({
   ARRAY: 0xA3,
 });
 
-const DataTypeNames = InvertKeyValues(DataTypeCodes);
+export const DataTypeNames = InvertKeyValues(DataTypeCodes);
 
 /** ANS.1 */
-const DataTypeTagClassCodes = Object.freeze({
+export const DataTypeTagClassCodes = Object.freeze({
   Universal: 0,
   Application: 1,
   ContextSpecific: 2,
   Private: 3,
 });
 
-const DataTypeTagClassNames = InvertKeyValues(DataTypeTagClassCodes);
+export const DataTypeTagClassNames = InvertKeyValues(DataTypeTagClassCodes);
 
-const DataTypeTagTypeCodes = Object.freeze({
+export const DataTypeTagTypeCodes = Object.freeze({
   Primitive: 0,
   Constructed: 1,
 });
 
-const DataTypeTagTypeNames = InvertKeyValues(DataTypeTagTypeCodes);
+export const DataTypeTagTypeNames = InvertKeyValues(DataTypeTagTypeCodes);
 
-function DecodeDataTypeTag(buffer, offsetRef) {
+export function DecodeDataTypeTag(buffer, offsetRef) {
   const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   const tagClass = getBits(code, 6, 8);
   const tagType = getBits(code, 5, 6);
@@ -104,7 +102,7 @@ function DecodeDataTypeTag(buffer, offsetRef) {
   };
 }
 
-module.exports = {
+export default {
   DataTypeCodes,
   DataTypeNames,
   // DataTypeTag,

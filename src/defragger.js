@@ -1,8 +1,6 @@
-'use strict';
-
 /* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
 
-class Defragger {
+export default class Defragger {
   constructor(completeHandler, lengthHandler) {
     this._dataLength = 0;
     this._data = Buffer.allocUnsafe(0);
@@ -16,7 +14,10 @@ class Defragger {
     this._dataLength += data.length;
     this._data = Buffer.concat([this._data, data], this._dataLength);
 
-    while (this._dataLength > 0 && this._completeHandler(this._data, { current: 0 }, this._dataLength)) {
+    while (
+      this._dataLength > 0
+      && this._completeHandler(this._data, { current: 0 }, this._dataLength)
+    ) {
       const length = this._lengthHandler(this._data, { current: 0 });
       defraggedData = this._data.slice(0, length);
       this._dataLength -= length;
@@ -26,5 +27,3 @@ class Defragger {
     return defraggedData;
   }
 }
-
-module.exports = Defragger;

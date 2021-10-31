@@ -1,12 +1,10 @@
-'use strict';
-
 /**
  * MultiplexLayer utitlizes the info field of messages to multiplex messages from
  * multiple upper layers to one lower layer
  */
 
-const { CallbackPromise } = require('../../utils');
-const Layer = require('../Layer');
+import { CallbackPromise } from '../../utils.js';
+import Layer from '../Layer.js';
 
 function incrementContext(self) {
   self.__context = (self.__context + 1) % 0x100000000;
@@ -32,7 +30,7 @@ function layerForContext(self, context) {
   return layer;
 }
 
-class MultiplexLayer extends Layer {
+export default class MultiplexLayer extends Layer {
   constructor(lowerLayer) {
     super('multiplex', lowerLayer, {
       handlesForwarding: true,
@@ -97,5 +95,3 @@ class MultiplexLayer extends Layer {
     });
   }
 }
-
-module.exports = MultiplexLayer;
