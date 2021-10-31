@@ -1,6 +1,6 @@
 import { DataTypeCodes } from './codes.js';
 
-const DataType = Object.freeze({
+export const DataType = Object.freeze({
   UNKNOWN(length) {
     return { type: DataType.UNKNOWN, code: DataTypeCodes.UNKNOWN, length };
   },
@@ -200,7 +200,3 @@ const DataType = Object.freeze({
     };
   },
 });
-
-export default {
-  DataType,
-};

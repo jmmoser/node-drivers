@@ -1,15 +1,6 @@
-import Request from './request.js';
-import Objects from './objects/index.js';
-import EPath from './epath/index.js';
-import Constants from './constants/index.js';
-import DataTypes from './datatypes/index.js';
-import Attribute from './attribute.js';
-
-export default {
-  Request,
-  Objects,
-  EPath,
-  Constants,
-  DataTypes,
-  Attribute,
-};
+export * as Request from './request.js';
+export * as Objects from './objects/index.js';
+export * as EPath from './epath/index.js';
+export * as Constants from './constants/index.js';
+export * as DataTypes from './datatypes/index.js';
+export * as Attribute from './attribute.js';

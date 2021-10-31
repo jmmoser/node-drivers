@@ -5,7 +5,7 @@ import PCCC from './layers/pccc/index.js';
 import CIP from './layers/cip/index.js';
 import Extras from './layers/extras/index.js';
 
-export default {
+export {
   TCP,
   UDP,
   Modbus,

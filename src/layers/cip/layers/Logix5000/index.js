@@ -31,9 +31,9 @@ import {
 } from '../../../../utils.js';
 
 import {
-  Logix5000_DataTypeCodes,
-  Logix5000_DatatypeNames,
-  Logix5000_ClassCodes,
+  Logix5000DataTypeCodes,
+  Logix5000DatatypeNames,
+  Logix5000ClassCodes,
   SymbolServiceCodes,
   SymbolServiceNames,
   SymbolInstanceAttributeCodes,
@@ -203,12 +203,12 @@ async function parseReadTag(layer, scope, tag, elements, data) {
     }
 
     switch (templateType.code) {
-      case Logix5000_DataTypeCodes.Map:
-      case Logix5000_DataTypeCodes.Cxn:
-      case Logix5000_DataTypeCodes.Program:
-      case Logix5000_DataTypeCodes.Routine:
-      case Logix5000_DataTypeCodes.Task:
-        throw new Error(`Unable to directly read type ${Logix5000_DatatypeNames[templateType.code].toUpperCase()}: ${tag}`);
+      case Logix5000DataTypeCodes.Map:
+      case Logix5000DataTypeCodes.Cxn:
+      case Logix5000DataTypeCodes.Program:
+      case Logix5000DataTypeCodes.Routine:
+      case Logix5000DataTypeCodes.Task:
+        throw new Error(`Unable to directly read type ${Logix5000DatatypeNames[templateType.code].toUpperCase()}: ${tag}`);
       default:
         break;
     }
@@ -281,7 +281,7 @@ function encodeSymbolPath(tag) {
       return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
     case 'number':
       return EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Symbol),
+        new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Symbol),
         new EPath.Segments.Logical.InstanceID(tag),
       ]);
     case 'object':
@@ -601,7 +601,7 @@ async function getSymbolSize(layer, scope, tag) {
 
         const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
 
-        if (tagType && tagType.dataType.code === Logix5000_DataTypeCodes.Program) {
+        if (tagType && tagType.dataType.code === Logix5000DataTypeCodes.Program) {
           return getSymbolSize(layer, symbolParts[0], symbolParts.slice(1).join('.'));
         }
 
@@ -782,7 +782,7 @@ export default class Logix5000 extends CIPLayer {
                 ? tag.name
                 : (typeof tag === 'string' ? tag : null);
 
-              if (tagName && tagType && tagType.dataType.code === Logix5000_DataTypeCodes.Program) {
+              if (tagName && tagType && tagType.dataType.code === Logix5000DataTypeCodes.Program) {
                 value = {};
 
                 const listAttributes = [
@@ -1111,7 +1111,7 @@ export default class Logix5000 extends CIPLayer {
         const service = TemplateServiceCodes.Read;
 
         const path = EPath.Encode(true, [
-          new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Template),
+          new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Template),
           new EPath.Segments.Logical.InstanceID(templateID),
         ]);
 
@@ -1202,7 +1202,7 @@ export default class Logix5000 extends CIPLayer {
       const service = CommonServiceCodes.GetAttributeList;
 
       const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Template),
+        new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Template),
         new EPath.Segments.Logical.InstanceID(0),
       ]);
 
@@ -1252,7 +1252,7 @@ export default class Logix5000 extends CIPLayer {
         const service = CommonServiceCodes.GetAttributeList;
 
         const path = EPath.Encode(true, [
-          new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Template),
+          new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Template),
           new EPath.Segments.Logical.InstanceID(templateID),
         ]);
 
@@ -1314,7 +1314,7 @@ export default class Logix5000 extends CIPLayer {
       const service = CommonServiceCodes.GetAttributeList;
 
       const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Logix5000_ClassCodes.Controller),
+        new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Controller),
         new EPath.Segments.Logical.InstanceID(0x01),
       ]);
 

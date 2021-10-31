@@ -9,7 +9,7 @@ import {
   InvertKeyValues,
 } from '../../../../utils.js';
 
-const Logix5000DataTypeCodes = Object.freeze({
+export const Logix5000DataTypeCodes = Object.freeze({
   Program: 0x68,
   Map: 0x69,
   Routine: 0x6D,
@@ -17,9 +17,9 @@ const Logix5000DataTypeCodes = Object.freeze({
   Cxn: 0x7E,
 });
 
-const Logix5000DatatypeNames = InvertKeyValues(Logix5000DataTypeCodes);
+export const Logix5000DatatypeNames = InvertKeyValues(Logix5000DataTypeCodes);
 
-const Logix5000DataType = Object.freeze({
+export const Logix5000DataType = Object.freeze({
   Program() {
     return { type: Logix5000DataType.Program, code: Logix5000DataTypeCodes.Program };
   },
@@ -37,14 +37,14 @@ const Logix5000DataType = Object.freeze({
   },
 });
 
-const Logix5000ClassCodes = Object.freeze({
+export const Logix5000ClassCodes = Object.freeze({
   Symbol: 0x6B,
   Template: 0x6C,
   Controller: 0xAC,
 });
 
 /** 1756-PM020, pg. 16 */
-const SymbolServiceCodes = Object.freeze({
+export const SymbolServiceCodes = Object.freeze({
   Read: 0x4C,
   ReadFragmented: 0x52,
   WriteTag: 0x4D,
@@ -53,9 +53,9 @@ const SymbolServiceCodes = Object.freeze({
   GetInstanceAttributeList: 0x55,
 });
 
-const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
+export const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
 
-const SymbolInstanceAttributeCodes = Object.freeze({
+export const SymbolInstanceAttributeCodes = Object.freeze({
   Name: 0x01,
   Type: 0x02,
   Bytes: 0x07,
@@ -68,7 +68,7 @@ const SymbolInstanceAttributeCodes = Object.freeze({
   Unknown11: 11,
 });
 
-const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
+export const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
 
 /**
  * Possible remaining attributes:
@@ -84,7 +84,7 @@ const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCode
  *    Defines whether a tag value remains constant. Tags with this attribute
  *    set cannot be changed programmatically.)
  */
-const SymbolInstanceAttributeDataTypes = Object.freeze({
+export const SymbolInstanceAttributeDataTypes = Object.freeze({
   [SymbolInstanceAttributeCodes.Name]: DataType.STRING,
   [SymbolInstanceAttributeCodes.Type]: DataType.TRANSFORM(
     DataType.UINT,
@@ -100,39 +100,39 @@ const SymbolInstanceAttributeDataTypes = Object.freeze({
   [SymbolInstanceAttributeCodes.Unknown11]: DataType.UNKNOWN(1),
 });
 
-const TemplateServiceCodes = Object.freeze({
+export const TemplateServiceCodes = Object.freeze({
   Read: 0x4C,
 });
 
-const TemplateInstanceAttributeCodes = Object.freeze({
+export const TemplateInstanceAttributeCodes = Object.freeze({
   StructureHandle: 0x01, /** Calculated CRC value for members of the structure */
   MemberCount: 0x02, /** Number of members defined in the structure */
   DefinitionSize: 0x04, /** Size of the template definition structure */
   StructureSize: 0x05, /** Number of bytes transferred on the wire when the structure is read using the Read Tag service */
 });
 
-const TemplateInstanceAttributeDataTypes = Object.freeze({
+export const TemplateInstanceAttributeDataTypes = Object.freeze({
   [TemplateInstanceAttributeCodes.StructureHandle]: DataType.UINT,
   [TemplateInstanceAttributeCodes.MemberCount]: DataType.UINT,
   [TemplateInstanceAttributeCodes.DefinitionSize]: DataType.UDINT,
   [TemplateInstanceAttributeCodes.StructureSize]: DataType.UDINT,
 });
 
-const TemplateClassAttributeCodes = Object.freeze({
+export const TemplateClassAttributeCodes = Object.freeze({
   Unknown1: 1,
   Unknown2: 2,
   Unknown3: 3,
   Unknown8: 8,
 });
 
-const TemplateClassAttributeDataTypes = Object.freeze({
+export const TemplateClassAttributeDataTypes = Object.freeze({
   [TemplateClassAttributeCodes.Unknown1]: DataType.UNKNOWN(2),
   [TemplateClassAttributeCodes.Unknown2]: DataType.UNKNOWN(4),
   [TemplateClassAttributeCodes.Unknown3]: DataType.UNKNOWN(4),
   [TemplateClassAttributeCodes.Unknown8]: DataType.UNKNOWN(4),
 });
 
-const ControllerInstanceAttributeCodes = Object.freeze({
+export const ControllerInstanceAttributeCodes = Object.freeze({
   Unknown1: 1,
   Unknown2: 2,
   Unknown3: 3,
@@ -140,9 +140,9 @@ const ControllerInstanceAttributeCodes = Object.freeze({
   Unknown10: 10,
 });
 
-const ControllerInstanceAttributeNames = InvertKeyValues(ControllerInstanceAttributeCodes);
+export const ControllerInstanceAttributeNames = InvertKeyValues(ControllerInstanceAttributeCodes);
 
-const ControllerInstanceAttributeDataTypes = Object.freeze({
+export const ControllerInstanceAttributeDataTypes = Object.freeze({
   [ControllerInstanceAttributeCodes.Unknown1]: DataType.UINT,
   [ControllerInstanceAttributeCodes.Unknown2]: DataType.UINT,
   [ControllerInstanceAttributeCodes.Unknown3]: DataType.UDINT,
@@ -150,7 +150,7 @@ const ControllerInstanceAttributeDataTypes = Object.freeze({
   [ControllerInstanceAttributeCodes.Unknown10]: DataType.UDINT,
 });
 
-const GenericServiceStatusDescriptions = {
+export const GenericServiceStatusDescriptions = {
   0x04: 'A syntax error was detected decoding the Request Path',
   0x05: 'Request Path destination unknown',
   0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',
@@ -169,7 +169,7 @@ const GenericServiceStatusDescriptions = {
   },
 };
 
-class SymbolType {
+export class SymbolType {
   constructor(code) {
     this.code = code;
     this.atomic = getBits(code, 15, 16) === 0;
@@ -203,7 +203,7 @@ class SymbolType {
   }
 }
 
-class Member {
+export class Member {
   constructor(typeCode, info, offset, name, host) {
     this.type = new SymbolType(typeCode);
     this.info = info;
@@ -212,28 +212,3 @@ class Member {
     this.host = !!host;
   }
 }
-
-export default {
-  Logix5000DataTypeCodes,
-  Logix5000DatatypeNames,
-  Logix5000DataType,
-  Logix5000ClassCodes,
-  SymbolServiceCodes,
-  SymbolServiceNames,
-  SymbolInstanceAttributeCodes,
-  SymbolInstanceAttributeNames,
-  SymbolInstanceAttributeDataTypes,
-  // SymbolServiceErrorDescriptions,
-  TemplateServiceCodes,
-  TemplateClassAttributeCodes,
-  TemplateClassAttributeDataTypes,
-  TemplateInstanceAttributeCodes,
-  TemplateInstanceAttributeDataTypes,
-  // TemplateServiceErrorDescriptions,
-  GenericServiceStatusDescriptions,
-  Member,
-  SymbolType,
-  ControllerInstanceAttributeCodes,
-  ControllerInstanceAttributeDataTypes,
-  ControllerInstanceAttributeNames,
-};

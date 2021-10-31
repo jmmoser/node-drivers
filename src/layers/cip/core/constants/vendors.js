@@ -1,5 +1,5 @@
 /** https://github.com/boundary/wireshark/blob/07eade8124fd1d5386161591b52e177ee6ea849f/epan/dissectors/packet-cip.c#L1174 */
-const VendorNames = {
+export const VendorNames = {
   0: 'Reserved',
   1: 'Rockwell Automation/Allen-Bradley',
   2: 'Namco Controls Corp.',
@@ -1221,8 +1221,4 @@ const VendorNames = {
   1238: 'Global Engineering Solutions Co., Ltd.',
   1239: 'ALTE Transportation, S.L.',
   1240: 'Penko Engineering B.V.',
-};
-
-export default {
-  VendorNames,
 };

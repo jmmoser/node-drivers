@@ -8,7 +8,7 @@ import {
   decodeUnsignedInteger,
 } from '../../../../utils.js';
 
-function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
+export function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
   if (Array.isArray(dataType)) {
     return dataType.map((dataTypeItem) => DecodeTypedData(buffer, offsetRef, dataTypeItem, ctx));
   }
@@ -166,7 +166,3 @@ function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
 
   return value;
 }
-
-export default {
-  DecodeTypedData,
-};

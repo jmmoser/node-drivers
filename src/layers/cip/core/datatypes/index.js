@@ -1,22 +1,4 @@
-import { DataType } from './types.js';
-import { DataTypeCodes, DataTypeNames } from './codes.js';
-
-import {
-  Decode,
-} from './decoding.js';
-
-import {
-  EncodeSize,
-  Encode,
-  EncodeTo,
-} from './encoding.js';
-
-export default {
-  DataType,
-  DataTypeNames,
-  DataTypeCodes,
-  Decode,
-  EncodeSize,
-  Encode,
-  EncodeTo,
-};
+export * from './types.js';
+export * from './codes.js';
+export * from './decoding.js';
+export * from './encoding.js';
