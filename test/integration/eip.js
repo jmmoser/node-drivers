@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { TCP, CIP } from '../../src/index';
+import { TCP, CIP } from '../../src/index.js';
 
 const tcpLayer = new TCP({ host: '127.0.0.1', port: 44818 });
 const eipLayer = new CIP.EIP(tcpLayer);
