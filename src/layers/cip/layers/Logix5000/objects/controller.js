@@ -1,6 +1,6 @@
-import CIPMetaObject from '../../../core/object';
-import CIPAttribute from '../../../core/attribute';
-import { DataType } from '../../../core/datatypes';
+import CIPMetaObject from '../../../../../core/cip/object.js';
+import CIPAttribute from '../../../../../core/cip/attribute.js';
+import { DataType } from '../../../../../core/cip/datatypes/index.js';
 
 const InstanceAttribute = Object.freeze({
   Unknown1: new CIPAttribute.Instance(1, 'Unknown1', DataType.UINT),

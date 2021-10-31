@@ -1,14 +1,14 @@
-import CIPRequest from '../../core/request.js';
 import { InvertKeyValues } from '../../../../utils.js';
-import { GeneralStatusCodes, ClassCodes } from '../../core/constants/index.js';
-import { DataType } from '../../core/datatypes/index.js';
-import Layer from '../../../Layer.js';
-import ConnectionManager from '../../core/objects/ConnectionManager.js';
-import EPath from '../../core/epath/index.js';
+import CIPRequest from '../../../../core/cip/request.js';
+import { GeneralStatusCodes, ClassCodes } from '../../../../core/cip/constants/index.js';
+import { DataType } from '../../../../core/cip/datatypes/index.js';
+import Layer from '../../../layer.js';
+import ConnectionManager from '../../../../core/cip/objects/ConnectionManager.js';
+import EPath from '../../../../core/cip/epath/index.js';
 
 import EIPLayer from '../EIP/index.js';
-import TCPLayer from '../../../tcp/index.js';
-import UDPLayer from '../../../udp/index.js';
+import TCPLayer from '../../../tcp.js';
+import UDPLayer from '../../../udp.js';
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 

@@ -1,8 +1,8 @@
 import { InvertKeyValues } from '../../../../utils.js';
 
-import CIPRequest from '../../core/request.js';
-import EPath from '../../core/epath/index.js';
-import { ClassCodes } from '../../core/constants/index.js';
+import CIPRequest from '../../../../core/cip/request.js';
+import EPath from '../../../../core/cip/epath/index.js';
+import { ClassCodes } from '../../../../core/cip/constants/index.js';
 
 const ServiceCodes = Object.freeze({
   ExecutePCCC: 0x4B,

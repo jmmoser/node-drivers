@@ -1,9 +1,10 @@
-import { getBits } from '../../../../../utils';
-import Logix5000DataType from '../datatypes/codes';
-import Logix5000DatatypeNames from '../datatypes/names';
-import { DataType, DataTypeCodes, DataTypeNames } from '../../../core/datatypes';
+import { getBits } from '../../../../../utils.js';
+import Logix5000DataType from '../datatypes/codes.js';
+import Logix5000DatatypeNames from '../datatypes/names.js';
+import { DataType, DataTypeCodes, DataTypeNames } from '../../../../../core/cip/datatypes/index.js';
 
-class SymbolType {
+// eslint-disable-next-line import/prefer-default-export
+export class SymbolType {
   constructor(code) {
     this.code = code;
     this.atomic = getBits(code, 15, 16) === 0;
@@ -36,7 +37,3 @@ class SymbolType {
     this.dataType = dataType;
   }
 }
-
-export default {
-  SymbolType,
-};

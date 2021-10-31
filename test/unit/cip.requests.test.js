@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-import CIPRequest from '../../src/layers/cip/core/request';
+import CIPRequest from '../../src/core/cip/request.js';
 
 describe('Encoding', () => {
   test('Encode', () => {
@@ -86,6 +86,5 @@ describe('Decoding', () => {
     expect(response.service.code).toBe(10);
     expect(response.status.code).toBe(0);
     expect(response.value).toHaveLength(2);
-    console.log(offsetRef, responseBuffer.length, response);
   });
 });

@@ -2,7 +2,7 @@ import {
   DataType,
   DataTypeCodes,
   DataTypeNames,
-} from '../../core/datatypes/index.js';
+} from '../../../../core/cip/datatypes/index.js';
 
 import {
   getBits,
@@ -70,6 +70,50 @@ export const SymbolInstanceAttributeCodes = Object.freeze({
 
 export const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
 
+export class SymbolType {
+  constructor(code) {
+    this.code = code;
+    this.atomic = getBits(code, 15, 16) === 0;
+    this.system = getBits(code, 12, 13) > 0;
+    this.dimensions = getBits(code, 13, 15);
+
+    let dataType;
+
+    if (this.atomic) {
+      const dataTypeCode = getBits(code, 0, 8);
+      if (dataTypeCode === DataTypeCodes.BOOL) {
+        dataType = DataType.BOOL(getBits(code, 8, 11));
+      } else {
+        const dataTypeName = DataTypeNames[dataTypeCode] || Logix5000DatatypeNames[dataTypeCode] || 'Unknown';
+        if (dataTypeName) {
+          dataType = DataType[dataTypeName] || Logix5000DataType[dataTypeName];
+          if (typeof dataType === 'function') {
+            dataType = dataType();
+          }
+        }
+      }
+    } else {
+      const templateID = getBits(code, 0, 12);
+      this.template = {
+        id: templateID,
+      };
+
+      dataType = DataType.ABBREV_STRUCT;
+    }
+    this.dataType = dataType;
+  }
+}
+
+export class Member {
+  constructor(typeCode, info, offset, name, host) {
+    this.type = new SymbolType(typeCode);
+    this.info = info;
+    this.offset = offset;
+    this.name = name;
+    this.host = !!host;
+  }
+}
+
 /**
  * Possible remaining attributes:
  * - External Access
@@ -108,7 +152,9 @@ export const TemplateInstanceAttributeCodes = Object.freeze({
   StructureHandle: 0x01, /** Calculated CRC value for members of the structure */
   MemberCount: 0x02, /** Number of members defined in the structure */
   DefinitionSize: 0x04, /** Size of the template definition structure */
-  StructureSize: 0x05, /** Number of bytes transferred on the wire when the structure is read using the Read Tag service */
+  /** Number of bytes transferred on the wire when
+   * the structure is read using the Read Tag service */
+  StructureSize: 0x05,
 });
 
 export const TemplateInstanceAttributeDataTypes = Object.freeze({
@@ -168,47 +214,3 @@ export const GenericServiceStatusDescriptions = {
     0x2107: 'General Error: Object type used in request does not match the target object\'s data type',
   },
 };
-
-export class SymbolType {
-  constructor(code) {
-    this.code = code;
-    this.atomic = getBits(code, 15, 16) === 0;
-    this.system = getBits(code, 12, 13) > 0;
-    this.dimensions = getBits(code, 13, 15);
-
-    let dataType;
-
-    if (this.atomic) {
-      const dataTypeCode = getBits(code, 0, 8);
-      if (dataTypeCode === DataTypeCodes.BOOL) {
-        dataType = DataType.BOOL(getBits(code, 8, 11));
-      } else {
-        const dataTypeName = DataTypeNames[dataTypeCode] || Logix5000DatatypeNames[dataTypeCode] || 'Unknown';
-        if (dataTypeName) {
-          dataType = DataType[dataTypeName] || Logix5000DataType[dataTypeName];
-          if (typeof dataType === 'function') {
-            dataType = dataType();
-          }
-        }
-      }
-    } else {
-      const templateID = getBits(code, 0, 12);
-      this.template = {
-        id: templateID,
-      };
-
-      dataType = DataType.ABBREV_STRUCT;
-    }
-    this.dataType = dataType;
-  }
-}
-
-export class Member {
-  constructor(typeCode, info, offset, name, host) {
-    this.type = new SymbolType(typeCode);
-    this.info = info;
-    this.offset = offset;
-    this.name = name;
-    this.host = !!host;
-  }
-}

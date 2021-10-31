@@ -1,6 +1,6 @@
 import CIPLayer from '../internal/CIPInternalLayer.js';
-import EPath from '../../core/epath/index.js';
-import CIPRequest from '../../core/request.js';
+import EPath from '../../../../core/cip/epath/index.js';
+import CIPRequest from '../../../../core/cip/request.js';
 
 // const RECORD_TYPES = {
 //   CONTROLLER_ATTRIBUTES: 1,
@@ -13,7 +13,7 @@ import {
   CommonServiceCodes,
   // ClassCodes,
   GeneralStatusCodes,
-} from '../../core/constants/index.js';
+} from '../../../../core/cip/constants/index.js';
 
 import {
   DataType,
@@ -21,9 +21,9 @@ import {
   Encode,
   EncodeSize,
   EncodeTo,
-} from '../../core/datatypes/index.js';
+} from '../../../../core/cip/datatypes/index.js';
 
-import { DecodeTypedData } from '../../core/datatypes/decoding.js';
+import { DecodeTypedData } from '../../../../core/cip/datatypes/decoding.js';
 
 import {
   CallbackPromise,

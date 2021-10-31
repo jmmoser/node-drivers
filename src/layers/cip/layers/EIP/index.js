@@ -1,5 +1,5 @@
 import { CallbackPromise, InfoError } from '../../../../utils.js';
-import Layer from '../../../Layer.js';
+import Layer from '../../../layer.js';
 import EIPPacket from './packet.js';
 
 import CPF from './cpf.js';

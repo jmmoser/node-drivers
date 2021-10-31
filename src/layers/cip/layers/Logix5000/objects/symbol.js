@@ -1,7 +1,7 @@
-import CIPMetaObject from '../../../core/object';
-import CIPAttribute from '../../../core/attribute';
-import { DataType } from '../../../core/datatypes';
-import { SymbolType } from './__shared';
+import CIPMetaObject from '../../../../../core/cip/object.js';
+import CIPAttribute from '../../../../../core/cip/attribute.js';
+import { DataType } from '../../../../../core/cip/datatypes/index.js';
+import { SymbolType } from './__shared.js';
 
 const InstanceAttribute = Object.freeze({
   Name: new CIPAttribute.Instance(1, 'Name', DataType.STRING),

@@ -1,9 +1,9 @@
-import EPath from '../../core/epath/index.js';
-import CIPRequest from '../../core/request.js';
-import { CommonServiceCodes } from '../../core/constants/index.js';
+import EPath from '../../../../core/cip/epath/index.js';
+import CIPRequest from '../../../../core/cip/request.js';
+import { CommonServiceCodes } from '../../../../core/cip/constants/index.js';
 
 import { CallbackPromise } from '../../../../utils.js';
-import Layer from '../../../Layer.js';
+import Layer from '../../../layer.js';
 import ConnectionLayer from './CIPConnectionLayer.js';
 
 // import { OBJECTS } from '../../core/objects';

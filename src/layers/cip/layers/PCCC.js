@@ -1,194 +1,99 @@
-// 
+import CIPLayer from './internal/CIPInternalLayer.js';
+import EPath from '../../../core/cip/epath/index.js';
+import { ClassCodes } from '../../../core/cip/constants/index.js';
+import CIPRequest from '../../../core/cip/request.js';
+import { InvertKeyValues } from '../../../utils.js';
 
-// // const Layer from '../../Layer');
-// const CIPLayer from '../layers/internal/CIPLayer');
-// const EPath from '../core/epath');
-// const { ClassCodes } from '../core/constants');
-// const CIPRequest from '../core/request');
-// const { InvertKeyValues } from '../../../utils');
+const HEADER_LENGTH = 7;
 
-// const HEADER_LENGTH = 7;
+const PCCC_EPATH = EPath.Encode(true, [
+  new EPath.Segments.Logical.ClassID(ClassCodes.PCCC),
+  new EPath.Segments.Logical.InstanceID(0x01),
+]);
 
-// class PCCC extends CIPLayer {
-//   constructor(lowerLayer, options) {
-//     // super('pccc.cip', lowerLayer);
-//     super(lowerLayer, null, 'pccc.cip');
+/** Use driver specific error handling if exists */
+function send(self, service, data) {
+  const request = new CIPRequest(service, PCCC_EPATH, data);
+  self.send(request.encode(), { connected: false }, false, {
+    request,
+  });
+}
 
-//     this.options = Object.assign({
-//       vendorID: 0xABCD,
-//       serialNumber: 0x12345678
-//     }, options);
+const ServiceCodes = Object.freeze({
+  ExecutePCCC: 0x4B,
+});
 
-//     const header = Buffer.allocUnsafe(HEADER_LENGTH);
-//     header.writeUInt8(HEADER_LENGTH, 0);
-//     header.writeUInt16LE(this.options.vendorID, 1);
-//     header.writeUInt32LE(this.options.serialNumber, 3);
+const ServiceNames = InvertKeyValues(ServiceCodes);
 
-//     this.header = header;
-//   }
+export default class PCCC extends CIPLayer {
+  constructor(lowerLayer, options) {
+    // super('pccc.cip', lowerLayer);
+    super(lowerLayer, null, 'pccc.cip');
 
-//   sendNextMessage() {
-//     const request = this.getNextRequest();
-//     if (request != null) {
-//       const pcccMessage = request.message;
+    this.options = {
+      vendorID: 0xABCD,
+      serialNumber: 0x12345678,
+      ...options,
+    };
 
-//       const data = Buffer.concat(
-//         [this.header, pcccMessage],
-//         HEADER_LENGTH + pcccMessage.length
-//       );
+    const header = Buffer.allocUnsafe(HEADER_LENGTH);
+    header.writeUInt8(HEADER_LENGTH, 0);
+    header.writeUInt16LE(this.options.vendorID, 1);
+    header.writeUInt32LE(this.options.serialNumber, 3);
 
-//       send(this, ServiceCodes.ExecutePCCC, data);
+    this.header = header;
+  }
 
-//       setImmediate(() => this.sendNextMessage());
-//     }
-//   }
+  sendNextMessage() {
+    const request = this.getNextRequest();
+    if (request != null) {
+      const pcccMessage = request.message;
 
+      const data = Buffer.concat(
+        [this.header, pcccMessage],
+        HEADER_LENGTH + pcccMessage.length,
+      );
 
-//   handleData(data, info, context) {
-//     console.log('PCCC HANDLE DATA:');
-//     console.log(arguments);
-//     // return;
+      send(this, ServiceCodes.ExecutePCCC, data);
 
-//     if (context) {
-//       /** Since this class extends CIPLayer, allow CIPLayer to handle requests like identity() and supportedObjects() */
-//       super.handleData(data, info, context);
-//       return;
-//     }
+      setImmediate(() => this.sendNextMessage());
+    }
+  }
 
-//     const reply = CIPRequest.Response(data, 0, {
-//       serviceNames: ServiceNames
-//     });
+  handleData(data, info, context) {
+    console.log('PCCC HANDLE DATA:');
+    console.log(arguments);
+    // return;
 
-//     // console.log(reply);
+    if (context) {
+      /**
+       * Since this class extends CIPLayer, allow CIPLayer to handle
+       * requests like identity() and supportedObjects() */
+      super.handleData(data, info, context);
+      return;
+    }
 
-//     if (data.length > 4 && !reply.status.error) {
-//       this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
-//       /** Only ExcutePCCC service supported right now */
-//       // if (reply.service.code === ServiceCodes.ExecutePCCC) {
-//       //   this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
-//       // } else {
-//       //   console.log(reply);
-//       //   console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${ServiceCodes.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
-//       // }
-//     } else {
-//       // console.log('CIP_PCCCLayer: Unexpected PCCC embedded in CIP response:');
-//       // console.log(reply);
+    const reply = CIPRequest.Response(data, 0, {
+      serviceNames: ServiceNames,
+    });
 
-//       this.destroy(reply.status.name || 'Unexpected PCCC embedded in CIP response');
-//     }
-//   }
-// }
+    // console.log(reply);
 
-// const PCCC_EPATH = EPath.Encode(true, [
-//   new EPath.Segments.Logical.ClassID(ClassCodes.PCCC),
-//   new EPath.Segments.Logical.InstanceID(0x01)
-// ]);
+    if (data.length > 4 && !reply.status.error) {
+      this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
+      /** Only ExcutePCCC service supported right now */
+      // if (reply.service.code === ServiceCodes.ExecutePCCC) {
+      //   this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
+      // } else {
+      //   console.log(reply);
+      // eslint-disable-next-line
+      //   console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${ServiceCodes.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
+      // }
+    } else {
+      // console.log('CIP_PCCCLayer: Unexpected PCCC embedded in CIP response:');
+      // console.log(reply);
 
-// /** Use driver specific error handling if exists */
-// function send(self, service, data) {
-//   const request = new CIPRequest(service, PCCC_EPATH, data);
-//   self.send(request.encode(), { connected: false }, false, {
-//     request
-//   });
-// }
-
-// const ServiceCodes = Object.freeze({
-//   ExecutePCCC: 0x4B
-// });
-
-// const ServiceNames = InvertKeyValues(ServiceCodes);
-
-// module.exports = PCCC;
-
-
-
-
-// // 
-
-// // import EPath from '../../core/epath';
-// // import { ClassCodes } from '../../core/constants';
-// // import CIPLayer from './CIPLayer';
-// // import CIPRequest from '../../core/request';
-// // import { InvertKeyValues } from '../../../../utils';
-
-// // const HEADER_LENGTH = 7;
-
-// // class PCCC extends CIPLayer {
-// //   constructor(lowerLayer, options) {
-// //     // super('cip.pccc', lowerLayer);
-// //     super(lowerLayer, null, 'pccc.cip')
-
-// //     this.options = Object.assign({
-// //       vendorID: 0xABCD,
-// //       serialNumber: 0x12345678
-// //     }, options);
-    
-// //     const header = Buffer.allocUnsafe(HEADER_LENGTH);
-// //     header.writeUInt8(HEADER_LENGTH, 0);
-// //     header.writeUInt16LE(this.options.vendorID, 1);
-// //     header.writeUInt32LE(this.options.serialNumber, 3);
-
-// //     this.header = header;
-// //   }
-
-// //   sendNextMessage() {
-// //     const request = this.getNextRequest();
-// //     if (request != null) {
-// //       const pcccMessage = request.message;
-
-// //       const data = Buffer.concat(
-// //         [this.header, pcccMessage],
-// //         HEADER_LENGTH + pcccMessage.length
-// //       );
-
-// //       send(this, ServiceCodes.ExecutePCCC, data);
-
-// //       setImmediate(() => this.sendNextMessage());
-// //     }
-// //   }
-
-
-// //   handleData(data, info, context) {
-// //     if (context) {
-// //       /** Since this class extends CIPLayer, allow CIPLayer to handle requests like identity() and supportedObjects() */
-// //       super.handleData(data, info, context);
-// //       return;
-// //     }
-
-// //     const reply = CIPRequest.Response(data, 0, {
-// //       serviceNames: ServiceNames
-// //     });
-
-// //     if (data.length > 4 && !reply.status.error) {
-// //       this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
-// //       /** Only ExcutePCCC service supported right now */
-// //       // if (reply.service.code === ServiceCodes.ExecutePCCC) {
-// //       //   this.forward(reply.data.slice(reply.data.readUInt8(0)), info, context);
-// //       // } else {
-// //       //   console.log(reply);
-// //       //   console.log(`CIP_PCCCLayer: Unexpected CIP reply service code, ${reply.service.code}. Expected 0x${ServiceCodes.ExecutePCCC.toString(16)}.  This could be a developer error - was another service added?`);
-// //       // }
-// //     } else {
-// //       console.log('CIP_PCCCLayer: Unexpected PCCC embedded in CIP response:');
-// //       console.log(reply);
-// //     }
-// //   }
-// // }
-
-// // const PCCC_EPATH = EPath.Encode(true, [
-// //   new EPath.Segments.Logical.ClassID(ClassCodes.PCCC),
-// //   new EPath.Segments.Logical.InstanceID(0x01)
-// // ]);
-
-// // /** Use driver specific error handling if exists */
-// // function send(self, service, data) {
-// //   return self.sendRequest(false, new CIPRequest(service, PCCC_EPATH, data));
-// // }
-
-// // const ServiceCodes = Object.freeze({
-// //   ExecutePCCC: 0x4B
-// // });
-
-// // const ServiceNames = InvertKeyValues(ServiceCodes);
-
-// // module.exports = PCCC;
+      this.destroy(reply.status.name || 'Unexpected PCCC embedded in CIP response');
+    }
+  }
+}

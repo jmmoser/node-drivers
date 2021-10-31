@@ -1,7 +1,7 @@
 import CIPInternalLayer from './layers/internal/CIPInternalLayer.js';
 import EIP from './layers/EIP/index.js';
 import Logix5000 from './layers/Logix5000/index.js';
-import * as Core from './core/index.js';
+import * as Core from '../../core/cip/index.js';
 
 class CIPLayer extends CIPInternalLayer {}
 
