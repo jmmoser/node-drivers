@@ -1,11 +1,11 @@
 // 
 
-// // const Layer = require('../../Layer');
-// const CIPLayer = require('../layers/internal/CIPLayer');
-// const { ClassCodes } = require('../core/constants');
-// const EPath = require('../core/epath');
-// const CIPRequest = require('../core/request');
-// const { CallbackPromise } = require('../../../utils');
+// // import Layer from '../../Layer';
+// import CIPLayer from '../layers/internal/CIPLayer';
+// import { ClassCodes } from '../core/constants';
+// import EPath from '../core/epath';
+// import CIPRequest from '../core/request';
+// import { CallbackPromise } from '../../../utils';
 
 // class Modbus extends CIPLayer {
 //   constructor(lowerLayer) {
@@ -154,11 +154,11 @@
 
 // // 
 
-// // const { ClassCodes } = require('../../core/constants');
-// // const EPath = require('../../core/epath');
-// // const CIPLayer = require('./CIPLayer');
-// // const CIPRequest = require('../../core/request');
-// // const { CallbackPromise } = require('../../../../utils');
+// // const { ClassCodes } from '../../core/constants');
+// // const EPath from '../../core/epath');
+// // const CIPLayer from './CIPLayer');
+// // const CIPRequest from '../../core/request');
+// // const { CallbackPromise } from '../../../../utils');
 
 // // class Modbus extends CIPLayer {
 // //   constructor(lowerLayer) {

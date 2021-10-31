@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-const EPath = require('../../src/layers/cip/core/epath');
+import EPath from '../../src/layers/cip/core/epath';
 
 const { Network } = EPath.Segments;
 

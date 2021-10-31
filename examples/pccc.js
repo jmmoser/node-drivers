@@ -1,4 +1,4 @@
-const { TCP, CIP, PCCC } = require('node-drivers');
+import { TCP, CIP, PCCC } from 'node-drivers';
 
 const tcpLayer = new TCP({ host: '1.2.3.4', port: 44818 });
 const cipLayer = new CIP(tcpLayer);

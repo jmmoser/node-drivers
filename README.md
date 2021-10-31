@@ -13,7 +13,7 @@ npm install node-drivers
 ### Read and list tags from a Logix5000 processor:
 
 ```javascript
-const { TCP, CIP } = require('node-drivers');
+import { TCP, CIP } from 'node-drivers';
 
 const tcpLayer = new TCP('1.2.3.4');
 const logix5000 = new CIP.Logix5000(tcpLayer);
@@ -70,7 +70,7 @@ await tcpLayer.close();
 ### Read/Write a tag from a PLC-5, SLC 5/03, or SLC 5/04 processor using PCCC embedded in CIP:
 
 ```javascript
-const { TCP, CIP, PCCC } = require('node-drivers');
+import { TCP, CIP, PCCC } from 'node-drivers';
 
 const tcpLayer = new TCP('1.2.3.4');
 const cipLayer = new CIP(tcpLayer);
@@ -92,7 +92,7 @@ await tcpLayer.close();
 ### Find all EtherNet/IP devices in a subnet using the UDP broadcast address or by explicitly pinging each host:
 
 ```javascript
-const { UDP, CIP } = require('node-drivers');
+import { UDP, CIP } from 'node-drivers';
 
 const udpLayer = new UDP('1.2.3.255');
 const eipLayer = new CIP.EIP(udpLayer);
@@ -117,7 +117,7 @@ await udpLayer.close();
 ### Retrieve information from an EtherNet/IP device over TCP:
 
 ```javascript
-const { TCP, CIP } = require('node-drivers');
+import { TCP, CIP } from 'node-drivers';
 
 const tcpLayer = new TCP('1.2.3.4');
 const eipLayer = new CIP.EIP(tcpLayer);
@@ -135,7 +135,7 @@ await tcpLayer.close();
 ### Communicate with a Modbus device over TCP:
 
 ```javascript
-const { TCP, Modbus } = require('node-drivers');
+import { TCP, Modbus } from 'node-drivers';
 
 const tcpLayer = new TCP('1.2.3.4');
 const modbusLayer = new Modbus(tcpLayer);

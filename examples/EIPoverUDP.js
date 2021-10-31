@@ -1,4 +1,4 @@
-const { UDP, CIP } = require('node-drivers');
+import { UDP, CIP } from 'node-drivers';
 
 const udpLayer = new UDP({ host: '0.0.0.255', port: 44818 });
 const eipLayer = new CIP.EIP(udpLayer);

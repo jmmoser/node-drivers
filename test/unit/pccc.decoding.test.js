@@ -1,10 +1,11 @@
 /* eslint-disable no-undef */
 
-const { PCCCDataType } = require('../../src/layers/pccc/constants');
-const {
+import { PCCCDataType } from '../../src/layers/pccc/constants';
+
+import {
   DecodeDataDescriptor,
   DecodeTypedData,
-} = require('../../src/layers/pccc/decoding');
+} from '../../src/layers/pccc/decoding';
 
 const buffer1 = Buffer.from([
   0b10010111,

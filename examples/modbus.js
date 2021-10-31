@@ -1,4 +1,4 @@
-const { TCP, Modbus } = require('node-drivers');
+import { TCP, Modbus } from 'node-drivers';
 
 const tcpLayer = new TCP({ host: '1.2.3.4', port: 502 });
 const mbLayer = new Modbus(tcpLayer);

@@ -1,11 +1,11 @@
 // 
 
-// // const Layer = require('../../Layer');
-// const CIPLayer = require('../layers/internal/CIPLayer');
-// const EPath = require('../core/epath');
-// const { ClassCodes } = require('../core/constants');
-// const CIPRequest = require('../core/request');
-// const { InvertKeyValues } = require('../../../utils');
+// // const Layer from '../../Layer');
+// const CIPLayer from '../layers/internal/CIPLayer');
+// const EPath from '../core/epath');
+// const { ClassCodes } from '../core/constants');
+// const CIPRequest from '../core/request');
+// const { InvertKeyValues } from '../../../utils');
 
 // const HEADER_LENGTH = 7;
 
@@ -105,11 +105,11 @@
 
 // // 
 
-// // const EPath = require('../../core/epath');
-// // const { ClassCodes } = require('../../core/constants');
-// // const CIPLayer = require('./CIPLayer');
-// // const CIPRequest = require('../../core/request');
-// // const { InvertKeyValues } = require('../../../../utils');
+// // import EPath from '../../core/epath';
+// // import { ClassCodes } from '../../core/constants';
+// // import CIPLayer from './CIPLayer';
+// // import CIPRequest from '../../core/request';
+// // import { InvertKeyValues } from '../../../../utils';
 
 // // const HEADER_LENGTH = 7;
 

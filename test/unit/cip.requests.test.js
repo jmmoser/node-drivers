@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-const CIPRequest = require('../../src/layers/cip/core/request');
+import CIPRequest from '../../src/layers/cip/core/request';
 
 describe('Encoding', () => {
   test('Encode', () => {

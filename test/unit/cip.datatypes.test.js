@@ -1,13 +1,13 @@
 /* eslint-disable no-undef */
 
-const {
+import {
   DataType,
   Encode,
-} = require('../../src/layers/cip/core/datatypes');
+} from '../../src/layers/cip/core/datatypes';
 
-const { DecodeTypedData } = require('../../src/layers/cip/core/datatypes/decoding');
+import { DecodeTypedData } from '../../src/layers/cip/core/datatypes/decoding';
 
-const EPath = require('../../src/layers/cip/core/epath');
+import EPath from '../../src/layers/cip/core/epath';
 
 describe('Encoding', () => {
   test('SINT positive', () => {
