@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-import { PCCCDataType } from '../../src/core/pccc/constants.js';
+import { DataType } from '../../src/core/pccc/constants.js';
 
 import {
   DecodeDataDescriptor,
@@ -32,13 +32,13 @@ describe('DecodeDataDescriptor', () => {
   test('Integer Array', () => {
     const offsetRef = { current: 0 };
     expect(DecodeDataDescriptor(buffer1, offsetRef)).toStrictEqual({
-      type: PCCCDataType.Array,
+      type: DataType.Array,
       size: 7,
     });
     expect(offsetRef).toStrictEqual({ current: 2 });
 
     expect(DecodeDataDescriptor(buffer1, offsetRef)).toStrictEqual({
-      type: PCCCDataType.Integer,
+      type: DataType.Integer,
       size: 2,
     });
     expect(offsetRef).toStrictEqual({ current: 3 });
@@ -47,7 +47,7 @@ describe('DecodeDataDescriptor', () => {
   test('Extended Integer Array', () => {
     const offsetRef = { current: 0 };
     expect(DecodeDataDescriptor(buffer2, offsetRef)).toStrictEqual({
-      type: PCCCDataType.Array,
+      type: DataType.Array,
       size: 21,
     });
     expect(offsetRef).toStrictEqual({ current: 4 });

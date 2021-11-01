@@ -1,3 +1,11 @@
+- v3
+  - [x] Move eip directly under layers
+  - [x] Remove CIPInternalLayer and just keep as CIPLayer
+  - [ ] EPath allow encoding without creating segment objects
+  - [ ] Change sendNextMessage to a service that is only called by the base class, and returns true if a message was sent, return false if no message was sent. In the base class call setImmediate(() => this.sendNextMessage()); if the returned value is true.
+  - [ ] Move cip connection layer features to core
+
+
 - Logix5000
   - [ ] Read multidimensional arrays (CIP Vol 1, Table C-5.20)
   - [ ] Optimize

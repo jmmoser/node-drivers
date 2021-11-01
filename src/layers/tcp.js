@@ -1,5 +1,6 @@
 import net from 'net';
 import Layer from './layer.js';
+import { LayerNames } from './constants.js';
 import { CallbackPromise } from '../utils.js';
 
 const LOG = false;
@@ -122,7 +123,7 @@ function removeSocketListeners(socket) {
 
 export default class TCPLayer extends Layer {
   constructor(options) {
-    super('tcp');
+    super(LayerNames.TCP);
 
     let opts = options;
 

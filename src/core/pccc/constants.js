@@ -1,4 +1,4 @@
-export const PCCCDataType = {
+export const DataType = {
   Binary: 0x01,
   BitString: 0x02,
   Byte: 0x03,
@@ -16,6 +16,54 @@ export const PCCCDataType = {
   String: 0x1e,
   BlockTransfer: 0x20,
 };
+
+export const DataTypeNames = {
+  [DataType.Binary]: 'Bit',
+  [DataType.BitString]: 'Bit string',
+  [DataType.Byte]: 'Byte (or character string)',
+  [DataType.Integer]: 'Integer',
+  [DataType.Timer]: 'Allen-Bradley timer',
+  [DataType.Counter]: 'Allen-Bradley counter',
+  [DataType.Control]: 'Allen-Bradley general control structure',
+  [DataType.Float]: 'IEEE floating point',
+  [DataType.Array]: 'Array of similar elements',
+  [DataType.Address]: 'Address',
+  [DataType.BCD]: 'Binary-coded decimal (BCD)',
+  [DataType.PID]: 'PID',
+  [DataType.Message]: 'Message',
+  [DataType.SFCStatus]: 'SFC status',
+  [DataType.String]: 'String',
+  [DataType.BlockTransfer]: 'Block transfer',
+};
+
+export const ServiceCodes = {
+  ExecutePCCC: 0x4B,
+  ExecuteDHplus: 0x4C,
+  ExecuteLocalPCCC: 0x4D,
+};
+
+export const ServiceNames = {
+  0x4B: 'Exec PCCC Service',
+  0x4C: 'DH+ Like Service',
+  0x4D: 'Local PCCC Service',
+};
+
+/*
+  Source: http://iatip.blogspot.com/2008/11/ethernetip-pccc-service-codes.html
+  To force a DF1 message with destination=5 and source=2
+  0x4c                                              - DH+ Like Service
+  0x02 0x20 0x67 0x24 0x01                          - IOI to PCCC object
+  0x00 0x00 0x02 0x00 0x00 0x00 0x05 0x00           - DH+ Like Header
+  0x0F 0x00 0x5C 0x00 0xA2 0x14 0x07 0x89 0x00 0x00 - example pccc message
+
+  The originator info has been swapped with an 8 byte struct of the form
+  AA AA BB XX CC CC DD XX.
+  "XX" are control bytes of some sort, just leave 0x00
+  "AA AA" is the destination link
+  "BB" is the destination node
+  "CC CC" is the source link
+  "DD" is the source node
+*/
 
 export const STSCodeDescriptions = {
   0: 'Success',

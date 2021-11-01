@@ -3,7 +3,7 @@ import {
 } from '../../utils.js';
 
 import {
-  PCCCDataType,
+  DataType,
 } from './constants.js';
 
 export function DecodeDataDescriptor(data, offsetRef) {
@@ -62,21 +62,21 @@ export function DecodeTypedData(data, offsetRef, type, size) {
   let value;
 
   switch (type) {
-    case PCCCDataType.Binary:
-    case PCCCDataType.BitString:
-    case PCCCDataType.Byte:
+    case DataType.Binary:
+    case DataType.BitString:
+    case DataType.Byte:
       value = data.readUInt8(offsetRef.current);
       offsetRef.current += 1;
       break;
-    case PCCCDataType.Integer:
+    case DataType.Integer:
       value = data.readInt16LE(offsetRef.current);
       offsetRef.current += 2;
       break;
-    case PCCCDataType.Float:
+    case DataType.Float:
       value = data.readFloatLE(offsetRef.current);
       offsetRef.current += 4;
       break;
-    case PCCCDataType.Array: {
+    case DataType.Array: {
       value = [];
       const lastOffset = offsetRef.current + size;
       const descriptor = DecodeDataDescriptor(data, offsetRef);
@@ -85,7 +85,7 @@ export function DecodeTypedData(data, offsetRef, type, size) {
       }
       break;
     }
-    case PCCCDataType.Timer: {
+    case DataType.Timer: {
       /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2721 */
       const bits = data.readInt16LE(offsetRef.current);
       value = {
@@ -98,7 +98,7 @@ export function DecodeTypedData(data, offsetRef, type, size) {
       offsetRef.current += 6;
       break;
     }
-    case PCCCDataType.Counter: {
+    case DataType.Counter: {
       /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2728 */
       const bits = data.readInt16LE(offsetRef.current);
       value = {
@@ -113,7 +113,7 @@ export function DecodeTypedData(data, offsetRef, type, size) {
       offsetRef.current += 6;
       break;
     }
-    case PCCCDataType.Control: {
+    case DataType.Control: {
       /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2737 */
       const bits = data.readInt16LE(offsetRef.current);
       value = {
@@ -137,4 +137,10 @@ export function DecodeTypedData(data, offsetRef, type, size) {
   }
 
   return value;
+}
+
+export function DecodeTypedReadResponse(data, offset = 0) {
+  const offsetRef = { current: offset };
+  const descriptor = DecodeDataDescriptor(data, offsetRef);
+  return DecodeTypedData(data, offsetRef, descriptor.type, descriptor.size);
 }

@@ -3,6 +3,7 @@ import UDP from './layers/udp.js';
 import Modbus from './layers/modbus.js';
 import PCCC from './layers/pccc.js';
 import CIP from './layers/cip/index.js';
+import EIP from './layers/eip.js';
 import Multiplex from './layers/multiplex.js';
 
 export {
@@ -11,5 +12,6 @@ export {
   Modbus,
   PCCC,
   CIP,
+  EIP,
   Multiplex,
 };

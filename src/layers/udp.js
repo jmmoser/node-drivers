@@ -1,5 +1,6 @@
 import dgram from 'dgram';
 import Layer from './layer.js';
+import { LayerNames } from './constants.js';
 import { CallbackPromise } from '../utils.js';
 
 async function setup(layer) {
@@ -52,7 +53,7 @@ function removeSocketListeners(socket) {
 
 export default class UDPLayer extends Layer {
   constructor(options) {
-    super('udp');
+    super(LayerNames.UDP);
 
     this.options = {
       target: {

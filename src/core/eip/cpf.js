@@ -1,5 +1,5 @@
-import { getBits, InvertKeyValues } from '../../../../utils.js';
-import CIPIdentity from '../../../../core/cip/objects/Identity.js';
+import { getBits, InvertKeyValues } from '../../utils.js';
+import CIPIdentity from '../cip/objects/Identity.js';
 
 const ItemTypeIDs = Object.freeze({
   NullAddress: 0x0000, // address

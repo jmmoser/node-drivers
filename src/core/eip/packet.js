@@ -79,6 +79,14 @@ const EIPStatusCodeDescriptions = Object.freeze({
 //   255: 'Default for Get Attribute All service'
 // };
 
+function SendDataPacket(interfaceHandle, timeout, data) {
+  const buffer = Buffer.allocUnsafe(data.length + 6);
+  buffer.writeUInt32LE(interfaceHandle, 0);
+  buffer.writeUInt16LE(timeout, 4);
+  data.copy(buffer, 6);
+  return buffer;
+}
+
 /**
  * EIPPacket is defraggable
  */
@@ -199,6 +207,28 @@ export default class EIPPacket {
       startingOffsetRef.current + OFFSET_DATA,
       startingOffsetRef.current + OFFSET_DATA + EIPPacket.DataLength(buffer, startingOffsetRef),
     );
+  }
+
+  static EncodeSendRRDataMessage(sessionHandle, senderContext, data) {
+    // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
+    const cpfMessage = CPF.Packet.EncodeUCMM(data);
+    const dataPacket = SendDataPacket(0, 0, cpfMessage);
+    return EIPPacket.Encode(
+      Command.SendRRData,
+      sessionHandle,
+      0,
+      senderContext,
+      0,
+      dataPacket,
+    );
+  }
+
+  static EncodeSendUnitDataMessage(
+    sessionHandle, interfaceHandle, timeout, connectionIdentifier, data,
+  ) {
+    const cpfMessage = CPF.Packet.EncodeConnected(connectionIdentifier, data);
+    const dataPacket = SendDataPacket(interfaceHandle, timeout, cpfMessage);
+    return EIPPacket.Encode(Command.SendUnitData, sessionHandle, 0, null, 0, dataPacket);
   }
 
   static UnregisterSessionRequest(sessionHandle, senderContext) {

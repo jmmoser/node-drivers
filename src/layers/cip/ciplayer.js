@@ -1,31 +1,29 @@
-import EPath from '../../../../core/cip/epath/index.js';
-import CIPRequest from '../../../../core/cip/request.js';
-import { CommonServiceCodes } from '../../../../core/cip/constants/index.js';
+import Layer from '../layer.js';
+import ConnectionLayer from './layers/connection.js';
+import { CommonServiceCodes } from '../../core/cip/constants/index.js';
+import EPath from '../../core/cip/epath/index.js';
+import CIPRequest from '../../core/cip/request.js';
 
-import { CallbackPromise } from '../../../../utils.js';
-import Layer from '../../../layer.js';
-import ConnectionLayer from './CIPConnectionLayer.js';
+import { CallbackPromise } from '../../utils.js';
 
-// import { OBJECTS } from '../../core/objects';
+import * as PCCCHandler from './handlers/pccc.js';
 
-import PCCC from './pccc.js';
-
-class CIPInternalLayer extends Layer {
+export default class CIPLayer extends Layer {
   constructor(lowerLayer, options, name) {
     /** Inject Connection as lower layer */
     super(name || 'cip', new ConnectionLayer(lowerLayer, options));
     this._options = options;
   }
 
-  layerAdded(layer) {
-    switch (layer.name) {
-      case 'pccc':
-        this._pccc = PCCC(this._options);
-        break;
-      default:
-        throw new Error('CIP layer currently only supports forwarding PCCC layer');
-    }
-  }
+  // layerAdded(layer) {
+  //   switch (layer.name) {
+  //     case 'pccc':
+  //       this._pccc = PCCC(this._options);
+  //       break;
+  //     default:
+  //       throw new Error('CIP layer currently only supports forwarding PCCC layer');
+  //   }
+  // }
 
   sendRequest(connected, request, callback) {
     return CallbackPromise(callback, (resolver) => {
@@ -94,15 +92,12 @@ class CIPInternalLayer extends Layer {
   sendNextMessage() {
     const request = this.getNextRequest();
     if (request != null) {
-      if (request.layer.name === 'pccc') {
-        const req = this._pccc.request(request.message);
-        this.send(req.encode(), { connected: false }, false, {
-          type: 'pccc',
-          request: req,
-          info: request.info,
-          context: request.context,
-          internal: false,
-        });
+      switch (request.layer.name) {
+        case 'pccc':
+          PCCCHandler.Send(this, request, this._options);
+          break;
+        default:
+          break;
       }
       // else {
       //   throw new Error('Currently only supports forwarding PCCC requests');
@@ -136,5 +131,3 @@ class CIPInternalLayer extends Layer {
     this.forward(data, info, context);
   }
 }
-
-export default CIPInternalLayer;

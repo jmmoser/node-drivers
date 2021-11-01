@@ -1,4 +1,4 @@
-import CIPLayer from '../internal/CIPInternalLayer.js';
+import CIPLayer from '../../ciplayer.js';
 import EPath from '../../../../core/cip/epath/index.js';
 import CIPRequest from '../../../../core/cip/request.js';
 

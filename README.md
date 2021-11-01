@@ -92,10 +92,10 @@ await tcpLayer.close();
 ### Find all EtherNet/IP devices in a subnet using the UDP broadcast address or by explicitly pinging each host:
 
 ```javascript
-import { UDP, CIP } from 'node-drivers';
+import { UDP, EIP } from 'node-drivers';
 
 const udpLayer = new UDP('1.2.3.255');
-const eipLayer = new CIP.EIP(udpLayer);
+const eipLayer = new EIP(udpLayer);
 
 /** Broadcast */
 console.log(await eipLayer.listIdentity());
@@ -117,10 +117,10 @@ await udpLayer.close();
 ### Retrieve information from an EtherNet/IP device over TCP:
 
 ```javascript
-import { TCP, CIP } from 'node-drivers';
+import { TCP, EIP } from 'node-drivers';
 
 const tcpLayer = new TCP('1.2.3.4');
-const eipLayer = new CIP.EIP(tcpLayer);
+const eipLayer = new EIP(tcpLayer);
 
 console.log(await eipLayer.listInterfaces());
 

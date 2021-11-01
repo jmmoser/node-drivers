@@ -1,7 +1,7 @@
-import { UDP, CIP } from 'node-drivers';
+import { UDP, EIP } from 'node-drivers';
 
 const udpLayer = new UDP({ host: '0.0.0.255', port: 44818 });
-const eipLayer = new CIP.EIP(udpLayer);
+const eipLayer = new EIP(udpLayer);
 
 (async () => {
   try {

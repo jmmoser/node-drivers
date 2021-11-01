@@ -1,6 +1,8 @@
 import { CallbackPromise } from '../utils.js';
 import Layer from './layer.js';
 import PCCCPacket from '../core/pccc/packet.js';
+import * as Encoding from '../core/pccc/encoding.js';
+import * as Decoding from '../core/pccc/decoding.js';
 
 function incrementTransaction(self) {
   self._transaction++;
@@ -16,11 +18,6 @@ function getError(status) {
 
   return status.description;
 }
-
-const Commands = Object.freeze({
-  Connected: 0x0A,
-  Unconnected: 0x0B,
-});
 
 function send(self, internal, request, contextOrCallback) {
   let context;
@@ -38,7 +35,7 @@ function send(self, internal, request, contextOrCallback) {
     request,
   });
 
-  self.send(request.encode(), null, false);
+  self.send(request, null, false);
 }
 
 /**
@@ -62,7 +59,7 @@ export default class PCCCLayer extends Layer {
     }
 
     return CallbackPromise(callback, (resolver) => {
-      const message = PCCCPacket.WordRangeReadRequest(
+      const message = Encoding.EncodeWordRangeReadRequest(
         incrementTransaction(this),
         address,
         words,
@@ -96,7 +93,7 @@ export default class PCCCLayer extends Layer {
         items = 1;
       }
 
-      const message = PCCCPacket.TypedReadRequest(
+      const message = Encoding.EncodeTypedRead(
         incrementTransaction(this),
         address,
         items,
@@ -106,7 +103,7 @@ export default class PCCCLayer extends Layer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          const value = PCCCPacket.ParseTypedReadData(reply.data);
+          const value = Decoding.DecodeTypedReadResponse(reply.data, 0);
           if (items === 1 && Array.isArray(value) && value.length > 0) {
             resolver.resolve(value[0]);
           } else {
@@ -129,7 +126,7 @@ export default class PCCCLayer extends Layer {
 
       value = Array.isArray(value) ? value : [value];
 
-      const message = PCCCPacket.TypedWriteRequest(
+      const message = Encoding.EncodeTypedWrite(
         incrementTransaction(this),
         address,
         value,
@@ -153,8 +150,8 @@ export default class PCCCLayer extends Layer {
   //     return;
   //   }
 
-  //   let transaction = incrementTransaction(this);
-  //   let message = PCCCPacket.UnprotectedReadRequest(transaction, address, size);
+  //   const transaction = incrementTransaction(this);
+  //   const message = Encoding.EncodeUnprotectedRead(transaction, address, size);
 
   //   this.send(message, INFO, false, this.contextCallback(function(error, reply) {
   //     if (error) {
@@ -167,7 +164,7 @@ export default class PCCCLayer extends Layer {
 
   diagnosticStatus(callback) {
     return CallbackPromise(callback, (resolver) => {
-      const message = PCCCPacket.DiagnosticStatusRequest(
+      const message = Encoding.EncodeDiagnosticStatus(
         incrementTransaction(this),
       );
 
@@ -183,7 +180,7 @@ export default class PCCCLayer extends Layer {
 
   echo(data, callback) {
     return CallbackPromise(callback, (resolver) => {
-      const message = PCCCPacket.EchoRequest(
+      const message = Encoding.EncodeEcho(
         incrementTransaction(this),
         data,
       );
@@ -214,21 +211,17 @@ export default class PCCCLayer extends Layer {
       const { info, message } = request;
 
       if (info != null && info.connectionID != null && info.transportHeader != null) {
-        // TODO: Move this to core
-        const data = Buffer.allocUnsafe(6 + message.length);
-        data.writeUInt8(0, 0); // FNC
-        data.writeUInt8(0, 1); // Extra
-        data.writeUInt16LE(info.connectionID, 2);
-        data.writeUInt16LE(info.transportHeader, 4);
-        message.copy(data, 6);
-        packet = new PCCCPacket(Commands.Connected, 0, transaction, data);
+        packet = Encoding.EncodeConnectedRequest(
+          transaction,
+          this.connectionID,
+          this.transportHeader,
+          message,
+        );
       } else {
-        // TODO: Move this to core
-        const data = Buffer.allocUnsafe(2 + message.length);
-        data.writeUInt8(0, 0); // FNC
-        data.writeUInt8(0, 1); // Extra
-        message.copy(data, 2);
-        packet = new PCCCPacket(Commands.Unconnected, 0, transaction, data);
+        packet = Encoding.EncodeUnconnectedRequest(
+          transaction,
+          message,
+        );
       }
 
       send(this, false, packet, request.context);

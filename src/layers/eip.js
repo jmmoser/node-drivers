@@ -1,35 +1,13 @@
-import { CallbackPromise, InfoError } from '../../../../utils.js';
-import Layer from '../../../layer.js';
-import EIPPacket from './packet.js';
+import { CallbackPromise, InfoError } from '../utils.js';
+import Layer from './layer.js';
+import { LayerNames } from './constants.js';
+import EIPPacket from '../core/eip/packet.js';
 
-import CPF from './cpf.js';
+import CPF from '../core/eip/cpf.js';
 
 const {
   CommandCodes,
 } = EIPPacket;
-
-function SendDataPacket(interfaceHandle, timeout, data) {
-  const buffer = Buffer.allocUnsafe(data.length + 6);
-  buffer.writeUInt32LE(interfaceHandle, 0);
-  buffer.writeUInt16LE(timeout, 4);
-  data.copy(buffer, 6);
-  return buffer;
-}
-
-function EncodeSendRRDataMessage(sessionHandle, senderContext, data) {
-  // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
-  const cpfMessage = CPF.Packet.EncodeUCMM(data);
-  const dataPacket = SendDataPacket(0, 0, cpfMessage);
-  return EIPPacket.Encode(CommandCodes.SendRRData, sessionHandle, 0, senderContext, 0, dataPacket);
-}
-
-function EncodeSendUnitDataMessage(
-  sessionHandle, interfaceHandle, timeout, connectionIdentifier, data,
-) {
-  const cpfMessage = CPF.Packet.EncodeConnected(connectionIdentifier, data);
-  const dataPacket = SendDataPacket(interfaceHandle, timeout, cpfMessage);
-  return EIPPacket.Encode(CommandCodes.SendUnitData, sessionHandle, 0, null, 0, dataPacket);
-}
 
 function setConnectionState(layer, state) {
   // console.log(`EIP connection state: ${layer._connectionState} => ${state}`);
@@ -187,7 +165,7 @@ export default class EIPLayer extends Layer {
       throw new Error('EIP layer requires a lower layer');
     }
 
-    super('eip.cip', lowerLayer, null, { ...DefaultOptions, ...options });
+    super(LayerNames.EIP, lowerLayer, null, { ...DefaultOptions, ...options });
 
     this._sessionHandle = 0;
     this._context = Buffer.alloc(8);
@@ -376,7 +354,7 @@ export default class EIPLayer extends Layer {
           let fullMessage = null;
 
           if (info && info.connectionID != null) {
-            fullMessage = EncodeSendUnitDataMessage(
+            fullMessage = EIPPacket.EncodeSendUnitDataMessage(
               this._sessionHandle,
               0,
               0,
@@ -389,7 +367,11 @@ export default class EIPLayer extends Layer {
             }
           } else {
             incrementContext(this);
-            fullMessage = EncodeSendRRDataMessage(this._sessionHandle, this._context, message);
+            fullMessage = EIPPacket.EncodeSendRRDataMessage(
+              this._sessionHandle,
+              this._context,
+              message,
+            );
 
             if (request.context != null) {
               this._unconnectedContexts.set(this._context.toString('hex'), request.context);

@@ -1,14 +1,13 @@
-import { InvertKeyValues } from '../../../../utils.js';
-import CIPRequest from '../../../../core/cip/request.js';
-import { GeneralStatusCodes, ClassCodes } from '../../../../core/cip/constants/index.js';
-import { DataType } from '../../../../core/cip/datatypes/index.js';
-import Layer from '../../../layer.js';
-import ConnectionManager from '../../../../core/cip/objects/ConnectionManager.js';
-import EPath from '../../../../core/cip/epath/index.js';
+import { InvertKeyValues } from '../../../utils.js';
+import CIPRequest from '../../../core/cip/request.js';
+import { GeneralStatusCodes, ClassCodes } from '../../../core/cip/constants/index.js';
+import { DataType } from '../../../core/cip/datatypes/index.js';
+import Layer from '../../layer.js';
+import { LayerNames } from '../../constants.js';
+import ConnectionManager from '../../../core/cip/objects/ConnectionManager.js';
+import EPath from '../../../core/cip/epath/index.js';
 
-import EIPLayer from '../EIP/index.js';
-import TCPLayer from '../../../tcp.js';
-import UDPLayer from '../../../udp.js';
+import EIPLayer from '../../eip.js';
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 
@@ -401,12 +400,11 @@ function connect(self) {
   return undefined;
 }
 
-class CIPConnectionLayer extends Layer {
+export default class CIPConnectionLayer extends Layer {
   constructor(lowerLayer, options) {
     if (lowerLayer == null) {
-      // lowerLayer = new EIPLayer();
       throw new Error('Lower layer is currently required to use ');
-    } else if (lowerLayer instanceof TCPLayer || lowerLayer instanceof UDPLayer) {
+    } else if ([LayerNames.TCP, LayerNames.UDP].indexOf(lowerLayer.name) >= 0) {
       lowerLayer = new EIPLayer(lowerLayer);
     }
 
@@ -493,8 +491,6 @@ class CIPConnectionLayer extends Layer {
     this.sendInfo = null;
   }
 }
-
-export default CIPConnectionLayer;
 
 // /** CIP Vol1 Table 3-4.2 */
 // const ClassServices = Object.freeze({

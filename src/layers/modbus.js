@@ -1,5 +1,6 @@
 import { CallbackPromise, once } from '../utils.js';
 import Layer from './layer.js';
+import { LayerNames } from './constants.js';
 import * as MB from '../core/modbus/constants.js';
 import Frames from '../core/modbus/frames/index.js';
 import PDU from '../core/modbus/pdu.js';
@@ -35,10 +36,10 @@ function writeRequest(self, fn, address, values, callback) {
 
 export default class Modbus extends Layer {
   constructor(lowerLayer, options) {
-    super('modbus', lowerLayer, null, DefaultOptions);
+    super(LayerNames.Modbus, lowerLayer, null, DefaultOptions);
 
     switch (lowerLayer.name) {
-      case 'tcp': {
+      case LayerNames.TCP: {
         const cOpts = {
           unitID: 0xFF,
           protocolID: 0,
@@ -80,39 +81,39 @@ export default class Modbus extends Layer {
     }
   }
 
-  readDiscreteInputs(inputAddressing, count, callback) {
-    return readRequest(this, ReadDiscreteInputs, inputAddressing, count, callback);
+  readDiscreteInputs(address, count, callback) {
+    return readRequest(this, ReadDiscreteInputs, address, count, callback);
   }
 
-  readCoils(inputAddressing, count, callback) {
-    return readRequest(this, ReadCoils, inputAddressing, count, callback);
+  readCoils(address, count, callback) {
+    return readRequest(this, ReadCoils, address, count, callback);
   }
 
-  readInputRegisters(inputAddressing, count, callback) {
-    return readRequest(this, ReadInputRegisters, inputAddressing, count, callback);
+  readInputRegisters(address, count, callback) {
+    return readRequest(this, ReadInputRegisters, address, count, callback);
   }
 
-  readHoldingRegisters(inputAddressing, count = 1, callback) {
-    return readRequest(this, ReadHoldingRegisters, inputAddressing, count, callback);
+  readHoldingRegisters(address, count = 1, callback) {
+    return readRequest(this, ReadHoldingRegisters, address, count, callback);
   }
 
-  writeSingleCoil(inputAddressing, value, callback) {
+  writeSingleCoil(address, value, callback) {
     const values = [value ? 0x00FF : 0x0000];
-    return writeRequest(this, WriteSingleCoil, inputAddressing, values, callback);
+    return writeRequest(this, WriteSingleCoil, address, values, callback);
   }
 
-  writeMultipleCoils(inputAddressing, values, callback) {
+  writeMultipleCoils(address, values, callback) {
     for (let i = 0; i < values.length; i++) {
       values[i] = values[i] ? 0x00FF : 0x0000;
     }
-    return writeRequest(this, WriteMultipleCoils, inputAddressing, values, callback);
+    return writeRequest(this, WriteMultipleCoils, address, values, callback);
   }
 
-  writeSingleHoldingRegister(inputAddressing, values, callback) {
-    return writeRequest(this, WriteSingleHoldingRegister, inputAddressing, values, callback);
+  writeSingleHoldingRegister(address, values, callback) {
+    return writeRequest(this, WriteSingleHoldingRegister, address, values, callback);
   }
 
-  // writeMultipleHoldingRegisters(inputAddressing, values, callback) {
+  // writeMultipleHoldingRegisters(address, values, callback) {
   //   return CallbackPromise(callback, (resolver) => {
   //     resolver.reject('Not supported yet');
   //   });

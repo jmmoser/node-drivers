@@ -1,7 +1,7 @@
-import { TCP, CIP } from 'node-drivers';
+import { TCP, EIP } from 'node-drivers';
 
 const tcpLayer = new TCP({ host: '1.2.3.4', port: 44818 });
-const eipLayer = new CIP.EIP(tcpLayer);
+const eipLayer = new EIP(tcpLayer);
 
 (async () => {
   try {
