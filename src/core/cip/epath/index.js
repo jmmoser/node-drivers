@@ -1,27 +1,6 @@
 import { getBits } from '../../../utils.js';
 import Segments from './segments/index.js';
 
-function encodeSize(padded, segments) {
-  if (!Array.isArray(segments)) {
-    throw new Error(`Segments must be an array. Received: ${typeof segments}`);
-  }
-  let size = 0;
-  for (let i = 0; i < segments.length; i++) {
-    size += segments[i].encodeSize(padded);
-  }
-  return size;
-}
-
-function EncodeTo(buffer, offset, padded, segments) {
-  if (!Array.isArray(segments)) {
-    throw new Error(`Segments must be an array. Received: ${typeof segments}`);
-  }
-  for (let i = 0; i < segments.length; i++) {
-    offset = segments[i].encodeTo(buffer, offset, padded);
-  }
-  return offset;
-}
-
 class EPath {
   constructor(padded, segments) {
     this.padded = padded;
@@ -29,7 +8,7 @@ class EPath {
   }
 
   encodeSize() {
-    return encodeSize(this.padded, this.segments);
+    return EPath.EncodeSize(this.padded, this.segments);
   }
 
   /**
@@ -121,7 +100,14 @@ class EPath {
   }
 
   static EncodeSize(padded, segments) {
-    return encodeSize(padded, segments);
+    if (!Array.isArray(segments)) {
+      throw new Error(`Segments must be an array. Received: ${typeof segments}`);
+    }
+    let size = 0;
+    for (let i = 0; i < segments.length; i++) {
+      size += segments[i].encodeSize(padded);
+    }
+    return size;
   }
 
   static Encode(padded, segments) {
@@ -130,12 +116,18 @@ class EPath {
       size += segments[i].encodeSize(padded);
     }
     const buffer = Buffer.alloc(size);
-    EncodeTo(buffer, 0, padded, segments);
+    EPath.EncodeTo(buffer, 0, padded, segments);
     return buffer;
   }
 
   static EncodeTo(buffer, offset, padded, segments) {
-    return EncodeTo(buffer, offset, padded, segments);
+    if (!Array.isArray(segments)) {
+      throw new Error(`Segments must be an array. Received: ${typeof segments}`);
+    }
+    for (let i = 0; i < segments.length; i++) {
+      offset = segments[i].encodeTo(buffer, offset, padded);
+    }
+    return offset;
   }
 }
 

@@ -123,7 +123,7 @@ function encodeTo(buffer, offset, type) {
   return offset;
 }
 
-class DataTypeSegment {
+export default class DataTypeSegment {
   constructor(value) {
     this.value = convertDataTypeToObject(value);
   }
@@ -147,5 +147,3 @@ class DataTypeSegment {
     return new DataTypeSegment(DecodeDataType(buffer, offsetRef));
   }
 }
-
-export default DataTypeSegment;

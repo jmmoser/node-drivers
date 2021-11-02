@@ -257,7 +257,7 @@ class SymbolicSegment {
 
     switch (extendedFormat) {
       case ExtendedStringFormatCodes.DoubleByteCharacters:
-        return new SymbolicSegment.Double(value);
+        return new SymbolicSegment.Double(value, extendedSize);
       case ExtendedStringFormatCodes.TripleByteCharacters:
         return new SymbolicSegment.Triple(value, extendedSize);
       case ExtendedStringFormatCodes.Numeric:

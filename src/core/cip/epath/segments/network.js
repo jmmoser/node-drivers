@@ -12,7 +12,7 @@ import {
   InvertKeyValues,
 } from '../../../../utils.js';
 
-const SubtypeCodes = Object.freeze({
+export const SubtypeCodes = Object.freeze({
   Schedule: 1,
   FixedTag: 2,
   ProductionInhibitTime: 3,
@@ -22,20 +22,23 @@ const SubtypeCodes = Object.freeze({
 
 const SubtypeNames = Object.freeze(InvertKeyValues(SubtypeCodes));
 
-class NetworkSegment {
+export default class NetworkSegment {
   constructor(subtype, value) {
-    this.subtype = subtype;
+    this.subtype = {
+      code: subtype,
+      name: SubtypeNames[subtype] || 'Unknown',
+    };
     this.value = value;
   }
 
   encodeSize() {
-    switch (this.subtype) {
+    switch (this.subtype.code) {
       case SubtypeCodes.Schedule:
       case SubtypeCodes.FixedTag:
       case SubtypeCodes.ProductionInhibitTime:
         return 2;
       default:
-        throw new Error(`Network segment subtype ${this.subtype} not supported yet`);
+        throw new Error(`Network segment subtype ${this.subtype.name} not supported yet`);
     }
   }
 
@@ -46,15 +49,15 @@ class NetworkSegment {
   }
 
   encodeTo(buffer, offset) {
-    offset = buffer.writeUInt8((0b01000000) | (this.subtype & 0b11111), offset);
-    switch (this.subtype) {
+    offset = buffer.writeUInt8((0b01000000) | (this.subtype.code & 0b11111), offset);
+    switch (this.subtype.code) {
       case SubtypeCodes.Schedule:
       case SubtypeCodes.FixedTag:
       case SubtypeCodes.ProductionInhibitTime:
         offset = buffer.writeUInt8(this.value, offset);
         break;
       default:
-        throw new Error(`Network segment subtype ${this.subtype} not supported yet`);
+        throw new Error(`Network segment subtype ${this.subtype.name} not supported yet`);
     }
 
     return offset;
@@ -78,35 +81,8 @@ class NetworkSegment {
         throw new Error(`Reserved Network segment subtype ${subtype}`);
     }
 
-    switch (subtype) {
-      case SubtypeCodes.Schedule:
-        return new NetworkSegment.Schedule(value);
-      case SubtypeCodes.FixedTag:
-        return new NetworkSegment.FixedTag(value);
-      case SubtypeCodes.ProductionInhibitTime:
-        return new NetworkSegment.ProductionInhibitTime(value);
-      default:
-        throw new Error('Invalid subtype');
-    }
+    return new NetworkSegment(subtype, value);
   }
 }
 
-NetworkSegment.Schedule = class ScheduleNetworkSegment extends NetworkSegment {
-  constructor(value) {
-    super(SubtypeCodes.Schedule, value);
-  }
-};
-
-NetworkSegment.FixedTag = class FixedTagNetworkSegment extends NetworkSegment {
-  constructor(value) {
-    super(SubtypeCodes.FixedTag, value);
-  }
-};
-
-NetworkSegment.ProductionInhibitTime = class ProductionInhibitTimeNetworkSegment extends NetworkSegment { // eslint-disable-line max-len
-  constructor(value) {
-    super(SubtypeCodes.ProductionInhibitTime, value);
-  }
-};
-
-export default NetworkSegment;
+NetworkSegment.SubtypeCodes = SubtypeCodes;

@@ -58,7 +58,7 @@ function validate(number, address) {
   }
 }
 
-class PortSegment {
+export default class PortSegment {
   constructor(number, address) {
     address = serializeAddress(address);
 
@@ -68,13 +68,13 @@ class PortSegment {
     this.address = address;
   }
 
-  encodeSize() {
+  static EncodeSize(number, address) {
     let size = 1;
-    if (this.number >= 15) {
+    if (number >= 15) {
       size += 2;
     }
 
-    const addressLength = this.address.length;
+    const addressLength = address.length;
 
     size += addressLength;
 
@@ -86,23 +86,17 @@ class PortSegment {
     return size;
   }
 
-  encode() {
-    const buffer = Buffer.alloc(this.encodeSize());
-    this.encodeTo(buffer, 0);
-    return buffer;
-  }
-
-  encodeTo(buffer, offset) {
+  static EncodeTo(buffer, offset, number, address) {
     const startingOffset = offset;
 
     let code = 0;
-    if (this.number >= 15) {
+    if (number >= 15) {
       code |= 15;
     } else {
-      code |= this.number;
+      code |= number;
     }
 
-    const addressLength = this.address.length;
+    const addressLength = address.length;
 
     if (addressLength > 1) {
       code |= 0b00010000;
@@ -114,11 +108,11 @@ class PortSegment {
       offset = buffer.writeUInt8(addressLength, offset);
     }
 
-    if (this.number >= 15) {
-      offset = buffer.writeUInt16LE(this.number, offset);
+    if (number >= 15) {
+      offset = buffer.writeUInt16LE(number, offset);
     }
 
-    const addressLengthCopied = this.address.copy(buffer, offset);
+    const addressLengthCopied = address.copy(buffer, offset);
 
     if (addressLengthCopied < addressLength) {
       throw new Error('Buffer is not large enough');
@@ -131,6 +125,24 @@ class PortSegment {
     }
 
     return offset;
+  }
+
+  static Encode(number, address) {
+    const buffer = Buffer.alloc(PortSegment.EncodeSize(number, address));
+    PortSegment.EncodeTo(buffer, 0, number, address);
+    return buffer;
+  }
+
+  encodeSize() {
+    return PortSegment.EncodeSize(this.number, this.address);
+  }
+
+  encode() {
+    return PortSegment.Encode(this.number, this.address);
+  }
+
+  encodeTo(buffer, offset) {
+    return PortSegment.EncodeTo(buffer, offset, this.number, this.address);
   }
 
   static Decode(buffer, offsetRef, segmentCode /* , padded */) {
@@ -170,5 +182,3 @@ class PortSegment {
     return new PortSegment(number, address);
   }
 }
-
-export default PortSegment;
