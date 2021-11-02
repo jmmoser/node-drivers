@@ -22,15 +22,15 @@ const DefaultOptions = {
   },
 };
 
-function readRequest(self, fn, address, count, callback) {
+function readRequest(self, fn, address, count, littleEndian, callback) {
   return CallbackPromise(callback, (resolver) => {
-    self._send(PDU.EncodeReadRequest(fn, address, count), {}, resolver);
+    self._send(PDU.EncodeReadRequest(fn, address, count, littleEndian), {}, resolver);
   });
 }
 
-function writeRequest(self, fn, address, values, callback) {
+function writeRequest(self, fn, address, values, littleEndian, callback) {
   return CallbackPromise(callback, (resolver) => {
-    self._send(PDU.EncodeWriteRequest(fn, address, values), {}, resolver);
+    self._send(PDU.EncodeWriteRequest(fn, address, values, littleEndian), {}, resolver);
   });
 }
 
@@ -45,6 +45,8 @@ export default class Modbus extends Layer {
           protocolID: 0,
           ...options,
         };
+
+        this._littleEndian = false;
 
         this._transactionCounter = 0;
         this._frameClass = Frames.TCP;
@@ -76,41 +78,51 @@ export default class Modbus extends Layer {
         this.setDefragger(Frames.TCP.IsComplete, Frames.TCP.Length);
         break;
       }
+      case LayerNames.CIP:
+        this._littleEndian = true;
+        break;
       default:
         break;
     }
   }
 
   readDiscreteInputs(address, count, callback) {
-    return readRequest(this, ReadDiscreteInputs, address, count, callback);
+    return readRequest(this, ReadDiscreteInputs, address, count, this._littleEndian, callback);
   }
 
   readCoils(address, count, callback) {
-    return readRequest(this, ReadCoils, address, count, callback);
+    return readRequest(this, ReadCoils, address, count, this._littleEndian, callback);
   }
 
   readInputRegisters(address, count, callback) {
-    return readRequest(this, ReadInputRegisters, address, count, callback);
+    return readRequest(this, ReadInputRegisters, address, count, this._littleEndian, callback);
   }
 
   readHoldingRegisters(address, count = 1, callback) {
-    return readRequest(this, ReadHoldingRegisters, address, count, callback);
+    return readRequest(this, ReadHoldingRegisters, address, count, this._littleEndian, callback);
   }
 
   writeSingleCoil(address, value, callback) {
     const values = [value ? 0x00FF : 0x0000];
-    return writeRequest(this, WriteSingleCoil, address, values, callback);
+    return writeRequest(this, WriteSingleCoil, address, values, this._littleEndian, callback);
   }
 
   writeMultipleCoils(address, values, callback) {
     for (let i = 0; i < values.length; i++) {
       values[i] = values[i] ? 0x00FF : 0x0000;
     }
-    return writeRequest(this, WriteMultipleCoils, address, values, callback);
+    return writeRequest(this, WriteMultipleCoils, address, values, this._littleEndian, callback);
   }
 
   writeSingleHoldingRegister(address, values, callback) {
-    return writeRequest(this, WriteSingleHoldingRegister, address, values, callback);
+    return writeRequest(
+      this,
+      WriteSingleHoldingRegister,
+      address,
+      values,
+      this._littleEndian,
+      callback,
+    );
   }
 
   // writeMultipleHoldingRegisters(address, values, callback) {

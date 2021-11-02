@@ -4,6 +4,8 @@ import {
   ErrorDescriptions,
 } from './constants.js';
 
+import { writeUInt, readUInt } from '../../bufferutils.js';
+
 const OFFSET_FN = 0;
 const OFFSET_DATA = 1;
 
@@ -21,32 +23,32 @@ const OFFSET_DATA = 1;
 // }
 
 export default class PDU {
-  static EncodeReadRequest(fn, address, count) {
+  static EncodeReadRequest(fn, address, count, littleEndian) {
     const buffer = Buffer.allocUnsafe(5);
     buffer.writeUInt8(fn, 0);
-    buffer.writeUInt16BE(address, 1);
-    buffer.writeUInt16BE(count, 3);
+    writeUInt(buffer, address, 1, 2, littleEndian);
+    writeUInt(buffer, count, 3, 2, littleEndian);
     return buffer;
   }
 
-  static EncodeWriteRequest(fn, address, values) {
+  static EncodeWriteRequest(fn, address, values, littleEndian) {
     let buffer;
     if (Buffer.isBuffer(values)) {
       buffer = Buffer.allocUnsafe(3 + values.length);
       buffer.writeUInt8(fn, 0);
-      buffer.writeUInt16BE(address, 1);
+      writeUInt(buffer, address, 1, 2, littleEndian);
       values.copy(buffer, 3);
     } else if (Array.isArray(values)) {
       buffer = Buffer.allocUnsafe(3 + 2 * values.length);
       buffer.writeUInt8(fn, 0);
-      buffer.writeUInt16BE(address, 1);
+      writeUInt(buffer, address, 1, 2, littleEndian);
       for (let i = 0; i < values.length; i++) {
         const value = values[i];
         const offset = 2 * i + 3;
         if (Buffer.isBuffer(value) && value.length === 2) {
           value.copy(buffer, offset, 0, 2);
         } else if (Number.isFinite(value)) {
-          buffer.writeInt16BE(value, offset);
+          writeUInt(buffer, value, offset, 2, littleEndian);
         } else {
           throw new Error('Modbus write request error: currently supports buffer, array of 2-byte buffers, or array of finite numbers');
         }
@@ -58,7 +60,7 @@ export default class PDU {
     return buffer;
   }
 
-  static Decode(buffer, offsetRef, pduLength) {
+  static Decode(buffer, offsetRef, pduLength, littleEndian) {
     const fn = PDU.Fn(buffer, offsetRef);
     const data = PDU.Data(buffer, offsetRef, pduLength);
 
@@ -90,15 +92,15 @@ export default class PDU {
           offsetRef.current += 1;
           const count = dataLength / 2;
           for (let i = 0; i < count; i++) {
-            value.push(buffer.readUInt16BE(offsetRef.current + OFFSET_DATA + 2 * i));
+            value.push(readUInt(buffer, offsetRef.current + OFFSET_DATA + 2 * i, 2, littleEndian));
           }
           offsetRef.current += dataLength;
           break;
         }
         case Functions.WriteSingleCoil:
         case Functions.WriteSingleHoldingRegister: {
-          const address = buffer.readUInt16BE(offsetRef.current + OFFSET_DATA);
-          const ivalue = buffer.readUInt16BE(offsetRef.current + OFFSET_DATA + 2);
+          const address = readUInt(buffer, offsetRef.current + OFFSET_DATA, 2, littleEndian);
+          const ivalue = readUInt(buffer, offsetRef.current + OFFSET_DATA + 2, 2, littleEndian);
           offsetRef.current += 4;
           value = {
             address,
@@ -108,8 +110,8 @@ export default class PDU {
         }
         case Functions.WriteMultipleCoils:
         case Functions.WriteMultipleHoldingRegisters: {
-          const address = buffer.readUInt16BE(offsetRef.current + OFFSET_DATA);
-          const count = buffer.readUInt16BE(offsetRef.current + OFFSET_DATA + 2);
+          const address = readUInt(buffer, offsetRef.current + OFFSET_DATA, 2, littleEndian);
+          const count = readUInt(buffer, offsetRef.current + OFFSET_DATA + 2, 2, littleEndian);
           offsetRef.current += 4;
           value = {
             address,

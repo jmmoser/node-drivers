@@ -5,13 +5,14 @@ import EPath from '../../core/cip/epath/index.js';
 import CIPRequest from '../../core/cip/request.js';
 
 import { CallbackPromise } from '../../utils.js';
+import { LayerNames } from '../constants.js';
 
 import * as PCCCHandler from './handlers/pccc.js';
 
 export default class CIPLayer extends Layer {
-  constructor(lowerLayer, options, name) {
+  constructor(lowerLayer, options) {
     /** Inject Connection as lower layer */
-    super(name || 'cip', new ConnectionLayer(lowerLayer, options));
+    super(LayerNames.CIP, new ConnectionLayer(lowerLayer, options));
     this._options = options;
   }
 
