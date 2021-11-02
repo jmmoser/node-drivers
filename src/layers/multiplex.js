@@ -72,7 +72,6 @@ export default class MultiplexLayer extends Layer {
     const request = this.getNextRequest();
     if (request != null) {
       this.send(request.message, request.info, false, layerContext(this, request.layer));
-      setImmediate(() => this.sendNextMessage());
     }
   }
 

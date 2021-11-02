@@ -237,13 +237,15 @@ export default class TCPLayer extends Layer {
             console.log('TCP layer write error:');
             console.log(err);
           }
-          setImmediate(() => this.sendNextMessage());
         });
+
+        return true;
       }
     } else if (this._connectionState === 0) {
       /** Reconnect */
       connect(this);
     }
+    return false;
   }
 
   handleDestroy() {

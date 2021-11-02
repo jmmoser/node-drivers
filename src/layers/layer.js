@@ -153,8 +153,27 @@ export default class Layer extends EventEmitter {
     this.emit('send', message, info, priority, context);
     const transport = this.lowerLayer != null ? this.lowerLayer : this;
     transport.addMessageToQueue(this, message, info, priority, context);
+
+    const obj = {
+      layer: this,
+      info: info || {},
+      message,
+      context,
+    };
+
+    transport._queue.enqueue(obj, priority);
+
     transport.sendNextMessage();
+
+    this.sendNextMessage();
   }
+
+  // static internalSendNextMessage(transport) {
+  //   let sent;
+  //   do {
+  //     sent = transport.sendNextMessage();
+  //   } while (sent === true);
+  // }
 
   requestQueueSize(priority) {
     return this._queue.size(priority);
@@ -180,6 +199,8 @@ export default class Layer extends EventEmitter {
     };
 
     this._queue.enqueue(obj, priority);
+
+    this.sendNextMessage();
   }
 
   clearRequestQueue() {

@@ -379,8 +379,6 @@ export default class EIPLayer extends Layer {
           }
 
           this.send(fullMessage, null, false);
-
-          setImmediate(() => this.sendNextMessage());
         }
       }
     }

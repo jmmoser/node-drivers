@@ -124,11 +124,12 @@ export default class UDPLayer extends Layer {
           }
         });
 
-        setImmediate(() => this.sendNextMessage());
+        return true;
       }
     } else {
       setup(this);
     }
+    return false;
   }
 
   disconnect(callback) {

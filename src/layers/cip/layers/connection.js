@@ -459,7 +459,6 @@ export default class CIPConnectionLayer extends Layer {
         } else {
           const request = this.getNextRequest();
           send(this, false, false, request.message, request.context);
-          setImmediate(() => this.sendNextMessage());
         }
       }
     } else if (this._connectionState === 2) {
@@ -470,7 +469,6 @@ export default class CIPConnectionLayer extends Layer {
           throw new Error('CIP Connection Error: Connected messages must include a context');
         }
         send(this, true, false, request.message, request.context);
-        setImmediate(() => this.sendNextMessage());
       }
     }
   }

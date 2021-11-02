@@ -102,8 +102,6 @@ export default class CIPLayer extends Layer {
       // else {
       //   throw new Error('Currently only supports forwarding PCCC requests');
       // }
-
-      setImmediate(() => this.sendNextMessage());
     }
   }
 

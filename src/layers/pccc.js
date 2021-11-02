@@ -225,8 +225,6 @@ export default class PCCCLayer extends Layer {
       }
 
       send(this, false, packet, request.context);
-
-      setImmediate(() => this.sendNextMessage());
     }
   }
 
