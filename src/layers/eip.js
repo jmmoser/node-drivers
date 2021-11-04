@@ -344,8 +344,7 @@ export default class EIPLayer extends Layer {
   }
 
   sendNextMessage() {
-    // console.log('asdfa', this._totalSentSinceLastResponse);
-    if (this._totalSentSinceLastResponse > 2000) {
+    if (this._totalSentSinceLastResponse > 1500) {
       return;
     }
 
