@@ -4,4 +4,5 @@ export const LayerNames = {
   Modbus: 'modbus',
   EIP: 'eip',
   CIP: 'cip',
+  PCCC: 'pccc',
 };

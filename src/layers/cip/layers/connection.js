@@ -375,7 +375,7 @@ export default class CIPConnectionLayer extends Layer {
       lowerLayer = new EIPLayer(lowerLayer);
     }
 
-    super('connection.cip', lowerLayer);
+    super('cip.connection', lowerLayer);
 
     mergeOptionsWithDefaults(this, options);
 

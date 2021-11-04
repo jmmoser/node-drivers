@@ -16,16 +16,6 @@ export default class CIPLayer extends Layer {
     this._options = options;
   }
 
-  // layerAdded(layer) {
-  //   switch (layer.name) {
-  //     case 'pccc':
-  //       this._pccc = PCCC(this._options);
-  //       break;
-  //     default:
-  //       throw new Error('CIP layer currently only supports forwarding PCCC layer');
-  //   }
-  // }
-
   sendRequest(connected, request, callback) {
     return CallbackPromise(callback, (resolver) => {
       const timeout = null;
@@ -67,26 +57,23 @@ export default class CIPLayer extends Layer {
       const attributes = [];
 
       for (let i = 1; i < maxAttribute; i++) {
-        try {
-          const path = EPath.Encode(true, [
-            new EPath.Segments.Logical.ClassID(classCode),
-            new EPath.Segments.Logical.InstanceID(instanceID),
-            new EPath.Segments.Logical.AttributeID(i),
-          ]);
-          const reply = await this.sendRequest(true, new CIPRequest(service, path));
-          attributes.push({
-            code: i,
-            data: reply.data,
-          });
-        } catch (err) {
-          if (!err.info || !err.info.status || err.info.status.code !== 20) {
-            resolver.reject(err);
-            return;
-          }
-        }
+        attributes.push(i);
       }
 
-      resolver.resolve(attributes);
+      const attributeValues = await Promise.all(attributes.map(async (attribute) => {
+        const path = EPath.Encode(true, [
+          new EPath.Segments.Logical.ClassID(classCode),
+          new EPath.Segments.Logical.InstanceID(instanceID),
+          new EPath.Segments.Logical.AttributeID(attribute),
+        ]);
+        const reply = await this.sendRequest(true, new CIPRequest(service, path));
+        return {
+          code: attribute,
+          data: reply.data,
+        };
+      }));
+
+      resolver.resolve(attributeValues);
     });
   }
 
@@ -94,7 +81,7 @@ export default class CIPLayer extends Layer {
     const request = this.getNextRequest();
     if (request != null) {
       switch (request.layer.name) {
-        case 'pccc':
+        case LayerNames.PCCC:
           PCCCHandler.Send(this, request, this._options);
           break;
         default:
@@ -109,7 +96,6 @@ export default class CIPLayer extends Layer {
   handleData(data, info, context) {
     if (context && context.internal === false) {
       const response = context.request.response(data);
-      // console.log(response);
       if (context.type === 'pccc') {
         this.forward(
           response.data.slice(response.data.readUInt8(0)),

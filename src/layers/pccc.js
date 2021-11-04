@@ -1,5 +1,6 @@
 import { CallbackPromise } from '../utils.js';
 import Layer from './layer.js';
+import { LayerNames } from './constants.js';
 import PCCCPacket from '../core/pccc/packet.js';
 import * as Encoding from '../core/pccc/encoding.js';
 import * as Decoding from '../core/pccc/decoding.js';
@@ -44,7 +45,7 @@ function send(self, internal, request, contextOrCallback) {
 
 export default class PCCCLayer extends Layer {
   constructor(lowerLayer) {
-    super('pccc', lowerLayer);
+    super(LayerNames.PCCC, lowerLayer);
     this._transaction = 0;
   }
 

@@ -3,6 +3,8 @@ import Queue from '../queue.js';
 import Defragger from '../defragger.js';
 import { CallbackPromise } from '../utils.js';
 
+const LOG = false;
+
 function incrementContext(self) {
   self.__context = (self.__context + 1) % 0x100000000; // eslint-disable-line no-underscore-dangle
   return self.__context; // eslint-disable-line no-underscore-dangle
@@ -80,7 +82,7 @@ export default class Layer extends EventEmitter {
   }
 
   setDefragger(isCompleteFunc, lengthCallbackFunc) {
-    this._defragger = new Defragger(isCompleteFunc, lengthCallbackFunc);
+    this._defragger = new Defragger(isCompleteFunc, lengthCallbackFunc, this.name);
     return this;
   }
 
@@ -135,24 +137,42 @@ export default class Layer extends EventEmitter {
 
   forward(data, info, context) {
     if (this.upperLayer != null) {
-      return Layer.forwardTo(this.upperLayer, data, info, context);
+      return Layer.forwardTo(this.upperLayer, data, info, context, this);
     }
-    return undefined;
+    throw new Error('No layer to forward to');
+    // return undefined;
   }
 
-  static forwardTo(layer, data, info, context) {
+  static forwardTo(layer, data, info, context, fromLayer) {
     if (layer._defragger != null) { // eslint-disable-line no-underscore-dangle
-      data = layer._defragger.defrag(data); // eslint-disable-line no-underscore-dangle
-      if (data == null) return;
+      layer._defragger.append(data); // eslint-disable-line no-underscore-dangle
+
+      while (true) {
+        const defraggedData = layer._defragger.defrag();
+        if (defraggedData) {
+          Layer.handleData(layer, defraggedData, info, context, fromLayer);
+        } else {
+          break;
+        }
+      }
+    } else {
+      Layer.handleData(layer, data, info, context, fromLayer);
     }
+  }
+
+  static handleData(layer, data, info, context, fromLayer) {
     layer.emit('data', data, info, context);
+    if (LOG) {
+      console.log(`${fromLayer.name} -> ${layer.name}`);
+      console.log(data);
+      console.log('');
+    }
     layer.handleData(data, info, context);
   }
 
   send(message, info, priority, context) {
     this.emit('send', message, info, priority, context);
     const transport = this.lowerLayer != null ? this.lowerLayer : this;
-    transport.addMessageToQueue(this, message, info, priority, context);
 
     const obj = {
       layer: this,
@@ -163,17 +183,10 @@ export default class Layer extends EventEmitter {
 
     transport._queue.enqueue(obj, priority);
 
-    transport.sendNextMessage();
-
     this.sendNextMessage();
-  }
 
-  // static internalSendNextMessage(transport) {
-  //   let sent;
-  //   do {
-  //     sent = transport.sendNextMessage();
-  //   } while (sent === true);
-  // }
+    transport.sendNextMessage();
+  }
 
   requestQueueSize(priority) {
     return this._queue.size(priority);
@@ -188,19 +201,6 @@ export default class Layer extends EventEmitter {
       return this._queue.peek();
     }
     return this._queue.dequeue();
-  }
-
-  addMessageToQueue(requestingLayer, message, info, priority, context) {
-    const obj = {
-      layer: requestingLayer,
-      info: info || {},
-      message,
-      context,
-    };
-
-    this._queue.enqueue(obj, priority);
-
-    this.sendNextMessage();
   }
 
   clearRequestQueue() {

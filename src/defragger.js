@@ -1,20 +1,23 @@
 /* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
 
 export default class Defragger {
-  constructor(completeHandler, lengthHandler) {
+  constructor(completeHandler, lengthHandler, name) {
     this._dataLength = 0;
     this._data = Buffer.allocUnsafe(0);
     this._completeHandler = completeHandler;
     this._lengthHandler = lengthHandler;
+    this.name = name;
   }
 
-  defrag(data) {
-    let defraggedData = null;
-
+  append(data) {
     this._dataLength += data.length;
     this._data = Buffer.concat([this._data, data], this._dataLength);
+  }
 
-    while (
+  defrag() {
+    let defraggedData = null;
+
+    if (
       this._dataLength > 0
       && this._completeHandler(this._data, { current: 0 }, this._dataLength)
     ) {

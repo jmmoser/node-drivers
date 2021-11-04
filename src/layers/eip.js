@@ -385,7 +385,6 @@ export default class EIPLayer extends Layer {
   }
 
   handleData(data /* , info, context */) {
-    // console.log(data);
     const packet = EIPPacket.fromBuffer(data, { current: 0 });
     const { command } = packet;
 

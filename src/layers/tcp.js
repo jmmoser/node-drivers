@@ -80,7 +80,7 @@ function connect(layer) {
 
     socket.on('data', (data) => {
       if (LOG) {
-        console.log('RX', data);
+        console.log('RX', data.length, data);
         console.log('');
       }
 

@@ -251,6 +251,7 @@ export default function CIPMetaObject(classCode, options) {
 
   CIPObject.CommonClassAttribute = CommonClassAttribute;
   // CIPObject.CommonServices = CommonServices;
+  CIPObject.ClassCode = classCode;
 
   return CIPObject;
 }
