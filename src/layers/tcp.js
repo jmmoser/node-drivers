@@ -79,6 +79,9 @@ function connect(layer) {
     }
 
     socket.on('data', (data) => {
+      layer.numberOfRX += 1;
+      layer.totalRX += data.length;
+
       if (LOG) {
         console.log('RX', data.length, data);
         console.log('');
@@ -124,6 +127,11 @@ function removeSocketListeners(socket) {
 export default class TCPLayer extends Layer {
   constructor(options) {
     super(LayerNames.TCP);
+
+    this.numberOfTX = 0;
+    this.numberOfRX = 0;
+    this.totalTX = 0;
+    this.totalRX = 0;
 
     let opts = options;
 
@@ -225,12 +233,36 @@ export default class TCPLayer extends Layer {
 
   sendNextMessage() {
     if (this._connectionState === 2) {
+      // const buffer = Buffer.concat(this.getAllRequests().map((req) => req.message));
+
+      // if (buffer.length > 0) {
+      //   if (LOG) {
+      //     console.log('TX', buffer.message);
+      //     console.log('');
+      //   }
+
+      //   this.numberOfTX += 1;
+
+      //   this.socket.write(buffer, (err) => {
+      //     if (err) {
+      //       console.log('TCP layer write error:');
+      //       console.log(err);
+      //     }
+      //   });
+
+      //   return true;
+      // }
+
       const request = this.getNextRequest();
+
       if (request) {
         if (LOG) {
           console.log('TX', request.message);
           console.log('');
         }
+
+        this.numberOfTX += 1;
+        this.totalTX += request.message.length;
 
         this.socket.write(request.message, (err) => {
           if (err) {
@@ -246,6 +278,15 @@ export default class TCPLayer extends Layer {
       connect(this);
     }
     return false;
+  }
+
+  stats() {
+    return {
+      numberOfTX: this.numberOfTX,
+      numberOfRX: this.numberOfRX,
+      totalTX: this.totalTX,
+      totalRX: this.totalRX,
+    };
   }
 
   handleDestroy() {

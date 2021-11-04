@@ -175,6 +175,8 @@ export default class EIPLayer extends Layer {
     setupCallbacks(this);
 
     this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
+
+    this._totalSentSinceLastResponse = 0;
   }
 
   nop(callback) {
@@ -342,47 +344,123 @@ export default class EIPLayer extends Layer {
   }
 
   sendNextMessage() {
+    // console.log('asdfa', this._totalSentSinceLastResponse);
+    if (this._totalSentSinceLastResponse > 2000) {
+      return;
+    }
+
     if (this.hasRequest()) {
       if (this._connectionState === 0) {
         this.connect();
       } else if (this._connectionState === 2) {
-        const request = this.getNextRequest();
+        let fullMessage = null;
 
-        if (request) {
-          const { message, info } = request;
+        while (true) {
+          const request = this.getNextRequest(true);
 
-          let fullMessage = null;
+          if (request) {
+            const { message, info } = request;
 
-          if (info && info.connectionID != null) {
-            fullMessage = EIPPacket.EncodeSendUnitDataMessage(
-              this._sessionHandle,
-              0,
-              0,
-              info.connectionID,
-              message,
-            );
+            let buffer;
+            if (info && info.connectionID != null) {
+              buffer = EIPPacket.EncodeSendUnitDataMessage(
+                this._sessionHandle,
+                0,
+                0,
+                info.connectionID,
+                message,
+              );
 
-            if (info.connectionID != null && info.responseID != null) {
-              this._connectedContexts.set(info.responseID, info.connectionID);
+              if (!fullMessage) {
+                fullMessage = buffer;
+              } else if (fullMessage.length + buffer.length <= 500) {
+                fullMessage = Buffer.concat([fullMessage, buffer]);
+              } else {
+                break;
+              }
+
+              if (info.connectionID != null && info.responseID != null) {
+                this._connectedContexts.set(info.responseID, info.connectionID);
+              }
+            } else {
+              incrementContext(this);
+              buffer = EIPPacket.EncodeSendRRDataMessage(
+                this._sessionHandle,
+                this._context,
+                message,
+              );
+
+              if (!fullMessage) {
+                fullMessage = buffer;
+              } else if (fullMessage.length + buffer.length <= 500) {
+                fullMessage = Buffer.concat([fullMessage, buffer]);
+              } else {
+                break;
+              }
+
+              if (request.context != null) {
+                this._unconnectedContexts.set(this._context.toString('hex'), request.context);
+              }
             }
           } else {
-            incrementContext(this);
-            fullMessage = EIPPacket.EncodeSendRRDataMessage(
-              this._sessionHandle,
-              this._context,
-              message,
-            );
-
-            if (request.context != null) {
-              this._unconnectedContexts.set(this._context.toString('hex'), request.context);
-            }
+            break;
           }
 
-          this.send(fullMessage, null, false);
+          this.getNextRequest();
+
+          if (this._totalSentSinceLastResponse + fullMessage.length > 1500) {
+            break;
+          }
         }
+
+        this._totalSentSinceLastResponse += fullMessage.length;
+        this.send(fullMessage, null, false);
       }
     }
   }
+
+  // sendNextMessage() {
+  //   if (this.hasRequest()) {
+  //     if (this._connectionState === 0) {
+  //       this.connect();
+  //     } else if (this._connectionState === 2) {
+  //       const request = this.getNextRequest();
+
+  //       if (request) {
+  //         const { message, info } = request;
+
+  //         let fullMessage = null;
+
+  //         if (info && info.connectionID != null) {
+  //           fullMessage = EIPPacket.EncodeSendUnitDataMessage(
+  //             this._sessionHandle,
+  //             0,
+  //             0,
+  //             info.connectionID,
+  //             message,
+  //           );
+
+  //           if (info.connectionID != null && info.responseID != null) {
+  //             this._connectedContexts.set(info.responseID, info.connectionID);
+  //           }
+  //         } else {
+  //           incrementContext(this);
+  //           fullMessage = EIPPacket.EncodeSendRRDataMessage(
+  //             this._sessionHandle,
+  //             this._context,
+  //             message,
+  //           );
+
+  //           if (request.context != null) {
+  //             this._unconnectedContexts.set(this._context.toString('hex'), request.context);
+  //           }
+  //         }
+
+  //         this.send(fullMessage, null, false);
+  //       }
+  //     }
+  //   }
+  // }
 
   handleData(data /* , info, context */) {
     const packet = EIPPacket.fromBuffer(data, { current: 0 });
@@ -406,6 +484,9 @@ export default class EIPLayer extends Layer {
       console.log(this._callbacks);
       console.log(data);
     }
+
+    this._totalSentSinceLastResponse = 0;
+    this.sendNextMessage();
   }
 
   handleDestroy(error) {

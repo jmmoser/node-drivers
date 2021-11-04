@@ -21,7 +21,19 @@ export default class Queue {
     }
   }
 
-  dequeue() {
+  dequeue(consumeAll) {
+    if (consumeAll === true) {
+      if (this._priorityQueue.length > 0) {
+        const entities = [...this._priorityQueue];
+        this._priorityQueue.length = 0;
+        return entities;
+      }
+
+      const entities = [...this._queue];
+      this._queue.length = 0;
+      return entities;
+    }
+
     if (this._priorityQueue.length > 0) {
       return this._priorityQueue.shift();
     }
@@ -32,6 +44,18 @@ export default class Queue {
 
     return undefined;
   }
+
+  // dequeue() {
+  //   if (this._priorityQueue.length > 0) {
+  //     return this._priorityQueue.shift();
+  //   }
+
+  //   if (this._queue.length > 0) {
+  //     return this._queue.shift();
+  //   }
+
+  //   return undefined;
+  // }
 
   peek() {
     if (this._priorityQueue.length > 0) {

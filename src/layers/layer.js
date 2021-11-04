@@ -36,6 +36,9 @@ function internalDestroy(layer, error) {
   layer.handleDestroy(error);
 }
 
+let numberOfTX = 0;
+let numberOfRX = 0;
+
 export default class Layer extends EventEmitter {
   constructor(name, lowerLayer, options, defaultOptions) {
     if (!name || typeof name !== 'string') {
@@ -160,6 +163,13 @@ export default class Layer extends EventEmitter {
     }
   }
 
+  static PrintStats() {
+    return {
+      numberOfTX,
+      numberOfRX,
+    };
+  }
+
   static handleData(layer, data, info, context, fromLayer) {
     layer.emit('data', data, info, context);
     if (LOG) {
@@ -194,6 +204,10 @@ export default class Layer extends EventEmitter {
 
   hasRequest(priority) {
     return this.requestQueueSize(priority) > 0;
+  }
+
+  getAllRequests() {
+    return this._queue.dequeue(true);
   }
 
   getNextRequest(peek) {

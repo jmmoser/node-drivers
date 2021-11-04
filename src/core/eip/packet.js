@@ -261,7 +261,6 @@ export default class EIPPacket {
   }
 
   static Length(buffer, startingOffsetRef) {
-    // console.log(HEADER_LENGTH + EIPPacket.DataLength(buffer, startingOffsetRef));
     return HEADER_LENGTH + EIPPacket.DataLength(buffer, startingOffsetRef);
   }
 

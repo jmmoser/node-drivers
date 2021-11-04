@@ -56,9 +56,11 @@ export default class CIPLayer extends Layer {
 
       const attributes = [];
 
+      // for (let j = 0; j < 30; j++) {
       for (let i = 1; i < maxAttribute; i++) {
         attributes.push(i);
       }
+      // }
 
       const attributeValues = await Promise.all(attributes.map(async (attribute) => {
         const path = EPath.Encode(true, [
