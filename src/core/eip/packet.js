@@ -1,4 +1,5 @@
 import CPF from './cpf.js';
+import { InvertKeyValues } from '../../utils.js';
 
 /*
   Communication Profile Families
@@ -43,6 +44,8 @@ const Command = Object.freeze({
   IndicateStatus: 0x0072, // needs to be added to EIPReply parsers
   Cancel: 0x0073, // needs to be added to EIPReply parsers
 });
+
+const CommandNames = InvertKeyValues(Command);
 
 const CPFItemTypeIDs = Object.freeze({
   NullAddress: 0x0000, // address
@@ -92,7 +95,10 @@ function SendDataPacket(interfaceHandle, timeout, data) {
  */
 export default class EIPPacket {
   constructor() {
-    this.command = 0;
+    this.command = {
+      code: 0,
+      name: 'Unknown',
+    };
     this.dataLength = 0;
     this.sessionHandle = 0;
     this.senderContext = NullSenderContext;
@@ -106,7 +112,7 @@ export default class EIPPacket {
 
   toBuffer() {
     return EIPPacket.Encode(
-      this.command,
+      this.command.code,
       this.sessionHandle,
       this.status.code,
       this.senderContext,
@@ -117,7 +123,8 @@ export default class EIPPacket {
 
   static fromBuffer(buffer, offsetRef) {
     const packet = new EIPPacket();
-    packet.command = EIPPacket.Command(buffer, offsetRef);
+    packet.command.code = EIPPacket.Command(buffer, offsetRef);
+    packet.command.name = CommandNames[packet.command.code] || 'Unknown';
     packet.dataLength = EIPPacket.DataLength(buffer, offsetRef);
     packet.sessionHandle = EIPPacket.SessionHandle(buffer, offsetRef);
     packet.status.code = EIPPacket.Status(buffer, offsetRef);
@@ -132,7 +139,7 @@ export default class EIPPacket {
     }
 
     if (packet.status.code === 0) {
-      switch (packet.command) {
+      switch (packet.command.code) {
         case Command.ListServices:
         case Command.ListIdentity:
         case Command.ListInterfaces:
@@ -153,7 +160,7 @@ export default class EIPPacket {
           packet.items = CPF.Packet.Decode(buffer, offsetRef);
           break;
         default:
-          console.log('EIPPacket Error: Unrecognized command:', Buffer.from([packet.command]));
+          console.log('EIPPacket Error: Unrecognized command:', Buffer.from([packet.command.code]));
       }
     }
 
@@ -258,6 +265,10 @@ export default class EIPPacket {
 
   static IndicateStatusRequest() {
     return EIPPacket.Encode(Command.IndicateStatus, 0, 0, NullSenderContext, 0);
+  }
+
+  static CancelRequest() {
+    return EIPPacket.Encode(Command.Cancel, 0, 0, NullSenderContext, 0);
   }
 
   static Length(buffer, startingOffsetRef) {

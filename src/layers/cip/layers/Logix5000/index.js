@@ -1,6 +1,7 @@
 import CIPLayer from '../../ciplayer.js';
 import EPath from '../../../../core/cip/epath/index.js';
 import CIPRequest from '../../../../core/cip/request.js';
+import * as Encoding from './encoding.js';
 
 // const RECORD_TYPES = {
 //   CONTROLLER_ATTRIBUTES: 1,
@@ -61,36 +62,6 @@ function Logix5000DecodeDataType(buffer, offsetRef, cb) {
     offsetRef.current += 1;
   }
   return type;
-}
-
-async function readTagFragmented(layer, path, elements) {
-  const service = SymbolServiceCodes.ReadFragmented;
-
-  const reqData = Buffer.allocUnsafe(6);
-  reqData.writeUInt16LE(elements, 0);
-
-  const offsetRef = { current: 0 };
-  const chunks = [];
-
-  while (true) {
-    reqData.writeUInt32LE(offsetRef.current, 2);
-    const reply = await sendPromise(layer, service, path, reqData, 5000);
-
-    /** remove the tag type bytes if already received */
-    Logix5000DecodeDataType(reply.data, offsetRef);
-    const dataTypeOffset = offsetRef.current;
-    chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
-
-    if (reply.status.code === GeneralStatusCodes.PartialTransfer) {
-      offsetRef.current = reply.data.length - dataTypeOffset;
-    } else if (reply.status.code === 0) {
-      break;
-    } else {
-      throw new InfoError(reply, reply.status.description);
-    }
-  }
-
-  return Buffer.concat(chunks);
 }
 
 async function parseReadTagMemberStructure(layer, structureType, data, offset) {
@@ -183,7 +154,7 @@ async function parseReadTag(layer, scope, tag, elements, data) {
       if (!template || !Array.isArray(template.members)) {
         throw new Error(`Unable to read template: ${templateType.template.id}`);
       }
-      const members = template.members;
+      const { members } = template;
       templateType = null;
       for (let j = 0; j < members.length; j++) {
         const member = members[j];
@@ -266,33 +237,35 @@ function sendPromise(self, service, path, data, timeout) {
   });
 }
 
-function encodeAttributes(attributes) {
-  const data = Buffer.allocUnsafe(2 + attributes.length * 2);
-  data.writeUInt16LE(attributes.length, 0);
-  for (let i = 0; i < attributes.length; i++) {
-    data.writeUInt16LE(attributes[i], 2 * (i + 1));
-  }
-  return data;
-}
+async function readTagFragmented(layer, path, elements) {
+  const service = SymbolServiceCodes.ReadFragmented;
 
-function encodeSymbolPath(tag) {
-  switch (typeof tag) {
-    case 'string':
-      return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
-    case 'number':
-      return EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Symbol),
-        new EPath.Segments.Logical.InstanceID(tag),
-      ]);
-    case 'object':
-      return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
-    default:
-      throw new Error('Tag must be a tag name, symbol instance number, or a tag object');
+  const offsetRef = { current: 0 };
+  const chunks = [];
+
+  for (; ;) {
+    const reqData = Encoding.EncodeReadTagFragmentedServiceData(elements, offsetRef.current);
+    const reply = await sendPromise(layer, service, path, reqData, 5000);
+
+    /** remove the tag type bytes if already received */
+    Logix5000DecodeDataType(reply.data, offsetRef);
+    const dataTypeOffset = offsetRef.current;
+    chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
+
+    if (reply.status.code === GeneralStatusCodes.PartialTransfer) {
+      offsetRef.current = reply.data.length - dataTypeOffset;
+    } else if (reply.status.code === 0) {
+      break;
+    } else {
+      throw new InfoError(reply, reply.status.description);
+    }
   }
+
+  return Buffer.concat(chunks);
 }
 
 function encodeFullSymbolPath(scope, symbol) {
-  const symbolPath = encodeSymbolPath(symbol);
+  const symbolPath = Encoding.EncodeSymbolPath(symbol);
 
   if (scope) {
     return Buffer.concat([
@@ -516,11 +489,11 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
   let timeout = MIN_TIMEOUT;
 
   const service = SymbolServiceCodes.GetInstanceAttributeList;
-  const data = encodeAttributes(attributes);
+  const data = Encoding.EncodeAttributes(attributes);
 
   let retry = 0;
 
-  while (true) {
+  for (;;) {
     const path = encodeFullSymbolPath(scope, instanceID);
 
     let reply;
@@ -756,7 +729,7 @@ export default class Logix5000 extends CIPLayer {
       }
 
       const service = SymbolServiceCodes.Read;
-      const path = encodeSymbolPath(tag);
+      const path = Encoding.EncodeSymbolPath(tag);
       const requestData = Encode(DataType.UINT, elements);
 
       send(this, service, path, requestData, async (error, reply) => {
@@ -838,7 +811,7 @@ export default class Logix5000 extends CIPLayer {
       }
 
       const service = SymbolServiceCodes.WriteTag;
-      const path = encodeSymbolPath(tag);
+      const path = Encoding.EncodeSymbolPath(tag);
 
       const valueDataLength = EncodeSize(tagType.dataType, value);
 
@@ -893,14 +866,9 @@ export default class Logix5000 extends CIPLayer {
       }
 
       const service = SymbolServiceCodes.ReadModifyWriteTag;
-      const path = encodeSymbolPath(tag);
+      const path = Encoding.EncodeSymbolPath(tag);
 
-      const data = Buffer.alloc(2 + 2 * sizeOfMasks);
-      data.writeUInt16LE(sizeOfMasks, 0);
-      for (let i = 0; i < sizeOfMasks; i++) {
-        data.writeUInt8(ORmasks[i], 2 + i);
-        data.writeUInt8(ANDmasks[i], 2 + sizeOfMasks + i);
-      }
+      const data = Encoding.EncodeReadModifyWriteMasks(ORmasks, ANDmasks);
 
       send(this, service, path, data, (error, reply) => {
         if (error) {
@@ -944,7 +912,7 @@ export default class Logix5000 extends CIPLayer {
       }
 
       const path = encodeFullSymbolPath(scope, symbolID);
-      const requestData = encodeAttributes(attributes);
+      const requestData = Encoding.EncodeAttributes(attributes);
 
       send(this, service, path, requestData, (error, reply) => {
         if (error) {
@@ -1127,16 +1095,19 @@ export default class Logix5000 extends CIPLayer {
           return;
         }
 
+        /** Docs: CIP Logix5000 1756-PM020 */
+
         /** Documentation says the header is 23 bytes, I'm pretty sure it is only 20 bytes */
         const bytesToRead = attributes[TemplateInstanceAttributeCodes.DefinitionSize] * 4 - 20;
-        const reqData = Buffer.allocUnsafe(6);
         const chunks = [];
 
         let reqOffset = 0;
 
-        while (true) {
-          reqData.writeUInt32LE(reqOffset, 0);
-          reqData.writeUInt16LE(bytesToRead - reqOffset, 4);
+        for (;;) {
+          const reqData = Encoding.EncodeReadTemplateServiceData(
+            reqOffset,
+            bytesToRead - reqOffset,
+          );
           const reply = await sendPromise(this, service, path, reqData, 5000);
           chunks.push(reply.data);
 
@@ -1206,7 +1177,7 @@ export default class Logix5000 extends CIPLayer {
         new EPath.Segments.Logical.InstanceID(0),
       ]);
 
-      const reply = await sendPromise(this, service, path, encodeAttributes([
+      const reply = await sendPromise(this, service, path, Encoding.EncodeAttributes([
         TemplateClassAttributeCodes.Unknown1,
         TemplateClassAttributeCodes.Unknown2,
         TemplateClassAttributeCodes.Unknown3,
@@ -1256,7 +1227,7 @@ export default class Logix5000 extends CIPLayer {
           new EPath.Segments.Logical.InstanceID(templateID),
         ]);
 
-        const requestData = encodeAttributes([
+        const requestData = Encoding.EncodeAttributes([
           TemplateInstanceAttributeCodes.StructureHandle,
           TemplateInstanceAttributeCodes.MemberCount,
           TemplateInstanceAttributeCodes.DefinitionSize,
@@ -1318,7 +1289,7 @@ export default class Logix5000 extends CIPLayer {
         new EPath.Segments.Logical.InstanceID(0x01),
       ]);
 
-      const requestData = encodeAttributes([
+      const requestData = Encoding.EncodeAttributes([
         ControllerInstanceAttributeCodes.Unknown1,
         ControllerInstanceAttributeCodes.Unknown2,
         ControllerInstanceAttributeCodes.Unknown3,

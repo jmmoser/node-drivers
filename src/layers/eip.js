@@ -2,7 +2,6 @@ import { CallbackPromise, InfoError } from '../utils.js';
 import Layer from './layer.js';
 import { LayerNames } from './constants.js';
 import EIPPacket from '../core/eip/packet.js';
-
 import CPF from '../core/eip/cpf.js';
 
 const {
@@ -37,89 +36,9 @@ function sendUserRequests(self) {
 }
 
 function setupCallbacks(self) {
-  self._callbacks = new Map();
   self._userCallbacks = new Map();
   self._unconnectedContexts = new Map();
   self._connectedContexts = new Map();
-
-  self._callbacks.set(CommandCodes.RegisterSession, (packet) => {
-    // console.log('RegisterSession');
-    // console.log(packet);
-    if (packet.status.code === 0) {
-      setConnectionState(self, 2);
-      self._sessionHandle = packet.sessionHandle;
-      if (self._connectCallback) self._connectCallback();
-      self.sendNextMessage();
-      sendUserRequests(self);
-    } else {
-      setConnectionState(self, 0);
-    }
-  });
-
-  /** This should never be called, UnregisterSession has no response */
-  self._callbacks.set(CommandCodes.UnregisterSession, () => {
-    // console.log('UnregisterSession');
-    cleanup(self);
-  });
-
-  self._callbacks.set(CommandCodes.SendRRData, (packet) => {
-    const info = { connected: false };
-    const senderContext = packet.senderContext.toString('hex');
-    let context = null; // context can be null if only one upper layer
-    if (self._unconnectedContexts.has(senderContext)) {
-      context = self._unconnectedContexts.get(senderContext);
-      self._unconnectedContexts.delete(senderContext);
-    }
-    // else {
-    //   console.log('EIPLayer Error: no Sender Context available:');
-    //   console.log(packet);
-    //   console.log(senderContext);
-    //   console.log(self._unconnectedContexts);
-    // }
-
-    if (!Array.isArray(packet.items)) {
-      console.log('EIP SendRRData response does not have any CPF items');
-      console.log(packet);
-      self.destroy(new InfoError(packet, packet.status.description));
-      return;
-    }
-
-    const messageItem = packet.items.find(
-      (item) => item.type.code === CPF.ItemTypeIDs.UnconnectedMessage,
-    );
-    if (messageItem) {
-      self.forward(messageItem.data, info, context);
-    } else {
-      console.log('EIP unhandled SendRRData packet', packet.items);
-    }
-  });
-
-  self._callbacks.set(CommandCodes.SendUnitData, (packet) => {
-    if (packet.status.code === 0) {
-      const addressItem = packet.items.find(
-        (item) => item.type.code === CPF.ItemTypeIDs.ConnectedAddress,
-      );
-      const messageItem = packet.items.find(
-        (item) => item.type.code === CPF.ItemTypeIDs.ConnectedMessage,
-      );
-
-      if (addressItem && messageItem) {
-        const info = {
-          connected: true,
-          responseID: addressItem.address,
-          connectionID: self._connectedContexts.get(addressItem.address),
-        };
-        // console.log(info);
-        /** DO NOT SEND CONTEXT FOR CONNECTED MESSAGES */
-        self.forward(messageItem.data, info);
-      } else {
-        console.log('EIP unhandled SendUnitData packet', packet);
-      }
-    } else {
-      console.log('EIPLayer Error: Packet Status:');
-      console.log(packet);
-    }
-  });
 }
 
 function incrementContext(self) {
@@ -317,6 +236,34 @@ export default class EIPLayer extends Layer {
     });
   }
 
+  indicateStatus(callback) {
+    return CallbackPromise(callback, (resolver) => {
+      queueUserRequest(this, EIPPacket.IndicateStatusRequest(), null, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else if (Array.isArray(reply.items)) {
+          resolver.resolve(reply.items);
+        } else {
+          resolver.reject('Unexpected result', reply);
+        }
+      });
+    });
+  }
+
+  cancel(callback) {
+    return CallbackPromise(callback, (resolver) => {
+      queueUserRequest(this, EIPPacket.CancelRequest(), null, (error, reply) => {
+        if (error) {
+          resolver.reject(error, reply);
+        } else if (Array.isArray(reply.items)) {
+          resolver.resolve(reply.items);
+        } else {
+          resolver.reject('Unexpected result', reply);
+        }
+      });
+    });
+  }
+
   // TODO: can this use CallbackPromise?
   connect(callback) {
     if (this._connectionState === 2) {
@@ -354,7 +301,7 @@ export default class EIPLayer extends Layer {
       } else if (this._connectionState === 2) {
         let fullMessage = null;
 
-        while (true) {
+        for (;;) {
           const request = this.getNextRequest(true);
 
           if (request) {
@@ -463,25 +410,98 @@ export default class EIPLayer extends Layer {
 
   handleData(data /* , info, context */) {
     const packet = EIPPacket.fromBuffer(data, { current: 0 });
-    const { command } = packet;
+    const { code: command } = packet.command;
 
-    if (this._userCallbacks.has(command)) {
-      const callbacks = this._userCallbacks.get(command);
-      // this._userCallbacks.delete(command);
-      // callbacks.forEach(callback => {
-      //   callback.apply(this, [packet]);
-      // });
+    switch (command) {
+      case CommandCodes.UnregisterSession:
+        /** This should never be called, UnregisterSession has no response */
+        cleanup(this);
+        break;
+      case CommandCodes.RegisterSession:
+        if (packet.status.code === 0) {
+          setConnectionState(this, 2);
+          this._sessionHandle = packet.sessionHandle;
+          if (this._connectCallback) this._connectCallback();
+          this.sendNextMessage();
+          sendUserRequests(this);
+        } else {
+          setConnectionState(this, 0);
+        }
+        break;
+      case CommandCodes.SendRRData: {
+        const info = { connected: false };
+        const senderContext = packet.senderContext.toString('hex');
+        let context = null; // context can be null if only one upper layer
+        if (this._unconnectedContexts.has(senderContext)) {
+          context = this._unconnectedContexts.get(senderContext);
+          this._unconnectedContexts.delete(senderContext);
+        }
+        // else {
+        //   console.log('EIPLayer Error: no Sender Context available:');
+        //   console.log(packet);
+        //   console.log(senderContext);
+        //   console.log(self._unconnectedContexts);
+        // }
 
-      const error = packet.status.code !== 0 ? packet.status.description || `EIP error code ${packet.status.code}` : null;
+        if (!Array.isArray(packet.items)) {
+          console.log('EIP SendRRData response does not have any CPF items');
+          console.log(packet);
+          this.destroy(new InfoError(packet, packet.status.description));
+        } else {
+          const messageItem = packet.items.find(
+            (item) => item.type.code === CPF.ItemTypeIDs.UnconnectedMessage,
+          );
+          if (messageItem) {
+            this.forward(messageItem.data, info, context);
+          } else {
+            console.log('EIP unhandled SendRRData packet', packet.items);
+          }
+        }
 
-      this._userCallbacks.set(command, callbacks.filter((callback) => callback(error, packet)));
-    } else if (this._callbacks.has(command)) {
-      this._callbacks.get(command)(packet);
-    } else {
-      console.log('EIP Error: Unhandled packet:');
-      console.log(packet);
-      console.log(this._callbacks);
-      console.log(data);
+        break;
+      }
+      case CommandCodes.SendUnitData: {
+        if (packet.status.code === 0) {
+          const addressItem = packet.items.find(
+            (item) => item.type.code === CPF.ItemTypeIDs.ConnectedAddress,
+          );
+          const messageItem = packet.items.find(
+            (item) => item.type.code === CPF.ItemTypeIDs.ConnectedMessage,
+          );
+
+          if (addressItem && messageItem) {
+            const info = {
+              connected: true,
+              responseID: addressItem.address,
+              connectionID: this._connectedContexts.get(addressItem.address),
+            };
+            // console.log(info);
+            /** DO NOT SEND CONTEXT FOR CONNECTED MESSAGES */
+            this.forward(messageItem.data, info);
+          } else {
+            console.log('EIP unhandled SendUnitData packet', packet);
+          }
+        } else {
+          console.log('EIPLayer Error: Packet Status:');
+          console.log(packet);
+        }
+        break;
+      }
+      case CommandCodes.Cancel:
+      case CommandCodes.IndicateStatus:
+      case CommandCodes.NOP:
+      case CommandCodes.ListIdentity:
+      case CommandCodes.ListInterfaces:
+      case CommandCodes.ListServices: {
+        const callbacks = this._userCallbacks.get(command);
+
+        const error = packet.status.code !== 0 ? packet.status.description || `EIP error code ${packet.status.code}` : null;
+
+        this._userCallbacks.set(command, callbacks.filter((callback) => callback(error, packet)));
+        break;
+      }
+      default:
+        throw new Error(`EIP invalid or unsupported packet received with command: ${command}`);
     }
 
     this._totalSentSinceLastResponse = 0;

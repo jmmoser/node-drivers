@@ -147,7 +147,7 @@ export default class Layer extends EventEmitter {
     if (layer._defragger != null) { // eslint-disable-line no-underscore-dangle
       layer._defragger.append(data); // eslint-disable-line no-underscore-dangle
 
-      while (true) {
+      for (;;) {
         const defraggedData = layer._defragger.defrag();
         if (defraggedData) {
           Layer.handleData(layer, defraggedData, info, context, fromLayer);
