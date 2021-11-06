@@ -167,7 +167,7 @@ export function EncodeUploadAllRequest(transaction) {
 }
 
 export function EncodeUploadCompleted(transaction) {
-  return new EncodeCommand(0x0F, 0, transaction, Buffer.from([0x55]));
+  return EncodeCommand(0x0F, 0, transaction, Buffer.from([0x55]));
 }
 
 /**
