@@ -7,7 +7,7 @@ import {
   DataType,
 } from './constants.js';
 
-import { logicalASCIIAddressInfo } from './shared.js';
+import { logicalASCIIAddressInfo } from './shared';
 
 import { Ref } from '../../types';
 
@@ -98,7 +98,7 @@ export function EncodeDataDescriptor(data: Buffer, offsetRef: Ref, id: number, s
   throw new Error(`Unable to encode data type with id ${id} and size ${size}`);
 }
 
-export function EncodeTypedData(buffer, offsetRef, type, value) {
+export function EncodeTypedData(buffer: Buffer, offsetRef: Ref, type: number | string, value: number) {
   switch (type) {
     case DataType.Binary:
     case DataType.Byte:
@@ -122,11 +122,11 @@ export function EncodeTypedData(buffer, offsetRef, type, value) {
 
 /* ********* REQUESTS ********* */
 
-export function EncodeDiagnosticStatus(transaction) {
+export function EncodeDiagnosticStatus(transaction: number) {
   return EncodeCommand(0x06, 0, transaction, Buffer.from([0x03]));
 }
 
-export function EncodeEcho(transaction, data) {
+export function EncodeEcho(transaction: number, data: Buffer) {
   if (!Buffer.isBuffer(data)) {
     data = Buffer.allocUnsafe(0);
   }
@@ -136,7 +136,7 @@ export function EncodeEcho(transaction, data) {
   return EncodeCommand(0x06, 0, transaction, buffer);
 }
 
-export function EncodeUnprotectedRead(transaction, address, size) {
+export function EncodeUnprotectedRead(transaction: number, address: number, size: number) {
   const buffer = Buffer.allocUnsafe(3);
   buffer.writeUInt16LE(address, 0);
   buffer.writeUInt8(size, 2);
@@ -152,7 +152,7 @@ export function EncodeUnprotectedRead(transaction, address, size) {
  * - SLC 500
  * - MicroLogix 1000
 */
-export function EncodeUnprotectedWrite(transaction, address, writeData) {
+export function EncodeUnprotectedWrite(transaction: number, address: number, writeData: Buffer) {
   const buffer = Buffer.allocUnsafe(2 + writeData.length);
   buffer.writeUInt16LE(address, 0);
   writeData.copy(buffer, 2);
@@ -164,23 +164,23 @@ export function EncodeUnprotectedWrite(transaction, address, writeData) {
  * - PLC-5
  * - PLC-5/VME
  */
-export function EncodeUploadAllRequest(transaction) {
+export function EncodeUploadAllRequest(transaction: number) {
   return EncodeCommand(0x0F, 0, transaction, Buffer.from([0x53]));
 }
 
-export function EncodeUploadCompleted(transaction) {
-  return new EncodeCommand(0x0F, 0, transaction, Buffer.from([0x55]));
+export function EncodeUploadCompleted(transaction: number) {
+  return EncodeCommand(0x0F, 0, transaction, Buffer.from([0x55]));
 }
 
 /**
  * Supported Processors
  * - PLC-3
  */
-export function EncodeUpload(transaction) {
+export function EncodeUpload(transaction: number) {
   return EncodeCommand(0x0F, 0, transaction, Buffer.from([0x06]));
 }
 
-export function EncodeTypedRead(transaction, address, items) {
+export function EncodeTypedRead(transaction: number, address: string, items: number) {
   // const info = logicalASCIIAddressInfo(address);
   // if (!info) {
   //   throw new Error(`Unsupported address: ${address}`);
@@ -197,7 +197,7 @@ export function EncodeTypedRead(transaction, address, items) {
   return EncodeCommand(0x0F, 0, transaction, data);
 }
 
-export function EncodeTypedWrite(transaction, address, values) {
+export function EncodeTypedWrite(transaction: number, address: string, values: any[]) {
   const info = logicalASCIIAddressInfo(address);
   if (!info) {
     throw new Error(`Unsupported address: ${address}`);
@@ -224,7 +224,7 @@ export function EncodeTypedWrite(transaction, address, values) {
   return EncodeCommand(0x0F, 0, transaction, data);
 }
 
-export function EncodeWordRangeReadRequest(transaction, address, words) {
+export function EncodeWordRangeReadRequest(transaction: number, address: string, words: number) {
   const info = logicalASCIIAddressInfo(address);
   if (!info) {
     throw new Error(`Unsupported address: ${address}`);
@@ -270,7 +270,7 @@ export function EncodeWordRangeReadRequest(transaction, address, words) {
 }
 
 /** Documentation: CIP and PCCC v1 */
-export function EncodeUnconnectedRequest(transaction, data) {
+export function EncodeUnconnectedRequest(transaction: number, data: Buffer) {
   const buffer = Buffer.allocUnsafe(2 + data.length);
   buffer.writeUInt8(0, 0); // FNC
   buffer.writeUInt8(0, 1); // Extra
@@ -279,7 +279,7 @@ export function EncodeUnconnectedRequest(transaction, data) {
 }
 
 /** Documentation: CIP and PCCC v1 */
-export function EncodeConnectedRequest(transaction, connectionID, transportHeader, data) {
+export function EncodeConnectedRequest(transaction: number, connectionID: number, transportHeader: number, data: Buffer) {
   const buffer = Buffer.allocUnsafe(6 + data.length);
   buffer.writeUInt8(0, 0); // FNC
   buffer.writeUInt8(0, 1); // Extra
