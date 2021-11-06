@@ -64,11 +64,7 @@ export default class TCP {
   }
 
   static Length(buffer, offsetRef) {
+    if (buffer.length - offsetRef.length < 7) return -1;
     return 6 + TCP.RemainingLength(buffer, offsetRef);
-  }
-
-  static IsComplete(buffer, offsetRef, length) {
-    if (length < 7) return false;
-    return (length >= TCP.Length(buffer, offsetRef));
   }
 }

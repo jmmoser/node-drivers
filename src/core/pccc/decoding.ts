@@ -6,7 +6,9 @@ import {
   DataType,
 } from './constants.js';
 
-export function DecodeDataDescriptor(data, offsetRef) {
+import { Ref } from '../../types';
+
+export function DecodeDataDescriptor(data: Buffer, offsetRef: Ref) {
   const flag = data.readUInt8(offsetRef.current); offsetRef.current += 1;
 
   let type;
@@ -25,7 +27,7 @@ export function DecodeDataDescriptor(data, offsetRef) {
         type = data.readUInt32LE(offsetRef.current);
         break;
       default:
-      //
+        //
     }
     offsetRef.current += dataTypeBytes;
   } else {
@@ -58,7 +60,7 @@ export function DecodeDataDescriptor(data, offsetRef) {
   };
 }
 
-export function DecodeTypedData(data, offsetRef, type, size) {
+export function DecodeTypedData(data: Buffer, offsetRef: Ref, type: number, size?: number): any {
   let value;
 
   switch (type) {
@@ -78,10 +80,10 @@ export function DecodeTypedData(data, offsetRef, type, size) {
       break;
     case DataType.Array: {
       value = [];
-      const lastOffset = offsetRef.current + size;
+      const lastOffset = offsetRef.current + size!;
       const descriptor = DecodeDataDescriptor(data, offsetRef);
       while (offsetRef.current < lastOffset) {
-        value.push(DecodeTypedData(data, offsetRef, descriptor.type, descriptor.size));
+        value.push(DecodeTypedData(data, offsetRef, descriptor.type!, descriptor.size));
       }
       break;
     }
@@ -139,8 +141,7 @@ export function DecodeTypedData(data, offsetRef, type, size) {
   return value;
 }
 
-export function DecodeTypedReadResponse(data, offset = 0) {
-  const offsetRef = { current: offset };
+export function DecodeTypedReadResponse(data: Buffer, offsetRef: Ref) {
   const descriptor = DecodeDataDescriptor(data, offsetRef);
-  return DecodeTypedData(data, offsetRef, descriptor.type, descriptor.size);
+  return DecodeTypedData(data, offsetRef, descriptor.type!, descriptor.size);
 }

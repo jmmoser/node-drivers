@@ -272,12 +272,8 @@ export default class EIPPacket {
   }
 
   static Length(buffer, startingOffsetRef) {
+    if (buffer.length - startingOffsetRef.current < HEADER_LENGTH) return -1;
     return HEADER_LENGTH + EIPPacket.DataLength(buffer, startingOffsetRef);
-  }
-
-  static IsComplete(buffer, startingOffsetRef, length) {
-    if (length < 24) return false;
-    return (length >= EIPPacket.Length(buffer, startingOffsetRef));
   }
 }
 

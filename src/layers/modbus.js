@@ -75,7 +75,7 @@ export default class Modbus extends Layer {
 
           this.send(message, null, false, callback);
         };
-        this.setDefragger(Frames.TCP.IsComplete, Frames.TCP.Length);
+        this.setDefragger(Frames.TCP.Length);
         break;
       }
       case LayerNames.CIP:

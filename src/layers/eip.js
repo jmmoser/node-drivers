@@ -93,7 +93,7 @@ export default class EIPLayer extends Layer {
     setConnectionState(this, 0);
     setupCallbacks(this);
 
-    this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
+    this.setDefragger(EIPPacket.Length);
 
     this._totalSentSinceLastResponse = 0;
   }

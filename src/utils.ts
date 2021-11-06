@@ -76,7 +76,7 @@ export function once(fn: () => any, context: any) {
 export class InfoError extends Error {
   info: any;
 
-  constructor(info: any, err: Error, ...params: any[]) {
+  constructor(info: any, err: Error | string, ...params: any[]) {
     // Pass remaining arguments (including vendor specific ones) to parent constructor
     if (typeof err === 'object' && err.message) {
       super(err.message, ...params);
@@ -93,23 +93,28 @@ export class InfoError extends Error {
   }
 }
 
-export function CallbackPromise(callback: (a0: null | Error, a1: any) => void, func: (a0: () => void) => Promise<void>, timeout?: number) {
+interface Resolver {
+  resolve: (res?: any) => void;
+  reject: (err: Error | string, info?: any) => void;
+}
+
+export function CallbackPromise(callback: undefined | ((a0?: Error, a1?: any) => void), func: (a0: Resolver) => void, timeout?: number) {
   const hasCallback = typeof callback === 'function';
   return new Promise((resolve, reject) => {
-    let timeoutHandle;
+    let timeoutHandle: NodeJS.Timeout;
     let active = true;
     const resolver = {
-      resolve: (res) => {
+      resolve: (res: any) => {
         if (active) {
           active = false;
           clearTimeout(timeoutHandle);
           if (hasCallback) {
-            callback(null, res);
+            callback(undefined, res);
           }
           resolve(res);
         }
       },
-      reject: (err, info) => {
+      reject: (err: Error | string, info?: any) => {
         if (active) {
           let error = err;
           if (typeof err === 'string') {
@@ -123,8 +128,8 @@ export function CallbackPromise(callback: (a0: null | Error, a1: any) => void, f
           active = false;
           clearTimeout(timeoutHandle);
           if (hasCallback) {
-            callback(error);
-            resolve();
+            callback(error as Error);
+            resolve(undefined);
           } else {
             reject(error);
           }
@@ -141,7 +146,7 @@ export function CallbackPromise(callback: (a0: null | Error, a1: any) => void, f
     try {
       return func(resolver);
     } catch (err) {
-      resolver.reject(err);
+      resolver.reject(err as Error);
       return resolver;
     }
   });

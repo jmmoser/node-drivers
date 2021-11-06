@@ -9,37 +9,39 @@ import {
 
 import { logicalASCIIAddressInfo } from './shared.js';
 
+import { Ref } from '../../types';
+
 const CommandCodes = Object.freeze({
   Connected: 0x0A,
   Unconnected: 0x0B,
 });
 
-export function EncodeCommand(command, status, transaction, data = []) {
-  const buffer = Buffer.allocUnsafe(4 + data.length);
+export function EncodeCommand(command: number, status: number, transaction: number, data?: Buffer) {
+  const buffer = Buffer.allocUnsafe(4 + (data?.length || 0));
   buffer.writeUInt8(command, 0);
   buffer.writeUInt8(status, 1);
   buffer.writeUInt16LE(transaction, 2);
-  if (data.length > 0) {
+  if (data && data.length > 0) {
     data.copy(buffer, 4);
   }
   return buffer;
 }
 
-export function EncodeLogicalASCIIAddress(buffer, offsetRef, address) {
+export function EncodeLogicalASCIIAddress(buffer: Buffer, offsetRef: Ref, address: string) {
   offsetRef.current = buffer.writeUInt8(0x00, offsetRef.current);
   offsetRef.current = buffer.writeUInt8(0x24, offsetRef.current);
   offsetRef.current += buffer.write(address, offsetRef.current, 'ascii');
   offsetRef.current = buffer.writeUInt8(0x00, offsetRef.current);
 }
 
-function dataTypeAttributeAdditionalEncodingLength(value) {
+function dataTypeAttributeAdditionalEncodingLength(value: number) {
   if (value < 7) {
     return 0;
   }
   return unsignedIntegerSize(value);
 }
 
-export function DataTypeEncodingLength(id, size) {
+export function DataTypeEncodingLength(id: number, size: number) {
   const idLength = dataTypeAttributeAdditionalEncodingLength(id);
   const sizeLength = dataTypeAttributeAdditionalEncodingLength(size);
 
@@ -62,7 +64,7 @@ export function DataTypeEncodingLength(id, size) {
   throw new Error(`Unable to encode data type with id ${id} and size ${size}`);
 }
 
-export function EncodeDataDescriptor(data, offsetRef, id, size) {
+export function EncodeDataDescriptor(data: Buffer, offsetRef: Ref, id: number, size: number) {
   const idLength = dataTypeAttributeAdditionalEncodingLength(id);
   const sizeLength = dataTypeAttributeAdditionalEncodingLength(size);
 
@@ -72,7 +74,7 @@ export function EncodeDataDescriptor(data, offsetRef, id, size) {
   }
 
   if (idLength > 0 && sizeLength === 0) {
-    offsetRef.current = data.writeUInt8(((0b1000 | idLength) << 4) | size, offsetRef);
+    offsetRef.current = data.writeUInt8(((0b1000 | idLength) << 4) | size, offsetRef.current);
     offsetRef.current = encodeUnsignedInteger(data, offsetRef.current, id, idLength);
     return;
   }

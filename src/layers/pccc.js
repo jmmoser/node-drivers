@@ -104,7 +104,7 @@ export default class PCCCLayer extends Layer {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          const value = Decoding.DecodeTypedReadResponse(reply.data, 0);
+          const value = Decoding.DecodeTypedReadResponse(reply.data, { current: 0 });
           if (items === 1 && Array.isArray(value) && value.length > 0) {
             resolver.resolve(value[0]);
           } else {

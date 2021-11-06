@@ -25,7 +25,7 @@ export default class Queue {
     }
   }
 
-  dequeue(consumeAll: boolean) {
+  dequeue(consumeAll?: boolean) {
     if (consumeAll === true) {
       if (this._priorityQueue.length > 0) {
         const entities = [...this._priorityQueue];
