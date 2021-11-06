@@ -7,7 +7,7 @@ export function readUInt(buffer, offset, byteLength, littleEndian) {
 }
 
 export function readInt(buffer, offset, byteLength, littleEndian) {
-  if (littleEndian === true) return buffer.writeIntLE(offset, byteLength);
+  if (littleEndian === true) return buffer.readIntLE(offset, byteLength);
   return buffer.readIntBE(offset, byteLength);
 }
 
