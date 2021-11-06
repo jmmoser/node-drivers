@@ -72,7 +72,7 @@ export function EncodeDataDescriptor(data, offsetRef, id, size) {
   }
 
   if (idLength > 0 && sizeLength === 0) {
-    offsetRef.current = data.writeUInt8(((0b1000 | idLength) << 4) | size, offsetRef);
+    offsetRef.current = data.writeUInt8(((0b1000 | idLength) << 4) | size, offsetRef.current);
     offsetRef.current = encodeUnsignedInteger(data, offsetRef.current, id, idLength);
     return;
   }
