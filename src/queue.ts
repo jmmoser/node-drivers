@@ -1,19 +1,23 @@
 /* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
+type TQueue = any[];
 
 export default class Queue {
+  _queue: TQueue;
+  _priorityQueue: TQueue;
+
   constructor() {
     this._queue = [];
     this._priorityQueue = [];
   }
 
-  size(priorityOnly) {
+  size(priorityOnly: boolean) {
     if (priorityOnly === true) {
       return this._priorityQueue.length;
     }
     return this._priorityQueue.length + this._queue.length;
   }
 
-  enqueue(obj, priority) {
+  enqueue(obj: any, priority: boolean) {
     if (priority) {
       this._priorityQueue.push(obj);
     } else {
@@ -21,7 +25,7 @@ export default class Queue {
     }
   }
 
-  dequeue(consumeAll) {
+  dequeue(consumeAll: boolean) {
     if (consumeAll === true) {
       if (this._priorityQueue.length > 0) {
         const entities = [...this._priorityQueue];
@@ -45,18 +49,6 @@ export default class Queue {
     return undefined;
   }
 
-  // dequeue() {
-  //   if (this._priorityQueue.length > 0) {
-  //     return this._priorityQueue.shift();
-  //   }
-
-  //   if (this._queue.length > 0) {
-  //     return this._queue.shift();
-  //   }
-
-  //   return undefined;
-  // }
-
   peek() {
     if (this._priorityQueue.length > 0) {
       return this._priorityQueue[0];
@@ -72,33 +64,5 @@ export default class Queue {
   clear() {
     this._queue.length = 0;
     this._priorityQueue.length = 0;
-  }
-
-  iterate(cb) {
-    let finished = false;
-
-    function iterator(queue) {
-      let i = 0;
-      function consumer() {
-        queue.splice(i, 1);
-        i -= 1;
-      }
-
-      while (i < queue.length) {
-        if (!cb(queue[i], consumer)) {
-          finished = true;
-          break;
-        }
-        i += 1;
-      }
-    }
-
-    if (!finished) {
-      iterator(this._priorityQueue);
-    }
-
-    if (!finished) {
-      iterator(this._queue);
-    }
   }
 }

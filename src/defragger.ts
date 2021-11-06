@@ -1,7 +1,17 @@
 /* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
+import { Ref } from './types.js';
+
+type CompleteHander = (buffer: Buffer, offsetRef: Ref, dataLength: number) => boolean;
+type LengthHandler = (buffer: Buffer, offsetRef: Ref) => number;
 
 export default class Defragger {
-  constructor(completeHandler, lengthHandler, name) {
+  _dataLength: number;
+  _data: Buffer;
+  _completeHandler: CompleteHander;
+  _lengthHandler: LengthHandler;
+  name?: string;
+
+  constructor(completeHandler: CompleteHander, lengthHandler: LengthHandler, name?: string) {
     this._dataLength = 0;
     this._data = Buffer.allocUnsafe(0);
     this._completeHandler = completeHandler;
@@ -9,7 +19,7 @@ export default class Defragger {
     this.name = name;
   }
 
-  append(data) {
+  append(data: Buffer) {
     this._dataLength += data.length;
     this._data = Buffer.concat([this._data, data], this._dataLength);
   }

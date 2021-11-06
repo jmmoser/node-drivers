@@ -211,10 +211,6 @@ export default class Layer extends EventEmitter {
     this._queue.clear();
   }
 
-  iterateRequestQueue(cb) {
-    this._queue.iterate(cb);
-  }
-
   contextCallback(callback, contextOrModifier, timeout) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
     if (typeof callback !== 'function') {
