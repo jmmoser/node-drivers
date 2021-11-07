@@ -214,8 +214,8 @@ export default class PCCCLayer extends Layer {
       if (info != null && info.connectionID != null && info.transportHeader != null) {
         packet = Encoding.EncodeConnectedRequest(
           transaction,
-          this.connectionID,
-          this.transportHeader,
+          info.connectionID,
+          info.transportHeader,
           message,
         );
       } else {
