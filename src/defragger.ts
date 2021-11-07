@@ -2,7 +2,7 @@
 import { Ref } from './types.js';
 
 // export type CompleteHander = (buffer: Buffer, offsetRef: Ref, dataLength: number) => boolean;
-type LengthHandler = (buffer: Buffer, offsetRef: Ref) => number;
+export type LengthHandler = (buffer: Buffer, offsetRef: Ref) => number;
 
 export default class Defragger {
   _dataLength: number;

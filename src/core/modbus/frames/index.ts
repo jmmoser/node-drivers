@@ -1,4 +1,4 @@
-import TCP from './tcp.js';
+import TCP from './tcp';
 
 export default {
   TCP,

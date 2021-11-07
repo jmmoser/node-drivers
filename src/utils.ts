@@ -98,7 +98,7 @@ interface Resolver {
   reject: (err: Error | string, info?: any) => void;
 }
 
-export function CallbackPromise(callback: undefined | ((a0?: Error, a1?: any) => void), func: (a0: Resolver) => void, timeout?: number) {
+export function CallbackPromise(callback: undefined | Function, func: (a0: Resolver) => void, timeout?: number) {
   const hasCallback = typeof callback === 'function';
   return new Promise((resolve, reject) => {
     let timeoutHandle: NodeJS.Timeout;

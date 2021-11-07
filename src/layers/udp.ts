@@ -1,9 +1,9 @@
 import dgram from 'dgram';
 import Layer from './layer';
-import { LayerNames } from './constants.js';
+import { LayerNames } from './constants';
 import { CallbackPromise } from '../utils';
 
-async function setup(layer: Layer) {
+async function setup(layer: UDPLayer) {
   /** Only await layer._settingUp if not null */
   if (layer._settingUp != null) {
     await layer._settingUp;
@@ -21,7 +21,7 @@ async function setup(layer: Layer) {
 
     socket.once('listening', () => {
       layer._listening = true;
-      socket.setBroadcast(layer.options.broadcast);
+      socket.setBroadcast(layer.options.broadcast!);
       resolve(true);
       layer.sendNextMessage();
     });
@@ -39,7 +39,7 @@ async function setup(layer: Layer) {
       resolve(false);
     });
 
-    socket.bind(layer.options.listen);
+    socket.bind(layer.options.listen?.port, layer.options.listen?.address);
 
     layer._socket = socket;
   });
@@ -69,11 +69,14 @@ export default class UDPLayer extends Layer {
   options: UDPLayerOptions;
   _socket?: dgram.Socket;
   _listening: boolean;
+  _settingUp?: Promise<void>;
 
   constructor(options?: UDPLayerOptions | number) {
     super(LayerNames.UDP);
 
     this._listening = false;
+
+    this._settingUp = undefined;
 
     this.options = {
       target: {
@@ -128,14 +131,14 @@ export default class UDPLayer extends Layer {
   }
 
   sendNextMessage() {
-    if (this._listening) {
+    if (this._listening && this._socket) {
       const request = this.getNextRequest();
       if (request) {
         const { message, info } = request;
         const { target } = this.options;
 
-        const port = info.port || target.port;
-        const host = info.host || target.host;
+        const port = info.port || target!.port;
+        const host = info.host || target!.host;
 
         // console.log(`UDPLayer sending to ${host}:${port}`);
 

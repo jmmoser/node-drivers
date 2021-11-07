@@ -1,5 +1,7 @@
-import CPF from './cpf.js';
+import CPF, { CPFPacket } from './cpf.js';
 import { InvertKeyValues } from '../../utils.js';
+
+import { Ref, CodedValue, CodeDescriptionMap } from '../../types';
 
 /*
   Communication Profile Families
@@ -45,7 +47,7 @@ const Command = Object.freeze({
   Cancel: 0x0073, // needs to be added to EIPReply parsers
 });
 
-const CommandNames = InvertKeyValues(Command);
+const CommandNames: CodeDescriptionMap = InvertKeyValues(Command) as CodeDescriptionMap;
 
 const CPFItemTypeIDs = Object.freeze({
   NullAddress: 0x0000, // address
@@ -60,8 +62,9 @@ const CPFItemTypeIDs = Object.freeze({
 });
 
 const NullSenderContext = Buffer.alloc(8);
+const NoDataBuffer = Buffer.alloc(0);
 
-const EIPStatusCodeDescriptions = Object.freeze({
+const EIPStatusCodeDescriptions: CodeDescriptionMap = Object.freeze({
   0x0000: 'Success',
   0x0001: 'The sender issued an invalid or unsupported encapsulation command.',
   0x0002: 'Insufficient memory resources in the receiver to handle the command.  This is not an application error.  Instead, it only results if the encapsulation layer cannot obtain memory resources that it needs.',
@@ -82,7 +85,7 @@ const EIPStatusCodeDescriptions = Object.freeze({
 //   255: 'Default for Get Attribute All service'
 // };
 
-function SendDataPacket(interfaceHandle, timeout, data) {
+function SendDataPacket(interfaceHandle: number, timeout: number, data: Buffer) {
   const buffer = Buffer.allocUnsafe(data.length + 6);
   buffer.writeUInt32LE(interfaceHandle, 0);
   buffer.writeUInt16LE(timeout, 4);
@@ -94,20 +97,36 @@ function SendDataPacket(interfaceHandle, timeout, data) {
  * EIPPacket is defraggable
  */
 export default class EIPPacket {
+  command: CodedValue;
+  sessionHandle: number;
+  senderContext: Buffer;
+  options: number;
+  data: Buffer;
+  status: CodedValue;
+  items: CPFPacket[];
+
+  protocol?: number;
+  flags?: number;
+  interfaceHandle?: number;
+  timeout?: number;
+
+  static CommandCodes = Command;
+  static CPFItemTypeIDs = CPFItemTypeIDs;
+
   constructor() {
     this.command = {
       code: 0,
-      name: 'Unknown',
+      description: 'Unknown',
     };
-    this.dataLength = 0;
     this.sessionHandle = 0;
     this.senderContext = NullSenderContext;
     this.options = 0;
-    this.data = Buffer.alloc(0);
+    this.data = NoDataBuffer;
     this.status = {
       code: 0,
       description: '',
     };
+    this.items = [];
   }
 
   toBuffer() {
@@ -121,11 +140,10 @@ export default class EIPPacket {
     );
   }
 
-  static fromBuffer(buffer, offsetRef) {
+  static fromBuffer(buffer: Buffer, offsetRef: Ref) {
     const packet = new EIPPacket();
     packet.command.code = EIPPacket.Command(buffer, offsetRef);
-    packet.command.name = CommandNames[packet.command.code] || 'Unknown';
-    packet.dataLength = EIPPacket.DataLength(buffer, offsetRef);
+    packet.command.description = CommandNames[packet.command.code] || 'Unknown';
     packet.sessionHandle = EIPPacket.SessionHandle(buffer, offsetRef);
     packet.status.code = EIPPacket.Status(buffer, offsetRef);
     packet.senderContext = EIPPacket.SenderContext(buffer, offsetRef);
@@ -143,7 +161,7 @@ export default class EIPPacket {
         case Command.ListServices:
         case Command.ListIdentity:
         case Command.ListInterfaces:
-          packet.items = CPF.Packet.Decode(buffer, offsetRef);
+          packet.items = CPF.Decode(buffer, offsetRef);
           break;
         case Command.RegisterSession:
           packet.protocol = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
@@ -157,7 +175,7 @@ export default class EIPPacket {
           // not used for reply
           packet.timeout = buffer.readUInt16LE(offsetRef.current);
           offsetRef.current += 2;
-          packet.items = CPF.Packet.Decode(buffer, offsetRef);
+          packet.items = CPF.Decode(buffer, offsetRef);
           break;
         default:
           console.log('EIPPacket Error: Unrecognized command:', Buffer.from([packet.command.code]));
@@ -167,58 +185,58 @@ export default class EIPPacket {
     return packet;
   }
 
-  static Encode(command, sessionHandle, status, senderContext, options, data = []) {
+  static Encode(command: number, sessionHandle: number, status: number, senderContext: Buffer | undefined, options: number, data?: Buffer) {
     const dataLength = Buffer.isBuffer(data) ? data.length : 0;
     const buffer = Buffer.alloc(HEADER_LENGTH + dataLength);
     buffer.writeUInt16LE(command, OFFSET_COMMAND);
     buffer.writeUInt16LE(dataLength, OFFSET_DATA_LENGTH);
     buffer.writeUInt32LE(sessionHandle, OFFSET_SESSION_HANDLE);
-    buffer.writeUInt32LE(status.code, OFFSET_STATUS);
+    buffer.writeUInt32LE(status, OFFSET_STATUS);
     (senderContext || NullSenderContext).copy(buffer, OFFSET_SENDER_CONTEXT, 0, 8);
     buffer.writeUInt32LE(options, OFFSET_OPTIONS);
     if (dataLength > 0) {
-      data.copy(buffer, OFFSET_DATA);
+      data!.copy(buffer, OFFSET_DATA);
     }
     return buffer;
   }
 
-  static Command(buffer, startingOffsetRef) {
+  static Command(buffer: Buffer, startingOffsetRef: Ref) {
     return buffer.readUInt16LE(startingOffsetRef.current + OFFSET_COMMAND);
   }
 
-  static DataLength(buffer, startingOffsetRef) {
+  static DataLength(buffer: Buffer, startingOffsetRef: Ref) {
     return buffer.readUInt16LE(startingOffsetRef.current + OFFSET_DATA_LENGTH);
   }
 
-  static SessionHandle(buffer, startingOffsetRef) {
+  static SessionHandle(buffer: Buffer, startingOffsetRef: Ref) {
     return buffer.readUInt32LE(startingOffsetRef.current + OFFSET_SESSION_HANDLE);
   }
 
-  static Status(buffer, startingOffsetRef) {
+  static Status(buffer: Buffer, startingOffsetRef: Ref) {
     return buffer.readUInt32LE(startingOffsetRef.current + OFFSET_STATUS);
   }
 
-  static SenderContext(buffer, startingOffsetRef) {
+  static SenderContext(buffer: Buffer, startingOffsetRef: Ref) {
     return buffer.slice(
       startingOffsetRef.current + OFFSET_SENDER_CONTEXT,
       startingOffsetRef.current + OFFSET_SENDER_CONTEXT + 8,
     );
   }
 
-  static Options(buffer, startingOffsetRef) {
+  static Options(buffer: Buffer, startingOffsetRef: Ref) {
     return buffer.readUInt32LE(startingOffsetRef.current + OFFSET_OPTIONS);
   }
 
-  static Data(buffer, startingOffsetRef) {
+  static Data(buffer: Buffer, startingOffsetRef: Ref) {
     return buffer.slice(
       startingOffsetRef.current + OFFSET_DATA,
       startingOffsetRef.current + OFFSET_DATA + EIPPacket.DataLength(buffer, startingOffsetRef),
     );
   }
 
-  static EncodeSendRRDataMessage(sessionHandle, senderContext, data) {
+  static EncodeSendRRDataMessage(sessionHandle: number, senderContext: Buffer, data: Buffer) {
     // INTERFACE HANDLE SHOULD BE 0 FOR ENCAPSULATING CIP PACKETS
-    const cpfMessage = CPF.Packet.EncodeUCMM(data);
+    const cpfMessage = CPF.EncodeUCMM(data);
     const dataPacket = SendDataPacket(0, 0, cpfMessage);
     return EIPPacket.Encode(
       Command.SendRRData,
@@ -231,18 +249,18 @@ export default class EIPPacket {
   }
 
   static EncodeSendUnitDataMessage(
-    sessionHandle, interfaceHandle, timeout, connectionIdentifier, data,
+    sessionHandle: number, interfaceHandle: number, timeout: number, connectionIdentifier: number, data: Buffer,
   ) {
-    const cpfMessage = CPF.Packet.EncodeConnected(connectionIdentifier, data);
+    const cpfMessage = CPF.EncodeConnected(connectionIdentifier, data);
     const dataPacket = SendDataPacket(interfaceHandle, timeout, cpfMessage);
-    return EIPPacket.Encode(Command.SendUnitData, sessionHandle, 0, null, 0, dataPacket);
+    return EIPPacket.Encode(Command.SendUnitData, sessionHandle, 0, undefined, 0, dataPacket);
   }
 
-  static UnregisterSessionRequest(sessionHandle, senderContext) {
-    return EIPPacket.Encode(Command.UnregisterSession, sessionHandle, 0, senderContext, 0, []);
+  static UnregisterSessionRequest(sessionHandle: number, senderContext: Buffer) {
+    return EIPPacket.Encode(Command.UnregisterSession, sessionHandle, 0, senderContext, 0);
   }
 
-  static RegisterSessionRequest(senderContext) {
+  static RegisterSessionRequest(senderContext: Buffer) {
     const protocolVersion = Buffer.from([0x01, 0x00, 0x00, 0x00]);
     return EIPPacket.Encode(Command.RegisterSession, 0, 0, senderContext, 0, protocolVersion);
   }
@@ -251,7 +269,7 @@ export default class EIPPacket {
     return EIPPacket.Encode(Command.ListIdentity, 0, 0, NullSenderContext, 0);
   }
 
-  static ListServicesRequest(senderContext) {
+  static ListServicesRequest(senderContext: Buffer) {
     return EIPPacket.Encode(Command.ListServices, 0, 0, senderContext, 0);
   }
 
@@ -271,11 +289,8 @@ export default class EIPPacket {
     return EIPPacket.Encode(Command.Cancel, 0, 0, NullSenderContext, 0);
   }
 
-  static Length(buffer, startingOffsetRef) {
+  static Length(buffer: Buffer, startingOffsetRef: Ref) {
     if (buffer.length - startingOffsetRef.current < HEADER_LENGTH) return -1;
     return HEADER_LENGTH + EIPPacket.DataLength(buffer, startingOffsetRef);
   }
 }
-
-EIPPacket.CommandCodes = Command;
-EIPPacket.CPFItemTypeIDs = CPFItemTypeIDs;

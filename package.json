@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "start": "tsc && node dist/app.js",
+    "build": "npx tsc",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose --runInBand --coverage",
     "test-watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose --runInBand --coverage --watch"
   },

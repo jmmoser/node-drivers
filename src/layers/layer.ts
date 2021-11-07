@@ -1,6 +1,6 @@
 import EventEmitter from 'events';
 import Queue from '../queue.js';
-import Defragger from '../defragger.js';
+import Defragger, { LengthHandler } from '../defragger.js';
 import { CallbackPromise } from '../utils.js';
 import CreateContext, { ContextGenerator } from '../context';
 
@@ -27,7 +27,9 @@ function internalDestroy(layer: Layer, error: Error) {
   layer._contextToCallbackTimeouts.forEach((handle: NodeJS.Timeout) => clearTimeout(handle));
   layer._contextToCallbackTimeouts.clear(); // eslint-disable-line no-underscore-dangle
 
-  layer._contextToCallback.forEach((cb: (a0?: Error) => void) => cb(error)); // eslint-disable-line no-underscore-dangle
+  layer._contextToCallback.forEach((cb: (a0?: Error) => void) => {
+    cb(error)
+  }); // eslint-disable-line no-underscore-dangle
   layer._contextToCallback.clear(); // eslint-disable-line no-underscore-dangle
 
   layer._idContext.clear(); // eslint-disable-line
@@ -79,8 +81,6 @@ export default class Layer extends EventEmitter {
     this._contextToCallbackTimeouts = new Map();
     this._idContext = new Map();
 
-    this._open = 0;
-
     if (lowerLayer != null) {
       if (lowerLayer._handlesForwarding !== true) {
         lowerLayer._upperLayer = this;
@@ -97,7 +97,7 @@ export default class Layer extends EventEmitter {
     return this._name;
   }
 
-  setDefragger(lengthCallbackFunc) {
+  setDefragger(lengthCallbackFunc: LengthHandler) {
     this._defragger = new Defragger(lengthCallbackFunc, this.name);
     return this;
   }
@@ -151,7 +151,7 @@ export default class Layer extends EventEmitter {
     internalDestroy(this, error);
   }
 
-  forward(data: Buffer, info: any, context: any) {
+  forward(data: Buffer, info: any, context?: any) {
     if (this._upperLayer != null) {
       return Layer.forwardTo(this._upperLayer, data, info, context, this);
     }

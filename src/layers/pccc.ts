@@ -1,11 +1,11 @@
 import { CallbackPromise } from '../utils.js';
 import Layer from './layer.js';
-import { LayerNames } from './constants.js';
+import { LayerNames } from './constants';
 import PCCCPacket from '../core/pccc/packet.js';
 import * as Encoding from '../core/pccc/encoding.js';
 import * as Decoding from '../core/pccc/decoding.js';
 
-function incrementTransaction(self) {
+function incrementTransaction(self: PCCCLayer) {
   self._transaction++;
   return self._transaction % 0x10000;
 }
@@ -20,7 +20,7 @@ function getError(status) {
   return status.description;
 }
 
-function send(self, internal, request, contextOrCallback) {
+function send(self: PCCCLayer, internal, request, contextOrCallback) {
   let context;
   if (internal) {
     if (typeof contextOrCallback === 'function') {
@@ -44,12 +44,14 @@ function send(self, internal, request, contextOrCallback) {
  */
 
 export default class PCCCLayer extends Layer {
-  constructor(lowerLayer) {
+  _transaction: number;
+
+  constructor(lowerLayer: Layer) {
     super(LayerNames.PCCC, lowerLayer);
     this._transaction = 0;
   }
 
-  wordRangeRead(address, words, callback) {
+  wordRangeRead(address: string, words: number, callback?: Function) {
     if (callback == null && typeof words === 'function') {
       callback = words;
       words = undefined;
@@ -66,17 +68,17 @@ export default class PCCCLayer extends Layer {
         words,
       );
 
-      send(this, true, message, (error, reply) => {
+      send(this, true, message, (error?: Error, reply?: { data: Buffer }) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          resolver.resolve(reply.data);
+          resolver.resolve(reply!.data);
         }
       });
     });
   }
 
-  typedRead(address, items, callback) {
+  typedRead(address: string, items: number, callback?: Function) {
     if (callback == null && typeof items === 'function') {
       callback = items;
       items = undefined;
@@ -100,11 +102,11 @@ export default class PCCCLayer extends Layer {
         items,
       );
 
-      send(this, true, message, (error, reply) => {
+      send(this, true, message, (error?: Error, reply?: { data: Buffer }) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          const value = Decoding.DecodeTypedReadResponse(reply.data, { current: 0 });
+          const value = Decoding.DecodeTypedReadResponse(reply!.data, { current: 0 });
           if (items === 1 && Array.isArray(value) && value.length > 0) {
             resolver.resolve(value[0]);
           } else {
@@ -118,7 +120,7 @@ export default class PCCCLayer extends Layer {
   /**
    * value argument can be an array of values
    */
-  typedWrite(address, value, callback) {
+  typedWrite(address: string, value: any | any[], callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
       if (value == null) {
         resolver.reject(`Unable to write value: ${value}`);
@@ -133,7 +135,7 @@ export default class PCCCLayer extends Layer {
         value,
       );
 
-      send(this, true, message, (error, reply) => {
+      send(this, true, message, (error?: Error, reply?: any) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -163,34 +165,34 @@ export default class PCCCLayer extends Layer {
   //   }, transaction));
   // }
 
-  diagnosticStatus(callback) {
+  diagnosticStatus(callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
       const message = Encoding.EncodeDiagnosticStatus(
         incrementTransaction(this),
       );
 
-      send(this, true, message, (error, reply) => {
+      send(this, true, message, (error?: Error, reply?: { data: any }) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          resolver.resolve(reply.data);
+          resolver.resolve(reply?.data);
         }
       });
     });
   }
 
-  echo(data, callback) {
+  echo(data: Buffer, callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
       const message = Encoding.EncodeEcho(
         incrementTransaction(this),
         data,
       );
 
-      send(this, true, message, (error, reply) => {
+      send(this, true, message, (error?: Error, reply?: { data: any }) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
-          resolver.resolve(reply.data);
+          resolver.resolve(reply?.data);
         }
       });
     });
@@ -214,8 +216,8 @@ export default class PCCCLayer extends Layer {
       if (info != null && info.connectionID != null && info.transportHeader != null) {
         packet = Encoding.EncodeConnectedRequest(
           transaction,
-          this.connectionID,
-          this.transportHeader,
+          info.connectionID,
+          info.transportHeader,
           message,
         );
       } else {
@@ -229,7 +231,7 @@ export default class PCCCLayer extends Layer {
     }
   }
 
-  handleData(data, info, context) {
+  handleData(data: Buffer, info: any, context: any) {
     const packet = PCCCPacket.fromBufferReply(data, { current: 0 });
 
     const savedContext = this.getContextForID(packet.transaction);
