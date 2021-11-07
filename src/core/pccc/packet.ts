@@ -56,4 +56,8 @@ export default class PCCCPacket {
 
     return packet;
   }
+
+  static Transaction(buffer: Buffer, startingOffsetRef: Ref) {
+    return buffer.readUInt16LE(startingOffsetRef.current + 2);
+  }
 }

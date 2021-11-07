@@ -4,5 +4,6 @@ internal.js
 playground*
 
 coverage/
+dist/
 
 .DS_Store

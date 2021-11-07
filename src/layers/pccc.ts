@@ -5,12 +5,18 @@ import PCCCPacket from '../core/pccc/packet.js';
 import * as Encoding from '../core/pccc/encoding.js';
 import * as Decoding from '../core/pccc/decoding.js';
 
+import { CodedValue } from '../types';
+
 function incrementTransaction(self: PCCCLayer) {
   self._transaction++;
   return self._transaction % 0x10000;
 }
 
-function getError(status) {
+type Status = CodedValue & {
+  extended: CodedValue;
+}
+
+function getError(status: Status) {
   if (status.code === 0) return null;
 
   if (status.extended.description != null && status.extended.description.length > 0) {
@@ -20,7 +26,7 @@ function getError(status) {
   return status.description;
 }
 
-function send(self: PCCCLayer, internal, request, contextOrCallback) {
+function send(self: PCCCLayer, internal: boolean, message: Buffer, contextOrCallback: number | Function) {
   let context;
   if (internal) {
     if (typeof contextOrCallback === 'function') {
@@ -30,13 +36,15 @@ function send(self: PCCCLayer, internal, request, contextOrCallback) {
     context = contextOrCallback;
   }
 
-  self.setContextForID(request.transaction, {
+  const transaction = PCCCPacket.Transaction(message, { current: 0 });
+
+  self.setContextForID(transaction + '', {
     context,
     internal,
-    request,
+    message,
   });
 
-  self.send(request, null, false);
+  self.send(message, null, false);
 }
 
 /**
@@ -51,7 +59,7 @@ export default class PCCCLayer extends Layer {
     this._transaction = 0;
   }
 
-  wordRangeRead(address: string, words: number, callback?: Function) {
+  wordRangeRead(address: string, words?: number, callback?: Function) {
     if (callback == null && typeof words === 'function') {
       callback = words;
       words = undefined;
@@ -65,7 +73,7 @@ export default class PCCCLayer extends Layer {
       const message = Encoding.EncodeWordRangeReadRequest(
         incrementTransaction(this),
         address,
-        words,
+        words!,
       );
 
       send(this, true, message, (error?: Error, reply?: { data: Buffer }) => {
@@ -78,7 +86,7 @@ export default class PCCCLayer extends Layer {
     });
   }
 
-  typedRead(address: string, items: number, callback?: Function) {
+  typedRead(address: string, items?: number, callback?: Function) {
     if (callback == null && typeof items === 'function') {
       callback = items;
       items = undefined;
@@ -88,7 +96,7 @@ export default class PCCCLayer extends Layer {
       const itemsSpecified = items != null;
 
       if (itemsSpecified) {
-        if ((!Number.isFinite(items) || items <= 0 || items > 0xFFFF)) {
+        if ((!Number.isFinite(items) || items! <= 0 || items! > 0xFFFF)) {
           resolver.reject('If specified, items must be a positive integer between 1 and 65535');
           return;
         }
@@ -99,7 +107,7 @@ export default class PCCCLayer extends Layer {
       const message = Encoding.EncodeTypedRead(
         incrementTransaction(this),
         address,
-        items,
+        items!,
       );
 
       send(this, true, message, (error?: Error, reply?: { data: Buffer }) => {
@@ -234,7 +242,7 @@ export default class PCCCLayer extends Layer {
   handleData(data: Buffer, info: any, context: any) {
     const packet = PCCCPacket.fromBufferReply(data, { current: 0 });
 
-    const savedContext = this.getContextForID(packet.transaction);
+    const savedContext = this.getContextForID(packet.transaction + '', false);
     if (!savedContext) {
       console.log('PCCC Layer unhandled data', data, info, context);
       return;
@@ -248,7 +256,7 @@ export default class PCCCLayer extends Layer {
       }
     }
 
-    this.forward(packet.data, info, savedContext.context);
+    this.forward(packet.data!, info, savedContext.context);
   }
 }
 

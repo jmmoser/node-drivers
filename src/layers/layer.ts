@@ -54,9 +54,9 @@ export default class Layer extends EventEmitter {
   _handlesForwarding: boolean;
   _contextToCallbackTimeouts: Map<number, NodeJS.Timeout>;
   _contextToCallback: Map<number, Function>;
-  _idContext: Map<string, number>;
+  _idContext: Map<string, any>;
 
-  constructor(name: string, lowerLayer: Layer, options: Options, defaultOptions: any) {
+  constructor(name: string, lowerLayer: Layer, options?: Options, defaultOptions?: any) {
     if (!name || typeof name !== 'string') {
       throw new Error('Layer name must be a non-empty string');
     }
@@ -186,7 +186,7 @@ export default class Layer extends EventEmitter {
     layer.handleData(data, info, context);
   }
 
-  send(message: Buffer, info: any, priority: boolean, context: any) {
+  send(message: Buffer, info: any, priority: boolean, context?: any) {
     this.emit('send', message, info, priority, context);
     const transport = this._lowerLayer != null ? this._lowerLayer : this;
 
@@ -227,7 +227,7 @@ export default class Layer extends EventEmitter {
     this._queue.clear();
   }
 
-  contextCallback(callback: Function, contextOrModifier: any, timeout?: number) {
+  contextCallback(callback: Function, contextOrModifier?: any, timeout?: number) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
     if (typeof callback !== 'function') {
       throw new Error(`callback must be a function, received: ${typeof callback}`);
