@@ -2,9 +2,10 @@ import {
   Functions,
   FunctionNames,
   ErrorDescriptions,
-} from './constants.js';
+} from './constants';
 
 import { writeUInt, readUInt } from '../../bufferutils.js';
+import { Ref } from '../../types';
 
 const OFFSET_FN = 0;
 const OFFSET_DATA = 1;
@@ -23,7 +24,7 @@ const OFFSET_DATA = 1;
 // }
 
 export default class PDU {
-  static EncodeReadRequest(fn, address, count, littleEndian) {
+  static EncodeReadRequest(fn: number, address: number, count: number, littleEndian: boolean) {
     const buffer = Buffer.allocUnsafe(5);
     buffer.writeUInt8(fn, 0);
     writeUInt(buffer, address, 1, 2, littleEndian);
@@ -31,7 +32,7 @@ export default class PDU {
     return buffer;
   }
 
-  static EncodeWriteRequest(fn, address, values, littleEndian) {
+  static EncodeWriteRequest(fn: number, address: number, values: Buffer | Buffer[] | number[], littleEndian: boolean) {
     let buffer;
     if (Buffer.isBuffer(values)) {
       buffer = Buffer.allocUnsafe(3 + values.length);
@@ -48,7 +49,7 @@ export default class PDU {
         if (Buffer.isBuffer(value) && value.length === 2) {
           value.copy(buffer, offset, 0, 2);
         } else if (Number.isFinite(value)) {
-          writeUInt(buffer, value, offset, 2, littleEndian);
+          writeUInt(buffer, value as number, offset, 2, littleEndian);
         } else {
           throw new Error('Modbus write request error: currently supports buffer, array of 2-byte buffers, or array of finite numbers');
         }
@@ -60,7 +61,7 @@ export default class PDU {
     return buffer;
   }
 
-  static Decode(buffer, offsetRef, pduLength, littleEndian) {
+  static Decode(buffer: Buffer, offsetRef: Ref, pduLength: number, littleEndian: boolean) {
     const fn = PDU.Fn(buffer, offsetRef);
     const data = PDU.Data(buffer, offsetRef, pduLength);
 
@@ -70,7 +71,7 @@ export default class PDU {
       const errorCode = data.readUInt8(0);
       error = {
         code: errorCode,
-        message: ErrorDescriptions[errorCode] || 'Unknown error',
+        message: (ErrorDescriptions as any)[errorCode] || 'Unknown error',
       };
     } else {
       switch (fn) {
@@ -127,7 +128,7 @@ export default class PDU {
     return {
       fn: {
         code: fn,
-        name: FunctionNames[fn & 0x7F] || 'Unknown',
+        name: (FunctionNames as any)[fn & 0x7F] || 'Unknown',
       },
       data,
       error,
@@ -135,11 +136,11 @@ export default class PDU {
     };
   }
 
-  static Fn(buffer, offsetRef) {
+  static Fn(buffer: Buffer, offsetRef: Ref) {
     return buffer.readUInt8(offsetRef.current + OFFSET_FN);
   }
 
-  static Data(buffer, offsetRef, pduLength) {
+  static Data(buffer: Buffer, offsetRef: Ref, pduLength: number) {
     if (pduLength > 0) {
       return buffer.slice(offsetRef.current + OFFSET_DATA, offsetRef.current + pduLength);
     }

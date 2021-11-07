@@ -38,7 +38,7 @@ export default class PCCCPacket {
 
     packet.command = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
     packet.status.code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
-    packet.status.description = STSCodeDescriptions[packet.status.code] || '';
+    packet.status.description = (STSCodeDescriptions as any)[packet.status.code] || '';
 
     // if (buffer.length < 4) {
     //   return packet;
@@ -48,7 +48,7 @@ export default class PCCCPacket {
 
     if (packet.status.code === 0xF0) {
       packet.status.extended.code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
-      packet.status.extended.description = EXTSTSCodeDescriptionsCMDF0[packet.status.extended.code] || '';
+      packet.status.extended.description = (EXTSTSCodeDescriptionsCMDF0 as any)[packet.status.extended.code] || '';
     }
 
     packet.data = buffer.slice(offsetRef.current);
