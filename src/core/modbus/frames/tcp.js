@@ -50,6 +50,7 @@ export default class TCP {
       buffer,
       { current: offsetRef.current + OFFSET_PDU },
       TCP.RemainingLength(buffer, offsetRef) - 1,
+      false,
     );
   }
 
@@ -64,11 +65,12 @@ export default class TCP {
   }
 
   static Length(buffer, offsetRef) {
+    if (buffer.length - offsetRef.current < 7) return -1;
     return 6 + TCP.RemainingLength(buffer, offsetRef);
   }
 
   static IsComplete(buffer, offsetRef, length) {
-    if (length < 7) return false;
+    if (buffer.length - offsetRef.current < 7) return false;
     return (length >= TCP.Length(buffer, offsetRef));
   }
 }
