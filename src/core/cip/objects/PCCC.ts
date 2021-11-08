@@ -1,7 +1,7 @@
-import CIPRequest from '../request.js';
-import EPath from '../epath/index.js';
-import { ClassCodes } from '../constants/index.js';
-import { ServiceCodes, ServiceNames } from '../../pccc/constants.js';
+import CIPRequest from '../request';
+import EPath from '../epath/index';
+import { ClassCodes } from '../constants/index';
+import { ServiceCodes, ServiceNames } from '../../pccc/constants';
 
 const PCCCEPath = EPath.Encode(true, [
   new EPath.Segments.Logical.ClassID(ClassCodes.PCCC),
@@ -13,7 +13,7 @@ export const DefaultOptions = {
   serialNumber: 0x12345678,
 };
 
-export function EncodeExecutePCCCServiceRequest(vendorID, serialNumber, pcccData) {
+export function EncodeExecutePCCCServiceRequest(vendorID: number, serialNumber: number, pcccData: Buffer) {
   const headerLength = 7;
   const buffer = Buffer.allocUnsafe(headerLength + pcccData.length);
   buffer.writeUInt8(headerLength, 0);
@@ -23,7 +23,7 @@ export function EncodeExecutePCCCServiceRequest(vendorID, serialNumber, pcccData
   return buffer;
 }
 
-export function CreateExecutePCCCServiceRequest(vendorID, serialNumber, pcccData) {
+export function CreateExecutePCCCServiceRequest(vendorID: number, serialNumber: number, pcccData: Buffer) {
   const message = EncodeExecutePCCCServiceRequest(vendorID, serialNumber, pcccData);
 
   return new CIPRequest(

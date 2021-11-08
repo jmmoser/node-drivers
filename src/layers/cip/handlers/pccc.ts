@@ -1,6 +1,11 @@
-import { DefaultOptions, CreateExecutePCCCServiceRequest } from '../../../core/cip/objects/PCCC.js';
+import { DefaultOptions, CreateExecutePCCCServiceRequest } from '../../../core/cip/objects/PCCC';
 
-export function Send(layer, request, options) {
+type Options = {
+  vendorID: number;
+  serialNumber: number;
+};
+
+export function Send(layer: { send: Function }, request: { info?: any; context?: any; message: Buffer }, options?: Options) {
   const opts = {
     ...DefaultOptions,
     ...options,

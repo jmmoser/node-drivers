@@ -1,7 +1,7 @@
-import { DataTypeNames } from './codes.js';
-import { DataType } from './types.js';
+import { DataTypeNames } from './codes';
+import { DataType } from './types';
 
-export default (dt) => {
+export default (dt: object | number | string | Function) => {
   if (typeof dt === 'object') {
     return dt;
   }
@@ -9,7 +9,7 @@ export default (dt) => {
     dt = DataTypeNames[dt];
   }
   if (typeof dt === 'string') {
-    dt = DataType[dt];
+    dt = (DataType as { [key: string]: any})[dt];
   }
   if (typeof dt === 'function') {
     dt = dt();

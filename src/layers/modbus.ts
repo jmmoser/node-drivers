@@ -3,7 +3,9 @@ import Layer from './layer.js';
 import { LayerNames } from './constants.js';
 import * as MB from '../core/modbus/constants.js';
 import Frames from '../core/modbus/frames/index.js';
-import PDU from '../core/modbus/pdu.js';
+import PDU, { ModbusValues } from '../core/modbus/pdu.js';
+
+import CreateContext, { Context } from '../context';
 
 const {
   ReadDiscreteInputs,
@@ -22,21 +24,27 @@ const DefaultOptions = {
   },
 };
 
-function readRequest(self, fn, address, count, littleEndian, callback) {
+function readRequest(self: Modbus, fn: number, address: number, count: number, littleEndian: boolean, callback?: Function) {
   return CallbackPromise(callback, (resolver) => {
     self._send(PDU.EncodeReadRequest(fn, address, count, littleEndian), {}, resolver);
   });
 }
 
-function writeRequest(self, fn, address, values, littleEndian, callback) {
+function writeRequest(self: Modbus, fn: number, address: number, values: ModbusValues, littleEndian: boolean, callback?: Function) {
   return CallbackPromise(callback, (resolver) => {
     self._send(PDU.EncodeWriteRequest(fn, address, values, littleEndian), {}, resolver);
   });
 }
 
 export default class Modbus extends Layer {
+  _littleEndian: boolean;
+  // _transactionCounter: number;
+  _transactionCounter: Context;
+  _send: Function;
+  // _frameClass: any;
+
   constructor(lowerLayer, options) {
-    super(LayerNames.Modbus, lowerLayer, null, DefaultOptions);
+    super(LayerNames.Modbus, lowerLayer, undefined, DefaultOptions);
 
     switch (lowerLayer.name) {
       case LayerNames.TCP: {
@@ -48,14 +56,16 @@ export default class Modbus extends Layer {
 
         this._littleEndian = false;
 
-        this._transactionCounter = 0;
+        // this._transactionCounter = 0;
+        this._transactionCounter = CreateContext({ maxValue: 0x10000 });
         this._frameClass = Frames.TCP;
-        this._send = (pdu, opts, resolver) => {
+        this._send = (pdu: Buffer, opts: { protocolID?: number; unitID?: number }, resolver: { resolve: Function, reject: Function }) => {
           opts = opts || {};
-          this._transactionCounter = (this._transactionCounter + 1) % 0x10000;
+          // this._transactionCounter = (this._transactionCounter + 1) % 0x10000;
+          const transaction = this._transactionCounter();
 
           const callback = this.contextCallback(
-            once((err) => {
+            once((err?: Error) => {
               if (err) {
                 /** e.g. handle timeout error and return null */
                 resolver.reject(err);
@@ -63,11 +73,11 @@ export default class Modbus extends Layer {
               }
               return resolver;
             }),
-            this._transactionCounter,
+            transaction,
           );
 
           const message = Frames.TCP.Encode(
-            this._transactionCounter,
+            transaction,
             opts.protocolID || cOpts.protocolID,
             opts.unitID || cOpts.unitID,
             pdu,
@@ -86,35 +96,35 @@ export default class Modbus extends Layer {
     }
   }
 
-  readDiscreteInputs(address, count, callback) {
+  readDiscreteInputs(address: number, count: number, callback?: Function) {
     return readRequest(this, ReadDiscreteInputs, address, count, this._littleEndian, callback);
   }
 
-  readCoils(address, count, callback) {
+  readCoils(address: number, count: number, callback?: Function) {
     return readRequest(this, ReadCoils, address, count, this._littleEndian, callback);
   }
 
-  readInputRegisters(address, count, callback) {
+  readInputRegisters(address: number, count: number, callback?: Function) {
     return readRequest(this, ReadInputRegisters, address, count, this._littleEndian, callback);
   }
 
-  readHoldingRegisters(address, count = 1, callback) {
+  readHoldingRegisters(address: number, count = 1, callback?: Function) {
     return readRequest(this, ReadHoldingRegisters, address, count, this._littleEndian, callback);
   }
 
-  writeSingleCoil(address, value, callback) {
+  writeSingleCoil(address: number, value: boolean, callback?: Function) {
     const values = [value ? 0x00FF : 0x0000];
     return writeRequest(this, WriteSingleCoil, address, values, this._littleEndian, callback);
   }
 
-  writeMultipleCoils(address, values, callback) {
+  writeMultipleCoils(address: number, values: ModbusValues, callback?: Function) {
     for (let i = 0; i < values.length; i++) {
       values[i] = values[i] ? 0x00FF : 0x0000;
     }
     return writeRequest(this, WriteMultipleCoils, address, values, this._littleEndian, callback);
   }
 
-  writeSingleHoldingRegister(address, values, callback) {
+  writeSingleHoldingRegister(address: number, values: ModbusValues, callback?: Function) {
     return writeRequest(
       this,
       WriteSingleHoldingRegister,
@@ -131,7 +141,7 @@ export default class Modbus extends Layer {
   //   });
   // }
 
-  handleData(data) {
+  handleData(data: Buffer) {
     const packet = this._frameClass.Decode(data, { current: 0 });
 
     const callback = this.callbackForContext(packet.transactionID);

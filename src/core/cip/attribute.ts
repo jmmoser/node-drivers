@@ -1,11 +1,11 @@
 /* eslint-disable max-classes-per-file */
 
-import { DecodeTypedData } from './datatypes/decoding.js';
-import { CommonServiceCodes } from './constants/services.js';
-import EPath from './epath/index.js';
+import { DecodeTypedData } from './datatypes/decoding';
+import { CommonServiceCodes } from './constants/services';
+import EPath from './epath/index';
 
-import CIPRequest from './request.js';
-import CIPFeature from './feature.js';
+import CIPRequest from './request';
+import CIPFeature from './feature';
 
 const LogicalSegment = EPath.Segments.Logical;
 

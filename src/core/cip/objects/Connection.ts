@@ -1,5 +1,5 @@
-import { InvertKeyValues } from '../../../utils.js';
-import { DataType } from '../datatypes/types.js';
+import { InvertKeyValues } from '../../../utils';
+import { DataType } from '../datatypes/types';
 
 // /** CIP Vol1 Table 3-4.2 */
 // const ClassServices = Object.freeze({
@@ -70,7 +70,7 @@ export const InstanceAttributeDataTypes = Object.freeze({
       }
       return undefined;
     }),
-    (val) => val[1],
+    (val: any[]) => val[1],
   ),
 });
 
@@ -148,7 +148,7 @@ export const TransportDirectionCodes = Object.freeze({
 });
 
 export default class Connection {
-  static EncodeConnectedMessage(sequenceCount, message) {
+  static EncodeConnectedMessage(sequenceCount: number, message: Buffer) {
     const buffer = Buffer.allocUnsafe(message.length + 2);
     buffer.writeUInt16LE(sequenceCount, 0);
     message.copy(buffer, 2);

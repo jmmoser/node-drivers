@@ -1,13 +1,13 @@
-import CIPMetaObject from '../object.js';
-import CIPAttribute from '../attribute.js';
+import CIPMetaObject from '../object';
+import CIPAttribute from '../attribute';
 
 import {
   ClassCodes,
   VendorNames,
-} from '../constants/index.js';
+} from '../constants/index';
 
-import { DataType } from '../datatypes/index.js';
-import { getBits } from '../../../utils.js';
+import { DataType } from '../datatypes/index';
+import { getBits } from '../../../utils';
 
 // CIP Vol1 Table 5-2.2, Attribute ID 8, Semantics of Values
 const InstanceStateDescriptions = {

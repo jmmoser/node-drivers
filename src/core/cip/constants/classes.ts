@@ -1,6 +1,6 @@
 import {
   InvertKeyValues,
-} from '../../../utils.js';
+} from '../../../utils';
 
 /**
  * References:

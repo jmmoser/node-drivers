@@ -1,14 +1,14 @@
-import CIPMetaObject from '../object.js';
-import CIPAttribute from '../attribute.js';
+import CIPMetaObject from '../object';
+import CIPAttribute from '../attribute';
 
 import {
   ClassCodes,
   ClassNames,
-} from '../constants/index.js';
+} from '../constants/index';
 
 import {
   DataType,
-} from '../datatypes/index.js';
+} from '../datatypes/index';
 
 const ClassAttribute = Object.freeze({});
 

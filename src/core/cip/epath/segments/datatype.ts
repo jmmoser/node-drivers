@@ -2,13 +2,15 @@ import {
   decodeUnsignedInteger,
   unsignedIntegerSize,
   encodeUnsignedInteger,
-} from '../../../../utils.js';
+} from '../../../../utils';
 
-import convertDataTypeToObject from '../../datatypes/convertToObject.js';
-import { DataTypeCodes, DataTypeNames } from '../../datatypes/codes.js';
-import { DataType } from '../../datatypes/types.js';
+import convertDataTypeToObject from '../../datatypes/convertToObject';
+import { DataTypeCodes, DataTypeNames } from '../../datatypes/codes';
+import { DataType } from '../../datatypes/types';
 
-function DecodeDataType(buffer, offsetRef) {
+import { Ref } from '../../../../types';
+
+function DecodeDataType(buffer: Buffer, offsetRef: Ref) {
   let type;
   const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   switch (code) {
@@ -85,7 +87,7 @@ function encodeSize(type) {
   return size;
 }
 
-function encodeTo(buffer, offset, type) {
+function encodeTo(buffer: Buffer, offset: number, type) {
   type = convertDataTypeToObject(type);
   offset = buffer.writeUInt8(type.code, offset);
 
@@ -138,11 +140,11 @@ export default class DataTypeSegment {
     return buffer;
   }
 
-  encodeTo(buffer, offset) {
+  encodeTo(buffer: Buffer, offset: number) {
     return encodeTo(buffer, offset, this.value);
   }
 
-  static Decode(buffer, offsetRef /* , segmentCode, padded */) {
+  static Decode(buffer: Buffer, offsetRef: Ref /* , segmentCode, padded */) {
     offsetRef.current -= 1;
     return new DataTypeSegment(DecodeDataType(buffer, offsetRef));
   }

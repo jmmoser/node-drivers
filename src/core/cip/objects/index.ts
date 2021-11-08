@@ -1,11 +1,11 @@
-import { ClassCodes } from '../constants/index.js';
+import { ClassCodes } from '../constants/index';
 
-import Identity from './Identity.js';
-import MessageRouter from './MessageRouter.js';
-import Port from './Port.js';
-import TCPIPInterface from './TCPIPInterface.js';
-import EthernetLink from './EthernetLink.js';
-import ConnectionManager from './ConnectionManager.js';
+import Identity from './Identity';
+import MessageRouter from './MessageRouter';
+import Port from './Port';
+import TCPIPInterface from './TCPIPInterface';
+import EthernetLink from './EthernetLink';
+import ConnectionManager from './ConnectionManager';
 
 const OBJECTS = {
   [ClassCodes.Identity]: Identity,

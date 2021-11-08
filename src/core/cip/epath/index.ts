@@ -1,11 +1,17 @@
-import { getBits } from '../../../utils.js';
-import Segments from './segments/index.js';
+import { Ref } from '../../../types';
+import { getBits } from '../../../utils';
+import Segments from './segments/index';
 
 class EPath {
-  constructor(padded, segments) {
+  padded: boolean;
+  // segments: any[];
+
+  constructor(padded: boolean, segments) {
     this.padded = padded;
     this.segments = segments;
   }
+
+  static Segments = Segments;
 
   encodeSize() {
     return EPath.EncodeSize(this.padded, this.segments);
@@ -20,7 +26,7 @@ class EPath {
    * symbol[member].symbol
    * symbol[member,member]
    */
-  static ConvertSymbolToSegments(fullSymbol) {
+  static ConvertSymbolToSegments(fullSymbol: string) {
     const segments = [];
     const symbols = fullSymbol.split('.');
 
@@ -48,7 +54,7 @@ class EPath {
     return segments;
   }
 
-  static Decode(buffer, offsetRef, length, padded) {
+  static Decode(buffer: Buffer, offsetRef: Ref, length: number, padded: boolean) {
     if (length === true) {
       length = buffer.length - offsetRef.current; // eslint-disable-line no-param-reassign
     }
@@ -130,7 +136,5 @@ class EPath {
     return offset;
   }
 }
-
-EPath.Segments = Segments;
 
 export default EPath;

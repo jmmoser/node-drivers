@@ -5,9 +5,9 @@ import EPath from '../../core/cip/epath/index.js';
 import CIPRequest from '../../core/cip/request.js';
 
 import { CallbackPromise } from '../../utils.js';
-import { LayerNames } from '../constants.js';
+import { LayerNames } from '../constants';
 
-import * as PCCCHandler from './handlers/pccc.js';
+import * as PCCCHandler from './handlers/pccc';
 
 export default class CIPLayer extends Layer {
   constructor(lowerLayer, options) {

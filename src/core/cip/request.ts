@@ -7,15 +7,17 @@ import {
   GeneralStatusNames,
   GeneralStatusCodes,
   GeneralStatusDescriptions,
-} from './constants/index.js';
+} from './constants/index';
 
-import EPath from './epath/index.js';
+import EPath from './epath/index';
+
+import { Ref } from '../../types';
 
 const EncodeSizeSymbol = Symbol('encodeSize');
 const RequestMessageSymbol = Symbol('requestMessage');
 const ResponseDataHandlerSymbol = Symbol('responseDataHandler');
 
-function DecodeResponse(buffer, offsetRef, options, request, handler) {
+function DecodeResponse(buffer: Buffer, offsetRef: Ref, options, request, handler) {
   const opts = options || {};
 
   const res = {};
@@ -97,7 +99,11 @@ function DecodeResponse(buffer, offsetRef, options, request, handler) {
 }
 
 export default class CIPRequest {
-  constructor(service, path, data, responseHandler, options) {
+  service: number;
+  path: Buffer;
+  data: Buffer;
+  
+  constructor(service: number, path: Buffer, data: Buffer, responseHandler, options) {
     this.service = service;
     this.path = path;
     this.data = data;
@@ -138,7 +144,7 @@ export default class CIPRequest {
     return buffer;
   }
 
-  encodeTo(buffer, offset = 0) {
+  encodeTo(buffer: Buffer, offset = 0) {
     const startingOffset = offset;
 
     offset = buffer.writeUInt8(this.service, offset);
@@ -167,11 +173,11 @@ export default class CIPRequest {
     return offset;
   }
 
-  static Response(buffer, offsetRef, options) {
+  static Response(buffer: Buffer, offsetRef: Ref, options) {
     return DecodeResponse(buffer, offsetRef, options);
   }
 
-  response(buffer, offsetRef) {
+  response(buffer: Buffer, offsetRef: Ref) {
     return DecodeResponse(
       buffer,
       offsetRef,
@@ -188,7 +194,7 @@ const MessageRouterPath = EPath.Encode(true, [
 ]);
 
 function MultiCreateDataHandler(requests) {
-  return (buffer, offsetRef) => {
+  return (buffer: Buffer, offsetRef: Ref) => {
     const numberOfReplies = buffer.readUInt16LE(offsetRef.current, 0); // offsetRef.current += 2;
 
     if (numberOfReplies !== requests.length) {
@@ -216,7 +222,7 @@ function MultiCreateDataHandler(requests) {
 }
 
 class CIPMultiServiceRequest extends CIPRequest {
-  constructor(requests, path) {
+  constructor(requests, path: Buffer) {
     super(
       CommonServiceCodes.MultipleServicePacket,
       path || MessageRouterPath,
@@ -246,7 +252,7 @@ class CIPMultiServiceRequest extends CIPRequest {
     return buffer;
   }
 
-  encodeTo(buffer, offset) {
+  encodeTo(buffer: Buffer, offset: number) {
     const startingOffset = offset;
 
     offset = super.encodeTo(buffer, offset);

@@ -1,9 +1,9 @@
 // EIP-CIP-V1 3.5, page 3-53
 
-import { InvertKeyValues } from '../../../utils.js';
-import { ClassCodes } from '../constants/index.js';
-import CIPRequest from '../request.js';
-import EPath from '../epath/index.js';
+import { InvertKeyValues } from '../../../utils';
+import { ClassCodes } from '../constants/index';
+import CIPRequest from '../request';
+import EPath from '../epath/index';
 
 /** EIP-CIP-V1 3-5.5, page 3.56 */
 const ServiceCodes = {

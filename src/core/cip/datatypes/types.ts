@@ -1,7 +1,13 @@
-import { DataTypeCodes } from './codes.js';
+import { DataTypeCodes } from './codes';
 
-export const DataType = Object.freeze({
-  UNKNOWN(length) {
+interface DataType {
+  type: DataType;
+  code: number;
+}
+
+export const DataType = {
+// export const DataType: { [key: string]: DataType } = Object.freeze({
+  UNKNOWN(length: number) {
     return { type: DataType.UNKNOWN, code: DataTypeCodes.UNKNOWN, length };
   },
 
@@ -87,7 +93,7 @@ export const DataType = Object.freeze({
   TIME() {
     return { type: DataType.TIME, code: DataTypeCodes.TIME };
   },
-  EPATH(padded, length) {
+  EPATH(padded: boolean, length: number) {
     // eslint-disable-next-line object-curly-newline
     return { type: DataType.EPATH, code: DataTypeCodes.EPATH, padded, length };
   },
@@ -101,7 +107,7 @@ export const DataType = Object.freeze({
       code: DataTypeCodes.STRINGI,
       itype: DataType.STRUCT([
         DataType.USINT, // Number of internationalized character strings
-        DataType.PLACEHOLDER((length) => DataType.ARRAY(
+        DataType.PLACEHOLDER((length: number) => DataType.ARRAY(
           DataType.STRUCT(
             [
               DataType.TRANSFORM(
@@ -134,7 +140,7 @@ export const DataType = Object.freeze({
   },
 
   /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
-  ABBREV_STRUCT(crc) {
+  ABBREV_STRUCT(crc: number) {
     return {
       type: DataType.ABBREV_STRUCT,
       code: DataTypeCodes.ABBREV_STRUCT,
@@ -143,7 +149,7 @@ export const DataType = Object.freeze({
       crc,
     };
   },
-  ABBREV_ARRAY(itemType, length) {
+  ABBREV_ARRAY(itemType: DataType, length: number) {
     return {
       type: DataType.ABBREV_ARRAY,
       code: DataTypeCodes.ABBREV_ARRAY,
@@ -156,7 +162,7 @@ export const DataType = Object.freeze({
   /**
    * decodeCallback(decodedMembers, memberDataType, structDataType)
    *  - is called before each member is decoded */
-  STRUCT(members, decodeCallback) {
+  STRUCT<T extends DataType>(members: T[], decodeCallback: (a0: T[], a1: T) => any) {
     return {
       type: DataType.STRUCT,
       code: DataTypeCodes.STRUCT,
@@ -166,7 +172,7 @@ export const DataType = Object.freeze({
       decodeCallback,
     };
   },
-  ARRAY(itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag) {
+  ARRAY(itemType, lowerBound: number, upperBound: number, lowerBoundTag: number, upperBoundTag: number) {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
@@ -179,7 +185,7 @@ export const DataType = Object.freeze({
       upperBoundTag,
     };
   },
-  PLACEHOLDER(resolve) {
+  PLACEHOLDER(resolve: Function) {
     return {
       type: DataType.PLACEHOLDER,
       code: DataTypeCodes.PLACEHOLDER,
@@ -190,7 +196,7 @@ export const DataType = Object.freeze({
    * decodeTransform transforms from CIP data type to friendly data type
    * encodeTransform transforms friendly data type to CIP data type
    * */
-  TRANSFORM(dataType, decodeTransform, encodeTransform) {
+  TRANSFORM(dataType: DataType, decodeTransform: Function, encodeTransform: Function) {
     return {
       type: DataType.TRANSFORM,
       code: DataTypeCodes.TRANSFORM,
@@ -199,4 +205,4 @@ export const DataType = Object.freeze({
       encodeTransform,
     };
   },
-});
+};

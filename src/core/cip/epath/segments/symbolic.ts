@@ -8,7 +8,9 @@
 import {
   getBits,
   unsignedIntegerSize,
-} from '../../../../utils.js';
+} from '../../../../utils';
+
+import { Ref } from '../../../../types';
 
 const ExtendedStringFormatCodes = Object.freeze({
   DoubleByteCharacters: 1,
@@ -22,7 +24,9 @@ const ExtendedStringNumericTypeCodes = Object.freeze({
   UDINT: 8,
 });
 
-function validate(value, extendedFormat, extendedSize) {
+type SymbolicSegmentValue = number | string | Buffer;
+
+function validate(value: SymbolicSegmentValue, extendedFormat: number, extendedSize: number) {
   if (extendedFormat == null) {
     if (typeof value !== 'string' && !Buffer.isBuffer(value)) {
       throw new Error(`Non-extended Symbol segment value must be a string or buffer. Received ${value}`);
@@ -83,7 +87,11 @@ function validate(value, extendedFormat, extendedSize) {
 }
 
 class SymbolicSegment {
-  constructor(value, extendedFormat, extendedSize) {
+  value: SymbolicSegmentValue;
+  extendedFormat: number;
+  extendedSize: number;
+
+  constructor(value: SymbolicSegmentValue, extendedFormat: number, extendedSize: number) {
     if (extendedSize == null) {
       switch (extendedFormat) {
         case ExtendedStringFormatCodes.DoubleByteCharacters:
@@ -101,7 +109,7 @@ class SymbolicSegment {
           }
           break;
         case ExtendedStringFormatCodes.Numeric: {
-          switch (unsignedIntegerSize(value)) {
+          switch (unsignedIntegerSize(value as number)) {
             case 1:
               extendedSize = ExtendedStringNumericTypeCodes.USINT;
               break;
@@ -146,7 +154,7 @@ class SymbolicSegment {
         }
       }
       default:
-        return 1 + this.value.length;
+        return 1 + (this.value as Buffer).length;
     }
   }
 
@@ -156,14 +164,14 @@ class SymbolicSegment {
     return buffer;
   }
 
-  encodeTo(buffer, offset) {
+  encodeTo(buffer: Buffer, offset: number) {
     if (buffer.length - offset < this.encodeSize()) {
       throw new Error('Buffer to encode symbolic segment is not large enough');
     }
 
     let code = 0b01100000;
     if (this.extendedFormat == null) {
-      code |= (this.value.length & 0b11111);
+      code |= ((this.value as Buffer).length & 0b11111);
     }
     offset = buffer.writeUInt8(code, offset);
 
@@ -171,7 +179,7 @@ class SymbolicSegment {
       if (Buffer.isBuffer(this.value)) {
         offset += this.value.copy(buffer, offset);
       } else {
-        offset += buffer.write(this.value, offset, 'ascii');
+        offset += buffer.write(this.value as string, offset, 'ascii');
       }
     } else {
       offset = buffer.writeUInt8(
@@ -180,23 +188,23 @@ class SymbolicSegment {
       );
       switch (this.extendedFormat) {
         case ExtendedStringFormatCodes.DoubleByteCharacters:
-          this.value.copy(buffer, offset);
+          (this.value as Buffer).copy(buffer, offset);
           offset += 2 * this.extendedSize;
           break;
         case ExtendedStringFormatCodes.TripleByteCharacters:
-          this.value.copy(buffer, offset);
+          (this.value as Buffer).copy(buffer, offset);
           offset += 3 * this.extendedSize;
           break;
         case ExtendedStringFormatCodes.Numeric: {
           switch (this.extendedSize) {
             case ExtendedStringNumericTypeCodes.USINT:
-              offset = buffer.writeUInt8(this.value, offset);
+              offset = buffer.writeUInt8(this.value as number, offset);
               break;
             case ExtendedStringNumericTypeCodes.UINT:
-              offset = buffer.writeUInt16LE(this.value, offset);
+              offset = buffer.writeUInt16LE(this.value as number, offset);
               break;
             case ExtendedStringNumericTypeCodes.UDINT:
-              offset = buffer.writeUInt32LE(this.value, offset);
+              offset = buffer.writeUInt32LE(this.value as number, offset);
               break;
             default:
               break;
@@ -211,7 +219,7 @@ class SymbolicSegment {
     return offset;
   }
 
-  static Decode(buffer, offsetRef, segmentCode /* , padded */) {
+  static Decode(buffer: Buffer, offsetRef: Ref, segmentCode: number /* , padded */) {
     let value;
     let extendedFormat;
     let extendedSize;

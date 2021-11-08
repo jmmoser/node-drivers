@@ -20,10 +20,10 @@
  * section of physical media
  */
 
-import CIPMetaObject from '../object.js';
-import CIPAttribute from '../attribute.js';
-import { ClassCodes } from '../constants/index.js';
-import { DataType } from '../datatypes/index.js';
+import CIPMetaObject from '../object';
+import CIPAttribute from '../attribute';
+import { ClassCodes } from '../constants/index';
+import { DataType } from '../datatypes/index';
 
 /** CIP Vol 3 Chapter 3-7.3 */
 const PortTypeNames = Object.freeze({
@@ -82,7 +82,7 @@ const InstanceAttribute = Object.freeze({
         return undefined;
       },
     ),
-    (value) => value[1],
+    (value: any[]) => value[1],
   )),
   Name: new CIPAttribute.Instance(4, 'Name', DataType.SHORT_STRING),
   TypeName: new CIPAttribute.Instance(5, 'Type Name', DataType.SHORT_STRING),

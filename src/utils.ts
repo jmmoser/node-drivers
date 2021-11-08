@@ -60,7 +60,7 @@ export function InvertKeyValues(obj: object): object {
  * @param {Function} fn
  * @param {*} context
  */
-export function once(fn: () => any, context: any) {
+export function once(fn: Function, context?: any) {
   let result: any;
   let called = false;
   return (...args: any[]) => {

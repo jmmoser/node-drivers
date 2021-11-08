@@ -1,4 +1,6 @@
-import { getBits, InvertKeyValues } from '../../../utils.js';
+import { getBits, InvertKeyValues } from '../../../utils';
+
+import { Ref, CodeDescriptionMap } from '../../../types';
 
 /** CIP Vol1 Table C-6.1 */
 export const DataTypeCodes = Object.freeze({
@@ -53,7 +55,7 @@ export const DataTypeCodes = Object.freeze({
   ARRAY: 0xA3,
 });
 
-export const DataTypeNames = InvertKeyValues(DataTypeCodes);
+export const DataTypeNames: CodeDescriptionMap = InvertKeyValues(DataTypeCodes) as CodeDescriptionMap;
 
 /** ANS.1 */
 export const DataTypeTagClassCodes = Object.freeze({
@@ -63,16 +65,16 @@ export const DataTypeTagClassCodes = Object.freeze({
   Private: 3,
 });
 
-export const DataTypeTagClassNames = InvertKeyValues(DataTypeTagClassCodes);
+export const DataTypeTagClassNames: CodeDescriptionMap = InvertKeyValues(DataTypeTagClassCodes) as CodeDescriptionMap;
 
 export const DataTypeTagTypeCodes = Object.freeze({
   Primitive: 0,
   Constructed: 1,
 });
 
-export const DataTypeTagTypeNames = InvertKeyValues(DataTypeTagTypeCodes);
+export const DataTypeTagTypeNames: CodeDescriptionMap = InvertKeyValues(DataTypeTagTypeCodes) as CodeDescriptionMap;
 
-export function DecodeDataTypeTag(buffer, offsetRef) {
+export function DecodeDataTypeTag(buffer: Buffer, offsetRef: Ref) {
   const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   const tagClass = getBits(code, 6, 8);
   const tagType = getBits(code, 5, 6);

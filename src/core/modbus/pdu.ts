@@ -23,6 +23,8 @@ const OFFSET_DATA = 1;
 //   };
 // }
 
+export type ModbusValues = Buffer | Buffer[] | number[];
+
 export default class PDU {
   static EncodeReadRequest(fn: number, address: number, count: number, littleEndian: boolean) {
     const buffer = Buffer.allocUnsafe(5);
@@ -32,7 +34,7 @@ export default class PDU {
     return buffer;
   }
 
-  static EncodeWriteRequest(fn: number, address: number, values: Buffer | Buffer[] | number[], littleEndian: boolean) {
+  static EncodeWriteRequest(fn: number, address: number, values: ModbusValues, littleEndian: boolean) {
     let buffer;
     if (Buffer.isBuffer(values)) {
       buffer = Buffer.allocUnsafe(3 + values.length);

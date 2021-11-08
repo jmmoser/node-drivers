@@ -1,4 +1,4 @@
-import CIPFeature from './feature.js';
+import CIPFeature from './feature';
 
 export default class CIPFeatureGroup {
   constructor(features) {

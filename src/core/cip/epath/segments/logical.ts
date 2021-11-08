@@ -16,6 +16,8 @@ import {
   InvertKeyValues,
 } from '../../../../utils.js';
 
+import { CodeDescriptionMap } from '../../../../types';
+
 import { ClassNames } from '../../constants/index.js';
 
 const TypeCodes = Object.freeze({
@@ -29,7 +31,7 @@ const TypeCodes = Object.freeze({
   // Reserved: 7
 });
 
-const TypeNames = Object.freeze(InvertKeyValues(TypeCodes));
+const TypeNames: CodeDescriptionMap = Object.freeze(InvertKeyValues(TypeCodes)) as CodeDescriptionMap;
 
 const FormatCodes = Object.freeze({
   Address8Bit: 0,
@@ -71,7 +73,7 @@ function getFormatFromID(id) {
   }
 }
 
-function validate(type, format, value) {
+function validate(type: number, format, value) {
   switch (type) {
     case TypeCodes.ClassID:
     case TypeCodes.InstanceID:
@@ -112,7 +114,7 @@ function validate(type, format, value) {
   }
 }
 
-function encodeSize(padded, type, format, value) {
+function encodeSize(padded: boolean, type: number, format: number, value: { format: number }) {
   let size = 1;
 
   switch (type) {
@@ -158,7 +160,7 @@ function encodeSize(padded, type, format, value) {
   return size;
 }
 
-function encodeTo(buffer, offset, padded, type, format, value) {
+function encodeTo(buffer: Buffer, offset: number, padded: boolean, type: number, format: number, value: number) {
   offset = buffer.writeUInt8(0b00100000 | ((type & 0b111) << 2) | (format & 0b11), offset);
 
   switch (type) {
@@ -375,25 +377,25 @@ class LogicalSegment {
 }
 
 LogicalSegment.ClassID = class ClassID extends LogicalSegment {
-  constructor(value, format) {
+  constructor(value: number, format) {
     super(TypeCodes.ClassID, format, value);
   }
 };
 
 LogicalSegment.InstanceID = class InstanceID extends LogicalSegment {
-  constructor(value, format) {
+  constructor(value: number, format) {
     super(TypeCodes.InstanceID, format, value);
   }
 };
 
 LogicalSegment.AttributeID = class AttributeID extends LogicalSegment {
-  constructor(value, format) {
+  constructor(value: number, format) {
     super(TypeCodes.AttributeID, format, value);
   }
 };
 
 LogicalSegment.MemberID = class MemberID extends LogicalSegment {
-  constructor(value, format) {
+  constructor(value: number, format) {
     super(TypeCodes.MemberID, format, value);
   }
 };

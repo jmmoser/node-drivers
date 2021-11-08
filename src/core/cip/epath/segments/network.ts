@@ -12,6 +12,8 @@ import {
   InvertKeyValues,
 } from '../../../../utils.js';
 
+import { Ref, CodeDescriptionMap, CodedValue } from '../../../../types';
+
 export const SubtypeCodes = Object.freeze({
   Schedule: 1,
   FixedTag: 2,
@@ -20,16 +22,21 @@ export const SubtypeCodes = Object.freeze({
   Extended: 31,
 });
 
-const SubtypeNames = Object.freeze(InvertKeyValues(SubtypeCodes));
+const SubtypeNames: CodeDescriptionMap = Object.freeze(InvertKeyValues(SubtypeCodes)) as CodeDescriptionMap;
 
 export default class NetworkSegment {
-  constructor(subtype, value) {
+  subtype: CodedValue;
+  value: number;
+
+  constructor(subtype: number, value: number) {
     this.subtype = {
       code: subtype,
-      name: SubtypeNames[subtype] || 'Unknown',
+      description: SubtypeNames[subtype] || 'Unknown',
     };
     this.value = value;
   }
+
+  static SubtypeCodes = SubtypeCodes;
 
   encodeSize() {
     switch (this.subtype.code) {
@@ -38,7 +45,7 @@ export default class NetworkSegment {
       case SubtypeCodes.ProductionInhibitTime:
         return 2;
       default:
-        throw new Error(`Network segment subtype ${this.subtype.name} not supported yet`);
+        throw new Error(`Network segment subtype ${this.subtype.description} not supported yet`);
     }
   }
 
@@ -48,7 +55,7 @@ export default class NetworkSegment {
     return buffer;
   }
 
-  encodeTo(buffer, offset) {
+  encodeTo(buffer: Buffer, offset: number) {
     offset = buffer.writeUInt8((0b01000000) | (this.subtype.code & 0b11111), offset);
     switch (this.subtype.code) {
       case SubtypeCodes.Schedule:
@@ -57,13 +64,13 @@ export default class NetworkSegment {
         offset = buffer.writeUInt8(this.value, offset);
         break;
       default:
-        throw new Error(`Network segment subtype ${this.subtype.name} not supported yet`);
+        throw new Error(`Network segment subtype ${this.subtype.description} not supported yet`);
     }
 
     return offset;
   }
 
-  static Decode(buffer, offsetRef, segmentCode /* , padded */) {
+  static Decode(buffer: Buffer, offsetRef: Ref, segmentCode: number /* , padded */) {
     const subtype = getBits(segmentCode, 0, 5);
 
     let value;
@@ -84,5 +91,3 @@ export default class NetworkSegment {
     return new NetworkSegment(subtype, value);
   }
 }
-
-NetworkSegment.SubtypeCodes = SubtypeCodes;

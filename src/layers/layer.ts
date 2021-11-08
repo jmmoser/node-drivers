@@ -2,7 +2,7 @@ import EventEmitter from 'events';
 import Queue from '../queue.js';
 import Defragger, { LengthHandler } from '../defragger.js';
 import { CallbackPromise } from '../utils.js';
-import CreateContext, { ContextGenerator } from '../context';
+import CreateContext, { Context } from '../context';
 
 const LOG = false;
 
@@ -27,7 +27,7 @@ function internalDestroy(layer: Layer, error: Error) {
   layer._contextToCallbackTimeouts.forEach((handle: NodeJS.Timeout) => clearTimeout(handle));
   layer._contextToCallbackTimeouts.clear(); // eslint-disable-line no-underscore-dangle
 
-  layer._contextToCallback.forEach((cb: (a0?: Error) => void) => {
+  layer._contextToCallback.forEach((cb) => {
     cb(error)
   }); // eslint-disable-line no-underscore-dangle
   layer._contextToCallback.clear(); // eslint-disable-line no-underscore-dangle
@@ -41,7 +41,7 @@ function internalDestroy(layer: Layer, error: Error) {
 
 interface Options {
   handlesForwarding: boolean;
-  // contextGenerator: () => number;
+  // Context: () => number;
 }
 
 export default class Layer extends EventEmitter {
@@ -49,7 +49,7 @@ export default class Layer extends EventEmitter {
   _queue: Queue;
   _lowerLayer?: Layer;
   _upperLayer?: Layer;
-  _context: ContextGenerator;
+  _context: Context;
   _defragger?: Defragger;
   _handlesForwarding: boolean;
   _contextToCallbackTimeouts: Map<number, NodeJS.Timeout>;
@@ -65,7 +65,7 @@ export default class Layer extends EventEmitter {
 
     const opts = {
       handlesForwarding: false,
-      // contextGenerator: incrementContext,
+      // Context: incrementContext,
       ...options as {},
     };
 

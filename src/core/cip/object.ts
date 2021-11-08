@@ -1,10 +1,10 @@
-import EPath from './epath/index.js';
-import { CommonServiceCodes } from './constants/index.js';
-import CIPRequest from './request.js';
-import CIPAttribute from './attribute.js';
-import CIPFeatureGroup from './featuregroup.js';
-import { DataType } from './datatypes/types.js';
-import { DecodeTypedData } from './datatypes/decoding.js';
+import EPath from './epath/index';
+import { CommonServiceCodes } from './constants/index';
+import CIPRequest from './request';
+import CIPAttribute from './attribute';
+import CIPFeatureGroup from './featuregroup';
+import { DataType } from './datatypes/types';
+import { DecodeTypedData } from './datatypes/decoding';
 
 // const CommonClassAttribute = Object.freeze({
 //   Revision: new CIPAttribute.Class(1, 'Revision', DataType.UINT),

@@ -27,14 +27,16 @@ import {
   getBits,
   unsignedIntegerSize,
   encodeUnsignedInteger,
-} from '../../../../utils.js';
+} from '../../../../utils';
 
-function serializeAddress(address) {
+import { Ref } from '../../../../types';
+
+function serializeAddress(address: Buffer | number | string) {
   if (Buffer.isBuffer(address)) {
     return address;
   }
 
-  if (Number.isInteger(address) && address >= 0) {
+  if (typeof address === 'number' && Number.isInteger(address) && address >= 0) {
     const addressSize = unsignedIntegerSize(address);
     const buffer = Buffer.alloc(addressSize);
     encodeUnsignedInteger(buffer, 0, address, addressSize);
@@ -48,7 +50,7 @@ function serializeAddress(address) {
   throw new Error(`Unexpected port address, unable to serialize: ${address}`);
 }
 
-function validate(number, address) {
+function validate(number: number, address: Buffer) {
   if (!Number.isInteger(number) || number < 0 || number > 65535) {
     throw new Error(`Port segment port number must be an integer between 0 and 65535. Received: ${number}`);
   }
@@ -59,7 +61,10 @@ function validate(number, address) {
 }
 
 export default class PortSegment {
-  constructor(number, address) {
+  number: number;
+  address: Buffer;
+
+  constructor(number: number, address: Buffer) {
     address = serializeAddress(address);
 
     validate(number, address);
@@ -68,7 +73,7 @@ export default class PortSegment {
     this.address = address;
   }
 
-  static EncodeSize(number, address) {
+  static EncodeSize(number: number, address: Buffer) {
     let size = 1;
     if (number >= 15) {
       size += 2;
@@ -86,7 +91,7 @@ export default class PortSegment {
     return size;
   }
 
-  static EncodeTo(buffer, offset, number, address) {
+  static EncodeTo(buffer: Buffer, offset: number, number: number, address: Buffer) {
     const startingOffset = offset;
 
     let code = 0;
@@ -127,7 +132,7 @@ export default class PortSegment {
     return offset;
   }
 
-  static Encode(number, address) {
+  static Encode(number: number, address: Buffer) {
     const buffer = Buffer.alloc(PortSegment.EncodeSize(number, address));
     PortSegment.EncodeTo(buffer, 0, number, address);
     return buffer;
@@ -141,11 +146,11 @@ export default class PortSegment {
     return PortSegment.Encode(this.number, this.address);
   }
 
-  encodeTo(buffer, offset) {
+  encodeTo(buffer: Buffer, offset: number) {
     return PortSegment.EncodeTo(buffer, offset, this.number, this.address);
   }
 
-  static Decode(buffer, offsetRef, segmentCode /* , padded */) {
+  static Decode(buffer: Buffer, offsetRef: Ref, segmentCode: number /* , padded */) {
     /** -1 because first byte of segment was already read */
     const startingOffset = offsetRef.current - 1;
 
