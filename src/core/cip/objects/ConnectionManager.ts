@@ -229,7 +229,7 @@ class ConnectionManager {
     );
   }
 
-  static ForwardOpen(connection, incrementCounters) {
+  static ForwardOpen(connection, incrementCounters: boolean) {
     if (incrementCounters) {
       incrementConnectionCounters();
       connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
