@@ -201,10 +201,11 @@ const CIPObject = CIPMetaObject(ClassCodes.Identity, {
   GetAttributesAllInstanceAttributes,
 });
 
-class Identity extends CIPObject {}
-
-Identity.ClassAttribute = ClassAttribute;
-Identity.InstanceAttribute = InstanceAttribute;
+class Identity extends CIPObject {
+  static ClassAttribute = ClassAttribute;
+  static InstanceAttribute = InstanceAttribute;
+  static DeviceType = DeviceTypeCodes;
+}
 
 // // CIP Vol7 Table 5-2.1, Attribute 18
 // function ModbusIdentityInfoParser(res, buffer, offset) {
@@ -219,7 +220,5 @@ Identity.InstanceAttribute = InstanceAttribute;
 //     UserAppName [SHORT_STRING]
 //   */
 // }
-
-Identity.DeviceType = DeviceTypeCodes;
 
 export default Identity;

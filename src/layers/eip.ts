@@ -504,16 +504,16 @@ export default class EIPLayer extends Layer {
       case CommandCodes.SendUnitData: {
         if (packet.status.code === 0) {
           const addressItem = packet.items.find(
-            (item) => item.type.code === CPF.ItemTypeIDs.ConnectedAddress,
+            (item) => item.type.code === CPF.ItemTypeIDs.ConnectedAddress, // Sequneced?
           );
           const messageItem = packet.items.find(
             (item) => item.type.code === CPF.ItemTypeIDs.ConnectedMessage,
           );
 
-          if (addressItem && messageItem) {
+          if (addressItem && messageItem && Buffer.isBuffer(messageItem.value)) {
             const info = {
               connected: true,
-              responseID: addressItem.value,
+              responseID: addressItem.value as number,
               connectionID: this._connectedContexts.get(addressItem.value),
             };
             // console.log(info);
@@ -536,9 +536,10 @@ export default class EIPLayer extends Layer {
       case CommandCodes.ListServices: {
         const callbacks = this._userCallbacks.get(command);
 
-        const error = packet.status.code !== 0 ? packet.status.description || `EIP error code ${packet.status.code}` : null;
-
-        this._userCallbacks.set(command, callbacks.filter((callback) => callback(error, packet)));
+        if (callbacks) {
+          const error = packet.status.code !== 0 ? packet.status.description || `EIP error code ${packet.status.code}` : null;
+          this._userCallbacks.set(command, callbacks.filter((callback) => callback(error, packet)));
+        }
         break;
       }
       default:
