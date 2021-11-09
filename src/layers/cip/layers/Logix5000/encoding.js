@@ -1,8 +1,8 @@
-import EPath from '../../../../core/cip/epath/index.js';
+import EPath from '../../../../core/cip/epath/index';
 
 import {
   Logix5000ClassCodes,
-} from './constants.js';
+} from './constants';
 
 export function EncodeReadTemplateServiceData(offset, bytesToRead) {
   const buffer = Buffer.allocUnsafe(6);

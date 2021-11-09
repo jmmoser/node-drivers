@@ -2,12 +2,12 @@ import {
   DataType,
   DataTypeCodes,
   DataTypeNames,
-} from '../../../../core/cip/datatypes/index.js';
+} from '../../../../core/cip/datatypes/index';
 
 import {
   getBits,
   InvertKeyValues,
-} from '../../../../utils.js';
+} from '../../../../utils';
 
 export const Logix5000DataTypeCodes = Object.freeze({
   Program: 0x68,

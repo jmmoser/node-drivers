@@ -1,4 +1,4 @@
-import DataTypeCodes from './codes.js';
+import DataTypeCodes from './codes';
 
 const DataType = Object.freeze({
   Program() {

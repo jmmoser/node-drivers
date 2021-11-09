@@ -4,7 +4,7 @@ import {
   ErrorDescriptions,
 } from './constants';
 
-import { writeUInt, readUInt } from '../../bufferutils.js';
+import { writeUInt, readUInt } from '../../bufferutils';
 import { Ref } from '../../types';
 
 const OFFSET_FN = 0;

@@ -1,11 +1,11 @@
 /* eslint-disable no-undef */
 
-import { DataType } from '../../src/core/pccc/constants.js';
+import { DataType } from '../../src/core/pccc/constants';
 
 import {
   DecodeDataDescriptor,
   DecodeTypedData,
-} from '../../src/core/pccc/decoding.js';
+} from '../../src/core/pccc/decoding';
 
 const buffer1 = Buffer.from([
   0b10010111,

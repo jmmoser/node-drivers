@@ -1,14 +1,16 @@
-import EPath from '../epath/index.js';
-import { DataTypeCodes, DataTypeNames } from './codes.js';
-import convertToObject from './convertToObject.js';
+import EPath from '../epath/index';
+import { DataTypeCodes, DataTypeNames } from './codes';
+import convertToObject from './convertToObject';
 
 import {
   getBits,
   unsignedIntegerSize,
   decodeUnsignedInteger,
-} from '../../../utils.js';
+} from '../../../utils';
 
-export function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
+import { Ref } from '../../../types';
+
+export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, dataType, ctx) {
   if (Array.isArray(dataType)) {
     return dataType.map((dataTypeItem) => DecodeTypedData(buffer, offsetRef, dataTypeItem, ctx));
   }

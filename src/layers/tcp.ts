@@ -1,7 +1,7 @@
 import net from 'net';
-import Layer from './layer.js';
-import { LayerNames } from './constants.js';
-import { CallbackPromise } from '../utils.js';
+import Layer from './layer';
+import { LayerNames } from './constants';
+import { CallbackPromise } from '../utils';
 
 const LOG = false;
 

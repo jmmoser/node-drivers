@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { TCP, Modbus } from '../../../src/index.js';
+import { TCP, Modbus } from '../../../src/index';
 
 const tcpLayer = new TCP({ host: '127.0.0.1', port: 5020 });
 const mbLayer = new Modbus(tcpLayer);

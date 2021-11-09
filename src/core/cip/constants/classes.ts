@@ -2,6 +2,8 @@ import {
   InvertKeyValues,
 } from '../../../utils';
 
+import { CodeDescriptionMap } from '../../../types';
+
 /**
  * References:
  *  - CIP Vol 1 Table 5.1
@@ -105,4 +107,4 @@ export const ClassCodes = Object.freeze({
   CompoNetRepeater: 0xF8,
 });
 
-export const ClassNames = InvertKeyValues(ClassCodes);
+export const ClassNames = InvertKeyValues(ClassCodes) as CodeDescriptionMap;

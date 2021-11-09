@@ -10,7 +10,7 @@
 import {
   getBits,
   InvertKeyValues,
-} from '../../../../utils.js';
+} from '../../../../utils';
 
 import { Ref, CodeDescriptionMap, CodedValue } from '../../../../types';
 

@@ -1,10 +1,10 @@
-import TCP from './layers/tcp.js';
-import UDP from './layers/udp.js';
-import Modbus from './layers/modbus.js';
-import PCCC from './layers/pccc.js';
-import CIP from './layers/cip/index.js';
-import EIP from './layers/eip.js';
-import Multiplex from './layers/multiplex.js';
+import TCP from './layers/tcp';
+import UDP from './layers/udp';
+import Modbus from './layers/modbus';
+import PCCC from './layers/pccc';
+import CIP from './layers/cip/index';
+import EIP from './layers/eip';
+import Multiplex from './layers/multiplex';
 
 export {
   TCP,

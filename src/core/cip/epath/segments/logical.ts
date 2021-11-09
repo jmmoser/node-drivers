@@ -14,11 +14,9 @@ import {
   decodeUnsignedInteger,
   unsignedIntegerSize,
   InvertKeyValues,
-} from '../../../../utils.js';
+} from '../../../../utils';
 
-import { CodeDescriptionMap } from '../../../../types';
-
-import { ClassNames } from '../../constants/index.js';
+import { CodeDescriptionMap, CodedValue, Ref } from '../../../../types';
 
 const TypeCodes = Object.freeze({
   ClassID: 0,
@@ -40,7 +38,7 @@ const FormatCodes = Object.freeze({
   Reserved: 3,
 });
 
-const FormatNames = Object.freeze(InvertKeyValues(FormatCodes));
+const FormatNames = Object.freeze(InvertKeyValues(FormatCodes)) as CodeDescriptionMap;
 
 const LogicalFormatSizes = Object.freeze({
   [FormatCodes.Address8Bit]: 1,
@@ -60,7 +58,25 @@ const ElectronicKeyFormatCodes = Object.freeze({
   Normal: 4,
 });
 
-function getFormatFromID(id) {
+interface SpecialValue {
+  format: number;
+}
+
+interface ElectronicKeyValue extends SpecialValue {
+  // format: number;
+  vendorID: number;
+  deviceType: number;
+  productCode: number;
+  compatibility: boolean;
+  revision: {
+    major: number;
+    minor: number;
+  }
+};
+
+type LogicalValue = number | ElectronicKeyValue;
+
+function getFormatFromID(id: number) {
   switch (unsignedIntegerSize(id)) {
     case 1:
       return FormatCodes.Address8Bit;
@@ -73,7 +89,7 @@ function getFormatFromID(id) {
   }
 }
 
-function validate(type: number, format, value) {
+function validate(type: number, format: number, value: LogicalValue) {
   switch (type) {
     case TypeCodes.ClassID:
     case TypeCodes.InstanceID:
@@ -114,7 +130,7 @@ function validate(type: number, format, value) {
   }
 }
 
-function encodeSize(padded: boolean, type: number, format: number, value: { format: number }) {
+function encodeSize(padded: boolean, type: number, format: number, value: LogicalValue) {
   let size = 1;
 
   switch (type) {
@@ -160,7 +176,7 @@ function encodeSize(padded: boolean, type: number, format: number, value: { form
   return size;
 }
 
-function encodeTo(buffer: Buffer, offset: number, padded: boolean, type: number, format: number, value: number) {
+function encodeTo(buffer: Buffer, offset: number, padded: boolean, type: number, format: number, value: LogicalValue) {
   offset = buffer.writeUInt8(0b00100000 | ((type & 0b111) << 2) | (format & 0b11), offset);
 
   switch (type) {
@@ -170,21 +186,22 @@ function encodeTo(buffer: Buffer, offset: number, padded: boolean, type: number,
     case TypeCodes.MemberID:
     case TypeCodes.ConnectionPoint:
     case TypeCodes.ServiceID: {
+      const val = value as number;
       switch (format) {
         case FormatCodes.Address8Bit:
-          offset = buffer.writeUInt8(value, offset);
+          offset = buffer.writeUInt8(val, offset);
           break;
         case FormatCodes.Address16Bit:
           if (padded) {
             offset = buffer.writeUInt8(0, offset);
           }
-          offset = buffer.writeUInt16LE(value, offset);
+          offset = buffer.writeUInt16LE(val, offset);
           break;
         case FormatCodes.Address32Bit:
           if (padded) {
             offset = buffer.writeUInt8(0, offset);
           }
-          offset = buffer.writeUInt32LE(value, offset);
+          offset = buffer.writeUInt32LE(val, offset);
           break;
         default:
           throw new Error(`Logical segment unknown ${TypeNames[type]} format ${format}`);
@@ -194,17 +211,18 @@ function encodeTo(buffer: Buffer, offset: number, padded: boolean, type: number,
     case TypeCodes.Special: {
       switch (format) {
         case SpecialFormatCodes.ElectronicKey:
-          switch (value.format) {
+          const val = value as ElectronicKeyValue;
+          switch (val.format) {
             case ElectronicKeyFormatCodes.Normal: {
-              offset = buffer.writeUInt8(value.format, offset);
-              offset = buffer.writeUInt16LE(value.vendorID, offset);
-              offset = buffer.writeUInt16LE(value.deviceType, offset);
-              offset = buffer.writeUInt16LE(value.productCode, offset);
+              offset = buffer.writeUInt8(val.format, offset);
+              offset = buffer.writeUInt16LE(val.vendorID, offset);
+              offset = buffer.writeUInt16LE(val.deviceType, offset);
+              offset = buffer.writeUInt16LE(val.productCode, offset);
               offset = buffer.writeUInt8(
-                (((value.compatibility ? 1 : 0) << 7) | (value.revision.major & 0b1111111)),
+                (((val.compatibility ? 1 : 0) << 7) | (val.revision.major & 0b1111111)),
                 offset,
               );
-              offset = buffer.writeUInt8(value.revision.minor, offset);
+              offset = buffer.writeUInt8(val.revision.minor, offset);
               break;
             }
             default:
@@ -223,18 +241,17 @@ function encodeTo(buffer: Buffer, offset: number, padded: boolean, type: number,
   return offset;
 }
 
-function DecodeElectronicKey(buffer, offsetRef) {
+function DecodeElectronicKey(buffer: Buffer, offsetRef: Ref): ElectronicKeyValue {
   /** STARTS AT THE KEY FORMAT */
   const keyFormat = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   if (keyFormat !== ElectronicKeyFormatCodes.Normal) {
     throw new Error(`Electronic Key Format of ${keyFormat} is reserved`);
   }
 
-  const value = {};
-  value.format = keyFormat;
-  value.vendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-  value.deviceType = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-  value.productCode = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const format = keyFormat;
+  const vendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const deviceType = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const productCode = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
   const majorRevisionByte = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
   /**
@@ -243,17 +260,33 @@ function DecodeElectronicKey(buffer, offsetRef) {
    * Major Revision, and Minor Revision shall match. If set, then any
    * key may be accepted which a device can emulate.
    * */
-  value.compatibility = getBits(majorRevisionByte, 7, 8);
-  value.revision = {};
-  value.revision.major = getBits(majorRevisionByte, 0, 7);
-  value.revision.minor = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+  const compatibility = !!getBits(majorRevisionByte, 7, 8);
+  const majorRevision = getBits(majorRevisionByte, 0, 7);
+  const minorRevision = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
-  return value;
+  return {
+    format,
+    vendorID,
+    deviceType,
+    productCode,
+    compatibility,
+    revision: {
+      major: majorRevision,
+      minor: minorRevision,
+    },
+  };
 }
 
-class LogicalSegment {
-  constructor(type, format, value) {
+export default class LogicalSegment {
+  type: CodedValue;
+  format: CodedValue;
+  value: LogicalValue;
+
+  constructor(type: number, format: number, value: LogicalValue) {
     if (format == null) {
+      if (typeof value !== 'number') {
+        throw new Error('EPath logical segment error: Value must be a number if format is not specified');
+      }
       format = getFormatFromID(value);
     }
 
@@ -268,34 +301,30 @@ class LogicalSegment {
 
     this.type = {
       code: type,
-      name: TypeNames[type] || 'Unknown',
+      description: TypeNames[type] || 'Unknown',
     };
     this.format = {
       code: format,
-      name: formatName,
+      description: formatName,
     };
     this.value = value;
-
-    if (type === TypeCodes.ClassID && ClassNames[value]) {
-      this.className = ClassNames[value];
-    }
   }
 
-  encodeSize(padded) {
+  encodeSize(padded: boolean) {
     return encodeSize(padded, this.type.code, this.format.code, this.value);
   }
 
-  encode(padded) {
+  encode(padded: boolean) {
     const buffer = Buffer.alloc(this.encodeSize(padded));
     this.encodeTo(buffer, 0, padded);
     return buffer;
   }
 
-  encodeTo(buffer, offset, padded) {
+  encodeTo(buffer: Buffer, offset: number, padded: boolean) {
     return encodeTo(buffer, offset, padded, this.type.code, this.format.code, this.value);
   }
 
-  static Decode(buffer, offsetRef, segmentCode, padded) {
+  static Decode(buffer: Buffer, offsetRef: Ref, segmentCode: number, padded: boolean) {
     const type = getBits(segmentCode, 2, 5);
     const format = getBits(segmentCode, 0, 2);
 
@@ -321,25 +350,25 @@ class LogicalSegment {
         }
       }
 
-      value = decodeUnsignedInteger(buffer, offsetRef.current, valueSize);
+      value = decodeUnsignedInteger(buffer, offsetRef.current, valueSize) as number;
       offsetRef.current += valueSize;
     }
 
     switch (type) {
       case TypeCodes.ClassID:
-        return new LogicalSegment.ClassID(value, format);
+        return new LogicalSegment(TypeCodes.ClassID, format, value);
       case TypeCodes.InstanceID:
-        return new LogicalSegment.InstanceID(value, format);
+        return new LogicalSegment(TypeCodes.InstanceID, format, value);
       case TypeCodes.AttributeID:
-        return new LogicalSegment.AttributeID(value, format);
+        return new LogicalSegment(TypeCodes.AttributeID, format, value);
       case TypeCodes.MemberID:
-        return new LogicalSegment.MemberID(value, format);
+        return new LogicalSegment(TypeCodes.MemberID, format, value);
       case TypeCodes.ServiceID:
-        return new LogicalSegment.ServiceID(value, format);
+        return new LogicalSegment(TypeCodes.ServiceID, format, value);
       case TypeCodes.Special:
-        return new LogicalSegment.Special(value, format);
+        return new LogicalSegment(TypeCodes.Special, format, value);
       case TypeCodes.ConnectionPoint:
-        return new LogicalSegment.ConnectionPoint(value, format);
+        return new LogicalSegment(TypeCodes.ConnectionPoint, format, value);
       default:
         throw new Error(`Invalid logical segment type: ${type}`);
     }
@@ -348,7 +377,7 @@ class LogicalSegment {
 
   /** Helper function for the only kind of Special Logical Segment */
   static SpecialNormalElectronicKey(
-    vendorID, deviceType, productCode, majorRevision, minorRevision, compatibility,
+    vendorID: number, deviceType: number, productCode: number, majorRevision: number, minorRevision: number, compatibility: boolean,
   ) {
     return new LogicalSegment(TypeCodes.Special, SpecialFormatCodes.ElectronicKey, {
       vendorID,
@@ -375,50 +404,3 @@ class LogicalSegment {
     return SpecialFormatCodes;
   }
 }
-
-LogicalSegment.ClassID = class ClassID extends LogicalSegment {
-  constructor(value: number, format) {
-    super(TypeCodes.ClassID, format, value);
-  }
-};
-
-LogicalSegment.InstanceID = class InstanceID extends LogicalSegment {
-  constructor(value: number, format) {
-    super(TypeCodes.InstanceID, format, value);
-  }
-};
-
-LogicalSegment.AttributeID = class AttributeID extends LogicalSegment {
-  constructor(value: number, format) {
-    super(TypeCodes.AttributeID, format, value);
-  }
-};
-
-LogicalSegment.MemberID = class MemberID extends LogicalSegment {
-  constructor(value: number, format) {
-    super(TypeCodes.MemberID, format, value);
-  }
-};
-
-LogicalSegment.ConnectionPoint = class ConnectionPoint extends LogicalSegment {
-  constructor(value, format) {
-    super(TypeCodes.ConnectionPoint, format, value);
-  }
-};
-
-LogicalSegment.ServiceID = class ServiceID extends LogicalSegment {
-  constructor(value, format) {
-    super(TypeCodes.ServiceID, format, value);
-  }
-};
-
-LogicalSegment.Special = class Special extends LogicalSegment {
-  constructor(value, format) {
-    if (format == null) {
-      format = SpecialFormatCodes.ElectronicKey;
-    }
-    super(TypeCodes.Special, format, value);
-  }
-};
-
-export default LogicalSegment;

@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
-import Queue from '../queue.js';
-import Defragger, { LengthHandler } from '../defragger.js';
-import { CallbackPromise } from '../utils.js';
+import Queue from '../queue';
+import Defragger, { LengthHandler } from '../defragger';
+import { CallbackPromise } from '../utils';
 import CreateContext, { Context } from '../context';
 
 const LOG = false;

@@ -1,10 +1,10 @@
 import {
   getBits,
-} from '../../utils.js';
+} from '../../utils';
 
 import {
   DataType,
-} from './constants.js';
+} from './constants';
 
 import { Ref } from '../../types';
 
@@ -88,7 +88,7 @@ export function DecodeTypedData(data: Buffer, offsetRef: Ref, type: number, size
       break;
     }
     case DataType.Timer: {
-      /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2721 */
+      /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC#L2721 */
       const bits = data.readInt16LE(offsetRef.current);
       value = {
         EN: ((bits & (1 << 15)) > 0),
@@ -101,7 +101,7 @@ export function DecodeTypedData(data: Buffer, offsetRef: Ref, type: number, size
       break;
     }
     case DataType.Counter: {
-      /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2728 */
+      /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC#L2728 */
       const bits = data.readInt16LE(offsetRef.current);
       value = {
         CN: ((bits & (1 << 15)) > 0),
@@ -116,7 +116,7 @@ export function DecodeTypedData(data: Buffer, offsetRef: Ref, type: number, size
       break;
     }
     case DataType.Control: {
-      /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC.js#L2737 */
+      /** https://github.com/plcpeople/nodepccc/blob/13695b9a92762bb7cd1b8d3801d7abb1b797714e/nodePCCC#L2737 */
       const bits = data.readInt16LE(offsetRef.current);
       value = {
         EN: ((bits & (1 << 15)) > 0),

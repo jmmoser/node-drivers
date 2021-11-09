@@ -1,6 +1,6 @@
-import EPath from '../epath/index.js';
-import { DataTypeCodes, DataTypeNames } from './codes.js';
-import convertToObject from './convertToObject.js';
+import EPath from '../epath/index';
+import { DataTypeCodes, DataTypeNames } from './codes';
+import convertToObject from './convertToObject';
 
 export function EncodeSize(dataType, value) {
   dataType = convertToObject(dataType);

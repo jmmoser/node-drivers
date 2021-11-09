@@ -1,10 +1,10 @@
-import Layer from '../layer.js';
-import ConnectionLayer from './layers/connection.js';
-import { CommonServiceCodes } from '../../core/cip/constants/index.js';
-import EPath from '../../core/cip/epath/index.js';
-import CIPRequest from '../../core/cip/request.js';
+import Layer from '../layer';
+import ConnectionLayer from './layers/connection';
+import { CommonServiceCodes } from '../../core/cip/constants/index';
+import EPath from '../../core/cip/epath/index';
+import CIPRequest from '../../core/cip/request';
 
-import { CallbackPromise } from '../../utils.js';
+import { CallbackPromise } from '../../utils';
 import { LayerNames } from '../constants';
 
 import * as PCCCHandler from './handlers/pccc';

@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-import EPath from '../../src/core/cip/epath/index.js';
+import EPath from '../../src/core/cip/epath/index';
 
 const { Symbolic } = EPath.Segments;
 

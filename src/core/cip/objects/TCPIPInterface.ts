@@ -1,14 +1,20 @@
-import CIPMetaObject from '../object.js';
-import CIPAttribute from '../attribute.js';
-import { ClassCodes } from '../constants/index.js';
-import { DataType } from '../datatypes/index.js';
-import { getBits } from '../../../utils.js';
+import CIPMetaObject from '../object';
+import CIPAttribute from '../attribute';
+import { ClassCodes } from '../constants/index';
+import { DataType } from '../datatypes/index';
+import { getBits } from '../../../utils';
 
 const ClassAttribute = Object.freeze({});
 
 const IPAddressDataType = DataType.TRANSFORM(
   DataType.UDINT,
-  (value) => `${value >>> 24}.${(value >>> 16) & 255}.${(value >>> 8) & 255}.${value & 255}`,
+  (value: number) => `${value >>> 24}.${(value >>> 16) & 255}.${(value >>> 8) & 255}.${value & 255}`,
+  (value: string) => {
+    value.split('.').map(v => parseInt(v, 10)).reduce((accum, v, index) => {
+      accum |= v << (8 * (3 - index));
+      return accum;
+    }, 0);
+  }
 );
 
 const InterfaceConfigurationStatusDescriptions = {

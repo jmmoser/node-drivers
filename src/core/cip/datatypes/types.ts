@@ -1,8 +1,10 @@
 import { DataTypeCodes } from './codes';
 
 interface DataType {
-  type: DataType;
-  code: number;
+  (): {
+    type: DataType;
+    code: number;
+  } 
 }
 
 export const DataType = {

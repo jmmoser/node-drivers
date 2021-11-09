@@ -1,6 +1,6 @@
-import { DataType } from './constants.js';
+import { DataType } from './constants';
 
-// Help from https://github.com/plcpeople/nodepccc/blob/00b4824972baec636deb0906454f841d8b832797/nodePCCC.js
+// Help from https://github.com/plcpeople/nodepccc/blob/00b4824972baec636deb0906454f841d8b832797/nodePCCC
 export function logicalASCIIAddressInfo(address: string) {
   const splitString = address.split(':');
   const prefix = splitString[0].replace(/[0-9]/gi, '');

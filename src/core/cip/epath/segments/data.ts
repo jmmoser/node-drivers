@@ -7,14 +7,21 @@
 
 import {
   getBits,
-} from '../../../../utils.js';
+  InvertKeyValues,
+} from '../../../../utils';
+
+import { CodedValue, CodeDescriptionMap, Ref } from '../../../../types';
 
 const SubtypeCodes = Object.freeze({
   Simple: 0,
   ANSIExtendedSymbol: 17,
 });
 
-function validate(subtype, value) {
+const SubtypeNames = InvertKeyValues(SubtypeCodes);
+
+type DataValue = Buffer | string;
+
+function validate(subtype: number, value: DataValue) {
   switch (subtype) {
     case SubtypeCodes.Simple:
       if (!Buffer.isBuffer(value)) {
@@ -37,16 +44,22 @@ function validate(subtype, value) {
   }
 }
 
-class DataSegment {
-  constructor(subtype, value) {
+export default class DataSegment {
+  subtype: CodedValue;
+  value: DataValue;
+
+  constructor(subtype: number, value: DataValue) {
     validate(subtype, value);
 
-    this.subtype = subtype;
+    this.subtype = {
+      code: subtype,
+      description: (SubtypeNames as CodeDescriptionMap)[subtype],
+    };
     this.value = value;
   }
 
   encodeSize() {
-    switch (this.subtype) {
+    switch (this.subtype.code) {
       case SubtypeCodes.Simple:
         return 2 + this.value.length;
       case SubtypeCodes.ANSIExtendedSymbol:
@@ -62,13 +75,13 @@ class DataSegment {
     return buffer;
   }
 
-  encodeTo(buffer, offset) {
-    offset = buffer.writeUInt8(0b10000000 | (this.subtype & 0b11111), offset);
+  encodeTo(buffer: Buffer, offset: number) {
+    offset = buffer.writeUInt8(0b10000000 | (this.subtype.code & 0b11111), offset);
 
-    switch (this.subtype) {
+    switch (this.subtype.code) {
       case SubtypeCodes.Simple: {
         offset = buffer.writeUInt8(this.value.length / 2, offset);
-        const bytesCopied = this.value.copy(buffer, offset);
+        const bytesCopied = (this.value as Buffer).copy(buffer, offset);
         if (bytesCopied !== this.value.length) {
           throw new Error('Buffer to encode Simple Data Segment value is not large enough');
         }
@@ -77,7 +90,7 @@ class DataSegment {
       }
       case SubtypeCodes.ANSIExtendedSymbol: {
         offset = buffer.writeUInt8(this.value.length, offset);
-        const bytesWritten = buffer.write(this.value, offset, 'ascii');
+        const bytesWritten = buffer.write(this.value as string, offset, 'ascii');
         if (bytesWritten !== this.value.length) {
           throw new Error('Buffer to encode Simple Data Segment value is not large enough');
         }
@@ -93,7 +106,7 @@ class DataSegment {
     return offset;
   }
 
-  static Decode(buffer, offsetRef, segmentCode /* , padded */) {
+  static Decode(buffer: Buffer, offsetRef: Ref, segmentCode: number /* , padded */) {
     const subtype = getBits(segmentCode, 0, 5);
     const length = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
@@ -103,16 +116,14 @@ class DataSegment {
         if (buffer.length < offsetRef.current + 2 * length) {
           throw new Error('Simple Data Segment decode buffer not long enough');
         }
-        segment = new DataSegment.Simple(
-          buffer.slice(offsetRef.current, offsetRef.current + 2 * length),
-        );
+        segment = new DataSegment(SubtypeCodes.Simple, buffer.slice(offsetRef.current, offsetRef.current + 2 * length));
         offsetRef.current += 2 * length;
         break;
       case SubtypeCodes.ANSIExtendedSymbol:
         if (buffer.length < offsetRef.current + length) {
           throw new Error('ANSI Extended Symbol Data Segment decode buffer not long enough');
         }
-        segment = new DataSegment.ANSIExtendedSymbol(buffer.toString('ascii', offsetRef.current, offsetRef.current + length));
+        segment = new DataSegment(SubtypeCodes.ANSIExtendedSymbol, buffer.toString('ascii', offsetRef.current, offsetRef.current + length));
         offsetRef.current += length;
         if (length % 2 > 0) {
           /** make sure pad byte is 0 */
@@ -129,17 +140,3 @@ class DataSegment {
     return segment;
   }
 }
-
-DataSegment.Simple = class SimpleDataSegment extends DataSegment {
-  constructor(value) {
-    super(SubtypeCodes.Simple, value);
-  }
-};
-
-DataSegment.ANSIExtendedSymbol = class ANSIExtendedSymbolDataSegment extends DataSegment {
-  constructor(value) {
-    super(SubtypeCodes.ANSIExtendedSymbol, value);
-  }
-};
-
-export default DataSegment;

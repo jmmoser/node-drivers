@@ -1,5 +1,5 @@
 /* eslint no-underscore-dangle: ["error", { "allowAfterThis": true }] */
-import { Ref } from './types.js';
+import { Ref } from './types';
 
 // export type CompleteHander = (buffer: Buffer, offsetRef: Ref, dataLength: number) => boolean;
 export type LengthHandler = (buffer: Buffer, offsetRef: Ref) => number;

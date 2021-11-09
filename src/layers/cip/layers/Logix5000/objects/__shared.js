@@ -1,7 +1,7 @@
-import { getBits } from '../../../../../utils.js';
-import Logix5000DataType from '../datatypes/codes.js';
-import Logix5000DatatypeNames from '../datatypes/names.js';
-import { DataType, DataTypeCodes, DataTypeNames } from '../../../../../core/cip/datatypes/index.js';
+import { getBits } from '../../../../../utils';
+import Logix5000DataType from '../datatypes/codes';
+import Logix5000DatatypeNames from '../datatypes/names';
+import { DataType, DataTypeCodes, DataTypeNames } from '../../../../../core/cip/datatypes/index';
 
 // eslint-disable-next-line import/prefer-default-export
 export class SymbolType {

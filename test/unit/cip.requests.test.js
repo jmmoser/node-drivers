@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-import CIPRequest from '../../src/core/cip/request.js';
+import CIPRequest from '../../src/core/cip/request';
 
 describe('Encoding', () => {
   test('Encode', () => {

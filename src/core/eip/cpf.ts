@@ -1,4 +1,4 @@
-import { getBits, InvertKeyValues } from '../../utils.js';
+import { getBits, InvertKeyValues } from '../../utils';
 import CIPIdentity from '../cip/objects/Identity';
 
 import { Ref, CodeDescriptionMap, CodedValue } from '../../types';

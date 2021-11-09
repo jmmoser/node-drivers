@@ -1,7 +1,7 @@
-import CIPLayer from '../../ciplayer.js';
-import EPath from '../../../../core/cip/epath/index.js';
-import CIPRequest from '../../../../core/cip/request.js';
-import * as Encoding from './encoding.js';
+import CIPLayer from '../../ciplayer';
+import EPath from '../../../../core/cip/epath/index';
+import CIPRequest from '../../../../core/cip/request';
+import * as Encoding from './encoding';
 
 // const RECORD_TYPES = {
 //   CONTROLLER_ATTRIBUTES: 1,
@@ -14,7 +14,7 @@ import {
   CommonServiceCodes,
   // ClassCodes,
   GeneralStatusCodes,
-} from '../../../../core/cip/constants/index.js';
+} from '../../../../core/cip/constants/index';
 
 import {
   DataType,
@@ -22,14 +22,14 @@ import {
   Encode,
   EncodeSize,
   EncodeTo,
-} from '../../../../core/cip/datatypes/index.js';
+} from '../../../../core/cip/datatypes/index';
 
-import { DecodeTypedData } from '../../../../core/cip/datatypes/decoding.js';
+import { DecodeTypedData } from '../../../../core/cip/datatypes/decoding';
 
 import {
   CallbackPromise,
   InfoError,
-} from '../../../../utils.js';
+} from '../../../../utils';
 
 import {
   Logix5000DataTypeCodes,
@@ -50,7 +50,7 @@ import {
   ControllerInstanceAttributeCodes,
   ControllerInstanceAttributeDataTypes,
   ControllerInstanceAttributeNames,
-} from './constants.js';
+} from './constants';
 
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 

@@ -1,4 +1,4 @@
-import { InvertKeyValues } from '../../utils.js';
+import { InvertKeyValues } from '../../utils';
 
 export const Functions = Object.freeze({
   ReadCoils: 0x01,

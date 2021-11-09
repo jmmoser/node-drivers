@@ -4,9 +4,9 @@ import {
   DataType,
   Encode,
   DecodeTypedData,
-} from '../../dist/core/cip/datatypes/index.js';
+} from '../../dist/core/cip/datatypes/index';
 
-import EPath from '../../dist/core/cip/epath/index.js';
+import EPath from '../../dist/core/cip/epath/index';
 
 describe('Encoding', () => {
   test('SINT positive', () => {

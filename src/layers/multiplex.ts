@@ -3,15 +3,15 @@
  * multiple upper layers to one lower layer
  */
 
-import { CallbackPromise } from '../utils.js';
-import Layer from './layer.js';
+import { CallbackPromise } from '../utils';
+import Layer from './layer';
 
 function incrementContext(self) {
   self.__context = (self.__context + 1) % 0x100000000;
   return self.__context;
 }
 
-function layerContext(self, layer, context) {
+function layerContext(self: MultiplexLayer, layer: Layer, context) {
   if (layer != null) {
     if (context == null) {
       context = incrementContext(this); // eslint-disable-line no-param-reassign
@@ -21,7 +21,7 @@ function layerContext(self, layer, context) {
   return context;
 }
 
-function layerForContext(self, context) {
+function layerForContext(self: MultiplexLayer, context) {
   let layer = null;
   if (self.__contextToLayer.has(context)) {
     layer = self.__contextToLayer.get(context);
@@ -31,7 +31,7 @@ function layerForContext(self, context) {
 }
 
 export default class MultiplexLayer extends Layer {
-  constructor(lowerLayer) {
+  constructor(lowerLayer: Layer) {
     super('multiplex', lowerLayer, {
       handlesForwarding: true,
     });
@@ -41,11 +41,11 @@ export default class MultiplexLayer extends Layer {
     this.__contextToLayer = new Map();
   }
 
-  layerAdded(layer) {
+  layerAdded(layer: Layer) {
     this._layers.add(layer);
   }
 
-  disconnect(callback) {
+  disconnect(callback?: Function) {
     return CallbackPromise(callback, async (resolver) => {
       if (this._disconnecting === 1) {
         resolver.resolve();
@@ -75,7 +75,7 @@ export default class MultiplexLayer extends Layer {
     }
   }
 
-  handleData(data, info, context) {
+  handleData(data: Buffer, info, context) {
     if (context != null) {
       const layer = layerForContext(this, context);
       if (layer != null) {
@@ -88,7 +88,7 @@ export default class MultiplexLayer extends Layer {
     }
   }
 
-  handleDestroy(error) {
+  handleDestroy(error: Error) {
     [...this._layers].forEach((layer) => {
       layer.destroy(error);
     });

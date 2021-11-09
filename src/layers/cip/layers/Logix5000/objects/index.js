@@ -1,6 +1,6 @@
-import Controller from './controller.js';
-import SymbolObject from './symbol.js';
-import Template from './template.js';
+import Controller from './controller';
+import SymbolObject from './symbol';
+import Template from './template';
 
 export default {
   Controller,

@@ -1,9 +1,9 @@
-import { CallbackPromise, once } from '../utils.js';
-import Layer from './layer.js';
-import { LayerNames } from './constants.js';
-import * as MB from '../core/modbus/constants.js';
-import Frames from '../core/modbus/frames/index.js';
-import PDU, { ModbusValues } from '../core/modbus/pdu.js';
+import { CallbackPromise, once } from '../utils';
+import Layer from './layer';
+import { LayerNames } from './constants';
+import * as MB from '../core/modbus/constants';
+import Frames from '../core/modbus/frames/index';
+import PDU, { ModbusValues } from '../core/modbus/pdu';
 
 import CreateContext, { Context } from '../context';
 

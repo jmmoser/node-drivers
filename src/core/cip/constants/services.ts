@@ -1,6 +1,6 @@
 import {
   InvertKeyValues,
-} from '../../../utils.js';
+} from '../../../utils';
 
 /** CIP Vol1 Appendix A */
 export const CommonServiceCodes = Object.freeze({

@@ -1,5 +1,5 @@
-import CPF, { CPFPacket } from './cpf.js';
-import { InvertKeyValues } from '../../utils.js';
+import CPF, { CPFPacket } from './cpf';
+import { InvertKeyValues } from '../../utils';
 
 import { Ref, CodedValue, CodeDescriptionMap } from '../../types';
 

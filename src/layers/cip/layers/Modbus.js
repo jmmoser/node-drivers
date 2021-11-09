@@ -1,9 +1,9 @@
 // // import Layer from '../../Layer';
-// import CIPLayer from './internal/CIPInternalLayer.js';
-// import { ClassCodes } from '../../../core/cip/constants/index.js';
-// import EPath from '../../../core/cip/epath/index.js';
-// import CIPRequest from '../../../core/cip/request.js';
-// import { CallbackPromise } from '../../../utils.js';
+// import CIPLayer from './internal/CIPInternalLayer';
+// import { ClassCodes } from '../../../core/cip/constants/index';
+// import EPath from '../../../core/cip/epath/index';
+// import CIPRequest from '../../../core/cip/request';
+// import { CallbackPromise } from '../../../utils';
 
 // const MODBUS_EPATH = EPath.Encode(true, [
 //   new EPath.Segments.Logical.ClassID(ClassCodes.Modbus),

@@ -1,27 +1,29 @@
-import { CallbackPromise, InfoError } from '../utils.js';
-import Layer from './layer.js';
-import { LayerNames } from './constants.js';
-import EIPPacket from '../core/eip/packet.js';
-import CPF from '../core/eip/cpf.js';
+import { CallbackPromise, InfoError } from '../utils';
+import Layer from './layer';
+import { LayerNames } from './constants';
+import EIPPacket from '../core/eip/packet';
+import CPF from '../core/eip/cpf';
 
 const {
   CommandCodes,
 } = EIPPacket;
 
-function setConnectionState(layer, state) {
-  // console.log(`EIP connection state: ${layer._connectionState} => ${state}`);
-  layer._connectionState = state;
+const DEFAULT_EIP_PORT = 44818;
+
+function setConnectionState(self: EIPLayer, state: number) {
+  // console.log(`EIP connection state: ${self._connectionState} => ${state}`);
+  self._connectionState = state;
 }
 
-function cleanup(layer) {
-  layer._sessionHandle = 0;
-  layer._userCallbacks.clear();
-  layer._unconnectedContexts.clear();
-  layer._connectedContexts.clear();
-  setConnectionState(layer, 0);
+function cleanup(self: EIPLayer) {
+  self._sessionHandle = 0;
+  self._userCallbacks.clear();
+  self._unconnectedContexts.clear();
+  self._connectedContexts.clear();
+  setConnectionState(self, 0);
 }
 
-function sendUserRequests(self) {
+function sendUserRequests(self: EIPLayer) {
   if (self._connectionState === 0 || self._connectionState === 2) {
     // let buffer;
     let request;
@@ -35,20 +37,14 @@ function sendUserRequests(self) {
   }
 }
 
-function setupCallbacks(self) {
-  self._userCallbacks = new Map();
-  self._unconnectedContexts = new Map();
-  self._connectedContexts = new Map();
-}
-
-function incrementContext(self) {
+function incrementContext(self: EIPLayer) {
   for (let i = 0; i < 8; i++) {
-    self._context[i] = (self._context[i] + 1) % 0x100;
-    if (self._context[i] !== 0) break;
+    self._senderContext[i] = (self._senderContext[i] + 1) % 0x100;
+    if (self._senderContext[i] !== 0) break;
   }
 }
 
-function queueUserRequest(self, message, info, callback) {
+function queueUserRequest(self: EIPLayer, message: Buffer, info: any, callback?: Function) {
   const command = EIPPacket.Command(message, { current: 0 });
 
   if (callback) {
@@ -56,7 +52,7 @@ function queueUserRequest(self, message, info, callback) {
     if (!self._userCallbacks.has(command)) {
       self._userCallbacks.set(command, []);
     }
-    self._userCallbacks.get(command).push(callback.bind(self));
+    self._userCallbacks.get(command)!.push(callback.bind(self));
   }
 
   self._userRequests.push({
@@ -67,48 +63,81 @@ function queueUserRequest(self, message, info, callback) {
   sendUserRequests(self);
 }
 
+type UDPLayerOptions = {
+  tcp: {
+    port: number;
+  };
+  udp: {
+    target: {
+      port: number;
+    }
+  }
+};
+
 const DefaultOptions = {
   tcp: {
-    port: 44818,
+    port: DEFAULT_EIP_PORT,
   },
   udp: {
     target: {
-      port: 44818,
+      port: DEFAULT_EIP_PORT,
     },
   },
 };
 
+type Target = string | {
+  host: string;
+  port: number;
+};
+
+type UserRequest = {
+  message: Buffer;
+  info: any;
+}
+
 export default class EIPLayer extends Layer {
-  constructor(lowerLayer, options) {
+  _connectionState: number;
+  _sessionHandle: number;
+  _senderContext: Buffer;
+  _userCallbacks: Map<number, Function[]>;
+  _unconnectedContexts: Map<string, any>;
+  _connectedContexts: Map<number, any>;
+  _userRequests: UserRequest[];
+  _totalSentSinceLastResponse: number;
+  _connectCallback?: Function;
+
+  constructor(lowerLayer: Layer, options?: UDPLayerOptions) {
     if (lowerLayer == null) {
       throw new Error('EIP layer requires a lower layer');
     }
 
-    super(LayerNames.EIP, lowerLayer, null, { ...DefaultOptions, ...options });
+    super(LayerNames.EIP, lowerLayer, undefined, { ...DefaultOptions, ...options });
 
     this._sessionHandle = 0;
-    this._context = Buffer.alloc(8);
+    this._senderContext = Buffer.alloc(8);
     this._userRequests = [];
+    this._connectionState = 0;
 
-    setConnectionState(this, 0);
-    setupCallbacks(this);
+    this._userCallbacks = new Map();
+    this._unconnectedContexts = new Map();
+    this._connectedContexts = new Map();
 
     this.setDefragger(EIPPacket.Length);
 
     this._totalSentSinceLastResponse = 0;
   }
 
-  nop(callback) {
+  nop(callback?: Function) {
     // no response, used to test underlying transport layer
     return CallbackPromise(callback, (resolver) => {
-      queueUserRequest(this, EIPPacket.NOPRequest(), null, null);
+      queueUserRequest(this, EIPPacket.NOPRequest(), null);
       resolver.resolve();
     });
   }
 
-  listServices(callback) {
+  listServices(callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
-      queueUserRequest(this, EIPPacket.ListServicesRequest(this._context), null, (error, reply) => {
+      queueUserRequest(this, EIPPacket.ListServicesRequest(this._senderContext), null, (error?: Error, reply?: any) => {
         if (error) {
           resolver.reject(error, reply);
         } else if (Array.isArray(reply.items)) {
@@ -120,55 +149,67 @@ export default class EIPLayer extends Layer {
     });
   }
 
-  listIdentity(options, callback) {
-    let hostsSpecified = false;
-    const hosts = [];
+  listIdentity(options?: { targets?: Target[] }, callback?: Function) {
+    let targetsSpecified = false;
+    const targets: { host: string; port: number }[] = [];
 
     if (arguments.length === 1 && typeof arguments[0] === 'function') {
       callback = arguments[0]; // eslint-disable-line no-param-reassign, prefer-destructuring
     } else {
-      switch (typeof options) {
-        case 'object':
-          if (Array.isArray(options.hosts)) {
-            hostsSpecified = true;
-            options.hosts.forEach((host) => {
-              switch (typeof host) {
-                case 'string': {
-                  const parts = host.split(':', 2);
-                  if (parts.length === 0) {
-                    hosts.push({ host: parts[0] });
-                  } else {
-                    hosts.push({ host: parts[0], port: parts[1] });
-                  }
-                  break;
-                }
-                case 'object':
-                  hosts.push(host);
-                  break;
-                default:
-                  break;
-              }
-            });
+      if (Array.isArray(options?.targets)) {
+        options!.targets.map((target) => {
+          if (typeof target === 'string') {
+            const parts = target.split(':', 2);
+            if (parts.length === 0) {
+              return { host: parts[0], port: DEFAULT_EIP_PORT };
+            }
+            return { host: parts[0], port: parseInt(parts[1], 10) };
           }
-          break;
-        default:
-          break;
+          return target;
+        }).forEach((target) => targets.push(target));
       }
+      // switch (typeof options) {
+      //   case 'object':
+      //     if (Array.isArray(options.hosts)) {
+      //       targetsSpecified = true;
+      //       options.targets.forEach((host) => {
+      //         switch (typeof host) {
+      //           case 'string': {
+      //             const parts = host.split(':', 2);
+      //             if (parts.length === 0) {
+      //               hosts.push({ host: parts[0], port: DEFAULT_EIP_PORT });
+      //             } else {
+      //               hosts.push({ host: parts[0], port: parts[1] });
+      //             }
+      //             break;
+      //           }
+      //           case 'object':
+      //             hosts.push(host);
+      //             break;
+      //           default:
+      //             break;
+      //         }
+      //       });
+      //     }
+      //     break;
+      //   default:
+      //     break;
+      // }
     }
 
     const startingTimeout = 2000;
     const resetTimeout = 1000;
 
-    if (hosts.length === 0) {
-      hosts.push({});
+    if (targets.length === 0) {
+      targets.push({} as any);
     }
 
-    const identities = [];
+    const identities: any[] = [];
 
     return CallbackPromise(callback, (resolver) => {
-      let timeoutHandler;
+      let timeoutHandler = setTimeout(finalizer, startingTimeout);
 
-      function finalizer(error, reply) {
+      function finalizer(error?: string | Error, reply?: any) {
         clearTimeout(timeoutHandler);
         if (error) {
           resolver.reject(error, reply);
@@ -186,7 +227,7 @@ export default class EIPLayer extends Layer {
             return 0;
           });
 
-          if (hostsSpecified) {
+          if (targetsSpecified) {
             resolver.resolve(sortedIdentities);
           } else if (identities.length === 1) {
             resolver.resolve(sortedIdentities[0]);
@@ -196,15 +237,13 @@ export default class EIPLayer extends Layer {
         }
       }
 
-      timeoutHandler = setTimeout(finalizer, startingTimeout);
-
-      function internalListIdentityReplyHandler(error, reply) {
+      function internalListIdentityReplyHandler(error?: Error, reply?: any) {
         if (error) {
           finalizer(error, reply);
         } else if (Array.isArray(reply.items) && reply.items.length === 1) {
           identities.push(reply.items[0]);
           clearTimeout(timeoutHandler);
-          if (hostsSpecified) {
+          if (targetsSpecified) {
             timeoutHandler = setTimeout(finalizer, resetTimeout);
             return;
             // return true;
@@ -215,16 +254,16 @@ export default class EIPLayer extends Layer {
         }
       }
 
-      hosts.forEach((host, idx) => {
-        const cb = idx === 0 ? internalListIdentityReplyHandler : null;
-        queueUserRequest(this, EIPPacket.ListIdentityRequest(), host, cb);
+      targets.forEach((target: Target, idx) => {
+        const cb = idx === 0 ? internalListIdentityReplyHandler : undefined;
+        queueUserRequest(this, EIPPacket.ListIdentityRequest(), target, cb);
       });
     });
   }
 
-  listInterfaces(callback) {
+  listInterfaces(callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
-      queueUserRequest(this, EIPPacket.ListInterfacesRequest(), null, (error, reply) => {
+      queueUserRequest(this, EIPPacket.ListInterfacesRequest(), null, (error?: Error, reply?: any) => {
         if (error) {
           resolver.reject(error, reply);
         } else if (Array.isArray(reply.items)) {
@@ -236,9 +275,9 @@ export default class EIPLayer extends Layer {
     });
   }
 
-  indicateStatus(callback) {
+  indicateStatus(callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
-      queueUserRequest(this, EIPPacket.IndicateStatusRequest(), null, (error, reply) => {
+      queueUserRequest(this, EIPPacket.IndicateStatusRequest(), null, (error?: Error, reply?: any) => {
         if (error) {
           resolver.reject(error, reply);
         } else if (Array.isArray(reply.items)) {
@@ -250,9 +289,9 @@ export default class EIPLayer extends Layer {
     });
   }
 
-  cancel(callback) {
+  cancel(callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
-      queueUserRequest(this, EIPPacket.CancelRequest(), null, (error, reply) => {
+      queueUserRequest(this, EIPPacket.CancelRequest(), null, (error?: Error, reply?: any) => {
         if (error) {
           resolver.reject(error, reply);
         } else if (Array.isArray(reply.items)) {
@@ -265,7 +304,7 @@ export default class EIPLayer extends Layer {
   }
 
   // TODO: can this use CallbackPromise?
-  connect(callback) {
+  connect(callback?: Function) {
     if (this._connectionState === 2) {
       if (callback) callback();
       return;
@@ -273,14 +312,14 @@ export default class EIPLayer extends Layer {
     this._connectCallback = callback;
     if (this._connectionState > 0) return;
     setConnectionState(this, 1);
-    this.send(EIPPacket.RegisterSessionRequest(this._context), null, true);
+    this.send(EIPPacket.RegisterSessionRequest(this._senderContext), null, true);
   }
 
-  disconnect(callback) {
+  disconnect(callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
       if (this._connectionState !== 0) {
         this.send(
-          EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context),
+          EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._senderContext),
           null,
           true,
         );
@@ -295,7 +334,7 @@ export default class EIPLayer extends Layer {
       return;
     }
 
-    if (this.hasRequest()) {
+    if (this.hasRequest(false)) {
       if (this._connectionState === 0) {
         this.connect();
       } else if (this._connectionState === 2) {
@@ -332,7 +371,7 @@ export default class EIPLayer extends Layer {
               incrementContext(this);
               buffer = EIPPacket.EncodeSendRRDataMessage(
                 this._sessionHandle,
-                this._context,
+                this._senderContext,
                 message,
               );
 
@@ -345,7 +384,7 @@ export default class EIPLayer extends Layer {
               }
 
               if (request.context != null) {
-                this._unconnectedContexts.set(this._context.toString('hex'), request.context);
+                this._unconnectedContexts.set(this._senderContext.toString('hex'), request.context);
               }
             }
           } else {
@@ -359,8 +398,10 @@ export default class EIPLayer extends Layer {
           }
         }
 
-        this._totalSentSinceLastResponse += fullMessage.length;
-        this.send(fullMessage, null, false);
+        if (fullMessage) {
+          this._totalSentSinceLastResponse += fullMessage.length;
+          this.send(fullMessage, null, false);
+        }
       }
     }
   }
@@ -393,12 +434,12 @@ export default class EIPLayer extends Layer {
   //           incrementContext(this);
   //           fullMessage = EIPPacket.EncodeSendRRDataMessage(
   //             this._sessionHandle,
-  //             this._context,
+  //             this._senderContext,
   //             message,
   //           );
 
   //           if (request.context != null) {
-  //             this._unconnectedContexts.set(this._context.toString('hex'), request.context);
+  //             this._unconnectedContexts.set(this._senderContext.toString('hex'), request.context);
   //           }
   //         }
 
@@ -408,7 +449,7 @@ export default class EIPLayer extends Layer {
   //   }
   // }
 
-  handleData(data /* , info, context */) {
+  handleData(data: Buffer /* , info, context */) {
     const packet = EIPPacket.fromBuffer(data, { current: 0 });
     const { code: command } = packet.command;
 
@@ -451,8 +492,8 @@ export default class EIPLayer extends Layer {
           const messageItem = packet.items.find(
             (item) => item.type.code === CPF.ItemTypeIDs.UnconnectedMessage,
           );
-          if (messageItem) {
-            this.forward(messageItem.data, info, context);
+          if (Buffer.isBuffer(messageItem?.value)) {
+            this.forward(messageItem!.value, info, context);
           } else {
             console.log('EIP unhandled SendRRData packet', packet.items);
           }
@@ -472,12 +513,12 @@ export default class EIPLayer extends Layer {
           if (addressItem && messageItem) {
             const info = {
               connected: true,
-              responseID: addressItem.address,
-              connectionID: this._connectedContexts.get(addressItem.address),
+              responseID: addressItem.value,
+              connectionID: this._connectedContexts.get(addressItem.value),
             };
             // console.log(info);
             /** DO NOT SEND CONTEXT FOR CONNECTED MESSAGES */
-            this.forward(messageItem.data, info);
+            this.forward(messageItem.value, info);
           } else {
             console.log('EIP unhandled SendUnitData packet', packet);
           }
@@ -508,8 +549,8 @@ export default class EIPLayer extends Layer {
     this.sendNextMessage();
   }
 
-  handleDestroy(error) {
-    this._userCallbacks.forEach((callbacks) => {
+  handleDestroy(error: Error) {
+    this._userCallbacks.forEach((callbacks: Function[]) => {
       callbacks.forEach((cb) => cb(error));
     });
     cleanup(this);

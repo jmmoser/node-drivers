@@ -1,11 +1,11 @@
 import {
   encodeUnsignedInteger,
   unsignedIntegerSize,
-} from '../../utils.js';
+} from '../../utils';
 
 import {
   DataType,
-} from './constants.js';
+} from './constants';
 
 import { logicalASCIIAddressInfo } from './shared';
 

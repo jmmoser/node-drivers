@@ -1,6 +1,6 @@
 import {
   InvertKeyValues,
-} from '../../../utils.js';
+} from '../../../utils';
 
 export const GeneralStatusCodes = Object.freeze({
   Success: 0x00,

@@ -1,9 +1,9 @@
-import { CallbackPromise } from '../utils.js';
-import Layer from './layer.js';
+import { CallbackPromise } from '../utils';
+import Layer from './layer';
 import { LayerNames } from './constants';
-import PCCCPacket from '../core/pccc/packet.js';
-import * as Encoding from '../core/pccc/encoding.js';
-import * as Decoding from '../core/pccc/decoding.js';
+import PCCCPacket from '../core/pccc/packet';
+import * as Encoding from '../core/pccc/encoding';
+import * as Decoding from '../core/pccc/decoding';
 
 import { CodedValue } from '../types';
 

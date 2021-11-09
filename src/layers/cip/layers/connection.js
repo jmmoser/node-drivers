@@ -1,8 +1,8 @@
-import CIPRequest from '../../../core/cip/request.js';
-import { GeneralStatusCodes, ClassCodes } from '../../../core/cip/constants/index.js';
-import Layer from '../../layer.js';
-import { LayerNames } from '../../constants.js';
-import ConnectionManager from '../../../core/cip/objects/ConnectionManager.js';
+import CIPRequest from '../../../core/cip/request';
+import { GeneralStatusCodes, ClassCodes } from '../../../core/cip/constants/index';
+import Layer from '../../layer';
+import { LayerNames } from '../../constants';
+import ConnectionManager from '../../../core/cip/objects/ConnectionManager';
 import Connection, {
   TypeCodes,
   PriorityCodes,
@@ -10,10 +10,10 @@ import Connection, {
   TransportClassCodes,
   TransportProductionTriggerCodes,
   TransportDirectionCodes,
-} from '../../../core/cip/objects/Connection.js';
-import EPath from '../../../core/cip/epath/index.js';
+} from '../../../core/cip/objects/Connection';
+import EPath from '../../../core/cip/epath/index';
 
-import EIPLayer from '../../eip.js';
+import EIPLayer from '../../eip';
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 
