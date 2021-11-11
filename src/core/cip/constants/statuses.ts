@@ -2,6 +2,8 @@ import {
   InvertKeyValues,
 } from '../../../utils';
 
+import { CodeDescriptionMap } from '../../../types';
+
 export const GeneralStatusCodes = Object.freeze({
   Success: 0x00,
   ConnectionFailure: 0x01,
@@ -49,7 +51,7 @@ export const GeneralStatusCodes = Object.freeze({
   UnknownModbusError: 0x2B,
 });
 
-export const GeneralStatusNames = InvertKeyValues(GeneralStatusCodes);
+export const GeneralStatusNames = InvertKeyValues(GeneralStatusCodes) as CodeDescriptionMap;
 
 // // CIP-V1-1.0 Appendix B-1. General status codes
 // const GeneralStatusNames = Object.freeze({

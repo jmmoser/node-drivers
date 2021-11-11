@@ -1,6 +1,7 @@
 import EPath from '../epath/index';
 import { DataTypeCodes, DataTypeNames } from './codes';
 import convertToObject from './convertToObject';
+import { IDataType } from './types';
 
 import {
   getBits,
@@ -10,14 +11,14 @@ import {
 
 import { Ref } from '../../../types';
 
-export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, dataType, ctx) {
-  if (Array.isArray(dataType)) {
-    return dataType.map((dataTypeItem) => DecodeTypedData(buffer, offsetRef, dataTypeItem, ctx));
+export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, inputDataType: IDataType, ctx?: any): any {
+  if (Array.isArray(inputDataType)) {
+    return inputDataType.map((dataTypeItem) => DecodeTypedData(buffer, offsetRef, dataTypeItem, ctx));
   }
 
-  let value;
+  let value: any;
 
-  dataType = convertToObject(dataType);
+  let dataType: any = convertToObject(inputDataType) as any;
 
   if (ctx && ctx.dataTypeCallback) {
     /** Used to modify the datatype, especially with placeholders */
@@ -30,13 +31,16 @@ export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, dataType, ctx) {
 
   switch (dataType.code) {
     case DataTypeCodes.BOOL:
+      if (dataType.position >= 32) {
+        throw new Error('CIP boolean data type position out of range: ' + dataType.position);
+      }
       /** BOOL does not change the offset */
-      value = decodeUnsignedInteger(
+      const integerValue = decodeUnsignedInteger(
         buffer,
         offsetRef.current,
         unsignedIntegerSize(dataType.position),
       );
-      value = getBits(value, dataType.position, dataType.position + 1) > 0;
+      value = getBits(integerValue as number, dataType.position, dataType.position + 1) > 0;
       break;
     case DataTypeCodes.SINT:
       value = buffer.readInt8(offsetRef.current); offsetRef.current += 1;
@@ -104,14 +108,17 @@ export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, dataType, ctx) {
       /** Name of members is not known so use array to hold decoded member values */
       value = [];
 
-      const subCtx = {};
+      const subCtx = {} as {
+        dataTypeCallback?: (dt: IDataType) => any
+      };
       if (typeof dataType.decodeCallback === 'function') {
-        subCtx.dataTypeCallback = (dt) => dataType.decodeCallback(value, dt, dataType);
+        subCtx.dataTypeCallback = (dt: IDataType) => dataType.decodeCallback(value, dt, dataType);
       }
 
-      dataType.members.forEach((member) => {
-        value.push(DecodeTypedData(buffer, offsetRef, member, subCtx));
-      });
+      for (let i = 0; i < dataType.members.length; i++){ 
+        const memberDataType = dataType.members[i];
+        value.push(DecodeTypedData(buffer, offsetRef, memberDataType, subCtx));
+      }
 
       break;
     }

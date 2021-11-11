@@ -1,10 +1,16 @@
-const result = '127.0.0.1'.split('.').map((v) => parseInt(v, 10)).reduce((accum, v, index) => {
-  console.log(v, 8 * (3 - index));
-  accum |= v << (8 * (3 - index));
-  return accum;
-}, 0);
+// class Thing {
+//   constructor(type, name) {
+//     this.type = type;
+//     this.name = name;
+//   }
 
-console.log(result);
-const transform = (value) => `${value >>> 24}.${(value >>> 16) & 255}.${(value >>> 8) & 255}.${value & 255}`
+//   static Foo(...args) {
+//     return Thing(1, ...args);
+//   }
+// }
 
-console.log(transform(2130706433));
+// const a = new Thing.Foo('abc');
+
+// console.log(a);
+
+console.log(Buffer.from('abc', 'ascii'));

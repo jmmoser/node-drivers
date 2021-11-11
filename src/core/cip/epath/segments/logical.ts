@@ -282,7 +282,7 @@ export default class LogicalSegment {
   format: CodedValue;
   value: LogicalValue;
 
-  constructor(type: number, format: number, value: LogicalValue) {
+  constructor(type: number, value: LogicalValue, format?: number) {
     if (format == null) {
       if (typeof value !== 'number') {
         throw new Error('EPath logical segment error: Value must be a number if format is not specified');
@@ -356,30 +356,50 @@ export default class LogicalSegment {
 
     switch (type) {
       case TypeCodes.ClassID:
-        return new LogicalSegment(TypeCodes.ClassID, format, value);
+        return LogicalSegment.CreateClassID(value as number, format);
       case TypeCodes.InstanceID:
-        return new LogicalSegment(TypeCodes.InstanceID, format, value);
+        return LogicalSegment.CreateInstanceID(value as number, format);
       case TypeCodes.AttributeID:
-        return new LogicalSegment(TypeCodes.AttributeID, format, value);
+        return LogicalSegment.CreateAttributeID(value as number, format);
       case TypeCodes.MemberID:
-        return new LogicalSegment(TypeCodes.MemberID, format, value);
+        return LogicalSegment.CreateMemberID(value as number, format);
       case TypeCodes.ServiceID:
-        return new LogicalSegment(TypeCodes.ServiceID, format, value);
+        return LogicalSegment.CreateServiceID(value as number, format);
       case TypeCodes.Special:
-        return new LogicalSegment(TypeCodes.Special, format, value);
+        return new LogicalSegment(TypeCodes.Special, value, format);
       case TypeCodes.ConnectionPoint:
-        return new LogicalSegment(TypeCodes.ConnectionPoint, format, value);
+        return new LogicalSegment(TypeCodes.ConnectionPoint, value, format);
       default:
         throw new Error(`Invalid logical segment type: ${type}`);
     }
     // return new LogicalSegment(type, format, value);
   }
 
+  static CreateClassID(value: number, format?: number) {
+    return new LogicalSegment(TypeCodes.ClassID, value, format);
+  }
+
+  static CreateInstanceID(value: number, format?: number) {
+    return new LogicalSegment(TypeCodes.InstanceID, value, format);
+  }
+
+  static CreateAttributeID(value: number, format?: number) {
+    return new LogicalSegment(TypeCodes.AttributeID, value, format);
+  }
+
+  static CreateMemberID(value: number, format?: number) {
+    return new LogicalSegment(TypeCodes.MemberID, value, format);
+  }
+
+  static CreateServiceID(value: number, format?: number) {
+    return new LogicalSegment(TypeCodes.ServiceID, value, format);
+  }
+
   /** Helper function for the only kind of Special Logical Segment */
-  static SpecialNormalElectronicKey(
+  static CreateSpecialNormalElectronicKey(
     vendorID: number, deviceType: number, productCode: number, majorRevision: number, minorRevision: number, compatibility: boolean,
   ) {
-    return new LogicalSegment(TypeCodes.Special, SpecialFormatCodes.ElectronicKey, {
+    const value = {
       vendorID,
       deviceType,
       productCode,
@@ -389,7 +409,9 @@ export default class LogicalSegment {
       },
       compatibility,
       format: ElectronicKeyFormatCodes.Normal,
-    });
+    };
+
+    return new LogicalSegment(TypeCodes.Special, value, SpecialFormatCodes.ElectronicKey);
   }
 
   static get Types() {

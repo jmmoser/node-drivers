@@ -4,7 +4,8 @@ export interface Ref {
 
 export type CodedValue = {
   code: number;
-  description: string;
+  name?: string;
+  description?: string;
 }
 
 export interface CodeDescriptionMap {

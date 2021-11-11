@@ -9,22 +9,26 @@ import { LayerNames } from '../constants';
 
 import * as PCCCHandler from './handlers/pccc';
 
+type CIPLayerOptions = PCCCHandler.PCCCOptions;
+
 export default class CIPLayer extends Layer {
-  constructor(lowerLayer, options) {
+  _options?: CIPLayerOptions;
+
+  constructor(lowerLayer: Layer, options?: PCCCHandler.PCCCOptions) {
     /** Inject Connection as lower layer */
     super(LayerNames.CIP, new ConnectionLayer(lowerLayer, options));
     this._options = options;
   }
 
-  sendRequest(connected, request, callback) {
+  sendRequest(connected: boolean, request: CIPRequest, callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
       const timeout = null;
 
-      const context = this.contextCallback((error, message) => {
+      const context = this.contextCallback((error?: Error, message?: Buffer) => {
         try {
           if (error) {
             resolver.reject(error, message);
-          } else {
+          } else if (message) {
             const res = request.response(message, { current: 0 });
             if (res.status.error) {
               resolver.reject(res.status.description, res);
@@ -41,7 +45,7 @@ export default class CIPLayer extends Layer {
     });
   }
 
-  exploreAttributes(classCode, instanceID, maxAttribute, callback) {
+  exploreAttributes(classCode: number, instanceID: number, maxAttribute: number, callback?: Function) {
     if (typeof maxAttribute === 'function') {
       callback = maxAttribute;
       maxAttribute = null;

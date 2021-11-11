@@ -1,8 +1,8 @@
 import { DataTypeCodes } from './codes';
 
-interface DataType {
+export interface IDataType {
   (): {
-    type: DataType;
+    type: IDataType;
     code: number;
   } 
 }
@@ -95,7 +95,7 @@ export const DataType = {
   TIME() {
     return { type: DataType.TIME, code: DataTypeCodes.TIME };
   },
-  EPATH(padded: boolean, length: number) {
+  EPATH(padded: boolean, length?: number) {
     // eslint-disable-next-line object-curly-newline
     return { type: DataType.EPATH, code: DataTypeCodes.EPATH, padded, length };
   },
@@ -103,6 +103,13 @@ export const DataType = {
     return { type: DataType.ENGUNIT, code: DataTypeCodes.ENGUNIT };
   },
   STRINGI() {
+    DataType.TRANSFORM(
+      /* First three characters of the ISO 639-2/T language */
+      DataType.ARRAY(DataType.USINT, 0, 2),
+      (val: number) => Buffer.from(val).toString('ascii'),
+      (val) => Buffer.from(val, 'ascii')
+    )
+
     /** See CIP Vol 1, Appendix C-4.1 for abstract syntax notation */
     return {
       type: DataType.STRINGI,
@@ -116,6 +123,7 @@ export const DataType = {
                 /* First three characters of the ISO 639-2/T language */
                 DataType.ARRAY(DataType.USINT, 0, 2),
                 (val) => Buffer.from(val).toString('ascii'),
+                (val) => Buffer.from(val, 'ascii')
               ),
               // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
               DataType.EPATH(false),
@@ -151,7 +159,7 @@ export const DataType = {
       crc,
     };
   },
-  ABBREV_ARRAY(itemType: DataType, length: number) {
+  ABBREV_ARRAY(itemType: IDataType, length: number) {
     return {
       type: DataType.ABBREV_ARRAY,
       code: DataTypeCodes.ABBREV_ARRAY,
@@ -164,7 +172,7 @@ export const DataType = {
   /**
    * decodeCallback(decodedMembers, memberDataType, structDataType)
    *  - is called before each member is decoded */
-  STRUCT<T extends DataType>(members: T[], decodeCallback: (a0: T[], a1: T) => any) {
+  STRUCT<T extends IDataType>(members: T[], decodeCallback: (a0: T[], a1: T & { resolve: (val: any) => any}) => any) {
     return {
       type: DataType.STRUCT,
       code: DataTypeCodes.STRUCT,
@@ -174,7 +182,7 @@ export const DataType = {
       decodeCallback,
     };
   },
-  ARRAY(itemType, lowerBound: number, upperBound: number, lowerBoundTag: number, upperBoundTag: number) {
+  ARRAY(itemType: IDataType, lowerBound: number, upperBound: number, lowerBoundTag?: number, upperBoundTag?: number) {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
@@ -191,14 +199,14 @@ export const DataType = {
     return {
       type: DataType.PLACEHOLDER,
       code: DataTypeCodes.PLACEHOLDER,
-      resolve: resolve || ((dt) => dt),
+      resolve: typeof resolve === 'function' ? resolve : ((dt: IDataType) => dt),
     };
   },
   /**
    * decodeTransform transforms from CIP data type to friendly data type
    * encodeTransform transforms friendly data type to CIP data type
    * */
-  TRANSFORM(dataType: DataType, decodeTransform: Function, encodeTransform: Function) {
+  TRANSFORM(dataType: IDataType, decodeTransform: Function, encodeTransform: Function) {
     return {
       type: DataType.TRANSFORM,
       code: DataTypeCodes.TRANSFORM,

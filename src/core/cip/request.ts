@@ -11,37 +11,60 @@ import {
 
 import EPath from './epath/index';
 
-import { Ref } from '../../types';
+import { Ref, CodedValue } from '../../types';
 
-const EncodeSizeSymbol = Symbol('encodeSize');
+type ResponseHandler = CIPRequest | ((buffer: Buffer, offsetRef: Ref) => void);
+
+type CIPRequestOptions = {
+  acceptedServiceCodes: number[];
+  serviceNames?: string[];
+  statusHandler?: (statusCode: number, extendedStatus: Buffer) => { name?: string, description?: string, type?: string };
+  errorDataHandler?: (buffer: Buffer, offsetRef: Ref, response: any) => void;
+};
+
+interface CIPStatus extends CodedValue {
+  extended: Buffer;
+  type: string;
+  error: boolean;
+}
+
+interface CIPResponse {
+  request: CIPRequest;
+  service: CodedValue;
+  status: CIPStatus;
+}
+
+// const EncodeSizeSymbol = Symbol('encodeSize');
 const RequestMessageSymbol = Symbol('requestMessage');
 const ResponseDataHandlerSymbol = Symbol('responseDataHandler');
 
-function DecodeResponse(buffer: Buffer, offsetRef: Ref, options, request, handler) {
+function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptions, request?: Buffer, handler) {
   const opts = options || {};
 
-  const res = {};
+  const res: CIPResponse = {};
 
   if (request) {
     res.request = request;
   }
-  res.buffer = buffer.slice(offsetRef.current);
-  // res.service = buffer.readUInt8(offset); offset += 1;
-  const service = buffer.readUInt8(offsetRef.current) & 0x7F; offsetRef.current += 1;
 
-  if (opts.acceptedServiceCodes && opts.acceptedServiceCodes.indexOf(service) < 0) {
-    throw new Error(`Invalid service. Expected one of [${opts.acceptedServiceCodes.join(',')}], Received ${service}`);
+  // res.buffer = buffer.slice(offsetRef.current);
+  const startingOffset = offsetRef.current;
+
+  const serviceCode = buffer.readUInt8(offsetRef.current) & 0x7F; offsetRef.current += 1;
+
+  if (opts.acceptedServiceCodes && opts.acceptedServiceCodes.indexOf(serviceCode) < 0) {
+    throw new Error(`Invalid service. Expected one of [${opts.acceptedServiceCodes.join(',')}], Received ${serviceCode}`);
   }
 
-  res.service = {
-    code: service,
-    hex: `0x${service.toString(16).padStart(2, '0')}`,
-    name: CommonServiceNames[service],
+  const service = {
+    code: serviceCode,
+    hex: `0x${serviceCode.toString(16).padStart(2, '0')}`,
+    name: CommonServiceNames[serviceCode],
   };
 
-  if (!res.service.name) {
-    if (opts.serviceNames && opts.serviceNames[service]) {
-      res.service.name = opts.serviceNames[service];
+  if (!service.name) {
+    if (opts.serviceNames && opts.serviceNames[serviceCode]) {
+      res.service.name = opts.serviceNames[serviceCode];
     } else {
       res.service.name = 'Unknown';
     }
@@ -51,38 +74,43 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options, request, handle
 
   const statusCode = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
-  res.status = {};
-  res.status.code = statusCode;
-  res.status.error = (
+  const statusError = (
     statusCode !== GeneralStatusCodes.Success
     && statusCode !== GeneralStatusCodes.PartialTransfer
   );
-  res.status.name = GeneralStatusNames[statusCode] || '';
-  res.status.description = GeneralStatusDescriptions[statusCode] || (res.status.error ? 'CIP Error' : '');
+
+  
 
   /** Number of 16 bit words */
   const extendedStatusSize = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
-  res.status.extended = buffer.slice(offsetRef.current, offsetRef.current + 2 * extendedStatusSize);
+  const extendedStatus = buffer.slice(offsetRef.current, offsetRef.current + 2 * extendedStatusSize);
   offsetRef.current += 2 * extendedStatusSize;
+
+  const status: CIPStatus = {
+    code: statusCode,
+    name: GeneralStatusNames[statusCode] || '',
+    description: GeneralStatusDescriptions[statusCode] || (statusError ? 'CIP Error' : ''),
+    error: statusError,
+  }
 
   res.data = buffer.slice(offsetRef.current);
 
   if (typeof opts.statusHandler === 'function') {
-    opts.statusHandler(statusCode, res.status.extended, (name, description, type) => {
-      if (name) {
-        res.status.name = name;
-      }
-      if (description) {
-        res.status.description = description;
-      }
-      if (type) {
-        res.status.type = type;
-      }
-    });
+    const statusHandlerOutput = opts.statusHandler(statusCode, extendedStatus);
+
+    if (statusHandlerOutput.name) {
+      status.name = statusHandlerOutput.name;
+    }
+    if (statusHandlerOutput.description) {
+      status.description = statusHandlerOutput.description;
+    }
+    if (statusHandlerOutput.type) {
+      status.type = statusHandlerOutput.type;
+    }
   }
 
   if (res.data.length > 0) {
-    if (res.status.error === false && typeof handler === 'function') {
+    if (status.error === false && typeof handler === 'function') {
       if (handler.length === 4) {
         res.value = handler(buffer, offsetRef, res);
       } else {
@@ -90,20 +118,27 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options, request, handle
       }
     }
 
-    if (res.status.error && typeof opts.errorDataHandler === 'function') {
+    if (status.error && typeof opts.errorDataHandler === 'function') {
       opts.errorDataHandler(buffer, offsetRef, res);
     }
   }
 
-  return res;
+  return {
+    ...res,
+    status
+  };
 }
 
 export default class CIPRequest {
   service: number;
-  path: Buffer;
-  data: Buffer;
+  path?: Buffer;
+  data?: Buffer;
+  options: CIPRequestOptions
+  [ResponseDataHandlerSymbol]: ResponseHandler;
+  // [EncodeSizeSymbol]?: number;
+  [RequestMessageSymbol]?: Buffer;
   
-  constructor(service: number, path: Buffer, data: Buffer, responseHandler, options) {
+  constructor(service: number, path?: Buffer, data?: Buffer, responseHandler?: ResponseHandler, options?: CIPRequestOptions) {
     this.service = service;
     this.path = path;
     this.data = data;
@@ -124,9 +159,9 @@ export default class CIPRequest {
   }
 
   encodeSize() {
-    if (this[EncodeSizeSymbol] != null) {
-      return this[EncodeSizeSymbol];
-    }
+    // if (this[EncodeSizeSymbol] != null) {
+    //   return this[EncodeSizeSymbol]!;
+    // }
     let size = 1;
     if (Buffer.isBuffer(this.path)) {
       size += 1 + this.path.length;
@@ -134,7 +169,7 @@ export default class CIPRequest {
     if (Buffer.isBuffer(this.data)) {
       size += this.data.length;
     }
-    this[EncodeSizeSymbol] = size;
+    // this[EncodeSizeSymbol] = size;
     return size;
   }
 
@@ -189,13 +224,13 @@ export default class CIPRequest {
 }
 
 const MessageRouterPath = EPath.Encode(true, [
-  new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
-  new EPath.Segments.Logical.InstanceID(1),
+  EPath.Segments.Logical.CreateClassID(ClassCodes.MessageRouter),
+  EPath.Segments.Logical.CreateInstanceID(1),
 ]);
 
-function MultiCreateDataHandler(requests) {
+function MultiCreateDataHandler(requests: CIPRequest[]) {
   return (buffer: Buffer, offsetRef: Ref) => {
-    const numberOfReplies = buffer.readUInt16LE(offsetRef.current, 0); // offsetRef.current += 2;
+    const numberOfReplies = buffer.readUInt16LE(offsetRef.current); // offsetRef.current += 2;
 
     if (numberOfReplies !== requests.length) {
       throw new Error(`CIP Multiple Service response expected ${requests.length} replies but only received ${numberOfReplies}`);
@@ -222,11 +257,13 @@ function MultiCreateDataHandler(requests) {
 }
 
 class CIPMultiServiceRequest extends CIPRequest {
-  constructor(requests, path: Buffer) {
+  requests: CIPRequest[];
+
+  constructor(requests: CIPRequest[], path: Buffer) {
     super(
       CommonServiceCodes.MultipleServicePacket,
       path || MessageRouterPath,
-      null,
+      undefined,
       MultiCreateDataHandler(requests),
     );
 
@@ -234,15 +271,15 @@ class CIPMultiServiceRequest extends CIPRequest {
   }
 
   encodeSize() {
-    if (this[EncodeSizeSymbol] != null) {
-      return this[EncodeSizeSymbol];
-    }
+    // if (this[EncodeSizeSymbol] != null) {
+    //   return this[EncodeSizeSymbol]!;
+    // }
     const count = this.requests.length;
     let size = super.encodeSize() + 2 + 2 * count;
     for (let i = 0; i < count; i++) {
       size += this.requests[i].encodeSize();
     }
-    this[EncodeSizeSymbol] = size;
+    // this[EncodeSizeSymbol] = size;
     return size;
   }
 

@@ -1,6 +1,6 @@
 import { DefaultOptions, CreateExecutePCCCServiceRequest } from '../../../core/cip/objects/PCCC';
 
-type Options = {
+export type PCCCOptions = {
   vendorID: number;
   serialNumber: number;
 };

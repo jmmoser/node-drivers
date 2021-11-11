@@ -57,7 +57,6 @@ type UnconnectedMessageValue = Buffer;
 
 export interface CPFPacket {
   type: CodedValue;
-  // data: Buffer;
   value: NullAddressValue | ConnectedAddressValue | ListIdentityValue | ListServicesValue | SequencedAddressValue | UnconnectedMessageValue;
 }
 

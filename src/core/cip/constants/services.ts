@@ -2,6 +2,8 @@ import {
   InvertKeyValues,
 } from '../../../utils';
 
+import { CodeDescriptionMap } from '../../../types';
+
 /** CIP Vol1 Appendix A */
 export const CommonServiceCodes = Object.freeze({
   GetAttributesAll: 0x01,
@@ -28,4 +30,4 @@ export const CommonServiceCodes = Object.freeze({
   GroupSync: 0x1C,
 });
 
-export const CommonServiceNames = InvertKeyValues(CommonServiceCodes);
+export const CommonServiceNames = InvertKeyValues(CommonServiceCodes) as CodeDescriptionMap;
