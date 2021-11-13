@@ -1,7 +1,7 @@
 import EPath from '../epath/index';
 import { DataTypeCodes, DataTypeNames } from './codes';
 import convertToObject from './convertToObject';
-import { IDataType, IDataTypeOption, BoolDataType, StructDataType } from './types';
+import { IDataType, IDataTypeOption, BoolDataType, StructDataType, ArrayDataType, AbbrArrayDataType, EPathDataType, UnknownDataType, TransformDataType } from './types';
 
 import {
   getBits,
@@ -106,66 +106,71 @@ export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, inputDataType: I
       value = buffer.readDoubleLE(offsetRef.current); offsetRef.current += 8;
       break;
     case DataTypeCodes.STRUCT: {
-      const structDataType = dataType as StructDataType;
+      const { members, decodeCallback } = dataType as StructDataType;
       /** Name of members is not known so use array to hold decoded member values */
       value = [];
 
       const subCtx = {} as {
         dataTypeCallback?: (dt: IDataType) => any
       };
-      if (typeof structDataType.decodeCallback === 'function') {
-        subCtx.dataTypeCallback = (dt: IDataType) => structDataType.decodeCallback(value, dt, structDataType);
+      if (typeof decodeCallback === 'function') {
+        subCtx.dataTypeCallback = (dt: IDataType) => decodeCallback(value, dt, dataType as StructDataType);
       }
 
-      for (let i = 0; i < structDataType.members.length; i++){
-        const memberDataType = structDataType.members[i];
+      for (let i = 0; i < members.length; i++){
+        const memberDataType = members[i];
         value.push(DecodeTypedData(buffer, offsetRef, memberDataType, subCtx));
       }
 
       break;
     }
     case DataTypeCodes.ARRAY: {
+      const { lowerBound, upperBound, itemType } = dataType as ArrayDataType;
       value = [];
-      for (let i = dataType.lowerBound; i <= dataType.upperBound; i++) {
-        value.push(DecodeTypedData(buffer, offsetRef, dataType.itemType));
+      for (let i = lowerBound; i <= upperBound; i++) {
+        value.push(DecodeTypedData(buffer, offsetRef, itemType));
       }
       break;
     }
     case DataTypeCodes.ABBREV_ARRAY: {
+      const { length, itemType } = dataType as AbbrArrayDataType;
       value = [];
-      if (dataType.length === true) {
+      if (length === true) {
         while (offsetRef.current < buffer.length) {
           const previousOffset = offsetRef.current;
-          value.push(DecodeTypedData(buffer, offsetRef, dataType.itemType));
+          value.push(DecodeTypedData(buffer, offsetRef, itemType));
           /** Make sure nextOffset is greater than offset */
           if (offsetRef.current <= previousOffset) {
             throw new Error('Unexpected offset while decoding abbreviated array');
           }
         }
       } else {
-        if (!Number.isInteger(dataType.length) || dataType.length < 0) {
-          throw new Error(`Abbreviate array length must be a non-negative integer to decode values. Received: ${dataType.length}`);
+        if (!Number.isInteger(length) || length < 0) {
+          throw new Error(`Abbreviate array length must be a non-negative integer to decode values. Received: ${length}`);
         }
-        for (let i = 0; i < dataType.length; i++) {
-          value.push(DecodeTypedData(buffer, offsetRef, dataType.itemType));
+        for (let i = 0; i < length; i++) {
+          value.push(DecodeTypedData(buffer, offsetRef, itemType));
         }
       }
 
       break;
     }
     case DataTypeCodes.EPATH:
-      value = EPath.Decode(buffer, offsetRef, dataType.length, dataType.padded);
+      const { length, padded } = dataType as EPathDataType;
+      value = EPath.Decode(buffer, offsetRef, length, padded);
       break;
     case DataTypeCodes.UNKNOWN: {
-      value = buffer.slice(offsetRef.current, offsetRef.current + dataType.length);
-      offsetRef.current += dataType.length;
+      const { length } = dataType as UnknownDataType;
+      value = buffer.slice(offsetRef.current, offsetRef.current + length);
+      offsetRef.current += length;
       break;
     }
     case DataTypeCodes.TRANSFORM: {
-      value = dataType.decodeTransform(DecodeTypedData(
+      const { dataType: innerDataType, decodeTransform } = dataType as TransformDataType;
+      value = decodeTransform(DecodeTypedData(
         buffer,
         offsetRef,
-        dataType.dataType,
+        innerDataType,
       ));
       break;
     }

@@ -6,25 +6,29 @@ import {
 
 import convertDataTypeToObject from '../../datatypes/convertToObject';
 import { DataTypeCodes, DataTypeNames } from '../../datatypes/codes';
-import { DataType } from '../../datatypes/types';
+import { DataType, IDataTypeOption, StructDataType, AbbrStructDataType, ArrayDataType, AbbrArrayDataType, IDataType } from '../../datatypes/types';
 
 import { Ref } from '../../../../types';
 
-function DecodeDataType(buffer: Buffer, offsetRef: Ref) {
+function DecodeDataType(buffer: Buffer, offsetRef: Ref): IDataTypeOption {
   let type;
   const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   switch (code) {
     case DataTypeCodes.ABBREV_STRUCT: {
       const length = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
       const crc = decodeUnsignedInteger(buffer, offsetRef.current, length);
-      offsetRef.current += length;
-      type = DataType.ABBREV_STRUCT(crc);
+      if (typeof crc === 'number') {
+        offsetRef.current += length;
+        type = DataType.ABBREV_STRUCT(crc);
+      } else {
+        throw new Error('Abbreviated struct crc is not number: ' + crc);
+      }
       break;
     }
     case DataTypeCodes.ABBREV_ARRAY: {
       /* const length = buffer.readUInt8(offset); */ offsetRef.current += 1;
       const itemType = DecodeDataType(buffer, offsetRef);
-      type = DataType.ABBREV_ARRAY(itemType);
+      type = DataType.ABBREV_ARRAY(itemType, false);
       break;
     }
     case DataTypeCodes.STRUCT: {
@@ -50,36 +54,41 @@ function DecodeDataType(buffer: Buffer, offsetRef: Ref) {
       const upperBound = decodeUnsignedInteger(buffer, offsetRef.current, upperBoundLength);
       offsetRef.current += upperBoundLength;
 
-      const itemType = DecodeDataType(buffer, offsetRef);
-      type = DataType.ARRAY(itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag);
+      if (typeof lowerBound === 'number' && typeof upperBound === 'number') {
+        const itemType = DecodeDataType(buffer, offsetRef);
+        type = DataType.ARRAY(itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag);
+      } else {
+        throw new Error('Array data type lower or upper bound values are not numbers');
+      }
       break;
     }
     default:
-      type = DataType[DataTypeNames[code]];
+      type = (DataType as any)[DataTypeNames[code]] as IDataType;
       break;
   }
 
   return type;
 }
 
-function encodeSize(type) {
+function encodeSize(type: IDataTypeOption): number {
   type = convertDataTypeToObject(type);
   let size;
   switch (type.code) {
     case DataTypeCodes.STRUCT:
+      const { members } = type as StructDataType;
       size = 2;
-      for (let i = 0; i < type.members.length; i++) {
-        size += encodeSize(type.members[i]);
+      for (let i = 0; i < members.length; i++) {
+        size += encodeSize(members[i]);
       }
       break;
     case DataTypeCodes.ARRAY:
-      size = 8 + encodeSize(type.itemType);
+      size = 8 + encodeSize((type as ArrayDataType).itemType);
       break;
     case DataTypeCodes.ABBREV_STRUCT:
       size = 4;
       break;
     case DataTypeCodes.ABBREV_ARRAY:
-      size = 2 + encodeSize(type.itemType);
+      size = 2 + encodeSize((type as AbbrArrayDataType).itemType);
       break;
     default:
       size = 1;
@@ -87,37 +96,42 @@ function encodeSize(type) {
   return size;
 }
 
-function encodeTo(buffer: Buffer, offset: number, type) {
+function encodeTo(buffer: Buffer, offset: number, type: IDataTypeOption) {
   type = convertDataTypeToObject(type);
   offset = buffer.writeUInt8(type.code, offset);
 
   switch (type.code) {
     case DataTypeCodes.STRUCT:
+      const { members } = type as StructDataType;
       offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
-      for (let i = 0; i < type.members.length; i++) {
-        offset = encodeTo(buffer, offset, type.members[i]);
+      for (let i = 0; i < members.length; i++) {
+        offset = encodeTo(buffer, offset, members[i]);
       }
       break;
     case DataTypeCodes.ABBREV_STRUCT:
       offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
-      offset = buffer.writeUInt16LE(type.crc, offset);
+      offset = buffer.writeUInt16LE((type as AbbrStructDataType).crc, offset);
       break;
     case DataTypeCodes.ARRAY: {
+      const { itemType, lowerBound, upperBound, lowerBoundTag, upperBoundTag } = type as ArrayDataType;
+      if (lowerBoundTag == null || upperBoundTag == null) {
+        throw new Error('EPath data type segment lower and upper bound tags must be specified.');
+      }
       offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
-      offset = buffer.writeUInt8(type.lowerBoundTag, offset);
-      const lowerSize = unsignedIntegerSize(type.lowerBound);
+      offset = buffer.writeUInt8(lowerBoundTag, offset);
+      const lowerSize = unsignedIntegerSize(lowerBound);
       offset = buffer.writeUInt8(lowerSize, offset);
-      offset = encodeUnsignedInteger(buffer, offset, type.lowerBound, lowerSize);
-      offset = buffer.writeUInt8(type.upperBoundTag, offset);
-      const upperSize = unsignedIntegerSize(type.upperBound);
+      offset = encodeUnsignedInteger(buffer, offset, lowerBound, lowerSize);
+      offset = buffer.writeUInt8(upperBoundTag, offset);
+      const upperSize = unsignedIntegerSize(upperBound);
       offset = buffer.writeUInt8(upperSize, offset);
-      offset = encodeUnsignedInteger(buffer, offset, type.upperBound, upperSize);
-      offset = encodeTo(buffer, offset, type.itemType);
+      offset = encodeUnsignedInteger(buffer, offset, upperBound, upperSize);
+      offset = encodeTo(buffer, offset, itemType);
       break;
     }
     case DataTypeCodes.ABBREV_ARRAY:
       offset = buffer.writeUInt8(encodeSize(type) - 2, offset);
-      offset = encodeTo(buffer, offset, type.itemType);
+      offset = encodeTo(buffer, offset, (type as AbbrArrayDataType).itemType);
       break;
     default:
       break;
@@ -126,7 +140,9 @@ function encodeTo(buffer: Buffer, offset: number, type) {
 }
 
 export default class DataTypeSegment {
-  constructor(value) {
+  value: IDataTypeOption;
+
+  constructor(value: IDataTypeOption) {
     this.value = convertDataTypeToObject(value);
   }
 

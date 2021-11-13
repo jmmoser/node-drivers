@@ -54,12 +54,12 @@ class EPath {
     return segments;
   }
 
-  static Decode(buffer: Buffer, offsetRef: Ref, length: number, padded: boolean) {
+  static Decode(buffer: Buffer, offsetRef: Ref, length: number | boolean, padded: boolean) {
     if (length === true) {
       length = buffer.length - offsetRef.current; // eslint-disable-line no-param-reassign
     }
 
-    const lengthIsUnknown = length == null;
+    const lengthIsUnknown = length === false;
     if (lengthIsUnknown) {
       /** Allow length to be unknown? Assume a single segment */
       length = 1; // eslint-disable-line no-param-reassign

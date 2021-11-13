@@ -68,9 +68,9 @@ export default class CIPLayer extends Layer {
 
       const attributeValues = await Promise.all(attributes.map(async (attribute) => {
         const path = EPath.Encode(true, [
-          new EPath.Segments.Logical.ClassID(classCode),
-          new EPath.Segments.Logical.InstanceID(instanceID),
-          new EPath.Segments.Logical.AttributeID(attribute),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, classCode),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, classCode),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.AttributeID, classCode),
         ]);
         const reply = await this.sendRequest(true, new CIPRequest(service, path));
         return {
@@ -99,7 +99,7 @@ export default class CIPLayer extends Layer {
     }
   }
 
-  handleData(data, info, context) {
+  handleData(data: Buffer, info: any, context: any) {
     if (context && context.internal === false) {
       const response = context.request.response(data);
       if (context.type === 'pccc') {

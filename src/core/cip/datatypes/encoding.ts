@@ -1,13 +1,12 @@
 import EPath from '../epath/index';
 import { DataTypeCodes, DataTypeNames } from './codes';
+import { IDataTypeOption, EPathDataType, ArrayDataType, AbbrArrayDataType, StructDataType, TransformDataType, UnknownDataType } from './types';
 import convertToObject from './convertToObject';
 
-export function EncodeSize(dataType, value) {
+export function EncodeSize(dataType: IDataTypeOption, value: any): number {
   dataType = convertToObject(dataType);
 
-  const dataTypeCode = dataType.code != null ? dataType.code : dataType;
-
-  switch (dataTypeCode) {
+  switch (dataType.code) {
     case DataTypeCodes.SINT:
     case DataTypeCodes.USINT:
     case DataTypeCodes.BYTE:
@@ -39,10 +38,11 @@ export function EncodeSize(dataType, value) {
     case DataTypeCodes.LREAL:
       return 8;
     case DataTypeCodes.EPATH:
-      return EPath.EncodeSize(dataType.padded, value);
+      return EPath.EncodeSize((dataType as EPathDataType).padded, value);
     case DataTypeCodes.ARRAY: {
-      const bounds = (dataType.upperBound - dataType.lowerBound) + 1;
-      const size = EncodeSize(dataType.itemType, value[0]);
+      const { lowerBound, upperBound, itemType } = dataType as ArrayDataType;
+      const bounds = (upperBound - lowerBound) + 1;
+      const size = EncodeSize(itemType, value[0]);
       return bounds * size;
     }
     case DataTypeCodes.ABBREV_ARRAY:
@@ -52,29 +52,32 @@ export function EncodeSize(dataType, value) {
       if (value.length === 0) {
         return 0;
       }
-      return value.length * EncodeSize(dataType.itemType, value[0]);
+      return value.length * EncodeSize((dataType as AbbrArrayDataType).itemType, value[0]);
     case DataTypeCodes.STRUCT: {
+      const { members } = dataType as StructDataType;
       let size = 0;
-      for (let i = 0; i < dataType.members.length; i++) {
-        size += EncodeSize(dataType.members[i], value[i]);
+      for (let i = 0; i < members.length; i++) {
+        size += EncodeSize(members[i], value[i]);
       }
       return size;
     }
     case DataTypeCodes.TRANSFORM:
-      return EncodeSize(dataType.dataType, dataType.encodeTransform(value));
+      const { dataType: innerDataType, encodeTransform } = dataType as TransformDataType;
+      return EncodeSize(innerDataType, encodeTransform(value));
     case DataTypeCodes.UNKNOWN:
-      return dataType.length;
+      return (dataType as UnknownDataType).length;
     default:
-      throw new Error(`Encoding size for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
+      throw new Error(`Encoding size for data type is not currently supported: ${DataTypeNames[dataType.code] || dataType.code}`);
   }
 }
 
-export function EncodeTo(buffer, offset, dataType, value) {
-  if (dataType instanceof Function) dataType = dataType();
+export function EncodeTo(buffer: Buffer, offset: number, dataType: IDataTypeOption, value: any) {
+  // if (dataType instanceof Function) dataType = dataType();
+  dataType = convertToObject(dataType);
 
-  const dataTypeCode = dataType.code != null ? dataType.code : dataType;
+  // const dataTypeCode = dataType.code != null ? dataType.code : dataType;
 
-  switch (dataTypeCode) {
+  switch (dataType.code) {
     case DataTypeCodes.SINT:
       offset = buffer.writeInt8(value, offset);
       break;
@@ -135,7 +138,7 @@ export function EncodeTo(buffer, offset, dataType, value) {
       offset = buffer.writeDoubleLE(value, offset);
       break;
     case DataTypeCodes.EPATH:
-      offset = EPath.EncodeTo(buffer, offset, dataType.padded, value);
+      offset = EPath.EncodeTo(buffer, offset, (dataType as EPathDataType).padded, value);
       break;
     case DataTypeCodes.ARRAY:
     case DataTypeCodes.ABBREV_ARRAY: {
@@ -143,31 +146,33 @@ export function EncodeTo(buffer, offset, dataType, value) {
         throw new Error(`Value must be an array to encode an array. Received: ${typeof value}`);
       }
       for (let i = 0; i < value.length; i++) {
-        offset = EncodeTo(buffer, offset, dataType.itemType, value[i]);
+        offset = EncodeTo(buffer, offset, (dataType as ArrayDataType).itemType, value[i]);
       }
       break;
     }
     case DataTypeCodes.STRUCT:
-      if (!Array.isArray(value) || value.length !== dataType.members.length) {
+      const { members } = dataType as StructDataType;
+      if (!Array.isArray(value) || value.length !== members.length) {
         throw new Error(`Value must be an array to encode an array. Received: ${typeof value}`);
       }
-      for (let i = 0; i < dataType.members.length; i++) {
-        offset = EncodeTo(buffer, offset, dataType.members[i], value[i]);
+      for (let i = 0; i < members.length; i++) {
+        offset = EncodeTo(buffer, offset, members[i], value[i]);
       }
       break;
     case DataTypeCodes.TRANSFORM:
-      offset = EncodeTo(buffer, offset, dataType.dataType, dataType.encodeTransform(value));
+      const { dataType: innerDataType, encodeTransform } = dataType as TransformDataType;
+      offset = EncodeTo(buffer, offset, innerDataType, encodeTransform(value));
       break;
     case DataTypeCodes.BOOL:
       throw new Error("Boolean encoding isn't currently supported, use BYTE instead");
     default:
-      throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataTypeCode] || dataTypeCode}`);
+      throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataType.code] || dataType.code}`);
   }
 
   return offset;
 }
 
-export function Encode(dataType, value) {
+export function Encode(dataType: IDataTypeOption, value: any) {
   const buffer = Buffer.alloc(EncodeSize(dataType, value));
   EncodeTo(buffer, 0, dataType, value);
   return buffer;

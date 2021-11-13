@@ -70,7 +70,7 @@ function buildTransportClassTriggerCode(transport) {
   );
 }
 
-function mergeOptionsWithDefaults(self, options) {
+function mergeOptionsWithDefaults(self: CIPConnectionLayer, options) {
   const opts = options || {};
 
   self.networkConnectionParameters = {
@@ -125,24 +125,24 @@ function mergeOptionsWithDefaults(self, options) {
 
   self.route = EPath.Encode(true, opts.fullRoute || [
     ...opts.route,
-    new EPath.Segments.Logical.ClassID(ClassCodes.MessageRouter),
-    new EPath.Segments.Logical.InstanceID(0x01),
+    new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, ClassCodes.MessageRouter),
+    new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, 1),
   ]);
 }
 
-function incrementSequenceCount(self) {
+function incrementSequenceCount(self: CIPConnectionLayer) {
   self._sequenceCount = (self._sequenceCount + 1) % 0x10000;
   return self._sequenceCount;
 }
 
-function stopResend(self) {
+function stopResend(self: CIPConnectionLayer) {
   if (self.__resendInterval != null) {
     clearInterval(self.__resendInterval);
     self.__resendInterval = null;
   }
 }
 
-function startResend(self, lastMessage) {
+function startResend(self: CIPConnectionLayer, lastMessage) {
   stopResend(self);
 
   self.__resendInterval = setInterval(() => {
@@ -157,7 +157,7 @@ function startResend(self, lastMessage) {
  *  unconnected, internal => callback
  *  unconnected, external => context
  */
-function send(self, connected, internal, requestObj, contextOrCallback) {
+function send(self: CIPConnectionLayer, connected, internal, requestObj, contextOrCallback) {
   let context;
   let callback;
   if (internal && typeof contextOrCallback === 'function') {
@@ -368,7 +368,12 @@ function connect(self) {
 }
 
 export default class CIPConnectionLayer extends Layer {
-  constructor(lowerLayer, options) {
+  _connectionState: number;
+  _sequenceCount: number;
+  _disconnect?: Promise<any>;
+  route?: Buffer;
+
+  constructor(lowerLayer: Layer, options) {
     if (lowerLayer == null) {
       throw new Error('Lower layer is currently required to use ');
     } else if ([LayerNames.TCP, LayerNames.UDP].indexOf(lowerLayer.name) >= 0) {
@@ -398,7 +403,7 @@ export default class CIPConnectionLayer extends Layer {
 
     this._disconnect = new Promise((resolve) => {
       const disconnectTimeout = setTimeout(() => {
-        resolve();
+        resolve(undefined);
       }, 5000);
 
       const request = ConnectionManager.ForwardClose(this);
@@ -407,10 +412,10 @@ export default class CIPConnectionLayer extends Layer {
         clearTimeout(disconnectTimeout);
         if (err || res == null || res.status.code !== 0) {
           console.log('CIP connection unsuccessful close', err, res);
-          this.destroy('Forward Close error');
+          this.destroy(new Error('Forward Close error'));
         }
         this._connectionState = 0;
-        resolve();
+        resolve(undefined);
       });
     });
 
@@ -440,7 +445,7 @@ export default class CIPConnectionLayer extends Layer {
     }
   }
 
-  handleData(data, info, context) {
+  handleData(data: Buffer, info: any, context: any) {
     if (context != null) {
       /** Unconnected Message */
       handleUnconnectedMessage(this, data, info, context);

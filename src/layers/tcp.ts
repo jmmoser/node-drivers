@@ -12,7 +12,7 @@ const TCPStateCodes = {
   Connected: 2,
 };
 
-function setConnectionState(layer, state) {
+function setConnectionState(layer: TCPLayer, state: number) {
   const previousState = layer._connectionState;
 
   if (previousState !== state) {
@@ -40,7 +40,7 @@ function setConnectionState(layer, state) {
   }
 }
 
-function connect(layer) {
+function connect(layer: TCPLayer) {
   if (
     layer._connectionState === TCPStateCodes.Connecting
     || layer._connectionState === TCPStateCodes.Connected
@@ -125,6 +125,9 @@ function removeSocketListeners(socket) {
 }
 
 export default class TCPLayer extends Layer {
+  _connectionState: number;
+  _disconnect?: Promise<unknown>
+
   constructor(options) {
     super(LayerNames.TCP);
 
@@ -154,9 +157,7 @@ export default class TCPLayer extends Layer {
     }
 
     this.options = opts;
-
     this._connectionState = TCPStateCodes.Disconnected;
-    this._desiredState = TCPStateCodes.Disconnected;
   }
 
   handleDefaultOptions(defaultOptions) {
@@ -186,13 +187,13 @@ export default class TCPLayer extends Layer {
     }
   }
 
-  connected(callback) {
+  connected(callback?: Function) {
     return CallbackPromise(callback, async (resolver) => {
       resolver.resolve(await this._connect);
     });
   }
 
-  disconnect(callback) {
+  disconnect(callback?: Function) {
     const hasCallback = typeof callback === 'function';
 
     if (this._connectionState === TCPStateCodes.Disconnected) {

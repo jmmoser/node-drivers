@@ -56,7 +56,7 @@ export default class Layer extends EventEmitter {
   _contextToCallback: Map<number, Function>;
   _idContext: Map<string, any>;
 
-  constructor(name: string, lowerLayer: Layer, options?: Options, defaultOptions?: any) {
+  constructor(name: string, lowerLayer?: Layer, options?: Options, defaultOptions?: any) {
     if (!name || typeof name !== 'string') {
       throw new Error('Layer name must be a non-empty string');
     }
