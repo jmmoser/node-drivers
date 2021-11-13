@@ -50,6 +50,23 @@ export interface StructDataType extends StructuredDataType {
   decodeCallback?: StructDecodeCallback;
 }
 
+export interface AbbrStructDataType extends StructuredDataType {
+  crc: number;
+}
+
+export interface ArrayDataType extends StructuredDataType {
+  itemType: IDataTypeOption;
+  lowerBound: number;
+  upperBound: number;
+  lowerBoundTag?: number;
+  upperBoundTag?: number;
+}
+
+export interface AbbrArrayDataType extends StructuredDataType {
+  itemType: IDataTypeOption;
+  length: number;
+}
+
 export const DataType = {
 // export const DataType: { [key: string]: DataType } = Object.freeze({
   UNKNOWN(length: number): UnknownDataType {
@@ -206,7 +223,7 @@ export const DataType = {
   },
 
   /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
-  ABBREV_STRUCT(crc: number) {
+  ABBREV_STRUCT(crc: number): AbbrStructDataType {
     return {
       type: DataType.ABBREV_STRUCT,
       code: DataTypeCodes.ABBREV_STRUCT,
@@ -215,7 +232,7 @@ export const DataType = {
       crc,
     };
   },
-  ABBREV_ARRAY(itemType: IDataTypeOption, length: number) {
+  ABBREV_ARRAY(itemType: IDataTypeOption, length: number): AbbrArrayDataType {
     return {
       type: DataType.ABBREV_ARRAY,
       code: DataTypeCodes.ABBREV_ARRAY,
@@ -238,7 +255,7 @@ export const DataType = {
       decodeCallback,
     };
   },
-  ARRAY(itemType: IDataTypeOption, lowerBound: number, upperBound: number, lowerBoundTag?: number, upperBoundTag?: number) {
+  ARRAY(itemType: IDataTypeOption, lowerBound: number, upperBound: number, lowerBoundTag?: number, upperBoundTag?: number): ArrayDataType {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
@@ -262,10 +279,7 @@ export const DataType = {
    * decodeTransform transforms from CIP data type to friendly data type
    * encodeTransform transforms friendly data type to CIP data type
    * */
-  TRANSFORM(
-    // dataType: IDataType | { type: Function; code: number; },
-    dataType: IDataTypeOption,
-    decodeTransform: Function, encodeTransform: Function) {
+  TRANSFORM(dataType: IDataTypeOption, decodeTransform: (a0: any) => unknown, encodeTransform: (a0: any) => Buffer) {
     return {
       type: DataType.TRANSFORM,
       code: DataTypeCodes.TRANSFORM,
