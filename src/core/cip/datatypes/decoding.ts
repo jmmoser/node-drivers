@@ -1,7 +1,7 @@
 import EPath from '../epath/index';
 import { DataTypeCodes, DataTypeNames } from './codes';
 import convertToObject from './convertToObject';
-import { IDataType } from './types';
+import { IDataType, IDataTypeOption, BoolDataType, StructDataType } from './types';
 
 import {
   getBits,
@@ -11,36 +11,37 @@ import {
 
 import { Ref } from '../../../types';
 
-export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, inputDataType: IDataType, ctx?: any): any {
+export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, inputDataType: IDataTypeOption, ctx?: any): any {
   if (Array.isArray(inputDataType)) {
     return inputDataType.map((dataTypeItem) => DecodeTypedData(buffer, offsetRef, dataTypeItem, ctx));
   }
 
   let value: any;
 
-  let dataType: any = convertToObject(inputDataType) as any;
+  let dataType = convertToObject(inputDataType);
 
   if (ctx && ctx.dataTypeCallback) {
     /** Used to modify the datatype, especially with placeholders */
     dataType = convertToObject(ctx.dataTypeCallback(dataType) || dataType);
   }
 
-  if (dataType.itype) {
-    return DecodeTypedData(buffer, offsetRef, dataType.itype, ctx);
+  if ((dataType as any).itype) {
+    return DecodeTypedData(buffer, offsetRef, (dataType as any).itype, ctx);
   }
 
   switch (dataType.code) {
     case DataTypeCodes.BOOL:
-      if (dataType.position >= 32) {
-        throw new Error('CIP boolean data type position out of range: ' + dataType.position);
+      const boolDataType = dataType as BoolDataType;
+      if (boolDataType.position >= 32) {
+        throw new Error('CIP boolean data type position out of range: ' + boolDataType.position);
       }
       /** BOOL does not change the offset */
       const integerValue = decodeUnsignedInteger(
         buffer,
         offsetRef.current,
-        unsignedIntegerSize(dataType.position),
+        unsignedIntegerSize(boolDataType.position),
       );
-      value = getBits(integerValue as number, dataType.position, dataType.position + 1) > 0;
+      value = getBits(integerValue as number, boolDataType.position, boolDataType.position + 1) > 0;
       break;
     case DataTypeCodes.SINT:
       value = buffer.readInt8(offsetRef.current); offsetRef.current += 1;
@@ -105,18 +106,19 @@ export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, inputDataType: I
       value = buffer.readDoubleLE(offsetRef.current); offsetRef.current += 8;
       break;
     case DataTypeCodes.STRUCT: {
+      const structDataType = dataType as StructDataType;
       /** Name of members is not known so use array to hold decoded member values */
       value = [];
 
       const subCtx = {} as {
         dataTypeCallback?: (dt: IDataType) => any
       };
-      if (typeof dataType.decodeCallback === 'function') {
-        subCtx.dataTypeCallback = (dt: IDataType) => dataType.decodeCallback(value, dt, dataType);
+      if (typeof structDataType.decodeCallback === 'function') {
+        subCtx.dataTypeCallback = (dt: IDataType) => structDataType.decodeCallback(value, dt, structDataType);
       }
 
-      for (let i = 0; i < dataType.members.length; i++){ 
-        const memberDataType = dataType.members[i];
+      for (let i = 0; i < structDataType.members.length; i++){
+        const memberDataType = structDataType.members[i];
         value.push(DecodeTypedData(buffer, offsetRef, memberDataType, subCtx));
       }
 

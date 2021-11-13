@@ -1,9 +1,9 @@
 import { DataTypeNames } from './codes';
-import { DataType, IDataType } from './types';
+import { DataType, IDataTypeObject } from './types';
 
-export default (dt: object | number | string | Function): IDataType => {
+export default (dt: object | number | string | Function): IDataTypeObject => {
   if (typeof dt === 'object') {
-    return dt as IDataType;
+    return dt as IDataTypeObject;
   }
   if (typeof dt === 'number') {
     dt = DataTypeNames[dt];
@@ -14,5 +14,5 @@ export default (dt: object | number | string | Function): IDataType => {
   if (typeof dt === 'function') {
     dt = dt();
   }
-  return dt as IDataType;
+  return dt as IDataTypeObject;
 };

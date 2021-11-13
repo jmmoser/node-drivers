@@ -1,20 +1,63 @@
 import { DataTypeCodes } from './codes';
 
 export interface IDataType {
-  (): {
+  (...args: any[]): {
     type: IDataType;
     code: number;
-  } 
+  }
+}
+
+export interface IDataTypeObject {
+  type: IDataType,
+  code: number;
+}
+
+export type IDataTypeOption = IDataType | IDataTypeObject;
+
+export interface UnknownDataType extends IDataTypeObject {
+  length: number;
+}
+
+export interface BoolDataType extends IDataTypeObject {
+  position: number;
+}
+
+export interface EPathDataType extends IDataTypeObject {
+  padded: boolean;
+  length?: number;
+}
+
+// STRUCT(members: IDataTypeOption[], decodeCallback: (a0: IDataTypeOption[], a1: IDataTypeOption & { resolve: (val: any) => any }) => any) {
+//   return {
+//     type: DataType.STRUCT,
+//     code: DataTypeCodes.STRUCT,
+//     constructed: true,
+//     abbreviated: false,
+//     members,
+//     decodeCallback,
+//   };
+// },
+
+interface StructuredDataType extends IDataTypeObject {
+  constructed: boolean;
+  abbreviated: boolean;
+}
+
+type StructDecodeCallback = (a0: unknown[], a1: IDataTypeOption & { resolve: (val: unknown) => unknown }, a2: StructDataType) => unknown;
+
+export interface StructDataType extends StructuredDataType {
+  members: IDataTypeOption[];
+  decodeCallback?: StructDecodeCallback;
 }
 
 export const DataType = {
 // export const DataType: { [key: string]: DataType } = Object.freeze({
-  UNKNOWN(length: number) {
+  UNKNOWN(length: number): UnknownDataType {
     return { type: DataType.UNKNOWN, code: DataTypeCodes.UNKNOWN, length };
   },
 
   /** Elementary Types */
-  BOOL(position = 0) {
+  BOOL(position = 0): BoolDataType {
     return { type: DataType.BOOL, code: DataTypeCodes.BOOL, position };
   },
   SINT() {
@@ -95,7 +138,7 @@ export const DataType = {
   TIME() {
     return { type: DataType.TIME, code: DataTypeCodes.TIME };
   },
-  EPATH(padded: boolean, length?: number) {
+  EPATH(padded: boolean, length?: number): EPathDataType {
     // eslint-disable-next-line object-curly-newline
     return { type: DataType.EPATH, code: DataTypeCodes.EPATH, padded, length };
   },
@@ -103,13 +146,26 @@ export const DataType = {
     return { type: DataType.ENGUNIT, code: DataTypeCodes.ENGUNIT };
   },
   STRINGI() {
-    DataType.TRANSFORM(
-      /* First three characters of the ISO 639-2/T language */
-      DataType.ARRAY(DataType.USINT, 0, 2),
-      (val: number) => Buffer.from(val).toString('ascii'),
-      (val) => Buffer.from(val, 'ascii')
-    )
-
+    // DataType.STRUCT(
+    //   [
+    //     DataType.TRANSFORM(
+    //       /* First three characters of the ISO 639-2/T language */
+    //       DataType.ARRAY(DataType.USINT, 0, 2),
+    //       (val: number[]) => Buffer.from(val).toString('ascii'),
+    //       (val: string) => Buffer.from(val, 'ascii')
+    //     ),
+    //     // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
+    //     DataType.EPATH(false),
+    //     DataType.UINT, // Character set which the character string is based on,
+    //     DataType.PLACEHOLDER(), // Actual International character string
+    //   ],
+    //   (members, dt) => {
+    //     if (members.length === 3) {
+    //       return dt.resolve(members[1].value);
+    //     }
+    //     return undefined;
+    //   },
+    // ),
     /** See CIP Vol 1, Appendix C-4.1 for abstract syntax notation */
     return {
       type: DataType.STRINGI,
@@ -122,8 +178,8 @@ export const DataType = {
               DataType.TRANSFORM(
                 /* First three characters of the ISO 639-2/T language */
                 DataType.ARRAY(DataType.USINT, 0, 2),
-                (val) => Buffer.from(val).toString('ascii'),
-                (val) => Buffer.from(val, 'ascii')
+                (val: number[]) => Buffer.from(val).toString('ascii'),
+                (val: string) => Buffer.from(val, 'ascii')
               ),
               // Structure of the character string (0xD0, 0xD5, 0xD9, or 0xDA)
               DataType.EPATH(false),
@@ -159,7 +215,7 @@ export const DataType = {
       crc,
     };
   },
-  ABBREV_ARRAY(itemType: IDataType, length: number) {
+  ABBREV_ARRAY(itemType: IDataTypeOption, length: number) {
     return {
       type: DataType.ABBREV_ARRAY,
       code: DataTypeCodes.ABBREV_ARRAY,
@@ -172,7 +228,7 @@ export const DataType = {
   /**
    * decodeCallback(decodedMembers, memberDataType, structDataType)
    *  - is called before each member is decoded */
-  STRUCT<T extends IDataType>(members: T[], decodeCallback: (a0: T[], a1: T & { resolve: (val: any) => any}) => any) {
+  STRUCT(members: IDataTypeOption[], decodeCallback?: StructDecodeCallback): StructDataType {
     return {
       type: DataType.STRUCT,
       code: DataTypeCodes.STRUCT,
@@ -182,7 +238,7 @@ export const DataType = {
       decodeCallback,
     };
   },
-  ARRAY(itemType: IDataType, lowerBound: number, upperBound: number, lowerBoundTag?: number, upperBoundTag?: number) {
+  ARRAY(itemType: IDataTypeOption, lowerBound: number, upperBound: number, lowerBoundTag?: number, upperBoundTag?: number) {
     return {
       type: DataType.ARRAY,
       code: DataTypeCodes.ARRAY,
@@ -195,7 +251,7 @@ export const DataType = {
       upperBoundTag,
     };
   },
-  PLACEHOLDER(resolve: Function) {
+  PLACEHOLDER(resolve?: Function) {
     return {
       type: DataType.PLACEHOLDER,
       code: DataTypeCodes.PLACEHOLDER,
@@ -206,7 +262,10 @@ export const DataType = {
    * decodeTransform transforms from CIP data type to friendly data type
    * encodeTransform transforms friendly data type to CIP data type
    * */
-  TRANSFORM(dataType: IDataType, decodeTransform: Function, encodeTransform: Function) {
+  TRANSFORM(
+    // dataType: IDataType | { type: Function; code: number; },
+    dataType: IDataTypeOption,
+    decodeTransform: Function, encodeTransform: Function) {
     return {
       type: DataType.TRANSFORM,
       code: DataTypeCodes.TRANSFORM,
