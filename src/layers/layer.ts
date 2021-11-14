@@ -106,7 +106,7 @@ export default class Layer extends EventEmitter {
   handleDefaultOptions(defaultOptions: any, upperLayer: Layer) {} // eslint-disable-line
 
   /** OVERRIDE IF NEEDED */
-  disconnect(callback?: () => void) { // eslint-disable-line
+  disconnect(callback?: Function) { // eslint-disable-line
     return CallbackPromise(callback, (resolver) => {
       resolver.resolve();
     });
@@ -151,7 +151,7 @@ export default class Layer extends EventEmitter {
     internalDestroy(this, error);
   }
 
-  forward(data: Buffer, info: any, context?: any) {
+  forward(data: Buffer, info?: any, context?: any) {
     if (this._upperLayer != null) {
       return Layer.forwardTo(this._upperLayer, data, info, context, this);
     }

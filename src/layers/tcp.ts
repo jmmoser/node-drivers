@@ -60,7 +60,10 @@ function connect(layer: TCPLayer) {
       /** sanity check to make sure connection state has not changed since started connecting */
       if (layer._connectionState === TCPStateCodes.Connecting) {
         setConnectionState(layer, TCPStateCodes.Connected);
-        socket.setTimeout(layer.options.timeout);
+        if (layer.options.timeout! >= 0) {
+          socket.setTimeout(layer.options.timeout!);
+        }
+        
         resolve(true);
         layer.sendNextMessage();
       } else {
@@ -74,8 +77,8 @@ function connect(layer: TCPLayer) {
 
     socket.setNoDelay(true); // Disable Nagle algorithm
 
-    if (layer.options.connectTimeout > 0) {
-      socket.setTimeout(layer.options.connectTimeout);
+    if (layer.options.connectTimeout! > 0) {
+      socket.setTimeout(layer.options.connectTimeout!);
     }
 
     socket.on('data', (data) => {
@@ -92,7 +95,7 @@ function connect(layer: TCPLayer) {
     });
 
     socket.once('error', (err) => {
-      setConnectionState(layer, TCPStateCodes.Disconnected, err);
+      setConnectionState(layer, TCPStateCodes.Disconnected);
       layer.destroy(err);
     });
 
@@ -102,7 +105,7 @@ function connect(layer: TCPLayer) {
 
     socket.once('timeout', () => {
       setConnectionState(layer, TCPStateCodes.Disconnected);
-      layer.destroy(socket.connecting ? 'TCP layer connect timeout' : 'TCP layer write timeout');
+      layer.destroy(new Error(socket.connecting ? 'TCP layer connect timeout' : 'TCP layer write timeout'));
       if (socket.connecting) {
         resolve(false);
       }
@@ -111,24 +114,44 @@ function connect(layer: TCPLayer) {
     socket.once('end', () => {
       /** Might not be an error, assume it is an error until use case arrises */
       setConnectionState(layer, TCPStateCodes.Disconnected);
-      layer.destroy('TCP layer socket received FIN while connected');
+      layer.destroy(new Error('TCP layer socket received FIN while connected'));
     });
   });
 
   return layer._connect;
 }
 
-function removeSocketListeners(socket) {
+function removeSocketListeners(socket: net.Socket) {
   ['error', 'data', 'close', 'timeout', 'end'].forEach((eventName) => {
     socket.removeAllListeners(eventName);
   });
+}
+
+interface TCPOptions {
+  host?: string;
+  port?: number;
+  connectTimeout?: number;
+  timeout?: number;
 }
 
 export default class TCPLayer extends Layer {
   _connectionState: number;
   _disconnect?: Promise<unknown>
 
-  constructor(options) {
+  numberOfTX: number;
+  numberOfRX: number;
+  totalTX: number;
+  totalRX: number;
+
+  options: TCPOptions;
+
+  _additionalDisconnectCallbacks: Function[];
+
+  socket?: net.Socket;
+
+  _connect?: Promise<boolean>;
+
+  constructor(options: TCPOptions | string) {
     super(LayerNames.TCP);
 
     this.numberOfTX = 0;
@@ -136,16 +159,17 @@ export default class TCPLayer extends Layer {
     this.totalTX = 0;
     this.totalRX = 0;
 
-    let opts = options;
+    let opts: TCPOptions = {
+      host: '',
+      connectTimeout: 3000,
+      timeout: 0,
+      ...(typeof options === 'object' ? options : {}),
+    };
 
-    if (typeof opts === 'string') {
+    if (typeof options === 'string') {
       opts = {
         host: options,
       };
-    }
-
-    if (typeof opts !== 'object') {
-      opts = {};
     }
 
     if (typeof opts.connectTimeout !== 'number' || opts.connectTimeout < 0) {
@@ -158,15 +182,17 @@ export default class TCPLayer extends Layer {
 
     this.options = opts;
     this._connectionState = TCPStateCodes.Disconnected;
+
+    this._additionalDisconnectCallbacks = [];
   }
 
-  handleDefaultOptions(defaultOptions) {
+  handleDefaultOptions(defaultOptions: TCPOptions) {
     if (this.options.port == null && defaultOptions.port != null) {
       this.options.port = defaultOptions.port;
     }
   }
 
-  static async* Scan(hosts, ports) {
+  static async* Scan(hosts: string[], ports: number[]) {
     for (let i = 0; i < hosts.length; i++) {
       const host = hosts[i];
       for (let j = 0; j < ports.length; j++) {
@@ -193,21 +219,18 @@ export default class TCPLayer extends Layer {
     });
   }
 
-  disconnect(callback?: Function) {
+  disconnect(callback?: (args: void) => void) {
     const hasCallback = typeof callback === 'function';
 
     if (this._connectionState === TCPStateCodes.Disconnected) {
       if (hasCallback) {
         setImmediate(callback);
       }
-      return undefined;
+      return () => {};
     }
 
     if (this._connectionState === TCPStateCodes.Disconnecting) {
       if (hasCallback) {
-        if (!Array.isArray(this._additionalDisconnectCallbacks)) {
-          this._additionalDisconnectCallbacks = [];
-        }
         this._additionalDisconnectCallbacks.push(callback);
       }
       return this._disconnect;
@@ -220,7 +243,7 @@ export default class TCPLayer extends Layer {
       } else if (this._connectionState === TCPStateCodes.Connected) {
         // console.log(`TCP layer queue size at disconnect: ${this.requestQueueSize()}`);
         setConnectionState(this, TCPStateCodes.Disconnecting);
-        this.socket.end(() => {
+        this.socket!.end(() => {
           setConnectionState(this, TCPStateCodes.Disconnected);
           resolver.resolve();
         });
@@ -265,7 +288,7 @@ export default class TCPLayer extends Layer {
         this.numberOfTX += 1;
         this.totalTX += request.message.length;
 
-        this.socket.write(request.message, (err) => {
+        this.socket!.write(request.message, (err) => {
           if (err) {
             console.log('TCP layer write error:');
             console.log(err);
@@ -298,7 +321,7 @@ export default class TCPLayer extends Layer {
       removeSocketListeners(this.socket);
     }
 
-    this._disconnect = null;
+    this._disconnect = undefined;
     if (Array.isArray(this._additionalDisconnectCallbacks)) {
       this._additionalDisconnectCallbacks.forEach((callback) => callback());
       this._additionalDisconnectCallbacks.length = 0;

@@ -26,25 +26,34 @@ const DefaultOptions = {
 
 function readRequest(self: Modbus, fn: number, address: number, count: number, littleEndian: boolean, callback?: Function) {
   return CallbackPromise(callback, (resolver) => {
-    self._send(PDU.EncodeReadRequest(fn, address, count, littleEndian), {}, resolver);
+    self._send!(PDU.EncodeReadRequest(fn, address, count, littleEndian), {}, resolver);
   });
 }
 
 function writeRequest(self: Modbus, fn: number, address: number, values: ModbusValues, littleEndian: boolean, callback?: Function) {
   return CallbackPromise(callback, (resolver) => {
-    self._send(PDU.EncodeWriteRequest(fn, address, values, littleEndian), {}, resolver);
+    self._send!(PDU.EncodeWriteRequest(fn, address, values, littleEndian), {}, resolver);
   });
 }
 
+
+interface ModbusTCPOptions {
+  unitID?: number;
+  protocolID?: number;
+}
+
+export type ModbusOptions = ModbusTCPOptions;
+
 export default class Modbus extends Layer {
   _littleEndian: boolean;
-  // _transactionCounter: number;
-  _transactionCounter: Context;
-  _send: Function;
-  // _frameClass: any;
+  _transactionCounter?: Context;
+  _send?: Function;
+  _frameClass: any;
 
-  constructor(lowerLayer, options) {
+  constructor(lowerLayer: Layer, options?: ModbusOptions) {
     super(LayerNames.Modbus, lowerLayer, undefined, DefaultOptions);
+
+    this._littleEndian = false;
 
     switch (lowerLayer.name) {
       case LayerNames.TCP: {
@@ -54,15 +63,11 @@ export default class Modbus extends Layer {
           ...options,
         };
 
-        this._littleEndian = false;
-
-        // this._transactionCounter = 0;
-        this._transactionCounter = CreateContext({ maxValue: 0x10000 });
+        const transactionCounter = CreateContext({ maxValue: 0x10000 });
         this._frameClass = Frames.TCP;
         this._send = (pdu: Buffer, opts: { protocolID?: number; unitID?: number }, resolver: { resolve: Function, reject: Function }) => {
           opts = opts || {};
-          // this._transactionCounter = (this._transactionCounter + 1) % 0x10000;
-          const transaction = this._transactionCounter();
+          const transaction = transactionCounter!();
 
           const callback = this.contextCallback(
             once((err?: Error) => {

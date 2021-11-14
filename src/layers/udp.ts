@@ -63,13 +63,14 @@ type UDPLayerOptions = {
   broadcast?: boolean;
   host?: string;
   port?: number;
+  type?: dgram.SocketType;
 }
 
 export default class UDPLayer extends Layer {
   options: UDPLayerOptions;
   _socket?: dgram.Socket;
   _listening: boolean;
-  _settingUp?: Promise<void>;
+  _settingUp?: Promise<boolean>;
 
   constructor(options?: UDPLayerOptions | number) {
     super(LayerNames.UDP);

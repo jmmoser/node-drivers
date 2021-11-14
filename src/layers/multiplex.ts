@@ -5,23 +5,20 @@
 
 import { CallbackPromise } from '../utils';
 import Layer from './layer';
+import CreateContext, { Context } from '../context';
 
-function incrementContext(self) {
-  self.__context = (self.__context + 1) % 0x100000000;
-  return self.__context;
-}
-
-function layerContext(self: MultiplexLayer, layer: Layer, context) {
+function layerContext(self: MultiplexLayer, layer: Layer, context: number) {
   if (layer != null) {
     if (context == null) {
-      context = incrementContext(this); // eslint-disable-line no-param-reassign
+      context = self.__context();
+      // context = incrementContext(self); // eslint-disable-line no-param-reassign
     }
     self.__contextToLayer.set(context, layer);
   }
   return context;
 }
 
-function layerForContext(self: MultiplexLayer, context) {
+function layerForContext(self: MultiplexLayer, context: number) {
   let layer = null;
   if (self.__contextToLayer.has(context)) {
     layer = self.__contextToLayer.get(context);
@@ -31,14 +28,20 @@ function layerForContext(self: MultiplexLayer, context) {
 }
 
 export default class MultiplexLayer extends Layer {
+  _layers: Set<Layer>;
+  __context: Context;
+  __contextToLayer: Map<number, Layer>;
+  _disconnecting: number;
+
   constructor(lowerLayer: Layer) {
     super('multiplex', lowerLayer, {
       handlesForwarding: true,
     });
 
     this._layers = new Set();
-    this.__context = 0;
+    this.__context = CreateContext({ maxValue: 0x100000000 });
     this.__contextToLayer = new Map();
+    this._disconnecting = 0;
   }
 
   layerAdded(layer: Layer) {
@@ -71,11 +74,11 @@ export default class MultiplexLayer extends Layer {
   sendNextMessage() {
     const request = this.getNextRequest();
     if (request != null) {
-      this.send(request.message, request.info, false, layerContext(this, request.layer));
+      this.send(request.message, request.info, false, layerContext(this, request.layer, request.context));
     }
   }
 
-  handleData(data: Buffer, info, context) {
+  handleData(data: Buffer, info: any, context: number) {
     if (context != null) {
       const layer = layerForContext(this, context);
       if (layer != null) {
