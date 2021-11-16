@@ -3,7 +3,7 @@ import { DataTypeCodes, DataTypeNames } from './codes';
 import { IDataTypeOption, EPathDataType, ArrayDataType, AbbrArrayDataType, StructDataType, TransformDataType, UnknownDataType } from './types';
 import convertToObject from './convertToObject';
 
-export function EncodeSize(dataType: IDataTypeOption, value: any): number {
+export function EncodeSize(dataType: IDataTypeOption, value?: any): number {
   dataType = convertToObject(dataType);
 
   switch (dataType.code) {
@@ -63,6 +63,9 @@ export function EncodeSize(dataType: IDataTypeOption, value: any): number {
     }
     case DataTypeCodes.TRANSFORM:
       const { dataType: innerDataType, encodeTransform } = dataType as TransformDataType;
+      if (!encodeTransform) {
+        throw new Error('transform encoding not specified');
+      }
       return EncodeSize(innerDataType, encodeTransform(value));
     case DataTypeCodes.UNKNOWN:
       return (dataType as UnknownDataType).length;
@@ -161,6 +164,9 @@ export function EncodeTo(buffer: Buffer, offset: number, dataType: IDataTypeOpti
       break;
     case DataTypeCodes.TRANSFORM:
       const { dataType: innerDataType, encodeTransform } = dataType as TransformDataType;
+      if (!encodeTransform) {
+        throw new Error('transform encoding not specified');
+      }
       offset = EncodeTo(buffer, offset, innerDataType, encodeTransform(value));
       break;
     case DataTypeCodes.BOOL:

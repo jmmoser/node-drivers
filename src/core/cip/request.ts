@@ -13,7 +13,21 @@ import EPath from './epath/index';
 
 import { Ref, CodedValue } from '../../types';
 
-type ResponseHandler = CIPRequest | ((buffer: Buffer, offsetRef: Ref) => void);
+interface CIPStatus extends CodedValue {
+  extended: Buffer;
+  type?: string;
+  error: boolean;
+}
+
+interface CIPResponse {
+  request?: Buffer;
+  service: CodedValue;
+  status: CIPStatus;
+  value?: any;
+  // data: Buffer;
+}
+
+type ResponseHandler = CIPRequest | ((buffer: Buffer, offsetRef: Ref, response?: CIPResponse) => any);
 
 type CIPRequestOptions = {
   acceptedServiceCodes: number[];
@@ -22,30 +36,18 @@ type CIPRequestOptions = {
   errorDataHandler?: (buffer: Buffer, offsetRef: Ref, response: any) => void;
 };
 
-interface CIPStatus extends CodedValue {
-  extended: Buffer;
-  type: string;
-  error: boolean;
-}
-
-interface CIPResponse {
-  request: CIPRequest;
-  service: CodedValue;
-  status: CIPStatus;
-}
-
 // const EncodeSizeSymbol = Symbol('encodeSize');
 const RequestMessageSymbol = Symbol('requestMessage');
 const ResponseDataHandlerSymbol = Symbol('responseDataHandler');
 
-function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptions, request?: Buffer, handler) {
+function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptions, request?: Buffer, handler?: ResponseHandler): CIPResponse {
   const opts = options || {};
 
-  const res: CIPResponse = {};
+  // const res: CIPResponse = {};
 
-  if (request) {
-    res.request = request;
-  }
+  // if (request) {
+  //   res.request = request;
+  // }
 
   // res.buffer = buffer.slice(offsetRef.current);
   const startingOffset = offsetRef.current;
@@ -64,9 +66,9 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptio
 
   if (!service.name) {
     if (opts.serviceNames && opts.serviceNames[serviceCode]) {
-      res.service.name = opts.serviceNames[serviceCode];
+      service.name = opts.serviceNames[serviceCode];
     } else {
-      res.service.name = 'Unknown';
+      service.name = 'Unknown';
     }
   }
 
@@ -79,8 +81,6 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptio
     && statusCode !== GeneralStatusCodes.PartialTransfer
   );
 
-  
-
   /** Number of 16 bit words */
   const extendedStatusSize = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   const extendedStatus = buffer.slice(offsetRef.current, offsetRef.current + 2 * extendedStatusSize);
@@ -91,9 +91,10 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptio
     name: GeneralStatusNames[statusCode] || '',
     description: GeneralStatusDescriptions[statusCode] || (statusError ? 'CIP Error' : ''),
     error: statusError,
+    extended: extendedStatus
   }
 
-  res.data = buffer.slice(offsetRef.current);
+  // const data = buffer.slice(offsetRef.current);
 
   if (typeof opts.statusHandler === 'function') {
     const statusHandlerOutput = opts.statusHandler(statusCode, extendedStatus);
@@ -109,24 +110,29 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptio
     }
   }
 
-  if (res.data.length > 0) {
+  const response: CIPResponse = {
+    request,
+    service,
+    // value,
+    // data,
+    status
+  };
+
+  if (buffer.length - offsetRef.current > 0) {
     if (status.error === false && typeof handler === 'function') {
       if (handler.length === 4) {
-        res.value = handler(buffer, offsetRef, res);
+        response.value = handler(buffer, offsetRef, response);
       } else {
-        res.value = handler(buffer, offsetRef);
+        response.value = handler(buffer, offsetRef);
       }
     }
 
     if (status.error && typeof opts.errorDataHandler === 'function') {
-      opts.errorDataHandler(buffer, offsetRef, res);
+      opts.errorDataHandler(buffer, offsetRef, response);
     }
   }
 
-  return {
-    ...res,
-    status
-  };
+  return response;
 }
 
 export default class CIPRequest {
@@ -134,7 +140,7 @@ export default class CIPRequest {
   path?: Buffer;
   data?: Buffer;
   options: CIPRequestOptions
-  [ResponseDataHandlerSymbol]: ResponseHandler;
+  [ResponseDataHandlerSymbol]?: ResponseHandler;
   // [EncodeSizeSymbol]?: number;
   [RequestMessageSymbol]?: Buffer;
   
@@ -208,7 +214,7 @@ export default class CIPRequest {
     return offset;
   }
 
-  static Response(buffer: Buffer, offsetRef: Ref, options) {
+  static Response(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptions) {
     return DecodeResponse(buffer, offsetRef, options);
   }
 
@@ -256,7 +262,7 @@ function MultiCreateDataHandler(requests: CIPRequest[]) {
   };
 }
 
-class CIPMultiServiceRequest extends CIPRequest {
+export class CIPMultiServiceRequest extends CIPRequest {
   requests: CIPRequest[];
 
   constructor(requests: CIPRequest[], path: Buffer) {
@@ -311,5 +317,3 @@ class CIPMultiServiceRequest extends CIPRequest {
     return offset;
   }
 }
-
-CIPRequest.Multi = CIPMultiServiceRequest;

@@ -2,7 +2,7 @@ import { CallbackPromise, InfoError } from '../utils';
 import Layer from './layer';
 import { LayerNames } from './constants';
 import EIPPacket from '../core/eip/packet';
-import CPF from '../core/eip/cpf';
+import CPF, { ConnectedAddressValue } from '../core/eip/cpf';
 
 const {
   CommandCodes,
@@ -487,7 +487,7 @@ export default class EIPLayer extends Layer {
         if (!Array.isArray(packet.items)) {
           console.log('EIP SendRRData response does not have any CPF items');
           console.log(packet);
-          this.destroy(new InfoError(packet, packet.status.description));
+          this.destroy(new InfoError(packet, packet.status.description + ''));
         } else {
           const messageItem = packet.items.find(
             (item) => item.type.code === CPF.ItemTypeIDs.UnconnectedMessage,
@@ -514,7 +514,7 @@ export default class EIPLayer extends Layer {
             const info = {
               connected: true,
               responseID: addressItem.value as number,
-              connectionID: this._connectedContexts.get(addressItem.value),
+              connectionID: this._connectedContexts.get(addressItem.value as ConnectedAddressValue),
             };
             // console.log(info);
             /** DO NOT SEND CONTEXT FOR CONNECTED MESSAGES */

@@ -3,6 +3,7 @@ import CIPAttribute from '../attribute';
 import { ClassCodes } from '../constants/index';
 import { DataType } from '../datatypes/index';
 import { getBits } from '../../../utils';
+import { EncodeTo } from '../datatypes/encoding';
 
 const ClassAttribute = Object.freeze({});
 
@@ -10,7 +11,7 @@ const IPAddressDataType = DataType.TRANSFORM(
   DataType.UDINT,
   (value: number) => `${value >>> 24}.${(value >>> 16) & 255}.${(value >>> 8) & 255}.${value & 255}`,
   (value: string) => {
-    value.split('.').map(v => parseInt(v, 10)).reduce((accum, v, index) => {
+    return value.split('.').map(v => parseInt(v, 10)).reduce((accum, v, index) => {
       accum |= v << (8 * (3 - index));
       return accum;
     }, 0);
@@ -30,7 +31,7 @@ const ConfigurationControlStartupConfiguration = {
 
 const InstanceAttribute = Object.freeze({
   /** CIP Vol 2, 5-3.2.2.1 */
-  Status: new CIPAttribute.Instance(1, 'Status', DataType.TRANSFORM(
+  Status: new CIPAttribute(ClassCodes.TCPIPInterface, 1, 'Status', DataType.TRANSFORM(
     DataType.DWORD,
     (value) => {
       const interfaceConfigurationStatus = getBits(value, 0, 4);
@@ -44,7 +45,7 @@ const InstanceAttribute = Object.freeze({
     },
   )),
   /** CIP Vol 2, 5-3.2.2.2 */
-  ConfigurationCapability: new CIPAttribute.Instance(2, 'Configuration Capability', DataType.TRANSFORM(
+  ConfigurationCapability: new CIPAttribute(ClassCodes.TCPIPInterface, 2, 'Configuration Capability', DataType.TRANSFORM(
     DataType.DWORD,
     (value) => {
       const BOOTPClient = getBits(value, 0, 1);
@@ -82,7 +83,7 @@ const InstanceAttribute = Object.freeze({
     },
   )),
   /** CIP Vol 2, 5-3.2.2.3 */
-  ConfigurationControl: new CIPAttribute.Instance(3, 'Configuration Control', DataType.TRANSFORM(
+  ConfigurationControl: new CIPAttribute(ClassCodes.TCPIPInterface, 3, 'Configuration Control', DataType.TRANSFORM(
     DataType.DWORD,
     (value) => {
       const startupConfiguration = getBits(value, 0, 4);
@@ -100,7 +101,7 @@ const InstanceAttribute = Object.freeze({
       ];
     },
   )),
-  PhysicalLinkObject: new CIPAttribute(4, 'Physical Link Object', DataType.TRANSFORM(
+  PhysicalLinkObject: new CIPAttribute(ClassCodes.TCPIPInterface, 4, 'Physical Link Object', DataType.TRANSFORM(
     DataType.STRUCT(
       [
         DataType.UINT,
@@ -115,7 +116,7 @@ const InstanceAttribute = Object.freeze({
     ),
     (value) => value[1],
   )),
-  Configuration: new CIPAttribute.Instance(5, 'Configuration', DataType.STRUCT([
+  Configuration: new CIPAttribute(ClassCodes.TCPIPInterface, 5, 'Configuration', DataType.STRUCT([
     IPAddressDataType, // IP Address
     IPAddressDataType, // Network Mask
     IPAddressDataType, // Gateway Address
@@ -123,22 +124,22 @@ const InstanceAttribute = Object.freeze({
     IPAddressDataType, // Secondary Name Server
     DataType.STRING, // Default Domain Name
   ])),
-  HostName: new CIPAttribute.Instance(6, 'Host Name', DataType.STRING),
+  HostName: new CIPAttribute(ClassCodes.TCPIPInterface, 6, 'Host Name', DataType.STRING),
 });
 
-const GetAttributesAllInstanceAttributes = Object.freeze([
+const GetAllInstanceAttributes = [
   InstanceAttribute.Status,
   InstanceAttribute.ConfigurationCapability,
   InstanceAttribute.ConfigurationControl,
   InstanceAttribute.PhysicalLinkObject,
   InstanceAttribute.Configuration,
   InstanceAttribute.HostName,
-]);
+];
 
 const CIPObject = CIPMetaObject(ClassCodes.TCPIPInterface, {
   ClassAttributes: ClassAttribute,
   InstanceAttributes: InstanceAttribute,
-  GetAttributesAllInstanceAttributes,
+  GetAllInstanceAttributes,
 });
 
 class TCPIPInterface extends CIPObject {}

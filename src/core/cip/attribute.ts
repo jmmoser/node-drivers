@@ -7,15 +7,17 @@ import EPath from './epath/index';
 import CIPRequest from './request';
 import CIPFeature from './feature';
 
-import { IDataType } from './datatypes/types';
+import { IDataTypeOption } from './datatypes/types';
 
 const LogicalSegment = EPath.Segments.Logical;
 
 export default class CIPAttribute extends CIPFeature {
-  dataType: IDataType;
+  // instance: number;
+  dataType: IDataTypeOption;
 
-  constructor(code: number, name: string, dataType: IDataType, classCode: number) {
-    super(code, name, classCode);
+  constructor(classCode: number, attributeID: number, name: string, dataType: IDataTypeOption) {
+    super(attributeID, name, classCode);
+    // this.instance = instance;
     this.dataType = dataType;
   }
 

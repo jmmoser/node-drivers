@@ -1,25 +1,29 @@
 import CIPFeature from './feature';
 
 export default class CIPFeatureGroup {
-  constructor(features) {
-    this.features = Array.isArray(features) ? features : [];
-    this.featureCodeMap = new Map(this.features.map((feature) => [feature.code, feature]));
+  // features: CIPFeature[];
+  featureCodeMap: Map<number, CIPFeature>;
+
+  constructor(features?: CIPFeature[]) {
+    // this.features = Array.isArray(features) ? features : [];
+    features = Array.isArray(features) ? features : [];
+    this.featureCodeMap = new Map(features.map((feature) => [feature.code, feature]));
   }
 
-  register(feature) {
-    this.features.push(feature);
+  register(feature: CIPFeature) {
+    // this.features.push(feature);
     this.featureCodeMap.set(feature.code, feature);
     return feature;
   }
 
-  get(feature) {
+  get(feature: CIPFeature | number) {
     if (feature instanceof CIPFeature) {
       return feature;
     }
     return this.featureCodeMap.get(feature);
   }
 
-  getCode(feature) {
+  getCode(feature: CIPFeature | number) {
     const featureObject = this.get(feature);
     if (featureObject) {
       return featureObject.code;
@@ -27,10 +31,10 @@ export default class CIPFeatureGroup {
     return undefined;
   }
 
-  getName(feature) {
+  getDescription(feature: CIPFeature | number) {
     const featureObject = this.get(feature);
     if (featureObject) {
-      return featureObject.name;
+      return featureObject.description;
     }
     return undefined;
   }

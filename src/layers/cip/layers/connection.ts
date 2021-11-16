@@ -225,7 +225,7 @@ function handleUnconnectedMessage(self, data, info, context) {
   }
 }
 
-function handleConnectedMessage(self, data, info) {
+function handleConnectedMessage(self: CIPConnectionLayer, data: Buffer, info: any) {
   if (self.sendInfo == null || info == null) {
     console.log(
       'CIP Connection unhandled connected message, not connected',
@@ -288,7 +288,7 @@ function connect(self) {
   const request = ConnectionManager.ForwardOpen(self, true);
 
   self._connect = new Promise((resolve) => {
-    send(self, false, true, request, async (err, res) => {
+    send(self, false, true, request, async (err?: Error, res) => {
       if (err) {
         self._connectionState = 0;
 

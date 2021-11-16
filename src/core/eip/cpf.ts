@@ -25,7 +25,7 @@ const SocketFamilyNames: CodeDescriptionMap = Object.freeze({
 
 type NullAddressValue = null;
 
-type ConnectedAddressValue = number;
+export type ConnectedAddressValue = number;
 
 type ListIdentityValue = {
   encapsulationProtocolVersion: number;

@@ -57,12 +57,12 @@ export interface AbbrArrayDataType extends StructuredDataType {
 }
 
 type TransformDecodeFn = (a0: any) => any;
-type TransformEncodeFn = (a0: any) => Buffer;
+type TransformEncodeFn = (a0: any) => any;
 
 export interface TransformDataType extends IDataTypeObject {
   dataType: IDataTypeOption;
   decodeTransform: TransformDecodeFn;
-  encodeTransform: TransformEncodeFn;
+  encodeTransform?: TransformEncodeFn;
 }
 
 type PlaceholderResolveFn = (value: any) => IDataTypeObject;
@@ -263,7 +263,7 @@ export const DataType = {
    * decodeTransform transforms from CIP data type to friendly data type
    * encodeTransform transforms friendly data type to CIP data type
    * */
-  TRANSFORM(dataType: IDataTypeOption, decodeTransform: TransformDecodeFn, encodeTransform: TransformEncodeFn): TransformDataType {
+  TRANSFORM(dataType: IDataTypeOption, decodeTransform: TransformDecodeFn, encodeTransform?: TransformEncodeFn): TransformDataType {
     return {
       type: DataType.TRANSFORM,
       code: DataTypeCodes.TRANSFORM,
