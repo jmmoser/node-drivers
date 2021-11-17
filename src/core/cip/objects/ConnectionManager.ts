@@ -2,8 +2,9 @@
 
 import { InvertKeyValues } from '../../../utils';
 import { ClassCodes } from '../constants/index';
-import CIPRequest from '../request';
+import CIPRequest, { CIPResponseHandler } from '../request';
 import EPath from '../epath/index';
+import { Ref } from '../../../types';
 
 /** EIP-CIP-V1 3-5.5, page 3.56 */
 const ServiceCodes = {
@@ -18,7 +19,7 @@ const ServiceCodes = {
 
 const ServiceCodeSet = new Set(Object.values(ServiceCodes));
 
-const ServiceNames = InvertKeyValues(ServiceCodes);
+const ServiceNames = InvertKeyValues(ServiceCodes) as { [key: number]: string };
 
 /** CIP Vol 1 Table 3-5.29 */
 const StatusDescriptions = {
@@ -97,11 +98,11 @@ const StatusDescriptions = {
 };
 
 const ConnectionManagerEPath = EPath.Encode(true, [
-  new EPath.Segments.Logical.ClassID(ClassCodes.ConnectionManager),
-  new EPath.Segments.Logical.InstanceID(0x01),
+  new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, ClassCodes.ConnectionManager),
+  new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, 0x01),
 ]);
 
-function ConnectionManagerCIPRequest(service, data, responseDecoder) {
+function ConnectionManagerCIPRequest(service: number, data: Buffer, responseDecoder: CIPResponseHandler) {
   return new CIPRequest(service, ConnectionManagerEPath, data, responseDecoder, {
     serviceNames: ServiceNames,
   });
@@ -117,14 +118,14 @@ function incrementConnectionCounters() {
   TtoONetworkConnectionIDCounter++;
 }
 
-function encodeConnectionTiming(buffer, offset, tickTime, timeoutTicks) {
+function encodeConnectionTiming(buffer: Buffer, offset: number, tickTime, timeoutTicks) {
   const priority = 0; // 1 is reserved, keep for future
   offset = buffer.writeUInt8(((priority << 4) | (tickTime & 0b1111)), offset);
   offset = buffer.writeUInt8(timeoutTicks, offset);
   return offset;
 }
 
-function errorDataHandler(buffer, offsetRef, res) {
+function errorDataHandler(buffer: Buffer, offsetRef: Ref, res) {
   if (res.status.type === 'routing') {
     res.remainingPathSize = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
@@ -137,7 +138,7 @@ function errorDataHandler(buffer, offsetRef, res) {
   }
 }
 
-function connectionDataResponse(buffer, offsetRef) {
+function connectionDataResponse(buffer: Buffer, offsetRef: Ref) {
   const res = {};
   res.ConnectionNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
   res.ConnectionState = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
@@ -161,8 +162,10 @@ function connectionDataResponse(buffer, offsetRef) {
   return res;
 }
 
-class ConnectionManager {
-  static UnconnectedSend(request, route, options) {
+export default class ConnectionManager {
+  static ServiceCodes = ServiceCodes;
+
+  static UnconnectedSend(request: CIPRequest, route: Buffer, options) {
     options = {
       tickTime: 6,
       timeoutTicks: 156,
@@ -287,22 +290,30 @@ class ConnectionManager {
     return ConnectionManagerCIPRequest(
       connection.large ? ServiceCodes.LargeForwardOpen : ServiceCodes.ForwardOpen,
       data,
-      (buffer, offsetRef) => {
-        const r = {};
-        r.OtoTNetworkConnectionID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-        r.TtoONetworkConnectionID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-        r.ConnectionSerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-        r.OriginatorVendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-        r.OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-        r.OtoTActualPacketRate = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-        r.TtoOActualPacketRate = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+      (buffer: Buffer, offsetRef: Ref) => {
+        const OtoTNetworkConnectionID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        const TtoONetworkConnectionID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        const ConnectionSerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        const OriginatorVendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        const OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        const OtoTActualPacketRate = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        const TtoOActualPacketRate = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
         const appReplySize = 2 * buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
         offsetRef.current += 1; // reserved
 
-        r.data = buffer.slice(offsetRef.current, offsetRef.current + appReplySize);
+        const data = buffer.slice(offsetRef.current, offsetRef.current + appReplySize);
         offsetRef.current += appReplySize;
 
-        return r;
+        return {
+          OtoTNetworkConnectionID,
+          TtoONetworkConnectionID,
+          ConnectionSerialNumber,
+          OriginatorVendorID,
+          OriginatorSerialNumber,
+          OtoTActualPacketRate,
+          TtoOActualPacketRate,
+          data,
+        };
       },
     );
   }
@@ -335,7 +346,7 @@ class ConnectionManager {
     return ConnectionManagerCIPRequest(
       ServiceCodes.ForwardClose,
       data,
-      (buffer, offsetRef) => {
+      (buffer: Buffer, offsetRef) => {
         const res = {};
         res.SerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
         res.VendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
@@ -357,7 +368,7 @@ class ConnectionManager {
    * The connection_number corresponds to the offset into the Connection Manager attribute
    * that enumerates the status of the connections.
    * */
-  static GetConnectionData(connectionNumber) {
+  static GetConnectionData(connectionNumber: number) {
     const data = Buffer.allocUnsafe(2);
 
     data.writeUInt16LE(connectionNumber, 0);
@@ -378,7 +389,7 @@ class ConnectionManager {
    * The format of the Search_Connection_Data response shall be the same as
    * the response from the Get_Connection_Data service.
    * */
-  static SearchConnectionData(connectionSerialNumber, originatorVendorID, originatorSerialNumber) {
+  static SearchConnectionData(connectionSerialNumber: number, originatorVendorID: number, originatorSerialNumber: number) {
     let offset = 0;
     const data = Buffer.allocUnsafe(8);
 
@@ -415,7 +426,3 @@ class ConnectionManager {
     }
   }
 }
-
-ConnectionManager.ServiceCodes = ServiceCodes;
-
-export default ConnectionManager;

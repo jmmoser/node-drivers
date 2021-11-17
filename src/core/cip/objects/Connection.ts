@@ -1,5 +1,5 @@
 import { InvertKeyValues } from '../../../utils';
-import { DataType } from '../datatypes/types';
+import { DataType, PlaceholderDataType } from '../datatypes/types';
 
 // /** CIP Vol1 Table 3-4.2 */
 // const ClassServices = Object.freeze({
@@ -55,18 +55,18 @@ export const InstanceAttributeDataTypes = Object.freeze({
   [InstanceAttributeCodes.CIPConsumedConnectionID]: DataType.UDINT,
   [InstanceAttributeCodes.WatchdogTimeoutAction]: DataType.USINT,
   [InstanceAttributeCodes.ProducedConnectionPathLength]: DataType.UINT,
-  [InstanceAttributeCodes.ProducedConnectionPath]: DataType.EPATH(false),
+  [InstanceAttributeCodes.ProducedConnectionPath]: DataType.EPATH({ padded: false, length: false }),
   [InstanceAttributeCodes.ConsumedConnectionPathLength]: DataType.UINT,
-  [InstanceAttributeCodes.ConsumedConnectionPath]: DataType.EPATH(false),
+  [InstanceAttributeCodes.ConsumedConnectionPath]: DataType.EPATH({ padded: false, length: false }),
   [InstanceAttributeCodes.ProductionInhibitTime]: DataType.UINT,
   [InstanceAttributeCodes.ConnectionTimeoutMultiplier]: DataType.USINT,
   [InstanceAttributeCodes.ConnectionBindingList]: DataType.TRANSFORM(
     DataType.STRUCT([
       DataType.UINT,
-      DataType.PLACEHOLDER((length) => DataType.ABBREV_ARRAY(DataType.UINT, length)),
+      DataType.PLACEHOLDER((length: number) => DataType.ABBREV_ARRAY(DataType.UINT, length)),
     ], (members, dt) => {
       if (members.length === 1) {
-        return dt.resolve(members[0]);
+        return (dt as PlaceholderDataType).resolve(members[0]);
       }
       return undefined;
     }),

@@ -42,7 +42,7 @@ export const ServiceCodes = {
   ExecuteLocalPCCC: 0x4D,
 };
 
-export const ServiceNames = {
+export const ServiceNames: { [key: number]: string } = {
   0x4B: 'Exec PCCC Service',
   0x4C: 'DH+ Like Service',
   0x4D: 'Local PCCC Service',

@@ -7,7 +7,7 @@ import { getBits } from '../../../utils';
 const ClassAttribute = Object.freeze({});
 
 const InstanceAttribute = Object.freeze({
-  InterfaceSpeed: new CIPAttribute.Instance(1, 'Interface Speed', DataType.TRANSFORM(
+  InterfaceSpeed: new CIPAttribute(ClassCodes.EthernetLink, 1, 'Interface Speed', DataType.TRANSFORM(
     DataType.UDINT,
     (value) => `${value} Mbps`,
   )),
@@ -19,8 +19,8 @@ const InstanceAttribute = Object.freeze({
    *  Value 0: Half duplex
    *  Value 1: Full duplex
    */
-  // InterfaceFlags: new CIPAttribute.Instance(2, 'Interface Flags', DataType.DWORD),
-  InterfaceFlags: new CIPAttribute.Instance(2, 'Interface Flags', DataType.TRANSFORM(
+  // InterfaceFlags: new CIPAttribute(ClassCodes.EthernetLink, 2, 'Interface Flags', DataType.DWORD),
+  InterfaceFlags: new CIPAttribute(ClassCodes.EthernetLink, 2, 'Interface Flags', DataType.TRANSFORM(
     DataType.DWORD,
     (value) => {
       const linkStatusCode = getBits(value, 0, 1);
@@ -43,11 +43,11 @@ const InstanceAttribute = Object.freeze({
       };
     },
   )),
-  PhysicalAddress: new CIPAttribute.Instance(3, 'Physical Address', DataType.TRANSFORM(
+  PhysicalAddress: new CIPAttribute(ClassCodes.EthernetLink, 3, 'Physical Address', DataType.TRANSFORM(
     DataType.ABBREV_ARRAY(DataType.USINT, 6),
-    (value) => value.map((v) => v.toString(16).padStart(2, '0')).join(':'),
+    (value: number[]) => value.map((v) => v.toString(16).padStart(2, '0')).join(':'),
   )),
-  InterfaceCounters: new CIPAttribute.Instance(4, 'Interface Counters', DataType.TRANSFORM(
+  InterfaceCounters: new CIPAttribute(ClassCodes.EthernetLink, 4, 'Interface Counters', DataType.TRANSFORM(
     DataType.STRUCT([
       DataType.UDINT, /** Inbound Octets */
       DataType.UDINT, /** Inbound Unicast Packets */
@@ -75,7 +75,7 @@ const InstanceAttribute = Object.freeze({
       outboundErrorPackets: value[10],
     }),
   )),
-  MediaCounters: new CIPAttribute.Instance(5, 'Media Counters', DataType.TRANSFORM(
+  MediaCounters: new CIPAttribute(ClassCodes.EthernetLink, 5, 'Media Counters', DataType.TRANSFORM(
     DataType.STRUCT([
       DataType.UDINT, /** Alignment Errors */
       DataType.UDINT, /** FCS Errors */
@@ -105,7 +105,7 @@ const InstanceAttribute = Object.freeze({
       macReceiveErrors: value[11],
     }),
   )),
-  InterfaceControl: new CIPAttribute.Instance(6, 'Interface Control', DataType.TRANSFORM(
+  InterfaceControl: new CIPAttribute(ClassCodes.EthernetLink, 6, 'Interface Control', DataType.TRANSFORM(
     DataType.STRUCT([
       /**
        * Control Bits
@@ -137,28 +137,28 @@ const InstanceAttribute = Object.freeze({
       };
     },
   )),
-  InterfaceLabel: new CIPAttribute.Instance(10, 'Interface Label', DataType.SHORT_STRING),
-  // InterfacePortIndex: new CIPAttribute.Instance(
+  InterfaceLabel: new CIPAttribute(ClassCodes.EthernetLink, 10, 'Interface Label', DataType.SHORT_STRING),
+  // InterfacePortIndex: new CIPAttribute(ClassCodes.EthernetLink, 
   //   100, 'Interface Port Index', DataType.UDINT,
   // ),
-  // InterfacePortDescription: new CIPAttribute.Instance(
+  // InterfacePortDescription: new CIPAttribute(ClassCodes.EthernetLink, 
   //   101, 'Interface Port Description', DataType.STRING,
   // ),
   // /**
   //  * Value 0: Disabled Broadcast Storm Protection
   //  * Value 1: Enable Broadcast Storm Protection
   //  */
-  // BroadcastStormProtection: new CIPAttribute.Instance(
+  // BroadcastStormProtection: new CIPAttribute(ClassCodes.EthernetLink, 
   //   102, 'Broadcast Storm Protection', DataType.USINT,
   // ),
 
-  // InterfaceUtilization: new CIPAttribute.Instance(
+  // InterfaceUtilization: new CIPAttribute(ClassCodes.EthernetLink, 
   //   103, 'Interface Utilization', DataType.USINT,
   // ),
-  // UtilizationAlarmUpperThreshold: new CIPAttribute.Instance(
+  // UtilizationAlarmUpperThreshold: new CIPAttribute(ClassCodes.EthernetLink, 
   //   104, 'Utilization Alarm Upper Threshold', DataType.USINT,
   // ),
-  // UtilizationAlarmLowerThreshold: new CIPAttribute.Instance(
+  // UtilizationAlarmLowerThreshold: new CIPAttribute(ClassCodes.EthernetLink, 
   //   105, 'Utilization Alarm Lower Threshold', DataType.USINT,
   // ),
 
@@ -169,35 +169,31 @@ const InstanceAttribute = Object.freeze({
   //  * Value 3: Off (Relay 1)
   //  * Value 4: Off (Relay 2)
   //  * */
-  // PortLinkAlarm: new CIPAttribute.Instance(106, 'Port Link Alarm', DataType.USINT),
+  // PortLinkAlarm: new CIPAttribute(ClassCodes.EthernetLink, 106, 'Port Link Alarm', DataType.USINT),
   // /**
   //  * Value 0: Disable
   //  * Value 1: Enable (Relay 1)
   //  * Value 2: Enable (Relay 2)
   //  */
-  // PortTrafficOverloadAlarm: new CIPAttribute.Instance(
+  // PortTrafficOverloadAlarm: new CIPAttribute(ClassCodes.EthernetLink, 
   //   107, 'Port Traffic Overload Alarm', DataType.USINT,
   // ),
 });
 
-const GetAttributesAllInstanceAttributes = Object.freeze([
-  InstanceAttribute.InterfaceSpeed,
-  InstanceAttribute.InterfaceFlags,
-  InstanceAttribute.PhysicalAddress,
-  InstanceAttribute.InterfaceCounters,
-  InstanceAttribute.MediaCounters,
-  InstanceAttribute.InterfaceControl,
-]);
-
 const CIPObject = CIPMetaObject(ClassCodes.EthernetLink, {
   ClassAttributes: ClassAttribute,
   InstanceAttributes: InstanceAttribute,
-  GetAttributesAllInstanceAttributes,
+  GetAllInstanceAttributes: Object.freeze([
+    InstanceAttribute.InterfaceSpeed,
+    InstanceAttribute.InterfaceFlags,
+    InstanceAttribute.PhysicalAddress,
+    InstanceAttribute.InterfaceCounters,
+    InstanceAttribute.MediaCounters,
+    InstanceAttribute.InterfaceControl,
+  ]),
 });
 
-class EthernetLink extends CIPObject {}
-
-EthernetLink.ClassAttribute = ClassAttribute;
-EthernetLink.InstanceAttribute = InstanceAttribute;
-
-export default EthernetLink;
+export default class EthernetLink extends CIPObject {
+  static ClassAttribute = ClassAttribute;
+  static InstanceAttribute = InstanceAttribute;
+}

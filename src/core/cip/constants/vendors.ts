@@ -1,6 +1,6 @@
 /** https://github.com/boundary/wireshark/blob/07eade8124fd1d5386161591b52e177ee6ea849f/epan/dissectors/packet-cip.c#L1174 */
 // eslint-disable-next-line import/prefer-default-export
-export const VendorNames = {
+export const VendorNames: { [key: number]: string } = {
   0: 'Reserved',
   1: 'Rockwell Automation/Allen-Bradley',
   2: 'Namco Controls Corp.',

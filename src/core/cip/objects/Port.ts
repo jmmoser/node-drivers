@@ -23,10 +23,10 @@
 import CIPMetaObject from '../object';
 import CIPAttribute from '../attribute';
 import { ClassCodes } from '../constants/index';
-import { DataType } from '../datatypes/index';
+import { DataType, PlaceholderDataType } from '../datatypes/index';
 
 /** CIP Vol 3 Chapter 3-7.3 */
-const PortTypeNames = Object.freeze({
+const PortTypeNames: { [key: number]: string } = Object.freeze({
   0: 'Connection terminates in this device',
   // 1: 'Reserved for compatibility with existing protocols (Backplane)',
   1: 'Backplane',
@@ -41,8 +41,8 @@ const PortTypeNames = Object.freeze({
 });
 
 const ClassAttribute = Object.freeze({
-  EntryPort: new CIPAttribute.Class(8, 'Entry Port', DataType.UINT),
-  InstanceInfo: new CIPAttribute.Class(9, 'Instance Info', DataType.ABBREV_ARRAY(
+  EntryPort: new CIPAttribute(ClassCodes.Port, 8, 'Entry Port', DataType.UINT),
+  InstanceInfo: new CIPAttribute(ClassCodes.Port, 9, 'Instance Info', DataType.ABBREV_ARRAY(
     DataType.TRANSFORM(
       DataType.STRUCT([
         DataType.UINT, // Type
@@ -61,57 +61,53 @@ const ClassAttribute = Object.freeze({
 });
 
 const InstanceAttribute = Object.freeze({
-  Type: new CIPAttribute.Instance(1, 'Type', DataType.TRANSFORM(
+  Type: new CIPAttribute(ClassCodes.Port, 1, 'Type', DataType.TRANSFORM(
     DataType.UINT,
     (value) => ({
       code: value,
       name: PortTypeNames[value] || 'Unknown',
     }),
   )),
-  Number: new CIPAttribute.Instance(2, 'Number', DataType.UINT),
-  Link: new CIPAttribute.Instance(3, 'Link', DataType.TRANSFORM(
+  Number: new CIPAttribute(ClassCodes.Port, 2, 'Number', DataType.UINT),
+  Link: new CIPAttribute(ClassCodes.Port, 3, 'Link', DataType.TRANSFORM(
     DataType.STRUCT(
       [
         DataType.UINT,
-        DataType.PLACEHOLDER((length) => DataType.EPATH(true, length)),
+        DataType.PLACEHOLDER((length) => DataType.EPATH({ padded: true, length })),
       ],
       (members, dt) => {
         if (members.length === 1) {
-          return dt.resolve(2 * members[0]);
+          return (dt as PlaceholderDataType).resolve(2 * (members[0] as number));
         }
         return undefined;
       },
     ),
     (value: any[]) => value[1],
   )),
-  Name: new CIPAttribute.Instance(4, 'Name', DataType.SHORT_STRING),
-  TypeName: new CIPAttribute.Instance(5, 'Type Name', DataType.SHORT_STRING),
-  Description: new CIPAttribute.Instance(6, 'Description', DataType.SHORT_STRING),
-  NodeAddress: new CIPAttribute.Instance(7, 'Node Address', DataType.EPATH(true)),
-  NodeRange: new CIPAttribute.Instance(8, 'Node Range', DataType.STRUCT([
+  Name: new CIPAttribute(ClassCodes.Port, 4, 'Name', DataType.SHORT_STRING),
+  TypeName: new CIPAttribute(ClassCodes.Port, 5, 'Type Name', DataType.SHORT_STRING),
+  Description: new CIPAttribute(ClassCodes.Port, 6, 'Description', DataType.SHORT_STRING),
+  NodeAddress: new CIPAttribute(ClassCodes.Port, 7, 'Node Address', DataType.EPATH({ padded: true, length: false })),
+  NodeRange: new CIPAttribute(ClassCodes.Port, 8, 'Node Range', DataType.STRUCT([
     DataType.UINT,
     DataType.UINT,
   ])),
-  Key: new CIPAttribute.Instance(9, 'Key', DataType.EPATH(false)),
+  Key: new CIPAttribute(ClassCodes.Port, 9, 'Key', DataType.EPATH({ padded: false, length: false })),
 });
-
-const GetAttributesAllInstanceAttributes = Object.freeze([
-  InstanceAttribute.Type,
-  InstanceAttribute.Number,
-  InstanceAttribute.Link,
-  InstanceAttribute.Name,
-  InstanceAttribute.NodeAddress,
-]);
 
 const CIPObject = CIPMetaObject(ClassCodes.Port, {
   ClassAttributes: ClassAttribute,
   InstanceAttributes: InstanceAttribute,
-  GetAttributesAllInstanceAttributes,
+  GetAllInstanceAttributes: Object.freeze([
+    InstanceAttribute.Type,
+    InstanceAttribute.Number,
+    InstanceAttribute.Link,
+    InstanceAttribute.Name,
+    InstanceAttribute.NodeAddress,
+  ])
 });
 
-class Port extends CIPObject {}
-
-Port.ClassAttribute = ClassAttribute;
-Port.InstanceAttribute = InstanceAttribute;
-
-export default Port;
+export default class Port extends CIPObject {
+  static ClassAttribute = ClassAttribute;
+  static InstanceAttribute = InstanceAttribute;
+}

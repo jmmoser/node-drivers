@@ -1,9 +1,8 @@
 import CIPMetaObject from '../object';
 import CIPAttribute from '../attribute';
 import { ClassCodes } from '../constants/index';
-import { DataType } from '../datatypes/index';
+import { DataType, PlaceholderDataType } from '../datatypes/index';
 import { getBits } from '../../../utils';
-import { EncodeTo } from '../datatypes/encoding';
 
 const ClassAttribute = Object.freeze({});
 
@@ -23,7 +22,7 @@ const InterfaceConfigurationStatusDescriptions = {
   1: 'The Interface Configuration attribute contains valid configuration.',
 };
 
-const ConfigurationControlStartupConfiguration = {
+const ConfigurationControlStartupConfiguration: { [key: number]: string} = {
   0: 'The device shall use the interface configuration values previously stored (for example, in non-volatile memory or via hardware switches, etc).',
   1: 'The device shall obtain its interface configuration values via BOOTP.',
   2: 'The device shall obtain its interface configuration values via DHCP upon start-up.',
@@ -105,11 +104,11 @@ const InstanceAttribute = Object.freeze({
     DataType.STRUCT(
       [
         DataType.UINT,
-        DataType.PLACEHOLDER((length) => DataType.EPATH(true, length)),
+        DataType.PLACEHOLDER((length: number) => DataType.EPATH({ padded: true, length })),
       ],
       (members, dt) => {
         if (members.length === 1) {
-          return dt.resolve(2 * members[0]);
+          return (dt as PlaceholderDataType).resolve(2 * (members[0] as number));
         }
         return undefined;
       },
@@ -142,9 +141,7 @@ const CIPObject = CIPMetaObject(ClassCodes.TCPIPInterface, {
   GetAllInstanceAttributes,
 });
 
-class TCPIPInterface extends CIPObject {}
-
-TCPIPInterface.ClassAttribute = ClassAttribute;
-TCPIPInterface.InstanceAttribute = InstanceAttribute;
-
-export default TCPIPInterface;
+export default class TCPIPInterface extends CIPObject {
+  static ClassAttribute = ClassAttribute;
+  static InstanceAttribute = InstanceAttribute;
+}

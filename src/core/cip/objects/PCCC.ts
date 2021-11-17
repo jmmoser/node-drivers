@@ -4,8 +4,8 @@ import { ClassCodes } from '../constants/index';
 import { ServiceCodes, ServiceNames } from '../../pccc/constants';
 
 const PCCCEPath = EPath.Encode(true, [
-  new EPath.Segments.Logical.ClassID(ClassCodes.PCCC),
-  new EPath.Segments.Logical.InstanceID(0x01),
+  new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, ClassCodes.PCCC),
+  new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, 0x01),
 ]);
 
 export const DefaultOptions = {
@@ -30,7 +30,7 @@ export function CreateExecutePCCCServiceRequest(vendorID: number, serialNumber: 
     ServiceCodes.ExecutePCCC,
     PCCCEPath,
     message,
-    null,
-    { serviceNames: ServiceNames },
+    undefined,
+    { serviceNames: ServiceNames, acceptedServiceCodes: Object.values(ServiceCodes) },
   );
 }

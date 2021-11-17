@@ -10,7 +10,7 @@ import { DataType } from '../datatypes/index';
 import { getBits } from '../../../utils';
 
 // CIP Vol1 Table 5-2.2, Attribute ID 8, Semantics of Values
-const InstanceStateDescriptions = {
+const InstanceStateDescriptions: { [key: number]: string } = {
   0: 'Non-existent',
   1: 'Device self testing',
   2: 'Standby',
@@ -21,7 +21,7 @@ const InstanceStateDescriptions = {
 };
 
 // CIP Vol1 Table 5-2.4
-const ExtendedDeviceStatusDescriptions = {
+const ExtendedDeviceStatusDescriptions: { [key: number]: string } = {
   0b0000: 'Self-testing or unknown',
   0b0001: 'Firmware update in progress',
   0b0010: 'At least one faulted I/O connection',
@@ -128,33 +128,33 @@ const ClassAttribute = Object.freeze({});
 
 const LanguageDataType = DataType.TRANSFORM(
   DataType.STRUCT([DataType.USINT, DataType.USINT, DataType.USINT]),
-  (value) => value.map((v) => String.fromCharCode(v)).join(''),
+  (value: number[]) => value.map((v) => String.fromCharCode(v)).join(''),
 );
 
 const InstanceAttribute = Object.freeze({
-  VendorID: new CIPAttribute.Instance(1, 'Vendor ID', DataType.TRANSFORM(
+  VendorID: new CIPAttribute(ClassCodes.Identity, 1, 'Vendor ID', DataType.TRANSFORM(
     DataType.UINT,
     (value) => ({
       code: value,
       name: VendorNames[value] || 'Unknown',
     }),
   )),
-  DeviceType: new CIPAttribute.Instance(2, 'Device Type', DataType.TRANSFORM(
+  DeviceType: new CIPAttribute(ClassCodes.Identity, 2, 'Device Type', DataType.TRANSFORM(
     DataType.UINT,
     (value) => ({
       code: value,
       name: DeviceTypeNames[value] || 'Unknown',
     }),
   )),
-  ProductCode: new CIPAttribute.Instance(3, 'Product Code', DataType.UINT),
-  Revision: new CIPAttribute.Instance(4, 'Revision', DataType.TRANSFORM(
+  ProductCode: new CIPAttribute(ClassCodes.Identity, 3, 'Product Code', DataType.UINT),
+  Revision: new CIPAttribute(ClassCodes.Identity, 4, 'Revision', DataType.TRANSFORM(
     DataType.STRUCT([DataType.USINT, DataType.USINT]),
     (value) => ({
       major: value[0],
       minor: value[1],
     }),
   )),
-  Status: new CIPAttribute.Instance(5, 'Status', DataType.TRANSFORM(
+  Status: new CIPAttribute(ClassCodes.Identity, 5, 'Status', DataType.TRANSFORM(
     DataType.WORD,
     (value) => ({
       code: value,
@@ -167,38 +167,36 @@ const InstanceAttribute = Object.freeze({
       majorUnrecoverableFault: getBits(value, 11, 12),
     }),
   )),
-  SerialNumber: new CIPAttribute.Instance(6, 'Serial Number', DataType.UDINT),
-  ProductName: new CIPAttribute.Instance(7, 'Product Name', DataType.SHORT_STRING),
-  State: new CIPAttribute.Instance(8, 'State', DataType.TRANSFORM(
+  SerialNumber: new CIPAttribute(ClassCodes.Identity, 6, 'Serial Number', DataType.UDINT),
+  ProductName: new CIPAttribute(ClassCodes.Identity, 7, 'Product Name', DataType.SHORT_STRING),
+  State: new CIPAttribute(ClassCodes.Identity, 8, 'State', DataType.TRANSFORM(
     DataType.USINT,
     (value) => InstanceStateDescriptions[value] || 'Reserved',
   )),
-  ConfigurationConsistencyValue: new CIPAttribute.Instance(9, 'Configuration Consistency Value', DataType.UINT),
-  HeartbeatInterval: new CIPAttribute.Instance(10, 'Heartbeat Interval', DataType.USINT),
-  ActiveLanguage: new CIPAttribute.Instance(11, 'Active Language', LanguageDataType),
-  SupportedLanguageList: new CIPAttribute.Instance(12, 'Supported Language List', DataType.ABBREV_ARRAY(LanguageDataType, true)),
-  InternationalProductName: new CIPAttribute.Instance(13, 'International Product Name', DataType.STRINGI),
-  Semaphore: new CIPAttribute.Instance(14, 'Semaphore', DataType.STRUCT([DataType.UINT, DataType.UDINT, DataType.ITIME])),
-  AssignedName: new CIPAttribute.Instance(15, 'Assigned Name', DataType.STRINGI),
-  AssignedDescription: new CIPAttribute.Instance(16, 'Assigned Description', DataType.STRINGI),
-  GeographicLocation: new CIPAttribute.Instance(17, 'Geographic Location', DataType.STRINGI),
-  // ModbusIdentityInfo: new CIPAttribute.Instance(18)
+  ConfigurationConsistencyValue: new CIPAttribute(ClassCodes.Identity, 9, 'Configuration Consistency Value', DataType.UINT),
+  HeartbeatInterval: new CIPAttribute(ClassCodes.Identity, 10, 'Heartbeat Interval', DataType.USINT),
+  ActiveLanguage: new CIPAttribute(ClassCodes.Identity, 11, 'Active Language', LanguageDataType),
+  SupportedLanguageList: new CIPAttribute(ClassCodes.Identity, 12, 'Supported Language List', DataType.ABBREV_ARRAY(LanguageDataType, true)),
+  InternationalProductName: new CIPAttribute(ClassCodes.Identity, 13, 'International Product Name', DataType.STRINGI),
+  Semaphore: new CIPAttribute(ClassCodes.Identity, 14, 'Semaphore', DataType.STRUCT([DataType.UINT, DataType.UDINT, DataType.ITIME])),
+  AssignedName: new CIPAttribute(ClassCodes.Identity, 15, 'Assigned Name', DataType.STRINGI),
+  AssignedDescription: new CIPAttribute(ClassCodes.Identity, 16, 'Assigned Description', DataType.STRINGI),
+  GeographicLocation: new CIPAttribute(ClassCodes.Identity, 17, 'Geographic Location', DataType.STRINGI),
+  // ModbusIdentityInfo: new CIPAttribute(18)
 });
-
-const GetAttributesAllInstanceAttributes = [
-  InstanceAttribute.VendorID,
-  InstanceAttribute.DeviceType,
-  InstanceAttribute.ProductCode,
-  InstanceAttribute.Revision,
-  InstanceAttribute.Status,
-  InstanceAttribute.SerialNumber,
-  InstanceAttribute.ProductName,
-];
 
 const CIPObject = CIPMetaObject(ClassCodes.Identity, {
   ClassAttributes: ClassAttribute,
   InstanceAttributes: InstanceAttribute,
-  GetAttributesAllInstanceAttributes,
+  GetAllInstanceAttributes: [
+    InstanceAttribute.VendorID,
+    InstanceAttribute.DeviceType,
+    InstanceAttribute.ProductCode,
+    InstanceAttribute.Revision,
+    InstanceAttribute.Status,
+    InstanceAttribute.SerialNumber,
+    InstanceAttribute.ProductName,
+  ],
 });
 
 class Identity extends CIPObject {

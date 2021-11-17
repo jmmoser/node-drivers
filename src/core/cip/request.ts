@@ -27,11 +27,11 @@ interface CIPResponse {
   // data: Buffer;
 }
 
-type ResponseHandler = CIPRequest | ((buffer: Buffer, offsetRef: Ref, response?: CIPResponse) => any);
+export type CIPResponseHandler = CIPRequest | ((buffer: Buffer, offsetRef: Ref, response?: CIPResponse) => any);
 
 type CIPRequestOptions = {
-  acceptedServiceCodes: number[];
-  serviceNames?: string[];
+  acceptedServiceCodes?: number[];
+  serviceNames?: { [key: number]: string };
   statusHandler?: (statusCode: number, extendedStatus: Buffer) => { name?: string, description?: string, type?: string };
   errorDataHandler?: (buffer: Buffer, offsetRef: Ref, response: any) => void;
 };
@@ -40,7 +40,7 @@ type CIPRequestOptions = {
 const RequestMessageSymbol = Symbol('requestMessage');
 const ResponseDataHandlerSymbol = Symbol('responseDataHandler');
 
-function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptions, request?: Buffer, handler?: ResponseHandler): CIPResponse {
+function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptions, request?: Buffer, handler?: CIPResponseHandler): CIPResponse {
   const opts = options || {};
 
   // const res: CIPResponse = {};
@@ -140,11 +140,11 @@ export default class CIPRequest {
   path?: Buffer;
   data?: Buffer;
   options: CIPRequestOptions
-  [ResponseDataHandlerSymbol]?: ResponseHandler;
+  [ResponseDataHandlerSymbol]?: CIPResponseHandler;
   // [EncodeSizeSymbol]?: number;
   [RequestMessageSymbol]?: Buffer;
   
-  constructor(service: number, path?: Buffer, data?: Buffer, responseHandler?: ResponseHandler, options?: CIPRequestOptions) {
+  constructor(service: number, path?: Buffer, data?: Buffer, responseHandler?: CIPResponseHandler, options?: CIPRequestOptions) {
     this.service = service;
     this.path = path;
     this.data = data;
