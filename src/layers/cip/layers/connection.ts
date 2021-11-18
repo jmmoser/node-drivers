@@ -249,7 +249,7 @@ function handleConnectedMessage(self: CIPConnectionLayer, data: Buffer, info: an
 
   const sequenceCount = data.readUInt16LE(0);
 
-  const savedContext = self.getContextForID(sequenceCount);
+  const savedContext = self.getContextForID(sequenceCount.toString(), false);
   if (!savedContext) {
     /* This happens when the last message is resent to prevent CIP connection timeout disconnect */
     return;

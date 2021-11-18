@@ -227,7 +227,7 @@ export default class Layer extends EventEmitter {
     this._queue.clear();
   }
 
-  contextCallback(callback: Function, contextOrModifier?: any, timeout?: number) {
+  contextCallback(callback: Function, contextOrModifier?: number | Function, timeout?: number) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
     if (typeof callback !== 'function') {
       throw new Error(`callback must be a function, received: ${typeof callback}`);
@@ -261,7 +261,7 @@ export default class Layer extends EventEmitter {
     return context;
   }
 
-  callbackForContext(context: any) {
+  callbackForContext(context: number) {
     if (this._contextToCallback.has(context)) {
       const callback = this._contextToCallback.get(context);
       this._contextToCallback.delete(context);

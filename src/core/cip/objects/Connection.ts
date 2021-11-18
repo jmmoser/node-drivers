@@ -148,6 +148,8 @@ export const TransportDirectionCodes = Object.freeze({
 });
 
 export default class Connection {
+  route: Buffer;
+
   static EncodeConnectedMessage(sequenceCount: number, message: Buffer) {
     const buffer = Buffer.allocUnsafe(message.length + 2);
     buffer.writeUInt16LE(sequenceCount, 0);

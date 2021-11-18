@@ -5,6 +5,7 @@ import { ClassCodes } from '../constants/index';
 import CIPRequest, { CIPResponseHandler } from '../request';
 import EPath from '../epath/index';
 import { Ref } from '../../../types';
+import Connection from './Connection';
 
 /** EIP-CIP-V1 3-5.5, page 3.56 */
 const ServiceCodes = {
@@ -22,7 +23,7 @@ const ServiceCodeSet = new Set(Object.values(ServiceCodes));
 const ServiceNames = InvertKeyValues(ServiceCodes) as { [key: number]: string };
 
 /** CIP Vol 1 Table 3-5.29 */
-const StatusDescriptions = {
+const StatusDescriptions: { [key: number]: string | { [key: number]: string }} = {
   0x01: {
     0x0100: 'Connection in use or duplicate forward open', // see 3-5.5.2
     // 0x0101: 'Reserved',
@@ -118,14 +119,14 @@ function incrementConnectionCounters() {
   TtoONetworkConnectionIDCounter++;
 }
 
-function encodeConnectionTiming(buffer: Buffer, offset: number, tickTime, timeoutTicks) {
+function encodeConnectionTiming(buffer: Buffer, offset: number, tickTime: number, timeoutTicks: number) {
   const priority = 0; // 1 is reserved, keep for future
   offset = buffer.writeUInt8(((priority << 4) | (tickTime & 0b1111)), offset);
   offset = buffer.writeUInt8(timeoutTicks, offset);
   return offset;
 }
 
-function errorDataHandler(buffer: Buffer, offsetRef: Ref, res) {
+function errorDataHandler(buffer: Buffer, offsetRef: Ref, res: { status: { type: string }, remainingPathSize?: number }) {
   if (res.status.type === 'routing') {
     res.remainingPathSize = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
 
@@ -195,7 +196,7 @@ export default class ConnectionManager {
       {
         serviceNames: ServiceNames,
         acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service],
-        statusHandler: (statusCode, extendedBuffer, cb) => {
+        statusHandler: (statusCode: number, extendedBuffer: Buffer, cb: (a0: string, a1: string, a2: string) => void) => {
           switch (statusCode) {
             case 1:
               if (extendedBuffer.length === 2) {
@@ -347,15 +348,19 @@ export default class ConnectionManager {
       ServiceCodes.ForwardClose,
       data,
       (buffer: Buffer, offsetRef) => {
-        const res = {};
-        res.SerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-        res.VendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-        res.OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+        const SerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        const VendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        const OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
         const appReplySize = 2 * buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
         offsetRef.current += 1; /** Reserved */
-        res.data = buffer.slice(offsetRef.current, offsetRef.current + appReplySize);
+        const data = buffer.slice(offsetRef.current, offsetRef.current + appReplySize);
         offsetRef.current += appReplySize;
-        return res;
+        return {
+          SerialNumber,
+          VendorID,
+          OriginatorSerialNumber,
+          data,
+        };
       },
     );
   }
