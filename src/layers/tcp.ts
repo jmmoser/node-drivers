@@ -127,11 +127,15 @@ function removeSocketListeners(socket: net.Socket) {
   });
 }
 
-interface TCPOptions {
-  host?: string;
-  port?: number;
+// interface TCPOptions {
+//   host?: string;
+//   port?: number;
+//   connectTimeout?: number;
+//   timeout?: number;
+// }
+
+type TCPOptions = net.NetConnectOpts & {
   connectTimeout?: number;
-  timeout?: number;
 }
 
 export default class TCPLayer extends Layer {
@@ -151,7 +155,8 @@ export default class TCPLayer extends Layer {
 
   _connect?: Promise<boolean>;
 
-  constructor(options: TCPOptions | string) {
+  // constructor(options: TCPOptions | string) {
+  constructor(options: TCPOptions) {
     super(LayerNames.TCP);
 
     this.numberOfTX = 0;
@@ -161,16 +166,17 @@ export default class TCPLayer extends Layer {
 
     let opts: TCPOptions = {
       host: '',
+      port: 0,
       connectTimeout: 3000,
       timeout: 0,
       ...(typeof options === 'object' ? options : {}),
     };
 
-    if (typeof options === 'string') {
-      opts = {
-        host: options,
-      };
-    }
+    // if (typeof options === 'string') {
+    //   opts = {
+    //     host: options,
+    //   };
+    // }
 
     if (typeof opts.connectTimeout !== 'number' || opts.connectTimeout < 0) {
       opts.connectTimeout = 3000;
@@ -226,14 +232,15 @@ export default class TCPLayer extends Layer {
       if (hasCallback) {
         setImmediate(callback);
       }
-      return () => {};
+      return Promise.resolve();
+      // return () => {};
     }
 
     if (this._connectionState === TCPStateCodes.Disconnecting) {
       if (hasCallback) {
         this._additionalDisconnectCallbacks.push(callback);
       }
-      return this._disconnect;
+      return this._disconnect!;
     }
 
     this._disconnect = CallbackPromise(callback, async (resolver) => {

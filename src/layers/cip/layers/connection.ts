@@ -1,18 +1,11 @@
 import CIPRequest from '../../../core/cip/request';
-import { GeneralStatusCodes, ClassCodes } from '../../../core/cip/constants/index';
+import { GeneralStatusCodes } from '../../../core/cip/constants/index';
 import Layer from '../../layer';
 import { LayerNames } from '../../constants';
 import ConnectionManager from '../../../core/cip/objects/ConnectionManager';
 import Connection, {
   ConnectionOptions,
-  TypeCodes,
-  PriorityCodes,
-  SizeTypeCodes,
-  TransportClassCodes,
-  TransportProductionTriggerCodes,
-  TransportDirectionCodes,
 } from '../../../core/cip/objects/Connection';
-import EPath from '../../../core/cip/epath/index';
 
 import EIPLayer from '../../eip';
 
@@ -44,33 +37,6 @@ function buildNetworkConnectionParametersCode(options) {
   return code;
 }
 
-const TransportClassCodesSet = new Set(
-  Object.values(TransportClassCodes),
-);
-const TransportProductionTriggerCodesSet = new Set(
-  Object.values(TransportProductionTriggerCodes),
-);
-const TransportDirectionCodesSet = new Set(
-  Object.values(TransportDirectionCodes),
-);
-
-function buildTransportClassTriggerCode(transport) {
-  if (!TransportClassCodesSet.has(transport.transportClass)) {
-    throw new Error(`CIP Connection invalid transport class ${transport.transportClass}`);
-  }
-  if (!TransportProductionTriggerCodesSet.has(transport.productionTrigger)) {
-    throw new Error(`CIP Connection invalid transport production trigger ${transport.productionTrigger}`);
-  }
-  if (!TransportDirectionCodesSet.has(transport.direction)) {
-    throw new Error(`CIP Connection invalid transport direction ${transport.direction}`);
-  }
-  return (
-    ((transport.direction & 0b1) << 7)
-    | ((transport.productionTrigger & 0b111) << 4)
-    | ((transport.transportClass & 0b1111))
-  );
-}
-
 // function mergeOptionsWithDefaults(self: CIPConnectionLayer, options) {
 //   const opts = options || {};
 
@@ -84,16 +50,16 @@ function buildTransportClassTriggerCode(transport) {
 // }
 
 function stopResend(self: CIPConnectionLayer) {
-  if (self.__resendInterval != null) {
-    clearInterval(self.__resendInterval);
-    self.__resendInterval = null;
+  if (self._resendInterval != null) {
+    clearInterval(self._resendInterval);
+    self._resendInterval = undefined;
   }
 }
 
-function startResend(self: CIPConnectionLayer, lastMessage) {
+function startResend(self: CIPConnectionLayer, lastMessage: Buffer) {
   stopResend(self);
 
-  self.__resendInterval = setInterval(() => {
+  self._resendInterval = setInterval(() => {
     self.send(lastMessage, self.sendInfo, false, null);
   }, Math.floor(self._connectionTimeout * (3 / 4)) * 1000);
 }
@@ -105,7 +71,7 @@ function startResend(self: CIPConnectionLayer, lastMessage) {
  *  unconnected, internal => callback
  *  unconnected, external => context
  */
-function send(self: CIPConnectionLayer, connected, internal, requestObj, contextOrCallback) {
+function send(self: CIPConnectionLayer, connected: boolean, internal: boolean, requestObj, contextOrCallback) {
   let context;
   let callback;
   if (internal && typeof contextOrCallback === 'function') {
@@ -123,7 +89,7 @@ function send(self: CIPConnectionLayer, connected, internal, requestObj, context
       context = self.contextCallback(callback, `c${sequenceCount}`);
     }
 
-    self.setContextForID(sequenceCount, {
+    self.setContextForID(sequenceCount.toString(), {
       context,
       internal,
       request: requestObj,
@@ -147,7 +113,7 @@ function send(self: CIPConnectionLayer, connected, internal, requestObj, context
   }
 }
 
-function handleUnconnectedMessage(self, data, info, context) {
+function handleUnconnectedMessage(self: CIPConnectionLayer, data: Buffer, info: any, context) {
   if (!context) {
     console.log('CIP Connection unhandled unconnected message, no context', data);
     return;
@@ -245,8 +211,8 @@ function connect(self: CIPConnectionLayer) {
             res.service.code === LARGE_FORWARD_OPEN_SERVICE
             && res.status.code === GeneralStatusCodes.ServiceNotSupported
           ) {
-            self.networkConnectionParameters.maximumSize = 500;
-            self.large = false;
+            self.connection.options.networkConnectionParameters!.maximumSize = 500;
+            self.connection.large = false;
             self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(
               self.networkConnectionParameters,
             );
@@ -267,10 +233,10 @@ function connect(self: CIPConnectionLayer) {
               self._closeAndReconnect = true;
               const closeRequest = ConnectionManager.ForwardClose(self);
 
-              send(self, false, true, closeRequest, (closeErr, closeRes) => {
+              send(self, false, true, closeRequest, (closeErr?: Error, closeRes) => {
                 if (closeErr || closeRes == null || closeRes.status.code !== 0) {
                   console.log('CIP connection unsuccessful close', closeErr, closeRes);
-                  self.destroy('Forward Close error');
+                  self.destroy(new Error('Forward Close error'));
                 } else {
                   self._closeAndReconnect = false;
                   self._connectionState = 0;
@@ -295,7 +261,7 @@ function connect(self: CIPConnectionLayer) {
           ? self._OtoTPacketRate
           : self._TtoOPacketRate;
 
-        self._connectionTimeout = 4 * (rpi / 1e6) * (2 ** self.ConnectionTimeoutMultiplier);
+        self._connectionTimeout = 4 * (rpi / 1e6) * (2 ** self.connection.options.connectionTimeoutMultiplier!);
 
         self.sendInfo = {
           connectionID: self._OtoTConnectionID,
@@ -308,7 +274,7 @@ function connect(self: CIPConnectionLayer) {
         // console.log('CIP Connection connected');
         self.sendNextMessage();
       }
-      resolve();
+      resolve(undefined);
     });
   });
 
@@ -318,7 +284,15 @@ function connect(self: CIPConnectionLayer) {
 export default class CIPConnectionLayer extends Layer {
   _connectionState: number;
   _disconnect?: Promise<any>;
+  _connectionTimeout?: number;
+  _closeAndReconnect: boolean;
+  _resendInterval?: NodeJS.Timeout;
+  _connect?: Promise<void>;
   route?: Buffer;
+  sendInfo?: {
+    connectionID: number;
+    responseID: number;
+  }
 
   connection: Connection;
 
@@ -332,6 +306,7 @@ export default class CIPConnectionLayer extends Layer {
     super('cip.connection', lowerLayer);
 
     this._connectionState = 0;
+    this._closeAndReconnect = false;
 
     this.connection = new Connection(options);
   }
@@ -356,7 +331,7 @@ export default class CIPConnectionLayer extends Layer {
 
       const request = ConnectionManager.ForwardClose(this.connection);
 
-      send(this, false, true, request, (err, res) => {
+      send(this, false, true, request, (err?: Error, res) => {
         clearTimeout(disconnectTimeout);
         if (err || res == null || res.status.code !== 0) {
           console.log('CIP connection unsuccessful close', err, res);
@@ -405,6 +380,6 @@ export default class CIPConnectionLayer extends Layer {
 
   handleDestroy() {
     this._connectionState = 0;
-    this.sendInfo = null;
+    this.sendInfo = undefined;
   }
 }

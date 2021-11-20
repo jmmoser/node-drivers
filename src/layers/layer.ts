@@ -52,8 +52,8 @@ export default class Layer extends EventEmitter {
   _context: Context;
   _defragger?: Defragger;
   _handlesForwarding: boolean;
-  _contextToCallbackTimeouts: Map<number, NodeJS.Timeout>;
-  _contextToCallback: Map<number, Function>;
+  _contextToCallbackTimeouts: Map<string, NodeJS.Timeout>;
+  _contextToCallback: Map<string, Function>;
   _idContext: Map<string, any>;
 
   constructor(name: string, lowerLayer?: Layer, options?: Options, defaultOptions?: any) {
@@ -227,24 +227,10 @@ export default class Layer extends EventEmitter {
     this._queue.clear();
   }
 
-  contextCallback(callback: Function, contextOrModifier?: number | Function, timeout?: number) {
+  contextCallback(callback: Function, context: string, timeout?: number) {
     // caller can pass their own context (e.g. PCCCLayer passes the transaction)
     if (typeof callback !== 'function') {
       throw new Error(`callback must be a function, received: ${typeof callback}`);
-    }
-
-    let context: any;
-    let contextModifier;
-    if (typeof contextOrModifier === 'function') {
-      contextModifier = contextOrModifier;
-    } else {
-      context = contextOrModifier;
-    }
-    if (context == null) {
-      context = this._context();
-    }
-    if (contextModifier) {
-      context = contextModifier(context);
     }
 
     this._contextToCallback.set(context, callback);
@@ -261,7 +247,7 @@ export default class Layer extends EventEmitter {
     return context;
   }
 
-  callbackForContext(context: number) {
+  callbackForContext(context: string) {
     if (this._contextToCallback.has(context)) {
       const callback = this._contextToCallback.get(context);
       this._contextToCallback.delete(context);

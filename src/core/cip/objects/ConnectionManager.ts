@@ -241,7 +241,7 @@ export default class ConnectionManager {
   static ForwardOpen(connection: Connection, incrementCounters: boolean) {
     if (incrementCounters) {
       incrementConnectionCounters();
-      connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
+      connection.options.connectionSerialNumber = ConnectionSerialNumberCounter;
     }
 
     let offset = 0;
@@ -336,7 +336,7 @@ export default class ConnectionManager {
       connection.options.timeoutTicks!,
     );
 
-    offset = data.writeUInt16LE(connection.ConnectionSerialNumber, offset);
+    offset = data.writeUInt16LE(connection.options.connectionSerialNumber!, offset);
     offset = data.writeUInt16LE(connection.options.vendorID!, offset);
     offset = data.writeUInt32LE(connection.options.originatorSerialNumber!, offset);
 

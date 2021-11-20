@@ -123,12 +123,14 @@ export default class CPF {
     const attributes = CIPIdentity.DecodeInstanceAttributesAll(
       buffer,
       offsetRef,
+      1
     );
 
-    attributes.push(CIPIdentity.DecodeInstanceAttribute(
+    attributes.push(CIPIdentity.DecodeAttribute(
       buffer,
       offsetRef,
       CIPIdentity.InstanceAttribute.State,
+      1
     ));
 
     return {
