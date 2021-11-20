@@ -1,5 +1,7 @@
 import { InvertKeyValues } from '../../../utils';
 import { DataType, PlaceholderDataType } from '../datatypes/types';
+import EPath from '../epath/index';
+import { ClassCodes } from '../constants/classes';
 
 // /** CIP Vol1 Table 3-4.2 */
 // const ClassServices = Object.freeze({
@@ -142,32 +144,47 @@ export const TransportProductionTriggerCodes = Object.freeze({
   ApplicationObject: 2,
 });
 
-export const TransportDirectionCodes = Object.freeze({
-  Client: 0,
-  Server: 1,
-});
+// export const TransportDirectionCodes = Object.freeze({
+//   Client: 0,
+//   Server: 1,
+// });
+
+export enum TransportDirectionCodes {
+  Client = 0,
+  Server = 1,
+};
 
 export interface ConnectionTransportClassTrigger {
-  direction?: boolean;
+  direction?: number;
   productionTrigger?: number;
-  transportClass?: number;
+  class?: number;
 }
 
+const TransportClassCodesSet = new Set(
+  Object.values(TransportClassCodes),
+);
+const TransportProductionTriggerCodesSet = new Set(
+  Object.values(TransportProductionTriggerCodes),
+);
+const TransportDirectionCodesSet = new Set(
+  Object.values(TransportDirectionCodes),
+);
+
 function buildTransportClassTriggerCode(transport: ConnectionTransportClassTrigger) {
-  if (!TransportClassCodesSet.has(transport.transportClass)) {
-    throw new Error(`CIP Connection invalid transport class ${transport.transportClass}`);
+  if (!TransportClassCodesSet.has(transport.class!)) {
+    throw new Error(`CIP Connection invalid transport class ${transport.class}`);
   }
-  if (!TransportProductionTriggerCodesSet.has(transport.productionTrigger)) {
+  if (!TransportProductionTriggerCodesSet.has(transport.productionTrigger!)) {
     throw new Error(`CIP Connection invalid transport production trigger ${transport.productionTrigger}`);
   }
-  if (!TransportDirectionCodesSet.has(transport.direction)) {
+  if (!TransportDirectionCodesSet.has(transport.direction!)) {
     throw new Error(`CIP Connection invalid transport direction ${transport.direction}`);
   }
 
   return (
     ((transport.direction ? 0 : 1 & 0b1) << 7)
     | ((transport.productionTrigger! & 0b111) << 4)
-    | ((transport.transportClass! & 0b1111))
+    | ((transport.class! & 0b1111))
   );
 }
 
@@ -209,34 +226,69 @@ export interface ConnectionOptions {
   route?: Buffer;
   large?: boolean;
   connectionSerialNumber?: number;
+  connectionTimeoutMultiplier?: number;
   vendorID?: number;
   originatorSerialNumber?: number;
   transportClassTrigger?: ConnectionTransportClassTrigger;
   OtoTRPI?: number;
   TtoORPI?: number;
-  OtoTNetworkConnectionParameters?: NetworkConnectionParameters;
-  TtoONetworkConnectionParameters?: NetworkConnectionParameters;
+  networkConnectionParameters?: NetworkConnectionParameters;
+  transportProductionTrigger?: number;
+  tickTime?: number;
+  timeoutTicks?: number;
+  overrideLarge?: boolean;
 }
 
 export default class Connection {
   options: ConnectionOptions;
   sequenceCount: number;
   transportClassTriggerCode: number
+  OtoTNetworkConnectionParametersCode: number;
+  TtoONetworkConnectionParametersCode: number;
+  large: boolean;
 
   constructor(options?: ConnectionOptions) {
     this.options = {
-      route: Buffer.alloc(0),
+      vendorID: 0x1339,
+      originatorSerialNumber: 42,
+      connectionTimeoutMultiplier: 1,
+      route: EPath.Encode(true, [
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, ClassCodes.MessageRouter),
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, 1),
+      ]),
       large: false,
       connectionSerialNumber: 1,
       OtoTRPI: 2000000,
       TtoORPI: 2000000,
+      tickTime: 6,
+      timeoutTicks: 156,
+      overrideLarge: false,
       ...options,
       transportClassTrigger: {
+        class: TransportClassCodes.Class3,
+        productionTrigger: TransportProductionTriggerCodes.ApplicationObject,
+        direction: TransportDirectionCodes.Server,
         ...options?.transportClassTrigger,
-      }
+      },
+      networkConnectionParameters: {
+        redundantOwner: false,
+        type: TypeCodes.PointToPoint,
+        priority: PriorityCodes.Low,
+        sizeType: SizeTypeCodes.Variable,
+        maximumSize: 500,
+        ...options?.networkConnectionParameters,
+      },
     };
+    this.large = options?.overrideLarge || this.options.networkConnectionParameters!.maximumSize! > 500;
     this.sequenceCount = 0;
     this.transportClassTriggerCode = buildTransportClassTriggerCode(this.options.transportClassTrigger!);
+    this.OtoTNetworkConnectionParametersCode = buildNetworkConnectionParametersCode(this.options.networkConnectionParameters!);
+    this.TtoONetworkConnectionParametersCode = this.OtoTNetworkConnectionParametersCode;
+  }
+
+  incrementSequenceCount() {
+    this.sequenceCount = (this.sequenceCount + 1) % 0x10000;
+    return this.sequenceCount;
   }
 
   static EncodeConnectedMessage(sequenceCount: number, message: Buffer) {

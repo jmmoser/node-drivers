@@ -4,6 +4,7 @@ import Layer from '../../layer';
 import { LayerNames } from '../../constants';
 import ConnectionManager from '../../../core/cip/objects/ConnectionManager';
 import Connection, {
+  ConnectionOptions,
   TypeCodes,
   PriorityCodes,
   SizeTypeCodes,
@@ -70,70 +71,17 @@ function buildTransportClassTriggerCode(transport) {
   );
 }
 
-function mergeOptionsWithDefaults(self: CIPConnectionLayer, options) {
-  const opts = options || {};
+// function mergeOptionsWithDefaults(self: CIPConnectionLayer, options) {
+//   const opts = options || {};
 
-  self.networkConnectionParameters = {
-    redundantOwner: 0,
-    type: TypeCodes.PointToPoint,
-    priority: PriorityCodes.Low,
-    sizeType: SizeTypeCodes.Variable,
-    maximumSize: 500,
-    ...opts.networkConnectionParameters,
-  };
+//   opts.route = opts.route || [];
 
-  self.transport = {
-    transportClass: TransportClassCodes.Class3,
-    productionTrigger: TransportProductionTriggerCodes.ApplicationObject,
-    direction: TransportDirectionCodes.Server,
-    ...opts.transport,
-  };
-
-  self.timing = {
-    tickTime: 6,
-    timeoutTicks: 156,
-    ...opts.timing,
-  };
-
-  self.transportClass = opts.transportClass || TransportClassCodes.Class3;
-
-  self.transportProductionTrigger = (
-    opts.transportProductionTrigger
-    || TransportProductionTriggerCodes.ApplicationObject
-  );
-
-  self.transportDirection = opts.transportDirection || TransportDirectionCodes.Server;
-
-  self.large = self.networkConnectionParameters.maximumSize > MaximumNormalConnectionSize;
-
-  self.VendorID = opts.VendorID || 0x1339;
-  self.OriginatorSerialNumber = opts.OriginatorSerialNumber || 42;
-  self.ConnectionTimeoutMultiplier = opts.ConnectionTimeoutMultiplier || 0x01;
-
-  // Originator to Target requested packet interval (microseconds)
-  self.OtoTRPI = opts.OtoTRPI || 2000000;
-  self.OtoTNetworkConnectionParameters = buildNetworkConnectionParametersCode(
-    self.networkConnectionParameters,
-  );
-  self.TtoORPI = opts.TtoORPI || 2000000;
-  self.TtoONetworkConnectionParameters = buildNetworkConnectionParametersCode(
-    self.networkConnectionParameters,
-  );
-  self.TransportClassTrigger = buildTransportClassTriggerCode(self.transport);
-
-  opts.route = opts.route || [];
-
-  self.route = EPath.Encode(true, opts.fullRoute || [
-    ...opts.route,
-    new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, ClassCodes.MessageRouter),
-    new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, 1),
-  ]);
-}
-
-function incrementSequenceCount(self: CIPConnectionLayer) {
-  self._sequenceCount = (self._sequenceCount + 1) % 0x10000;
-  return self._sequenceCount;
-}
+//   self.route = EPath.Encode(true, opts.fullRoute || [
+//     ...opts.route,
+//     new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, ClassCodes.MessageRouter),
+//     new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, 1),
+//   ]);
+// }
 
 function stopResend(self: CIPConnectionLayer) {
   if (self.__resendInterval != null) {
@@ -169,7 +117,7 @@ function send(self: CIPConnectionLayer, connected, internal, requestObj, context
   const request = requestObj instanceof CIPRequest ? requestObj.encode() : requestObj;
 
   if (connected) {
-    const sequenceCount = incrementSequenceCount(self);
+    const sequenceCount = self.connection.incrementSequenceCount();
 
     if (internal && callback) {
       context = self.contextCallback(callback, `c${sequenceCount}`);
@@ -274,7 +222,7 @@ function handleConnectedMessage(self: CIPConnectionLayer, data: Buffer, info: an
   }
 }
 
-function connect(self) {
+function connect(self: CIPConnectionLayer) {
   if (self._connectionState === 1 || self._connectionState === 2) {
     return self._connect;
   }
@@ -285,7 +233,7 @@ function connect(self) {
 
   self._connectionState = 1;
 
-  const request = ConnectionManager.ForwardOpen(self, true);
+  const request = ConnectionManager.ForwardOpen(self.connection, true);
 
   self._connect = new Promise((resolve) => {
     send(self, false, true, request, async (err?: Error, res) => {
@@ -369,11 +317,12 @@ function connect(self) {
 
 export default class CIPConnectionLayer extends Layer {
   _connectionState: number;
-  _sequenceCount: number;
   _disconnect?: Promise<any>;
   route?: Buffer;
 
-  constructor(lowerLayer: Layer, options) {
+  connection: Connection;
+
+  constructor(lowerLayer: Layer, options?: ConnectionOptions) {
     if (lowerLayer == null) {
       throw new Error('Lower layer is currently required to use ');
     } else if ([LayerNames.TCP, LayerNames.UDP].indexOf(lowerLayer.name) >= 0) {
@@ -382,10 +331,9 @@ export default class CIPConnectionLayer extends Layer {
 
     super('cip.connection', lowerLayer);
 
-    mergeOptionsWithDefaults(this, options);
-
     this._connectionState = 0;
-    this._sequenceCount = 0;
+
+    this.connection = new Connection(options);
   }
 
   disconnect() {
@@ -406,7 +354,7 @@ export default class CIPConnectionLayer extends Layer {
         resolve(undefined);
       }, 5000);
 
-      const request = ConnectionManager.ForwardClose(this);
+      const request = ConnectionManager.ForwardClose(this.connection);
 
       send(this, false, true, request, (err, res) => {
         clearTimeout(disconnectTimeout);
@@ -457,7 +405,6 @@ export default class CIPConnectionLayer extends Layer {
 
   handleDestroy() {
     this._connectionState = 0;
-    this._sequenceCount = 0;
     this.sendInfo = null;
   }
 }

@@ -163,11 +163,16 @@ function connectionDataResponse(buffer: Buffer, offsetRef: Ref) {
   return res;
 }
 
+interface UnconnectedSendOptions {
+  tickTime: number;
+  timeoutTicks: number;
+}
+
 export default class ConnectionManager {
   static ServiceCodes = ServiceCodes;
 
-  static UnconnectedSend(request: CIPRequest, route: Buffer, options) {
-    options = {
+  static UnconnectedSend(request: CIPRequest, route: Buffer, options?: UnconnectedSendOptions) {
+    const opts = {
       tickTime: 6,
       timeoutTicks: 156,
       ...options,
@@ -178,7 +183,7 @@ export default class ConnectionManager {
     let offset = 0;
     const buffer = Buffer.allocUnsafe(6 + requestSize + (requestSize % 2) + route.length);
 
-    offset = encodeConnectionTiming(buffer, offset, options.tickTime, options.timeoutTicks);
+    offset = encodeConnectionTiming(buffer, offset, opts.tickTime, opts.timeoutTicks);
     offset = buffer.writeUInt16LE(requestSize, offset);
     offset = request.encodeTo(buffer, offset);
     if (requestSize % 2 === 1) {
@@ -233,56 +238,56 @@ export default class ConnectionManager {
     );
   }
 
-  static ForwardOpen(connection, incrementCounters: boolean) {
+  static ForwardOpen(connection: Connection, incrementCounters: boolean) {
     if (incrementCounters) {
       incrementConnectionCounters();
       connection.ConnectionSerialNumber = ConnectionSerialNumberCounter;
     }
 
     let offset = 0;
-    const data = Buffer.alloc(36 + connection.route.length + (connection.large ? 4 : 0));
+    const data = Buffer.alloc(36 + connection.options.route!.length + (connection.large ? 4 : 0));
 
     offset = encodeConnectionTiming(
       data,
       offset,
-      connection.timing.tickTime,
-      connection.timing.timeoutTicks,
+      connection.options.tickTime!,
+      connection.options.timeoutTicks!,
     );
 
     offset = data.writeUInt32LE(OtoTNetworkConnectionIDCounter, offset);
     offset = data.writeUInt32LE(TtoONetworkConnectionIDCounter, offset);
     offset = data.writeUInt16LE(ConnectionSerialNumberCounter, offset);
-    offset = data.writeUInt16LE(connection.VendorID, offset);
-    offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
-    offset = data.writeUInt8(connection.ConnectionTimeoutMultiplier, offset);
+    offset = data.writeUInt16LE(connection.options.vendorID!, offset);
+    offset = data.writeUInt32LE(connection.options.originatorSerialNumber!, offset);
+    offset = data.writeUInt8(connection.options.connectionTimeoutMultiplier!, offset);
 
     offset = data.writeUInt8(0, offset); /** Reserved */
     offset = data.writeUInt8(0, offset); /** Reserved */
     offset = data.writeUInt8(0, offset); /** Reserved */
 
-    offset = data.writeUInt32LE(connection.OtoTRPI, offset);
+    offset = data.writeUInt32LE(connection.options.OtoTRPI!, offset);
     if (connection.large) {
-      offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParameters, offset);
+      offset = data.writeUInt32LE(connection.OtoTNetworkConnectionParametersCode, offset);
     } else {
-      offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParameters, offset);
+      offset = data.writeUInt16LE(connection.OtoTNetworkConnectionParametersCode, offset);
     }
 
     // Target to Originator requested packet interval (rate), in microseconds
-    offset = data.writeUInt32LE(connection.TtoORPI, offset);
+    offset = data.writeUInt32LE(connection.options.TtoORPI!, offset);
 
     if (connection.large) {
-      offset = data.writeUInt32LE(connection.TtoONetworkConnectionParameters, offset);
+      offset = data.writeUInt32LE(connection.TtoONetworkConnectionParametersCode, offset);
     } else {
-      offset = data.writeUInt16LE(connection.TtoONetworkConnectionParameters, offset);
+      offset = data.writeUInt16LE(connection.TtoONetworkConnectionParametersCode, offset);
     }
 
     /**
      * Transport type/trigger
      * 0xA3: Direction = Server, Production Trigger = Application Object, Trasport Class = 3
      * */
-    offset = data.writeUInt8(connection.TransportClassTrigger, offset);
-    offset = data.writeUInt8(connection.route.length / 2, offset); // Connection path size
-    connection.route.copy(data, offset); offset += connection.route.length;
+    offset = data.writeUInt8(connection.transportClassTriggerCode, offset);
+    offset = data.writeUInt8(connection.options.route!.length / 2, offset); // Connection path size
+    offset += connection.options.route!.copy(data, offset);
 
     if (offset !== data.length) {
       throw new Error('offset does not match data length');
@@ -320,25 +325,25 @@ export default class ConnectionManager {
   }
 
   /** CIP Vol 1 3-5.5.3 */
-  static ForwardClose(connection) {
+  static ForwardClose(connection: Connection) {
     let offset = 0;
-    const data = Buffer.allocUnsafe(12 + connection.route.length);
+    const data = Buffer.allocUnsafe(12 + connection.options.route!.length);
 
     offset = encodeConnectionTiming(
       data,
       offset,
-      connection.timing.tickTime,
-      connection.timing.timeoutTicks,
+      connection.options.tickTime!,
+      connection.options.timeoutTicks!,
     );
 
     offset = data.writeUInt16LE(connection.ConnectionSerialNumber, offset);
-    offset = data.writeUInt16LE(connection.VendorID, offset);
-    offset = data.writeUInt32LE(connection.OriginatorSerialNumber, offset);
+    offset = data.writeUInt16LE(connection.options.vendorID!, offset);
+    offset = data.writeUInt32LE(connection.options.originatorSerialNumber!, offset);
 
     // connection path size, 16-bit words
-    offset = data.writeUInt8(connection.route.length / 2, offset);
+    offset = data.writeUInt8(connection.options.route!.length / 2, offset);
     offset = data.writeUInt8(0, offset); /** Reserved */
-    connection.route.copy(data, offset); offset += connection.route.length;
+    offset += connection.options.route!.copy(data, offset);
 
     if (offset !== data.length) {
       throw new Error('offset does not match data length');
