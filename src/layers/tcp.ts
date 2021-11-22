@@ -192,9 +192,9 @@ export default class TCPLayer extends Layer {
     this._additionalDisconnectCallbacks = [];
   }
 
-  handleDefaultOptions(defaultOptions: TCPOptions) {
-    if (this.options.port == null && defaultOptions.port != null) {
-      this.options.port = defaultOptions.port;
+  handleDefaultOptions(defaultOptions: any) {
+    if ((this.options as any).port == null && defaultOptions.port != null) {
+      (this.options as any).port = (defaultOptions as any).port;
     }
   }
 

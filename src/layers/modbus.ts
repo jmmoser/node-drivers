@@ -5,7 +5,7 @@ import * as MB from '../core/modbus/constants';
 import Frames from '../core/modbus/frames/index';
 import PDU, { ModbusValues } from '../core/modbus/pdu';
 
-import CreateContext, { Context } from '../context';
+import CreateCounter, { Counter } from '../counter';
 
 const {
   ReadDiscreteInputs,
@@ -46,7 +46,7 @@ export type ModbusOptions = ModbusTCPOptions;
 
 export default class Modbus extends Layer {
   _littleEndian: boolean;
-  _transactionCounter?: Context;
+  _transactionCounter?: Counter;
   _send?: Function;
   _frameClass: any;
 
@@ -63,7 +63,7 @@ export default class Modbus extends Layer {
           ...options,
         };
 
-        const transactionCounter = CreateContext({ maxValue: 0x10000 });
+        const transactionCounter = CreateCounter({ maxValue: 0x10000 });
         this._frameClass = Frames.TCP;
         this._send = (pdu: Buffer, opts: { protocolID?: number; unitID?: number }, resolver: { resolve: Function, reject: Function }) => {
           opts = opts || {};
@@ -78,7 +78,7 @@ export default class Modbus extends Layer {
               }
               return resolver;
             }),
-            transaction,
+            transaction.toString(),
           );
 
           const message = Frames.TCP.Encode(

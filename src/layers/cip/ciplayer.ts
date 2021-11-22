@@ -8,22 +8,23 @@ import { CallbackPromise } from '../../utils';
 import { LayerNames } from '../constants';
 
 import * as PCCCHandler from './handlers/pccc';
+import CreateCounter, { Counter } from '../../counter';
 
 type CIPLayerOptions = PCCCHandler.PCCCOptions;
 
 export default class CIPLayer extends Layer {
   _options?: CIPLayerOptions;
+  _counter: Counter;
 
   constructor(lowerLayer: Layer, options?: PCCCHandler.PCCCOptions) {
     /** Inject Connection as lower layer */
     super(LayerNames.CIP, new ConnectionLayer(lowerLayer, options));
     this._options = options;
+    this._counter = CreateCounter({ maxValue: 0x100000000 });
   }
 
   sendRequest(connected: boolean, request: CIPRequest, callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
-      const timeout = null;
-
       const context = this.contextCallback((error?: Error, message?: Buffer) => {
         try {
           if (error) {
@@ -31,15 +32,15 @@ export default class CIPLayer extends Layer {
           } else if (message) {
             const res = request.response(message, { current: 0 });
             if (res.status.error) {
-              resolver.reject(res.status.description, res);
+              resolver.reject(res.status.description || 'Error sending CIP request', res);
             } else {
               resolver.resolve(res);
             }
           }
-        } catch (err) {
+        } catch (err: any) {
           resolver.reject(err);
         }
-      }, null, timeout);
+      }, this._counter().toString());
 
       this.send(request.encode(), { connected }, false, context);
     });
@@ -66,15 +67,15 @@ export default class CIPLayer extends Layer {
       }
       // }
 
-      const attributeValues = await Promise.all(attributes.map(async (attribute) => {
+      const attributeValues = await Promise.all(attributes.map(async (attributeID) => {
         const path = EPath.Encode(true, [
           new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, classCode),
-          new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, classCode),
-          new EPath.Segments.Logical(EPath.Segments.Logical.Types.AttributeID, classCode),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, instanceID),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.AttributeID, attributeID),
         ]);
         const reply = await this.sendRequest(true, new CIPRequest(service, path));
         return {
-          code: attribute,
+          code: attributeID,
           data: reply.data,
         };
       }));

@@ -2,14 +2,9 @@ import EventEmitter from 'events';
 import Queue from '../queue';
 import Defragger, { LengthHandler } from '../defragger';
 import { CallbackPromise } from '../utils';
-import CreateContext, { Context } from '../context';
+import CreateCounter, { Counter } from '../counter';
 
 const LOG = false;
-
-// function incrementContext(self: any) {
-//   self.__context = (self.__context + 1) % 0x100000000; // eslint-disable-line no-underscore-dangle
-//   return self.__context; // eslint-disable-line no-underscore-dangle
-// }
 
 function passDefaultOptionsDown(defaultOptions: any, upperLayer: Layer) {
   let lowerLayer: Layer | undefined = upperLayer;
@@ -49,7 +44,7 @@ export default class Layer extends EventEmitter {
   _queue: Queue;
   _lowerLayer?: Layer;
   _upperLayer?: Layer;
-  _context: Context;
+  _counter: Counter;
   _defragger?: Defragger;
   _handlesForwarding: boolean;
   _contextToCallbackTimeouts: Map<string, NodeJS.Timeout>;
@@ -76,7 +71,7 @@ export default class Layer extends EventEmitter {
     this._handlesForwarding = opts.handlesForwarding === true;
 
     this._name = name;
-    this._context = CreateContext({ maxValue: 0x100000000 });
+    this._counter = CreateCounter({ maxValue: 0x100000000 });
     this._contextToCallback = new Map();
     this._contextToCallbackTimeouts = new Map();
     this._idContext = new Map();

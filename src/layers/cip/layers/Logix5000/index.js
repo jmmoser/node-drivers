@@ -229,7 +229,7 @@ function sendPromise(self, service, path, data, timeout) {
   return new Promise((resolve, reject) => {
     send(self, service, path, data, (error, reply) => {
       if (error) {
-        reject(new InfoError(reply, error));
+        reject(error);
       } else {
         resolve(reply);
       }
@@ -257,7 +257,7 @@ async function readTagFragmented(layer, path, elements) {
     } else if (reply.status.code === 0) {
       break;
     } else {
-      throw new InfoError(reply, reply.status.description);
+      throw new Error(reply.status.description);
     }
   }
 

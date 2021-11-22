@@ -5,13 +5,12 @@
 
 import { CallbackPromise } from '../utils';
 import Layer from './layer';
-import CreateContext, { Context } from '../context';
+import CreateCounter, { Counter } from '../counter';
 
 function layerContext(self: MultiplexLayer, layer: Layer, context: number) {
   if (layer != null) {
     if (context == null) {
-      context = self.__context();
-      // context = incrementContext(self); // eslint-disable-line no-param-reassign
+      context = self.__counter();
     }
     self.__contextToLayer.set(context, layer);
   }
@@ -29,7 +28,7 @@ function layerForContext(self: MultiplexLayer, context: number) {
 
 export default class MultiplexLayer extends Layer {
   _layers: Set<Layer>;
-  __context: Context;
+  __counter: Counter;
   __contextToLayer: Map<number, Layer>;
   _disconnecting: number;
 
@@ -39,7 +38,7 @@ export default class MultiplexLayer extends Layer {
     });
 
     this._layers = new Set();
-    this.__context = CreateContext({ maxValue: 0x100000000 });
+    this.__counter = CreateCounter({ maxValue: 0x100000000 });
     this.__contextToLayer = new Map();
     this._disconnecting = 0;
   }

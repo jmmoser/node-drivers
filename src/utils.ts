@@ -72,27 +72,6 @@ export function once(fn: Function, context?: any) {
   };
 }
 
-/** https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error */
-export class InfoError extends Error {
-  info: any;
-
-  constructor(info: any, err: Error | string, ...params: any[]) {
-    // Pass remaining arguments (including vendor specific ones) to parent constructor
-    if (typeof err === 'object' && err.message) {
-      super(err.message, ...params);
-    } else {
-      super(err, ...params);
-    }
-
-    // Maintains proper stack trace for where our error was thrown (only available on V8)
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, InfoError);
-    }
-    this.name = 'InfoError';
-    this.info = info;
-  }
-}
-
 interface Resolver {
   resolve: (res?: any) => void;
   reject: (err: Error | string, info?: any) => void;
@@ -117,11 +96,7 @@ export function CallbackPromise(callback: undefined | Function, func: (a0: Resol
       reject: (err: Error | string, info?: any) => {
         if (active) {
           let error = err;
-          if (typeof err === 'string') {
-            error = new InfoError(info, err);
-          } else if (err instanceof Error && info != null && err.info == null) {
-            error = new InfoError(info, err);
-          } else if (!(err instanceof Error)) {
+          if (typeof err === 'string' || !(err instanceof Error)) {
             error = new Error(err);
           }
 

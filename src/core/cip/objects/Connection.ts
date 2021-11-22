@@ -170,24 +170,6 @@ const TransportDirectionCodesSet = new Set(
   Object.values(TransportDirectionCodes),
 );
 
-function buildTransportClassTriggerCode(transport: ConnectionTransportClassTrigger) {
-  if (!TransportClassCodesSet.has(transport.class!)) {
-    throw new Error(`CIP Connection invalid transport class ${transport.class}`);
-  }
-  if (!TransportProductionTriggerCodesSet.has(transport.productionTrigger!)) {
-    throw new Error(`CIP Connection invalid transport production trigger ${transport.productionTrigger}`);
-  }
-  if (!TransportDirectionCodesSet.has(transport.direction!)) {
-    throw new Error(`CIP Connection invalid transport direction ${transport.direction}`);
-  }
-
-  return (
-    ((transport.direction ? 0 : 1 & 0b1) << 7)
-    | ((transport.productionTrigger! & 0b111) << 4)
-    | ((transport.class! & 0b1111))
-  );
-}
-
 interface NetworkConnectionParameters {
   maximumSize?: number;
   redundantOwner?: boolean;
@@ -198,29 +180,6 @@ interface NetworkConnectionParameters {
 
 const MaximumNormalConnectionSize = 0b111111111; /** 511 */
 const MaximumLargeConnectionSize = 0xFFFF;
-
-function buildNetworkConnectionParametersCode(options: NetworkConnectionParameters) {
-  let code = 0;
-  const large = options.maximumSize! > MaximumNormalConnectionSize;
-
-  if (large === true) {
-    code |= (options.redundantOwner ? 1 : 0! & 1) << 31;
-    code |= (options.type! & 3) << 29;
-    /** Bit 28 reserved */
-    code |= (options.priority! & 3) << 26;
-    code |= (options.sizeType! & 1) << 25;
-    /** Bits 16 through 24 reserved */
-    code |= (options.maximumSize! & MaximumLargeConnectionSize);
-  } else {
-    code |= (options.redundantOwner ? 1: 0! & 1) << 15;
-    code |= (options.type! & 3) << 13;
-    /** Bit 12 reserved */
-    code |= (options.priority! & 3) << 10;
-    code |= (options.sizeType! & 1) << 9;
-    code |= (options.maximumSize! & MaximumNormalConnectionSize);
-  }
-  return code;
-}
 
 export interface ConnectionOptions {
   route?: Buffer;
@@ -237,6 +196,11 @@ export interface ConnectionOptions {
   tickTime?: number;
   timeoutTicks?: number;
   overrideLarge?: boolean;
+  
+  OtoTConnectionID?: number;
+  TtoOConnectionID?: number;
+  OtoTPacketRate?: number;
+  TtoOPacketRate?: number;
 }
 
 export default class Connection {
@@ -281,14 +245,55 @@ export default class Connection {
     };
     this.large = options?.overrideLarge || this.options.networkConnectionParameters!.maximumSize! > 500;
     this.sequenceCount = 0;
-    this.transportClassTriggerCode = buildTransportClassTriggerCode(this.options.transportClassTrigger!);
-    this.OtoTNetworkConnectionParametersCode = buildNetworkConnectionParametersCode(this.options.networkConnectionParameters!);
+    this.transportClassTriggerCode = Connection.BuildTransportClassTriggerCode(this.options.transportClassTrigger!);
+    this.OtoTNetworkConnectionParametersCode = Connection.BuildNetworkConnectionParametersCode(this.options.networkConnectionParameters!);
     this.TtoONetworkConnectionParametersCode = this.OtoTNetworkConnectionParametersCode;
   }
 
   incrementSequenceCount() {
     this.sequenceCount = (this.sequenceCount + 1) % 0x10000;
     return this.sequenceCount;
+  }
+
+  static BuildTransportClassTriggerCode(transport: ConnectionTransportClassTrigger) {
+    if (!TransportClassCodesSet.has(transport.class!)) {
+      throw new Error(`CIP Connection invalid transport class ${transport.class}`);
+    }
+    if (!TransportProductionTriggerCodesSet.has(transport.productionTrigger!)) {
+      throw new Error(`CIP Connection invalid transport production trigger ${transport.productionTrigger}`);
+    }
+    if (!TransportDirectionCodesSet.has(transport.direction!)) {
+      throw new Error(`CIP Connection invalid transport direction ${transport.direction}`);
+    }
+
+    return (
+      ((transport.direction ? 0 : 1 & 0b1) << 7)
+      | ((transport.productionTrigger! & 0b111) << 4)
+      | ((transport.class! & 0b1111))
+    );
+  }
+
+  static BuildNetworkConnectionParametersCode(options: NetworkConnectionParameters) {
+    let code = 0;
+    const large = options.maximumSize! > MaximumNormalConnectionSize;
+
+    if (large === true) {
+      code |= (options.redundantOwner ? 1 : 0! & 1) << 31;
+      code |= (options.type! & 3) << 29;
+      /** Bit 28 reserved */
+      code |= (options.priority! & 3) << 26;
+      code |= (options.sizeType! & 1) << 25;
+      /** Bits 16 through 24 reserved */
+      code |= (options.maximumSize! & MaximumLargeConnectionSize);
+    } else {
+      code |= (options.redundantOwner ? 1 : 0! & 1) << 15;
+      code |= (options.type! & 3) << 13;
+      /** Bit 12 reserved */
+      code |= (options.priority! & 3) << 10;
+      code |= (options.sizeType! & 1) << 9;
+      code |= (options.maximumSize! & MaximumNormalConnectionSize);
+    }
+    return code;
   }
 
   static EncodeConnectedMessage(sequenceCount: number, message: Buffer) {

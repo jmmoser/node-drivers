@@ -1,4 +1,4 @@
-import { CallbackPromise, InfoError } from '../utils';
+import { CallbackPromise } from '../utils';
 import Layer from './layer';
 import { LayerNames } from './constants';
 import EIPPacket from '../core/eip/packet';
@@ -487,7 +487,7 @@ export default class EIPLayer extends Layer {
         if (!Array.isArray(packet.items)) {
           console.log('EIP SendRRData response does not have any CPF items');
           console.log(packet);
-          this.destroy(new InfoError(packet, packet.status.description + ''));
+          this.destroy(new Error(packet.status.description + ''));
         } else {
           const messageItem = packet.items.find(
             (item) => item.type.code === CPF.ItemTypeIDs.UnconnectedMessage,
