@@ -46,17 +46,6 @@ export function decodeUnsignedInteger(data: Buffer, offset: number, size: number
 }
 
 /**
- * @param {Object|Map} obj
- */
-export function InvertKeyValues(obj: object): object {
-  let inverted: any = {};
-  Object.entries(obj).forEach(([key, value]: [any, string]) => {
-    inverted[value] = key;
-  });
-  return inverted;
-}
-
-/**
  * @param {Function} fn
  * @param {*} context
  */
@@ -72,14 +61,16 @@ export function once(fn: Function, context?: any) {
   };
 }
 
-interface Resolver {
-  resolve: (res?: any) => void;
+interface Resolver<T> {
+  resolve: (res?: T) => void;
   reject: (err: Error | string, info?: any) => void;
 }
 
-export function CallbackPromise(callback: undefined | Function, func: (a0: Resolver) => void, timeout?: number) {
+export type Callback<T> = (error?: Error, value?: T) => void;
+
+export function CallbackPromise<T>(callback: Callback<T> | undefined, func: (a0: Resolver<T>) => void, timeout?: number) {
   const hasCallback = typeof callback === 'function';
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve: (value: T) => void, reject) => {
     let timeoutHandle: NodeJS.Timeout;
     let active = true;
     const resolver = {
@@ -104,7 +95,7 @@ export function CallbackPromise(callback: undefined | Function, func: (a0: Resol
           clearTimeout(timeoutHandle);
           if (hasCallback) {
             callback(error as Error);
-            resolve(undefined);
+            resolve(undefined as any);
           } else {
             reject(error);
           }

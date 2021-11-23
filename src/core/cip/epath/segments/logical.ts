@@ -13,50 +13,42 @@ import {
   getBits,
   decodeUnsignedInteger,
   unsignedIntegerSize,
-  InvertKeyValues,
 } from '../../../../utils';
 
-import { CodeDescriptionMap, CodedValue, Ref } from '../../../../types';
+import { CodedValue, Ref } from '../../../../types';
 
-const TypeCodes = Object.freeze({
-  ClassID: 0,
-  InstanceID: 1,
-  MemberID: 2,
-  ConnectionPoint: 3,
-  AttributeID: 4,
-  Special: 5, /** Does not use the logical addressing definition for the logical format */
-  ServiceID: 6, /** Does not use the logical addressing definition for the logical format */
-  // Reserved: 7
-});
+enum TypeCodes {
+  ClassID = 0,
+  InstanceID = 1,
+  MemberID = 2,
+  ConnectionPoint = 3,
+  AttributeID = 4,
+  Special = 5, /** Does not use the logical addressing definition for the logical format */
+  ServiceID = 6, /** Does not use the logical addressing definition for the logical format */
+  // Reserved = 7
+};
 
-const TypeNames: CodeDescriptionMap = Object.freeze(InvertKeyValues(TypeCodes)) as CodeDescriptionMap;
+enum FormatCodes {
+  Address8Bit = 0,
+  Address16Bit = 1,
+  Address32Bit = 2,
+  Reserved = 3,
+};
 
-const FormatCodes = Object.freeze({
-  Address8Bit: 0,
-  Address16Bit: 1,
-  Address32Bit: 2,
-  Reserved: 3,
-});
-
-const FormatNames = Object.freeze(InvertKeyValues(FormatCodes)) as CodeDescriptionMap;
-
-const LogicalFormatSizes = Object.freeze({
+const LogicalFormatSizes: { [key in FormatCodes]: number } = Object.freeze({
   [FormatCodes.Address8Bit]: 1,
   [FormatCodes.Address16Bit]: 2,
   [FormatCodes.Address32Bit]: 4,
+  [FormatCodes.Reserved]: Number.NaN,
 });
 
-// const ServiceIDFormatCodes = Object.freeze({
-//   Address8Bit: 0
-// });
+enum SpecialFormatCodes {
+  ElectronicKey = 0,
+};
 
-const SpecialFormatCodes = Object.freeze({
-  ElectronicKey: 0,
-});
-
-const ElectronicKeyFormatCodes = Object.freeze({
-  Normal: 4,
-});
+enum ElectronicKeyFormatCodes {
+  Normal = 4,
+};
 
 interface SpecialValue {
   format: number;
@@ -98,7 +90,7 @@ function validate(type: number, format: number, value: LogicalValue) {
     case TypeCodes.ConnectionPoint:
     case TypeCodes.ServiceID:
       if (value != null && (!Number.isInteger(value) || value < 0)) {
-        throw new Error(`Logical Segment of type ${TypeNames[type]}`);
+        throw new Error(`Logical Segment of type ${TypeCodes[type]}`);
       }
       break;
     case TypeCodes.Special:
@@ -151,7 +143,7 @@ function encodeSize(padded: boolean, type: number, format: number, value: Logica
           size += 4 + (padded ? 1 : 0);
           break;
         default:
-          throw new Error(`Logical segment unknown ${TypeNames[type]} format ${format}`);
+          throw new Error(`Logical segment unknown ${TypeCodes[type]} format ${format}`);
       }
       break;
     }
@@ -204,7 +196,7 @@ function encodeTo(buffer: Buffer, offset: number, padded: boolean, type: number,
           offset = buffer.writeUInt32LE(val, offset);
           break;
         default:
-          throw new Error(`Logical segment unknown ${TypeNames[type]} format ${format}`);
+          throw new Error(`Logical segment unknown ${TypeCodes[type]} format ${format}`);
       }
       break;
     }
@@ -294,14 +286,14 @@ export default class LogicalSegment {
     if (type === TypeCodes.Special && format === SpecialFormatCodes.ElectronicKey) {
       formatName = 'ElectronicKey';
     } else {
-      formatName = FormatNames[format] || 'Unknown';
+      formatName = FormatCodes[format] || 'Unknown';
     }
 
     validate(type, format, value);
 
     this.type = {
       code: type,
-      description: TypeNames[type] || 'Unknown',
+      description: TypeCodes[type] || 'Unknown',
     };
     this.format = {
       code: format,

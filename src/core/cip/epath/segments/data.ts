@@ -7,17 +7,14 @@
 
 import {
   getBits,
-  InvertKeyValues,
 } from '../../../../utils';
 
-import { CodedValue, CodeDescriptionMap, Ref } from '../../../../types';
+import { CodedValue, Ref } from '../../../../types';
 
-const SubtypeCodes = Object.freeze({
-  Simple: 0,
-  ANSIExtendedSymbol: 17,
-});
-
-const SubtypeNames = InvertKeyValues(SubtypeCodes);
+enum SubtypeCodes {
+  Simple = 0,
+  ANSIExtendedSymbol = 17,
+};
 
 type DataValue = Buffer | string;
 
@@ -53,7 +50,7 @@ export default class DataSegment {
 
     this.subtype = {
       code: subtype,
-      description: (SubtypeNames as CodeDescriptionMap)[subtype],
+      description: SubtypeCodes[subtype],
     };
     this.value = value;
   }

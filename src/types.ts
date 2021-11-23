@@ -7,7 +7,3 @@ export type CodedValue = {
   name?: string;
   description?: string;
 }
-
-export interface CodeDescriptionMap {
-  [key: number]: string;
-}

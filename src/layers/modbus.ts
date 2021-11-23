@@ -1,4 +1,4 @@
-import { CallbackPromise, once } from '../utils';
+import { CallbackPromise, Callback, once } from '../utils';
 import Layer from './layer';
 import { LayerNames } from './constants';
 import * as MB from '../core/modbus/constants';
@@ -24,18 +24,17 @@ const DefaultOptions = {
   },
 };
 
-function readRequest(self: Modbus, fn: number, address: number, count: number, littleEndian: boolean, callback?: Function) {
+function readRequest<T>(self: Modbus, fn: number, address: number, count: number, littleEndian: boolean, callback?: Callback<T>) {
   return CallbackPromise(callback, (resolver) => {
     self._send!(PDU.EncodeReadRequest(fn, address, count, littleEndian), {}, resolver);
   });
 }
 
-function writeRequest(self: Modbus, fn: number, address: number, values: ModbusValues, littleEndian: boolean, callback?: Function) {
+function writeRequest<T>(self: Modbus, fn: number, address: number, values: ModbusValues, littleEndian: boolean, callback?: (err?: Error, value?: T) => void) {
   return CallbackPromise(callback, (resolver) => {
     self._send!(PDU.EncodeWriteRequest(fn, address, values, littleEndian), {}, resolver);
   });
 }
-
 
 interface ModbusTCPOptions {
   unitID?: number;
@@ -101,35 +100,35 @@ export default class Modbus extends Layer {
     }
   }
 
-  readDiscreteInputs(address: number, count: number, callback?: Function) {
+  readDiscreteInputs(address: number, count: number, callback?: Callback<number[]>) {
     return readRequest(this, ReadDiscreteInputs, address, count, this._littleEndian, callback);
   }
 
-  readCoils(address: number, count: number, callback?: Function) {
+  readCoils(address: number, count: number, callback?: Callback<boolean[]>) {
     return readRequest(this, ReadCoils, address, count, this._littleEndian, callback);
   }
 
-  readInputRegisters(address: number, count: number, callback?: Function) {
+  readInputRegisters(address: number, count: number, callback?: Callback<number[]>) {
     return readRequest(this, ReadInputRegisters, address, count, this._littleEndian, callback);
   }
 
-  readHoldingRegisters(address: number, count = 1, callback?: Function) {
+  readHoldingRegisters(address: number, count = 1, callback?: Callback<number[]>) {
     return readRequest(this, ReadHoldingRegisters, address, count, this._littleEndian, callback);
   }
 
-  writeSingleCoil(address: number, value: boolean, callback?: Function) {
+  writeSingleCoil(address: number, value: boolean, callback?: Callback<any>) {
     const values = [value ? 0x00FF : 0x0000];
     return writeRequest(this, WriteSingleCoil, address, values, this._littleEndian, callback);
   }
 
-  writeMultipleCoils(address: number, values: ModbusValues, callback?: Function) {
+  writeMultipleCoils(address: number, values: ModbusValues, callback?: Callback<any>) {
     for (let i = 0; i < values.length; i++) {
       values[i] = values[i] ? 0x00FF : 0x0000;
     }
     return writeRequest(this, WriteMultipleCoils, address, values, this._littleEndian, callback);
   }
 
-  writeSingleHoldingRegister(address: number, values: ModbusValues, callback?: Function) {
+  writeSingleHoldingRegister(address: number, values: ModbusValues, callback?: Callback<any>) {
     return writeRequest(
       this,
       WriteSingleHoldingRegister,

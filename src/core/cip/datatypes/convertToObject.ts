@@ -1,4 +1,4 @@
-import { DataTypeNames } from './codes';
+import { DataTypeCodes } from './codes';
 import { DataType, IDataTypeObject } from './types';
 
 export default (dt: object | number | string | Function): IDataTypeObject => {
@@ -6,7 +6,7 @@ export default (dt: object | number | string | Function): IDataTypeObject => {
     return dt as IDataTypeObject;
   }
   if (typeof dt === 'number') {
-    dt = DataTypeNames[dt];
+    dt = DataTypeCodes[dt];
   }
   if (typeof dt === 'string') {
     dt = (DataType as { [key: string]: any})[dt];

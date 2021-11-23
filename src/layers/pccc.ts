@@ -1,4 +1,4 @@
-import { CallbackPromise } from '../utils';
+import { CallbackPromise, Callback } from '../utils';
 import Layer from './layer';
 import { LayerNames } from './constants';
 import PCCCPacket from '../core/pccc/packet';
@@ -6,11 +6,7 @@ import * as Encoding from '../core/pccc/encoding';
 import * as Decoding from '../core/pccc/decoding';
 
 import { CodedValue } from '../types';
-
-function incrementTransaction(self: PCCCLayer) {
-  self._transaction++;
-  return self._transaction % 0x10000;
-}
+import CreateCounter, { Counter } from '../counter';
 
 type Status = CodedValue & {
   extended: CodedValue;
@@ -27,16 +23,16 @@ function getError(status: Status) {
 }
 
 function send(self: PCCCLayer, internal: boolean, message: Buffer, contextOrCallback: number | Function) {
+  const transaction = PCCCPacket.Transaction(message, { current: 0 });
+
   let context;
   if (internal) {
     if (typeof contextOrCallback === 'function') {
-      context = self.contextCallback(contextOrCallback);
+      context = self.contextCallback(contextOrCallback, transaction.toString());
     }
   } else {
     context = contextOrCallback;
   }
-
-  const transaction = PCCCPacket.Transaction(message, { current: 0 });
 
   self.setContextForID(transaction + '', {
     context,
@@ -52,14 +48,14 @@ function send(self: PCCCLayer, internal: boolean, message: Buffer, contextOrCall
  */
 
 export default class PCCCLayer extends Layer {
-  _transaction: number;
+  _transactionCounter: Counter;
 
   constructor(lowerLayer: Layer) {
     super(LayerNames.PCCC, lowerLayer);
-    this._transaction = 0;
+    this._transactionCounter = CreateCounter({ maxValue: 0x10000 });
   }
 
-  wordRangeRead(address: string, words?: number, callback?: Function) {
+  wordRangeRead(address: string, words?: number, callback?: Callback<Buffer>) {
     if (callback == null && typeof words === 'function') {
       callback = words;
       words = undefined;
@@ -71,7 +67,7 @@ export default class PCCCLayer extends Layer {
 
     return CallbackPromise(callback, (resolver) => {
       const message = Encoding.EncodeWordRangeReadRequest(
-        incrementTransaction(this),
+        this._transactionCounter(),
         address,
         words!,
       );
@@ -86,7 +82,7 @@ export default class PCCCLayer extends Layer {
     });
   }
 
-  typedRead(address: string, items?: number, callback?: Function) {
+  typedRead(address: string, items?: number, callback?: Callback<any>) {
     if (callback == null && typeof items === 'function') {
       callback = items;
       items = undefined;
@@ -105,7 +101,7 @@ export default class PCCCLayer extends Layer {
       }
 
       const message = Encoding.EncodeTypedRead(
-        incrementTransaction(this),
+        this._transactionCounter(),
         address,
         items!,
       );
@@ -128,7 +124,7 @@ export default class PCCCLayer extends Layer {
   /**
    * value argument can be an array of values
    */
-  typedWrite(address: string, value: any | any[], callback?: Function) {
+  typedWrite(address: string, value: any | any[], callback?: Callback<any>) {
     return CallbackPromise(callback, (resolver) => {
       if (value == null) {
         resolver.reject(`Unable to write value: ${value}`);
@@ -138,7 +134,7 @@ export default class PCCCLayer extends Layer {
       value = Array.isArray(value) ? value : [value];
 
       const message = Encoding.EncodeTypedWrite(
-        incrementTransaction(this),
+        this._transactionCounter(),
         address,
         value,
       );
@@ -161,7 +157,7 @@ export default class PCCCLayer extends Layer {
   //     return;
   //   }
 
-  //   const transaction = incrementTransaction(this);
+  //   const transaction = this._transactionCounter(),
   //   const message = Encoding.EncodeUnprotectedRead(transaction, address, size);
 
   //   this.send(message, INFO, false, this.contextCallback(function(error, reply) {
@@ -173,10 +169,10 @@ export default class PCCCLayer extends Layer {
   //   }, transaction));
   // }
 
-  diagnosticStatus(callback?: Function) {
+  diagnosticStatus(callback?: Callback<any>) {
     return CallbackPromise(callback, (resolver) => {
       const message = Encoding.EncodeDiagnosticStatus(
-        incrementTransaction(this),
+        this._transactionCounter(),
       );
 
       send(this, true, message, (error?: Error, reply?: { data: any }) => {
@@ -189,10 +185,10 @@ export default class PCCCLayer extends Layer {
     });
   }
 
-  echo(data: Buffer, callback?: Function) {
+  echo(data: Buffer, callback?: Callback<Buffer>) {
     return CallbackPromise(callback, (resolver) => {
       const message = Encoding.EncodeEcho(
-        incrementTransaction(this),
+        this._transactionCounter(),
         data,
       );
 
@@ -217,7 +213,7 @@ export default class PCCCLayer extends Layer {
       // Fragmentation protocol is currently not supported
 
       let packet;
-      const transaction = incrementTransaction(this);
+      const transaction = this._transactionCounter();
 
       const { info, message } = request;
 

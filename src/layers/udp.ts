@@ -1,7 +1,7 @@
 import dgram from 'dgram';
 import Layer from './layer';
 import { LayerNames } from './constants';
-import { CallbackPromise } from '../utils';
+import { CallbackPromise, Callback } from '../utils';
 
 async function setup(layer: UDPLayer) {
   /** Only await layer._settingUp if not null */
@@ -158,7 +158,7 @@ export default class UDPLayer extends Layer {
     return false;
   }
 
-  disconnect(callback: () => void) {
+  disconnect(callback?: Callback<void>) {
     return CallbackPromise(callback, (resolver) => {
       this._listening = false;
       if (this._socket) {

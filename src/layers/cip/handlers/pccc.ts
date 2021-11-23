@@ -5,7 +5,7 @@ export type PCCCOptions = {
   serialNumber: number;
 };
 
-export function Send(layer: { send: Function }, request: { info?: any; context?: any; message: Buffer }, options?: Options) {
+export function Send(layer: { send: Function }, request: { info?: any; context?: any; message: Buffer }, options?: PCCCOptions) {
   const opts = {
     ...DefaultOptions,
     ...options,

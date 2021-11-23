@@ -9,20 +9,17 @@
 
 import {
   getBits,
-  InvertKeyValues,
 } from '../../../../utils';
 
-import { Ref, CodeDescriptionMap, CodedValue } from '../../../../types';
+import { Ref, CodedValue } from '../../../../types';
 
-export const SubtypeCodes = Object.freeze({
-  Schedule: 1,
-  FixedTag: 2,
-  ProductionInhibitTime: 3,
-  Safety: 16,
-  Extended: 31,
-});
-
-const SubtypeNames: CodeDescriptionMap = Object.freeze(InvertKeyValues(SubtypeCodes)) as CodeDescriptionMap;
+export enum SubtypeCodes {
+  Schedule = 1,
+  FixedTag = 2,
+  ProductionInhibitTime = 3,
+  Safety = 16,
+  Extended = 31,
+};
 
 export default class NetworkSegment {
   subtype: CodedValue;
@@ -31,7 +28,7 @@ export default class NetworkSegment {
   constructor(subtype: number, value: number) {
     this.subtype = {
       code: subtype,
-      description: SubtypeNames[subtype] || 'Unknown',
+      description: SubtypeCodes[subtype] || 'Unknown',
     };
     this.value = value;
   }
@@ -83,7 +80,7 @@ export default class NetworkSegment {
       case SubtypeCodes.Safety:
       case SubtypeCodes.Extended:
         /** variable */
-        throw new Error(`Network segment subtype ${SubtypeNames[subtype]} not currently supported. TODO`);
+        throw new Error(`Network segment subtype ${SubtypeCodes[subtype]} not currently supported. TODO`);
       default:
         throw new Error(`Reserved Network segment subtype ${subtype}`);
     }

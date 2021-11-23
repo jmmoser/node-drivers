@@ -1,78 +1,72 @@
-import { getBits, InvertKeyValues } from '../../../utils';
+import { getBits } from '../../../utils';
 
-import { Ref, CodeDescriptionMap } from '../../../types';
+import { Ref } from '../../../types';
 
 /** CIP Vol1 Table C-6.1 */
-export const DataTypeCodes = Object.freeze({
+export enum DataTypeCodes {
   /** DATATYPES FROM EXTERNAL SOURCES CANNOT BE NEGATIVE BECAUSE CODE IS READ AS UNSIGNED */
-  TRANSFORM: -3,
-  PLACEHOLDER: -2, /** used when previously decoded data determines datatype */
-  UNKNOWN: -1,
+  TRANSFORM = -3,
+  PLACEHOLDER = -2, /** used when previously decoded data determines datatype */
+  UNKNOWN = -1,
 
-  BOOL: 0xC1,
-  SINT: 0xC2,
-  INT: 0xC3,
-  DINT: 0xC4,
-  LINT: 0xC5,
-  USINT: 0xC6,
-  UINT: 0xC7,
-  UDINT: 0xC8,
-  ULINT: 0xC9,
-  REAL: 0xCA,
-  LREAL: 0xCB,
-  STIME: 0xCC,
-  DATE: 0xCD,
-  TIME_OF_DAY: 0xCE,
-  DATE_AND_TIME: 0xCF,
-  STRING: 0xD0,
-  BYTE: 0xD1,
-  WORD: 0xD2,
-  DWORD: 0xD3,
-  LWORD: 0xD4,
-  STRING2: 0xD5,
-  FTIME: 0xD6,
-  LTIME: 0xD7,
-  ITIME: 0xD8,
-  STRINGN: 0xD9,
-  SHORT_STRING: 0xDA,
-  TIME: 0xDB,
-  EPATH: 0xDC,
-  ENGUNIT: 0xDD,
-  STRINGI: 0xDE,
+  BOOL = 0xC1,
+  SINT = 0xC2,
+  INT = 0xC3,
+  DINT = 0xC4,
+  LINT = 0xC5,
+  USINT = 0xC6,
+  UINT = 0xC7,
+  UDINT = 0xC8,
+  ULINT = 0xC9,
+  REAL = 0xCA,
+  LREAL = 0xCB,
+  STIME = 0xCC,
+  DATE = 0xCD,
+  TIME_OF_DAY = 0xCE,
+  DATE_AND_TIME = 0xCF,
+  STRING = 0xD0,
+  BYTE = 0xD1,
+  WORD = 0xD2,
+  DWORD = 0xD3,
+  LWORD = 0xD4,
+  STRING2 = 0xD5,
+  FTIME = 0xD6,
+  LTIME = 0xD7,
+  ITIME = 0xD8,
+  STRINGN = 0xD9,
+  SHORT_STRING = 0xDA,
+  TIME = 0xDB,
+  EPATH = 0xDC,
+  ENGUNIT = 0xDD,
+  STRINGI = 0xDE,
 
   /** CIP Volume 1, C-6.2 Constructed Data Type Reporting */
 
   /* Data is an abbreviated struct type, i.e. a CRC of the actual type descriptor */
-  ABBREV_STRUCT: 0xA0,
+  ABBREV_STRUCT = 0xA0,
 
   /* Data is an abbreviated array type. The limits are left off */
-  ABBREV_ARRAY: 0xA1,
+  ABBREV_ARRAY = 0xA1,
 
   /* Data is a struct type descriptor */
-  STRUCT: 0xA2,
+  STRUCT = 0xA2,
 
   /* Data is an array type descriptor */
-  ARRAY: 0xA3,
-});
-
-export const DataTypeNames: CodeDescriptionMap = InvertKeyValues(DataTypeCodes) as CodeDescriptionMap;
+  ARRAY = 0xA3,
+};
 
 /** ANS.1 */
-export const DataTypeTagClassCodes = Object.freeze({
-  Universal: 0,
-  Application: 1,
-  ContextSpecific: 2,
-  Private: 3,
-});
+export enum DataTypeTagClassCodes {
+  Universal = 0,
+  Application = 1,
+  ContextSpecific = 2,
+  Private = 3,
+};
 
-export const DataTypeTagClassNames: CodeDescriptionMap = InvertKeyValues(DataTypeTagClassCodes) as CodeDescriptionMap;
-
-export const DataTypeTagTypeCodes = Object.freeze({
-  Primitive: 0,
-  Constructed: 1,
-});
-
-export const DataTypeTagTypeNames: CodeDescriptionMap = InvertKeyValues(DataTypeTagTypeCodes) as CodeDescriptionMap;
+export enum DataTypeTagTypeCodes {
+  Primitive = 0,
+  Constructed = 1,
+};
 
 export function DecodeDataTypeTag(buffer: Buffer, offsetRef: Ref) {
   const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
@@ -93,11 +87,11 @@ export function DecodeDataTypeTag(buffer: Buffer, offsetRef: Ref) {
   return {
     tagClass: {
       code: tagClass,
-      name: DataTypeTagClassNames[tagClass] || 'Unknown',
+      name: DataTypeTagClassCodes[tagClass] || 'Unknown',
     },
     type: {
       code: tagType,
-      name: DataTypeTagTypeNames[tagType] || 'Unknown',
+      name: DataTypeTagTypeCodes[tagType] || 'Unknown',
     },
     id: tagID,
     code,
@@ -106,7 +100,6 @@ export function DecodeDataTypeTag(buffer: Buffer, offsetRef: Ref) {
 
 export default {
   DataTypeCodes,
-  DataTypeNames,
   // DataTypeTag,
   DecodeDataTypeTag,
 };

@@ -1,5 +1,5 @@
 import EPath from '../epath/index';
-import { DataTypeCodes, DataTypeNames } from './codes';
+import { DataTypeCodes } from './codes';
 import { IDataTypeOption, EPathDataType, ArrayDataType, AbbrArrayDataType, StructDataType, TransformDataType, UnknownDataType } from './types';
 import convertToObject from './convertToObject';
 
@@ -70,7 +70,7 @@ export function EncodeSize(dataType: IDataTypeOption, value?: any): number {
     case DataTypeCodes.UNKNOWN:
       return (dataType as UnknownDataType).length;
     default:
-      throw new Error(`Encoding size for data type is not currently supported: ${DataTypeNames[dataType.code] || dataType.code}`);
+      throw new Error(`Encoding size for data type is not currently supported: ${DataTypeCodes[dataType.code] || dataType.code}`);
   }
 }
 
@@ -172,7 +172,7 @@ export function EncodeTo(buffer: Buffer, offset: number, dataType: IDataTypeOpti
     case DataTypeCodes.BOOL:
       throw new Error("Boolean encoding isn't currently supported, use BYTE instead");
     default:
-      throw new Error(`Encoding for data type is not currently supported: ${DataTypeNames[dataType.code] || dataType.code}`);
+      throw new Error(`Encoding for data type is not currently supported: ${DataTypeCodes[dataType.code] || dataType.code}`);
   }
 
   return offset;

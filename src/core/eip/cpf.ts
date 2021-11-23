@@ -1,27 +1,23 @@
-import { getBits, InvertKeyValues } from '../../utils';
+import { getBits } from '../../utils';
 import CIPIdentity from '../cip/objects/Identity';
 
-import { Ref, CodeDescriptionMap, CodedValue } from '../../types';
+import { Ref, CodedValue } from '../../types';
 
-const ItemTypeIDs = Object.freeze({
-  NullAddress: 0x0000, // address
-  ListIdentity: 0x000C, // response
-  ConnectedAddress: 0x00A1, // address
-  ConnectedMessage: 0x00B1, // data
-  UnconnectedMessage: 0x00B2, // data
-  ListServices: 0x0100, // response
-  SockaddrInfoOtoT: 0x8000, // data
-  SockaddrInfoTtoO: 0x8001, // data
-  SequencedAddress: 0x8002, // address (with sequence)
-});
+enum ItemTypeIDs {
+  NullAddress = 0x0000, // address
+  ListIdentity = 0x000C, // response
+  ConnectedAddress = 0x00A1, // address
+  ConnectedMessage = 0x00B1, // data
+  UnconnectedMessage = 0x00B2, // data
+  ListServices = 0x0100, // response
+  SockaddrInfoOtoT = 0x8000, // data
+  SockaddrInfoTtoO = 0x8001, // data
+  SequencedAddress = 0x8002, // address (with sequence)
+};
 
-const ItemTypeIDNames: CodeDescriptionMap = InvertKeyValues(ItemTypeIDs) as CodeDescriptionMap;
-
-const SocketFamilyNames: CodeDescriptionMap = Object.freeze({
+const SocketFamilyNames: { [key: number]: string } = Object.freeze({
   2: 'AF_INET',
 });
-
-
 
 type NullAddressValue = null;
 
@@ -241,7 +237,7 @@ export default class CPF {
       items.push({
         type: {
           code: type,
-          description: ItemTypeIDNames[type] || 'Reserved',
+          description: ItemTypeIDs[type] || 'Reserved',
         },
         value,
       });

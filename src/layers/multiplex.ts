@@ -3,7 +3,7 @@
  * multiple upper layers to one lower layer
  */
 
-import { CallbackPromise } from '../utils';
+import { CallbackPromise, Callback } from '../utils';
 import Layer from './layer';
 import CreateCounter, { Counter } from '../counter';
 
@@ -47,7 +47,7 @@ export default class MultiplexLayer extends Layer {
     this._layers.add(layer);
   }
 
-  disconnect(callback?: Function) {
+  disconnect(callback?: Callback<void>) {
     return CallbackPromise(callback, async (resolver) => {
       if (this._disconnecting === 1) {
         resolver.resolve();

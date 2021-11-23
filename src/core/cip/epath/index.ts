@@ -46,7 +46,7 @@ class EPath {
         const members = membersStringWithBracket.substring(0, membersStringWithBracket.length - 1).split(',');
 
         for (let j = 0; j < members.length; j++) {
-          segments.push(new Segments.Logical.MemberID(parseInt(members[j], 10)));
+          segments.push(new Segments.Logical(Segments.Logical.Types.MemberID, parseInt(members[j], 10)));
         }
       }
     }
@@ -74,23 +74,23 @@ class EPath {
 
       switch (segmentType) {
         case 0:
-          segment = Segments.Port.Decode(buffer, offsetRef, code, padded);
+          segment = Segments.Port.Decode(buffer, offsetRef, code /*, padded */);
           break;
         case 1:
           segment = Segments.Logical.Decode(buffer, offsetRef, code, padded);
           break;
         case 2:
-          segment = Segments.Network.Decode(buffer, offsetRef, code, padded);
+          segment = Segments.Network.Decode(buffer, offsetRef, code /*, padded */);
           break;
         case 3:
-          segment = Segments.Symbolic.Decode(buffer, offsetRef, code, padded);
+          segment = Segments.Symbolic.Decode(buffer, offsetRef, code /*, padded */);
           break;
         case 4:
-          segment = Segments.Data.Decode(buffer, offsetRef, code, padded);
+          segment = Segments.Data.Decode(buffer, offsetRef, code /*, padded */);
           break;
         case 5:
         case 6:
-          segment = Segments.DataType.Decode(buffer, offsetRef, code, padded);
+          segment = Segments.DataType.Decode(buffer, offsetRef /*, code, padded */);
           break;
         default:
           throw new Error(`Unexpected segment: ${segmentType}`);
@@ -105,7 +105,7 @@ class EPath {
     return segments;
   }
 
-  static EncodeSize(padded, segments) {
+  static EncodeSize(padded: boolean, segments) {
     if (!Array.isArray(segments)) {
       throw new Error(`Segments must be an array. Received: ${typeof segments}`);
     }
@@ -116,7 +116,7 @@ class EPath {
     return size;
   }
 
-  static Encode(padded, segments) {
+  static Encode(padded: boolean, segments) {
     let size = 0;
     for (let i = 0; i < segments.length; i++) {
       size += segments[i].encodeSize(padded);
@@ -126,7 +126,7 @@ class EPath {
     return buffer;
   }
 
-  static EncodeTo(buffer, offset, padded, segments) {
+  static EncodeTo(buffer: Buffer, offset: number, padded: boolean, segments) {
     if (!Array.isArray(segments)) {
       throw new Error(`Segments must be an array. Received: ${typeof segments}`);
     }

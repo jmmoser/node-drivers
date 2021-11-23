@@ -11,10 +11,10 @@ import { logicalASCIIAddressInfo } from './shared';
 
 import { Ref } from '../../types';
 
-const CommandCodes = Object.freeze({
-  Connected: 0x0A,
-  Unconnected: 0x0B,
-});
+enum CommandCodes {
+  Connected = 0x0A,
+  Unconnected = 0x0B,
+};
 
 export function EncodeCommand(command: number, status: number, transaction: number, data?: Buffer) {
   const buffer = Buffer.allocUnsafe(4 + (data?.length || 0));

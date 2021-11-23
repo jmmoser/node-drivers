@@ -1,5 +1,5 @@
 import EPath from '../epath/index';
-import { DataTypeCodes, DataTypeNames } from './codes';
+import { DataTypeCodes } from './codes';
 import convertToObject from './convertToObject';
 import { IDataType, IDataTypeOption, BoolDataType, StructDataType, ArrayDataType, AbbrArrayDataType, EPathDataType, UnknownDataType, TransformDataType } from './types';
 
@@ -177,7 +177,7 @@ export function DecodeTypedData(buffer: Buffer, offsetRef: Ref, inputDataType: I
     case DataTypeCodes.PLACEHOLDER:
       throw new Error('Placeholder datatype should have been replaced before decoding');
     default:
-      throw new Error(`Decoding for data type is not currently supported: ${DataTypeNames[dataType.code] || dataType.code}`);
+      throw new Error(`Decoding for data type is not currently supported: ${DataTypeCodes[dataType.code] || dataType.code}`);
   }
 
   return value;

@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import Queue from '../queue';
 import Defragger, { LengthHandler } from '../defragger';
-import { CallbackPromise } from '../utils';
+import { CallbackPromise, Callback } from '../utils';
 import CreateCounter, { Counter } from '../counter';
 
 const LOG = false;
@@ -101,7 +101,7 @@ export default class Layer extends EventEmitter {
   handleDefaultOptions(defaultOptions: any, upperLayer: Layer) {} // eslint-disable-line
 
   /** OVERRIDE IF NEEDED */
-  disconnect(callback?: Function) { // eslint-disable-line
+  disconnect(callback?: Callback<void>) { // eslint-disable-line
     return CallbackPromise(callback, (resolver) => {
       resolver.resolve();
     });

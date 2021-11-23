@@ -1,23 +1,20 @@
 import {
   DataType,
   DataTypeCodes,
-  DataTypeNames,
+  IDataTypeOption,
 } from '../../../../core/cip/datatypes/index';
 
 import {
   getBits,
-  InvertKeyValues,
 } from '../../../../utils';
 
-export const Logix5000DataTypeCodes = Object.freeze({
-  Program: 0x68,
-  Map: 0x69,
-  Routine: 0x6D,
-  Task: 0x70,
-  Cxn: 0x7E,
-});
-
-export const Logix5000DatatypeNames = InvertKeyValues(Logix5000DataTypeCodes);
+export enum Logix5000DataTypeCodes {
+  Program = 0x68,
+  Map = 0x69,
+  Routine = 0x6D,
+  Task = 0x70,
+  Cxn = 0x7E,
+};
 
 export const Logix5000DataType = Object.freeze({
   Program() {
@@ -37,41 +34,46 @@ export const Logix5000DataType = Object.freeze({
   },
 });
 
-export const Logix5000ClassCodes = Object.freeze({
-  Symbol: 0x6B,
-  Template: 0x6C,
-  Controller: 0xAC,
-});
+export enum Logix5000ClassCodes {
+  Symbol = 0x6B,
+  Template = 0x6C,
+  Controller = 0xAC,
+};
 
 /** 1756-PM020, pg. 16 */
-export const SymbolServiceCodes = Object.freeze({
-  Read: 0x4C,
-  ReadFragmented: 0x52,
-  WriteTag: 0x4D,
-  WriteTagFragmented: 0x53,
-  ReadModifyWriteTag: 0x4E,
-  GetInstanceAttributeList: 0x55,
-});
+export enum SymbolServiceCodes {
+  Read = 0x4C,
+  ReadFragmented = 0x52,
+  WriteTag = 0x4D,
+  WriteTagFragmented = 0x53,
+  ReadModifyWriteTag = 0x4E,
+  GetInstanceAttributeList = 0x55,
+};
 
-export const SymbolServiceNames = InvertKeyValues(SymbolServiceCodes);
-
-export const SymbolInstanceAttributeCodes = Object.freeze({
-  Name: 0x01,
-  Type: 0x02,
-  Bytes: 0x07,
-  ArrayDimensionLengths: 0x08,
-  Unknown3: 3,
-  Unknown5: 5,
-  Unknown6: 6,
-  Unknown9: 9,
-  Unknown10: 10,
-  Unknown11: 11,
-});
-
-export const SymbolInstanceAttributeNames = InvertKeyValues(SymbolInstanceAttributeCodes);
+export enum SymbolInstanceAttributeCodes {
+  Name = 0x01,
+  Type = 0x02,
+  Bytes = 0x07,
+  ArrayDimensionLengths = 0x08,
+  Unknown3 = 3,
+  Unknown5 = 5,
+  Unknown6 = 6,
+  Unknown9 = 9,
+  Unknown10 = 10,
+  Unknown11 = 11,
+};
 
 export class SymbolType {
-  constructor(code) {
+  code: number;
+  atomic: boolean;
+  system: boolean;
+  dimensions: number;
+  template?: {
+    id: number;
+  };
+  dataType: IDataTypeOption;
+
+  constructor(code: number) {
     this.code = code;
     this.atomic = getBits(code, 15, 16) === 0;
     this.system = getBits(code, 12, 13) > 0;
@@ -84,9 +86,9 @@ export class SymbolType {
       if (dataTypeCode === DataTypeCodes.BOOL) {
         dataType = DataType.BOOL(getBits(code, 8, 11));
       } else {
-        const dataTypeName = DataTypeNames[dataTypeCode] || Logix5000DatatypeNames[dataTypeCode] || 'Unknown';
+        const dataTypeName = DataTypeCodes[dataTypeCode] || Logix5000DataTypeCodes[dataTypeCode] || 'Unknown';
         if (dataTypeName) {
-          dataType = DataType[dataTypeName] || Logix5000DataType[dataTypeName];
+          dataType = (DataType as any)[dataTypeName] || (Logix5000DataType as any)[dataTypeName];
           if (typeof dataType === 'function') {
             dataType = dataType();
           }
@@ -105,12 +107,18 @@ export class SymbolType {
 }
 
 export class Member {
-  constructor(typeCode, info, offset, name, host) {
+  type: SymbolType;
+  info: any;
+  offset: number;
+  name?: string;
+  host?: boolean;
+
+  constructor(typeCode: number, info: any, offset: number, name?: string, host?: boolean) {
     this.type = new SymbolType(typeCode);
     this.info = info;
     this.offset = offset;
     this.name = name;
-    this.host = !!host;
+    this.host = host;
   }
 }
 
@@ -144,32 +152,32 @@ export const SymbolInstanceAttributeDataTypes = Object.freeze({
   [SymbolInstanceAttributeCodes.Unknown11]: DataType.UNKNOWN(1),
 });
 
-export const TemplateServiceCodes = Object.freeze({
-  Read: 0x4C,
-});
+export enum TemplateServiceCodes {
+  Read = 0x4C,
+};
 
-export const TemplateInstanceAttributeCodes = Object.freeze({
-  StructureHandle: 0x01, /** Calculated CRC value for members of the structure */
-  MemberCount: 0x02, /** Number of members defined in the structure */
-  DefinitionSize: 0x04, /** Size of the template definition structure */
+export enum TemplateInstanceAttributeCodes {
+  StructureHandle = 0x01, /** Calculated CRC value for members of the structure */
+  MemberCount = 0x02, /** Number of members defined in the structure */
+  DefinitionSize = 0x04, /** Size of the template definition structure */
   /** Number of bytes transferred on the wire when
    * the structure is read using the Read Tag service */
-  StructureSize: 0x05,
-});
+  StructureSize = 0x05,
+};
 
-export const TemplateInstanceAttributeDataTypes = Object.freeze({
+export const TemplateInstanceAttributeDataTypes: { [key in TemplateInstanceAttributeCodes]: IDataTypeOption } = Object.freeze({
   [TemplateInstanceAttributeCodes.StructureHandle]: DataType.UINT,
   [TemplateInstanceAttributeCodes.MemberCount]: DataType.UINT,
   [TemplateInstanceAttributeCodes.DefinitionSize]: DataType.UDINT,
   [TemplateInstanceAttributeCodes.StructureSize]: DataType.UDINT,
 });
 
-export const TemplateClassAttributeCodes = Object.freeze({
-  Unknown1: 1,
-  Unknown2: 2,
-  Unknown3: 3,
-  Unknown8: 8,
-});
+export enum TemplateClassAttributeCodes {
+  Unknown1 = 1,
+  Unknown2 = 2,
+  Unknown3 = 3,
+  Unknown8 = 8,
+};
 
 export const TemplateClassAttributeDataTypes = Object.freeze({
   [TemplateClassAttributeCodes.Unknown1]: DataType.UNKNOWN(2),
@@ -178,17 +186,15 @@ export const TemplateClassAttributeDataTypes = Object.freeze({
   [TemplateClassAttributeCodes.Unknown8]: DataType.UNKNOWN(4),
 });
 
-export const ControllerInstanceAttributeCodes = Object.freeze({
-  Unknown1: 1,
-  Unknown2: 2,
-  Unknown3: 3,
-  Unknown4: 4,
-  Unknown10: 10,
-});
+export enum ControllerInstanceAttributeCodes {
+  Unknown1 = 1,
+  Unknown2 = 2,
+  Unknown3 = 3,
+  Unknown4 = 4,
+  Unknown10 = 10,
+}
 
-export const ControllerInstanceAttributeNames = InvertKeyValues(ControllerInstanceAttributeCodes);
-
-export const ControllerInstanceAttributeDataTypes = Object.freeze({
+export const ControllerInstanceAttributeDataTypes: { [key: string]: IDataTypeOption } = Object.freeze({
   [ControllerInstanceAttributeCodes.Unknown1]: DataType.UINT,
   [ControllerInstanceAttributeCodes.Unknown2]: DataType.UINT,
   [ControllerInstanceAttributeCodes.Unknown3]: DataType.UDINT,
@@ -196,7 +202,7 @@ export const ControllerInstanceAttributeDataTypes = Object.freeze({
   [ControllerInstanceAttributeCodes.Unknown10]: DataType.UDINT,
 });
 
-export const GenericServiceStatusDescriptions = {
+export const GenericServiceStatusDescriptions: { [key: number]: string | { [key: number]: string }} = {
   0x04: 'A syntax error was detected decoding the Request Path',
   0x05: 'Request Path destination unknown',
   0x06: 'Insufficient Packet Space: Not enough room in the response buffer for all the data',

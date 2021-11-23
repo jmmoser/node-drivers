@@ -1,7 +1,6 @@
 import CPF, { CPFPacket } from './cpf';
-import { InvertKeyValues } from '../../utils';
 
-import { Ref, CodedValue, CodeDescriptionMap } from '../../types';
+import { Ref, CodedValue } from '../../types';
 
 /*
   Communication Profile Families
@@ -34,37 +33,35 @@ const OFFSET_DATA = 24;
 
 const HEADER_LENGTH = OFFSET_DATA;
 
-const Command = Object.freeze({
-  NOP: 0x0000,
-  ListServices: 0x0004,
-  ListIdentity: 0x0063,
-  ListInterfaces: 0x0064,
-  RegisterSession: 0x0065,
-  UnregisterSession: 0x0066,
-  SendRRData: 0x006F,
-  SendUnitData: 0x0070,
-  IndicateStatus: 0x0072, // needs to be added to EIPReply parsers
-  Cancel: 0x0073, // needs to be added to EIPReply parsers
-});
+enum Command {
+  NOP = 0x0000,
+  ListServices = 0x0004,
+  ListIdentity = 0x0063,
+  ListInterfaces = 0x0064,
+  RegisterSession = 0x0065,
+  UnregisterSession = 0x0066,
+  SendRRData = 0x006F,
+  SendUnitData = 0x0070,
+  IndicateStatus = 0x0072, // needs to be added to EIPReply parsers
+  Cancel = 0x0073, // needs to be added to EIPReply parsers
+};
 
-const CommandNames: CodeDescriptionMap = InvertKeyValues(Command) as CodeDescriptionMap;
-
-const CPFItemTypeIDs = Object.freeze({
-  NullAddress: 0x0000, // address
-  ListIdentity: 0x000C, // response
-  ConnectedAddress: 0x00A1, // address
-  ConnectedMessage: 0x00B1, // data
-  UnconnectedMessage: 0x00B2, // data
-  ListServices: 0x0100, // response
-  SockaddrInfoOtoT: 0x8000, // data
-  SockaddrInfoTtoO: 0x8001, // data
-  SequencedAddress: 0x8002, // address (with sequence)
-});
+enum CPFItemTypeIDs {
+  NullAddress = 0x0000, // address
+  ListIdentity = 0x000C, // response
+  ConnectedAddress = 0x00A1, // address
+  ConnectedMessage = 0x00B1, // data
+  UnconnectedMessage = 0x00B2, // data
+  ListServices = 0x0100, // response
+  SockaddrInfoOtoT = 0x8000, // data
+  SockaddrInfoTtoO = 0x8001, // data
+  SequencedAddress = 0x8002, // address (with sequence)
+};
 
 const NullSenderContext = Buffer.alloc(8);
 const NoDataBuffer = Buffer.alloc(0);
 
-const EIPStatusCodeDescriptions: CodeDescriptionMap = Object.freeze({
+const EIPStatusCodeDescriptions: { [key: number]: string; } = Object.freeze({
   0x0000: 'Success',
   0x0001: 'The sender issued an invalid or unsupported encapsulation command.',
   0x0002: 'Insufficient memory resources in the receiver to handle the command.  This is not an application error.  Instead, it only results if the encapsulation layer cannot obtain memory resources that it needs.',
@@ -143,7 +140,7 @@ export default class EIPPacket {
   static fromBuffer(buffer: Buffer, offsetRef: Ref) {
     const packet = new EIPPacket();
     packet.command.code = EIPPacket.Command(buffer, offsetRef);
-    packet.command.description = CommandNames[packet.command.code] || 'Unknown';
+    packet.command.description = Command[packet.command.code] || 'Unknown';
     packet.sessionHandle = EIPPacket.SessionHandle(buffer, offsetRef);
     packet.status.code = EIPPacket.Status(buffer, offsetRef);
     packet.senderContext = EIPPacket.SenderContext(buffer, offsetRef);

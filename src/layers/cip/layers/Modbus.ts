@@ -23,14 +23,14 @@
 //   self.sendRequest(false, request, this.contextCallback(callback));
 // }
 
-// const Services = Object.freeze({
-//   ReadDiscreteInputs: 0x4B,
-//   ReadCoils: 0x4C,
-//   ReadInputRegisters: 0x4D,
-//   ReadHoldingRegisters: 0x4E,
-//   WriteCoils: 0x4F,
-//   WriteHoldingRegisters: 0x50,
-//   Passthrough: 0x51,
+// enum Services {
+//   ReadDiscreteInputs = 0x4B,
+//   ReadCoils = 0x4C,
+//   ReadInputRegisters = 0x4D,
+//   ReadHoldingRegisters = 0x4E,
+//   WriteCoils = 0x4F,
+//   WriteHoldingRegisters = 0x50,
+//   Passthrough = 0x51,
 // });
 
 // export default class Modbus extends CIPLayer {

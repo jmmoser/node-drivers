@@ -1,7 +1,7 @@
 import net from 'net';
 import Layer from './layer';
 import { LayerNames } from './constants';
-import { CallbackPromise } from '../utils';
+import { CallbackPromise, Callback } from '../utils';
 
 const LOG = false;
 
@@ -140,7 +140,7 @@ type TCPOptions = net.NetConnectOpts & {
 
 export default class TCPLayer extends Layer {
   _connectionState: number;
-  _disconnect?: Promise<unknown>
+  _disconnect?: Promise<void>;
 
   numberOfTX: number;
   numberOfRX: number;
@@ -219,13 +219,13 @@ export default class TCPLayer extends Layer {
     }
   }
 
-  connected(callback?: Function) {
+  connected(callback?: Callback<boolean>) {
     return CallbackPromise(callback, async (resolver) => {
       resolver.resolve(await this._connect);
     });
   }
 
-  disconnect(callback?: (args: void) => void) {
+  disconnect(callback?: Callback<void>) {
     const hasCallback = typeof callback === 'function';
 
     if (this._connectionState === TCPStateCodes.Disconnected) {
@@ -233,7 +233,6 @@ export default class TCPLayer extends Layer {
         setImmediate(callback);
       }
       return Promise.resolve();
-      // return () => {};
     }
 
     if (this._connectionState === TCPStateCodes.Disconnecting) {

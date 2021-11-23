@@ -28,17 +28,14 @@ import { DecodeTypedData } from '../../../../core/cip/datatypes/decoding';
 
 import {
   CallbackPromise,
-  InfoError,
+  Callback
 } from '../../../../utils';
 
 import {
   Logix5000DataTypeCodes,
-  Logix5000DatatypeNames,
   Logix5000ClassCodes,
   SymbolServiceCodes,
-  SymbolServiceNames,
   SymbolInstanceAttributeCodes,
-  SymbolInstanceAttributeNames,
   SymbolInstanceAttributeDataTypes,
   TemplateServiceCodes,
   TemplateClassAttributeCodes,
@@ -49,14 +46,33 @@ import {
   Member,
   ControllerInstanceAttributeCodes,
   ControllerInstanceAttributeDataTypes,
-  ControllerInstanceAttributeNames,
+  SymbolType,
 } from './constants';
+
+import { Ref } from '../../../../types';
+import { Tag } from './types';
+import Layer from '../../../layer';
+
+interface Attributes {
+  [key: number]: any;
+}
+
+interface Template {
+  members: unknown[];
+}
+
+interface Reply {
+  status: {
+    code: number;
+  };
+  data: Buffer;
+}
 
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
-function Logix5000DecodeDataType(buffer, offsetRef, cb) {
+function Logix5000DecodeDataType(buffer: Buffer, offsetRef: Ref) {
   const startingOffset = offsetRef.current;
-  const type = EPath.Decode(buffer, offsetRef, null, false, cb);
+  const type = EPath.Decode(buffer, offsetRef, false, false);
   /** TODO: Why is this necessary? */
   if (offsetRef.current - startingOffset < 2) {
     offsetRef.current += 1;
@@ -64,7 +80,7 @@ function Logix5000DecodeDataType(buffer, offsetRef, cb) {
   return type;
 }
 
-async function parseReadTagMemberStructure(layer, structureType, data, offset) {
+async function parseReadTagMemberStructure(layer: Logix5000, structureType: SymbolType, data: Buffer, offset: number) {
   if (!structureType.template) {
     console.log(structureType);
     throw new Error('Tried to read template without id');
@@ -76,7 +92,7 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
   }
 
   const { members } = template;
-  const structValues = {};
+  const structValues: { [key: string]: any } = {};
   for (let i = 0; i < members.length; i++) {
     const member = members[i];
     if (member.type.atomic) {
@@ -119,21 +135,19 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
   return structValues;
 }
 
-async function parseReadTag(layer, scope, tag, elements, data) {
+async function parseReadTag(layer: Logix5000, scope, tag: string, elements, data: Buffer) {
   if (data.length === 0) {
     return undefined;
   }
 
-  let typeInfo;
-  const offset = Logix5000DecodeDataType(data, 0, (val) => { typeInfo = val.value; });
+  const offsetRef = { current: 0 };
+  const typeInfo = Logix5000DecodeDataType(data, offsetRef);
 
   if (!typeInfo) {
     throw new Error('Unable to decode data type from read tag response data');
   }
 
   const values = [];
-  const offsetRef = { current: offset };
-
   if (!typeInfo.constructed || typeInfo.abbreviated === false) {
     for (let i = 0; i < elements; i++) {
       values.push(DecodeTypedData(data, offsetRef, typeInfo));
@@ -179,7 +193,7 @@ async function parseReadTag(layer, scope, tag, elements, data) {
       case Logix5000DataTypeCodes.Program:
       case Logix5000DataTypeCodes.Routine:
       case Logix5000DataTypeCodes.Task:
-        throw new Error(`Unable to directly read type ${Logix5000DatatypeNames[templateType.code].toUpperCase()}: ${tag}`);
+        throw new Error(`Unable to directly read type ${Logix5000DataTypeCodes[templateType.code].toUpperCase()}: ${tag}`);
       default:
         break;
     }
@@ -194,7 +208,7 @@ async function parseReadTag(layer, scope, tag, elements, data) {
   return values;
 }
 
-function statusHandler(code, extended, cb) {
+function statusHandler(code: number, extended: Buffer, cb: Function) {
   let error = GenericServiceStatusDescriptions[code];
   if (typeof error === 'object' && Buffer.isBuffer(extended) && extended.length >= 0) {
     error = error[extended.readUInt16LE(0)];
@@ -205,39 +219,39 @@ function statusHandler(code, extended, cb) {
 }
 
 /** Use driver specific error handling if exists */
-async function send(self, service, path, data, callback /* , timeout */) {
+async function send(self: Logix5000, service: number, path: Buffer, data: Buffer | undefined, callback: Function /* , timeout */) {
   try {
-    const request = new CIPRequest(service, path, data, null, {
-      serviceNames: SymbolServiceNames,
+    const request = new CIPRequest(service, path, data, undefined, {
+      serviceNames: SymbolServiceCodes,
       statusHandler,
     });
 
     const response = await self.sendRequest(true, request);
     // console.log(response);
     if (response.status.error) {
-      callback(response.status.description, response);
+      callback(new Error(response.status.description), response);
     } else {
       callback(null, response);
     }
   } catch (err) {
     console.log(err);
-    callback(err.message);
+    callback(err);
   }
 }
 
-function sendPromise(self, service, path, data, timeout) {
+function sendPromise(self: Logix5000, service: number, path: Buffer, data: Buffer) {
   return new Promise((resolve, reject) => {
-    send(self, service, path, data, (error, reply) => {
+    send(self, service, path, data, (error?: Error, reply?: any) => {
       if (error) {
         reject(error);
       } else {
         resolve(reply);
       }
-    }, timeout);
+    });
   });
 }
 
-async function readTagFragmented(layer, path, elements) {
+async function readTagFragmented(self: Logix5000, path: Buffer, elements) {
   const service = SymbolServiceCodes.ReadFragmented;
 
   const offsetRef = { current: 0 };
@@ -245,7 +259,7 @@ async function readTagFragmented(layer, path, elements) {
 
   for (; ;) {
     const reqData = Encoding.EncodeReadTagFragmentedServiceData(elements, offsetRef.current);
-    const reply = await sendPromise(layer, service, path, reqData, 5000);
+    const reply = await sendPromise(self, service, path, reqData, 5000);
 
     /** remove the tag type bytes if already received */
     Logix5000DecodeDataType(reply.data, offsetRef);
@@ -264,7 +278,7 @@ async function readTagFragmented(layer, path, elements) {
   return Buffer.concat(chunks);
 }
 
-function encodeFullSymbolPath(scope, symbol) {
+function encodeFullSymbolPath(scope: string, symbol) {
   const symbolPath = Encoding.EncodeSymbolPath(symbol);
 
   if (scope) {
@@ -335,7 +349,7 @@ function parseListTagsResponse(reply, attributes, tags, modifier) {
 //   return res;
 // }
 
-function parseTemplateMemberName(data, offset, cb) {
+function parseTemplateMemberName(data: Buffer, offset: number, cb: (a0: string) => void) {
   const nullIndex = data.indexOf(0x00, offset);
 
   if (nullIndex >= 0) {
@@ -347,7 +361,7 @@ function parseTemplateMemberName(data, offset, cb) {
   return data.length;
 }
 
-function parseTemplateNameInfo(data, offset, cb) {
+function parseTemplateNameInfo(data: Buffer, offset: number, cb: (a0: { name: string; extra: string; }) => void) {
   return parseTemplateMemberName(data, offset, (fullname) => {
     const parts = fullname.split(';');
     cb({
@@ -368,19 +382,18 @@ function parseTemplateNameInfo(data, offset, cb) {
 //   return error;
 // }
 
-function scopedGenerator() {
+function scopedGenerator(...params: string[]) {
   const separator = '::';
-  const args = [...arguments].filter((arg) => !!arg);
+  const args = [...params].filter((arg) => !!arg);
   const preface = args.length > 0 ? args.join(separator) + separator : '';
   return () => preface + [...arguments].join(separator);
 }
 
-async function getSymbolInstanceID(layer, scope, tag) {
+async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, tag: Tag) {
   let tagName;
   switch (typeof tag) {
     case 'string':
       tagName = tag;
-      // tagName = tag.split('.')[0];
       break;
     case 'number':
       return tag;
@@ -433,7 +446,7 @@ async function getSymbolInstanceID(layer, scope, tag) {
  * If scope is not specified, scope may be first segment of tag
  */
 
-async function getSymbolInfo(layer, scope, tagInput, attributes) {
+async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInput, attributes) {
   const info = {};
 
   if (!Array.isArray(attributes)) {
@@ -478,7 +491,7 @@ async function getSymbolInfo(layer, scope, tagInput, attributes) {
   return info;
 }
 
-async function* listTags(layer, attributes, scope, instance, shouldGroup, modifier) {
+async function* listTags(layer: Logix5000, attributes, scope: string | undefined, instance: number, shouldGroup: boolean, modifier) {
   let instanceID = instance != null ? instance : 0;
 
   // const MIN_TIMEOUT = 700;
@@ -537,7 +550,7 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
   }
 }
 
-async function getSymbolSize(layer, scope, tag) {
+async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: string) {
   if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
     try {
       const symbolParts = tag.split('.');
@@ -628,7 +641,10 @@ async function getSymbolSize(layer, scope, tag) {
 }
 
 export default class Logix5000 extends CIPLayer {
-  constructor(lowerLayer, options) {
+  _templates: Map<number, Template>;
+  _templateInstanceAttributes: Map<number, Attributes>;
+
+  constructor(lowerLayer: Layer, options) {
     options = {
       port: 1,
       slot: 0,
@@ -706,7 +722,7 @@ export default class Logix5000 extends CIPLayer {
   //   // }
   // }
 
-  readTag(tag, elements, callback) {
+  readTag(tag: string, elements, callback?: Function) {
     if (callback == null && typeof elements === 'function') {
       callback = elements;
       elements = undefined;
@@ -725,14 +741,14 @@ export default class Logix5000 extends CIPLayer {
           return;
         }
       } else {
-        elements = await getSymbolSize(this, null, tag);
+        elements = await getSymbolSize(this, undefined, tag);
       }
 
       const service = SymbolServiceCodes.Read;
       const path = Encoding.EncodeSymbolPath(tag);
       const requestData = Encode(DataType.UINT, elements);
 
-      send(this, service, path, requestData, async (error, reply) => {
+      send(this, service, path, requestData, async (error?: Error, reply?: any) => {
         if (error) {
           console.log(tag);
           resolver.reject(error, reply);
@@ -744,7 +760,7 @@ export default class Logix5000 extends CIPLayer {
               : await readTagFragmented(this, path, elements);
 
             if (data.length === 0) {
-              const tagInfo = await getSymbolInfo(this, null, tag, [
+              const tagInfo = await getSymbolInfo(this, undefined, tag, [
                 SymbolInstanceAttributeCodes.Type,
               ]);
 
@@ -780,21 +796,21 @@ export default class Logix5000 extends CIPLayer {
           } catch (err) {
             console.log(err);
             console.log(data);
-            resolver.reject(err, reply);
+            resolver.reject(err as Error, reply);
           }
         }
       }, 5000);
     });
   }
 
-  writeTag(tag, value, callback) {
+  writeTag(tag: Tag, value, callback?: Function) {
     return CallbackPromise(callback, async (resolver) => {
       if (!tag) {
         resolver.reject('tag must be specified');
         return;
       }
 
-      const tagInfo = await getSymbolInfo(this, null, tag, [
+      const tagInfo = await getSymbolInfo(this, undefined, tag, [
         SymbolInstanceAttributeCodes.Type,
       ]);
 
@@ -831,7 +847,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  readModifyWriteTag(tag, ORmasks, ANDmasks, callback) {
+  readModifyWriteTag(tag: Tag, ORmasks: number[] | Buffer, ANDmasks: number[] | Buffer, callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
       if (tag == null) {
         resolver.reject('tag must be specified');
@@ -880,16 +896,16 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  async readSymbolAttributeList(scope, tag, attributes, callback) {
+  async readSymbolAttributeList(scope: string | undefined, tag: Tag, attributes, callback?: Function) {
     if (arguments.length === 1) {
       tag = scope;
-      scope = null;
+      scope = undefined;
     }
 
     if (arguments.length === 2) {
       if (typeof tag !== 'string') {
         tag = scope;
-        scope = null;
+        scope = undefined;
       }
     }
 
@@ -914,7 +930,7 @@ export default class Logix5000 extends CIPLayer {
       const path = encodeFullSymbolPath(scope, symbolID);
       const requestData = Encoding.EncodeAttributes(attributes);
 
-      send(this, service, path, requestData, (error, reply) => {
+      send(this, service, path, requestData, (error?: Error, reply?: any) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -943,7 +959,7 @@ export default class Logix5000 extends CIPLayer {
               const value = DecodeTypedData(data, offsetRef, type);
 
               attributeResults.push({
-                name: SymbolInstanceAttributeNames[code] || 'Unknown',
+                name: SymbolInstanceAttributeCodes[code] || 'Unknown',
                 code,
                 value,
               });
@@ -958,16 +974,16 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  async readSymbolAttributesAll(scope, tag, callback) {
+  async readSymbolAttributesAll(scope: string | undefined, tag: Tag, callback?: Function) {
     if (arguments.length === 1) {
       tag = scope;
-      scope = null;
+      scope = undefined;
     }
 
     if (arguments.length === 2) {
       if (typeof tag !== 'string') {
         tag = scope;
-        scope = null;
+        scope = undefined;
       }
     }
 
@@ -982,18 +998,18 @@ export default class Logix5000 extends CIPLayer {
 
       const path = encodeFullSymbolPath(scope, symbolID);
 
-      send(this, service, path, null, (error, reply) => {
+      send(this, service, path, undefined, (error?: Error, reply?: any) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
           try {
             const { data } = reply;
             const offsetRef = { current: 0 };
-            const attributes = [];
+            const attributes: { name: string; value: any; code: number; }[] = [];
 
-            const appendAttribute = (code) => {
+            const appendAttribute = (code: number) => {
               attributes.push({
-                name: SymbolInstanceAttributeNames[code] || 'Unknown',
+                name: SymbolInstanceAttributeCodes[code] || 'Unknown',
                 value: DecodeTypedData(data, offsetRef, SymbolInstanceAttributeDataTypes[code]),
                 code,
               });
@@ -1036,7 +1052,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  listTags(scope, callback) {
+  listTags(scope?: string, callback?: Function) {
     const attributes = [
       SymbolInstanceAttributeCodes.Name,
       SymbolInstanceAttributeCodes.Type,
@@ -1068,7 +1084,7 @@ export default class Logix5000 extends CIPLayer {
     return listTags(this, attributes, scope, 0, false, modifier);
   }
 
-  readTemplate(templateID, callback) {
+  readTemplate(templateID: number, callback?: Callback<Template>): Promise<Template> {
     return CallbackPromise(callback, async (resolver) => {
       try {
         if (this._templates.has(templateID)) {
@@ -1079,16 +1095,11 @@ export default class Logix5000 extends CIPLayer {
         const service = TemplateServiceCodes.Read;
 
         const path = EPath.Encode(true, [
-          new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Template),
-          new EPath.Segments.Logical.InstanceID(templateID),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, Logix5000ClassCodes.Template),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, templateID),
         ]);
 
-        let attributes;
-        if (this._templateInstanceAttributes.has(templateID)) {
-          attributes = this._templateInstanceAttributes.get(templateID);
-        } else {
-          attributes = await this.readTemplateInstanceAttributes(templateID);
-        }
+        const attributes = await this.readTemplateInstanceAttributes(templateID);
 
         if (attributes == null) {
           resolver.reject(`Unable to read template attributes for template: ${templateID}`);
@@ -1108,7 +1119,7 @@ export default class Logix5000 extends CIPLayer {
             reqOffset,
             bytesToRead - reqOffset,
           );
-          const reply = await sendPromise(this, service, path, reqData, 5000);
+          const reply = await sendPromise(this, service, path, reqData) as Reply;
           chunks.push(reply.data);
 
           if (reply.status.code === GeneralStatusCodes.PartialTransfer) {
@@ -1163,18 +1174,18 @@ export default class Logix5000 extends CIPLayer {
 
         resolver.resolve(template);
       } catch (err) {
-        resolver.reject(err);
+        resolver.reject(err as Error);
       }
     });
   }
 
-  readTemplateClassAttributes(callback) {
+  readTemplateClassAttributes(callback?: Function) {
     return CallbackPromise(callback, async (resolver) => {
       const service = CommonServiceCodes.GetAttributeList;
 
       const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Template),
-        new EPath.Segments.Logical.InstanceID(0),
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, Logix5000ClassCodes.Template),
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, 0),
       ]);
 
       const reply = await sendPromise(this, service, path, Encoding.EncodeAttributes([
@@ -1212,19 +1223,19 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  readTemplateInstanceAttributes(templateID, callback) {
+  readTemplateInstanceAttributes(templateID: number, callback?: Function): Promise<Attributes> {
     return CallbackPromise(callback, (resolver) => {
       try {
         if (this._templateInstanceAttributes.has(templateID)) {
-          resolver.resolve(this._templateInstanceAttributes.get(templateID));
+          resolver.resolve(this._templateInstanceAttributes.get(templateID)!);
           return;
         }
 
         const service = CommonServiceCodes.GetAttributeList;
 
         const path = EPath.Encode(true, [
-          new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Template),
-          new EPath.Segments.Logical.InstanceID(templateID),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, Logix5000ClassCodes.Template),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, templateID),
         ]);
 
         const requestData = Encoding.EncodeAttributes([
@@ -1234,7 +1245,7 @@ export default class Logix5000 extends CIPLayer {
           TemplateInstanceAttributeCodes.StructureSize,
         ]);
 
-        send(this, service, path, requestData, (error, reply) => {
+        send(this, service, path, requestData, (error?: Error, reply?: any) => {
           if (error) {
             resolver.reject(error, reply);
           } else {
@@ -1243,10 +1254,10 @@ export default class Logix5000 extends CIPLayer {
 
               const offsetRef = { current: 0 };
               const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-              const attributes = {};
+              const attributes: Map<number, any> = new Map();
 
               for (let i = 0; i < attributeCount; i++) {
-                const attribute = DecodeTypedData(data, offsetRef, DataType.UINT);
+                const attribute: number = DecodeTypedData(data, offsetRef, DataType.UINT);
                 const status = DecodeTypedData(data, offsetRef, DataType.UINT);
 
                 const attributeDataType = TemplateInstanceAttributeDataTypes[attribute];
@@ -1256,21 +1267,22 @@ export default class Logix5000 extends CIPLayer {
                 }
 
                 if (status === 0) {
-                  attributes[attribute] = DecodeTypedData(data, offsetRef, attributeDataType);
+                  attributes.set(attribute, DecodeTypedData(data, offsetRef, attributeDataType));
                 } else {
                   throw new Error(`Attribute ${attribute} has error status: ${GenericServiceStatusDescriptions[status] || 'Unknown'}`);
                 }
               }
 
-              this._templateInstanceAttributes.set(templateID, attributes);
-              resolver.resolve(attributes);
+              const attrs: Attributes = Object.fromEntries(attributes);
+              this._templateInstanceAttributes.set(templateID, attrs);
+              resolver.resolve(attrs);
             } catch (err) {
-              resolver.reject(err, reply);
+              resolver.reject(err as Error, reply);
             }
           }
         });
       } catch (err) {
-        resolver.reject(err);
+        resolver.reject(err as Error);
       }
     });
   }
@@ -1280,13 +1292,13 @@ export default class Logix5000 extends CIPLayer {
    * Use to determine when the tags list and
    * structure information need refreshing
    * */
-  readControllerAttributes(callback) {
+  readControllerAttributes(callback?: Function) {
     return CallbackPromise(callback, (resolver) => {
       const service = CommonServiceCodes.GetAttributeList;
 
       const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Controller),
-        new EPath.Segments.Logical.InstanceID(0x01),
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, Logix5000ClassCodes.Controller),
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, 1),
       ]);
 
       const requestData = Encoding.EncodeAttributes([
@@ -1297,13 +1309,13 @@ export default class Logix5000 extends CIPLayer {
         ControllerInstanceAttributeCodes.Unknown10,
       ]);
 
-      send(this, service, path, requestData, (error, reply) => {
+      send(this, service, path, requestData, (error?: Error, reply?: { data: Buffer }) => {
         if (error) {
           resolver.reject(error, reply);
         } else {
           try {
             const attributeResponses = [];
-            const { data } = reply;
+            const { data } = reply!;
             const offsetRef = { current: 0 };
 
             const numberOfAttributes = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
@@ -1322,7 +1334,7 @@ export default class Logix5000 extends CIPLayer {
 
                 attributeResponses.push({
                   code: attribute,
-                  name: ControllerInstanceAttributeNames[attribute],
+                  name: ControllerInstanceAttributeCodes[attribute],
                   value: attributeValue,
                 });
               } else {
@@ -1332,14 +1344,14 @@ export default class Logix5000 extends CIPLayer {
 
             resolver.resolve(attributeResponses);
           } catch (err) {
-            resolver.reject(err, reply);
+            resolver.reject(err as Error, reply);
           }
         }
       });
     });
   }
 
-  handleData(data, info, context) {
+  handleData(data: Buffer, info: any, context?: string) {
     if (context == null) {
       throw new Error('Logix5000 Error: Unhandled message, context should not be null.');
     }

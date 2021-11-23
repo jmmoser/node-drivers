@@ -1,4 +1,4 @@
-import { CallbackPromise } from '../utils';
+import { CallbackPromise, Callback } from '../utils';
 import Layer from './layer';
 import { LayerNames } from './constants';
 import EIPPacket from '../core/eip/packet';
@@ -127,7 +127,7 @@ export default class EIPLayer extends Layer {
     this._totalSentSinceLastResponse = 0;
   }
 
-  nop(callback?: Function) {
+  nop(callback?: Callback<void>) {
     // no response, used to test underlying transport layer
     return CallbackPromise(callback, (resolver) => {
       queueUserRequest(this, EIPPacket.NOPRequest(), null);
@@ -304,7 +304,7 @@ export default class EIPLayer extends Layer {
   }
 
   // TODO: can this use CallbackPromise?
-  connect(callback?: Function) {
+  connect(callback?: Callback<void>) {
     if (this._connectionState === 2) {
       if (callback) callback();
       return;
@@ -315,7 +315,7 @@ export default class EIPLayer extends Layer {
     this.send(EIPPacket.RegisterSessionRequest(this._senderContext), null, true);
   }
 
-  disconnect(callback?: Function) {
+  disconnect(callback?: Callback<void>) {
     return CallbackPromise(callback, (resolver) => {
       if (this._connectionState !== 0) {
         this.send(

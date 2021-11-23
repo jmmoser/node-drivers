@@ -5,7 +5,7 @@ import {
 } from '../../../../utils';
 
 import convertDataTypeToObject from '../../datatypes/convertToObject';
-import { DataTypeCodes, DataTypeNames } from '../../datatypes/codes';
+import { DataTypeCodes } from '../../datatypes/codes';
 import { DataType, IDataTypeOption, StructDataType, AbbrStructDataType, ArrayDataType, AbbrArrayDataType, IDataType } from '../../datatypes/types';
 
 import { Ref } from '../../../../types';
@@ -63,7 +63,7 @@ function DecodeDataType(buffer: Buffer, offsetRef: Ref): IDataTypeOption {
       break;
     }
     default:
-      type = (DataType as any)[DataTypeNames[code]] as IDataType;
+      type = (DataType as any)[DataTypeCodes[code]] as IDataType;
       break;
   }
 

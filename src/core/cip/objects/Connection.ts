@@ -1,47 +1,44 @@
-import { InvertKeyValues } from '../../../utils';
 import { DataType, PlaceholderDataType } from '../datatypes/types';
 import EPath from '../epath/index';
 import { ClassCodes } from '../constants/classes';
 
 // /** CIP Vol1 Table 3-4.2 */
-// const ClassServices = Object.freeze({
+// enum ClassServices {
 //   /** Common */
-//   Create: CommonServiceCodes.Create,
-//   Delete: CommonServiceCodes.Delete,
-//   Reset: CommonServiceCodes.Reset,
-//   FindNextObjectInstance: CommonServiceCodes.FindNextObjectInstance,
-//   GetAttributeSingle: CommonServiceCodes.GetAttributeSingle,
+//   Create = CommonServiceCodes.Create,
+//   Delete = CommonServiceCodes.Delete,
+//   Reset = CommonServiceCodes.Reset,
+//   FindNextObjectInstance = CommonServiceCodes.FindNextObjectInstance,
+//   GetAttributeSingle = CommonServiceCodes.GetAttributeSingle,
 //   /** Class Specific */
-//   ConnectionBind: 0x4B,
-//   ProducingApplicationLookup: 0x4C,
-//   SafetyClose: 0x4E,
-//   SafetyOpen: 0x54
-// });
+//   ConnectionBind = 0x4B,
+//   ProducingApplicationLookup = 0x4C,
+//   SafetyClose = 0x4E,
+//   SafetyOpen = 0x54
+// };
 
 // CIP Vol 1, Table 3-4.9 (p 3-13)
-const InstanceAttributeCodes = Object.freeze({
-  State: 1,
-  Type: 2,
-  TransportClassTrigger: 3,
-  DeviceNetProducedConnectionID: 4,
-  DeviceNetConsumedConnectionID: 5,
-  DeviceNetInitialCommCharacteristics: 6,
-  ProducedConnectionSize: 7,
-  ConsumedConnectionSize: 8,
-  ExpectedPacketRate: 9,
-  CIPProducedConnectionID: 10,
-  CIPConsumedConnectionID: 11,
-  WatchdogTimeoutAction: 12,
-  ProducedConnectionPathLength: 13,
-  ProducedConnectionPath: 14,
-  ConsumedConnectionPathLength: 15,
-  ConsumedConnectionPath: 16,
-  ProductionInhibitTime: 17,
-  ConnectionTimeoutMultiplier: 18,
-  ConnectionBindingList: 19,
-});
-
-export const InstanceAttributeNames = InvertKeyValues(InstanceAttributeCodes);
+enum InstanceAttributeCodes {
+  State = 1,
+  Type = 2,
+  TransportClassTrigger = 3,
+  DeviceNetProducedConnectionID = 4,
+  DeviceNetConsumedConnectionID = 5,
+  DeviceNetInitialCommCharacteristics = 6,
+  ProducedConnectionSize = 7,
+  ConsumedConnectionSize = 8,
+  ExpectedPacketRate = 9,
+  CIPProducedConnectionID = 10,
+  CIPConsumedConnectionID = 11,
+  WatchdogTimeoutAction = 12,
+  ProducedConnectionPathLength = 13,
+  ProducedConnectionPath = 14,
+  ConsumedConnectionPathLength = 15,
+  ConsumedConnectionPath = 16,
+  ProductionInhibitTime = 17,
+  ConnectionTimeoutMultiplier = 18,
+  ConnectionBindingList = 19,
+};
 
 export const InstanceAttributeDataTypes = Object.freeze({
   [InstanceAttributeCodes.State]: DataType.USINT,
@@ -112,47 +109,42 @@ export const ConnectionBindServiceStatusCodeDescriptions = Object.freeze({
   },
 });
 
-export const TypeCodes = Object.freeze({
-  Null: 0,
-  Multicast: 1,
-  PointToPoint: 2,
-});
+export enum TypeCodes {
+  Null = 0,
+  Multicast = 1,
+  PointToPoint = 2,
+}
 
-export const PriorityCodes = Object.freeze({
-  Low: 0,
-  High: 1,
-  Scheduled: 2,
-  Urgent: 3,
-});
+export enum PriorityCodes {
+  Low = 0,
+  High = 1,
+  Scheduled = 2,
+  Urgent = 3,
+}
 
-export const SizeTypeCodes = Object.freeze({
-  Fixed: 0,
-  Variable: 1,
-});
+export enum SizeTypeCodes {
+  Fixed = 0,
+  Variable = 1,
+}
 
 /** For Transport Class Trigger Attribute */
-export const TransportClassCodes = Object.freeze({
-  Class0: 0,
-  Class1: 1,
-  Class2: 2,
-  Class3: 3,
-});
+export enum TransportClassCodes {
+  Class0 = 0,
+  Class1 = 1,
+  Class2 = 2,
+  Class3 = 3,
+}
 
-export const TransportProductionTriggerCodes = Object.freeze({
-  Cyclic: 0,
-  ChangeOfState: 1,
-  ApplicationObject: 2,
-});
-
-// export const TransportDirectionCodes = Object.freeze({
-//   Client: 0,
-//   Server: 1,
-// });
+export enum TransportProductionTriggerCodes {
+  Cyclic = 0,
+  ChangeOfState = 1,
+  ApplicationObject = 2,
+}
 
 export enum TransportDirectionCodes {
   Client = 0,
   Server = 1,
-};
+}
 
 export interface ConnectionTransportClassTrigger {
   direction?: number;
@@ -196,7 +188,7 @@ export interface ConnectionOptions {
   tickTime?: number;
   timeoutTicks?: number;
   overrideLarge?: boolean;
-  
+
   OtoTConnectionID?: number;
   TtoOConnectionID?: number;
   OtoTPacketRate?: number;

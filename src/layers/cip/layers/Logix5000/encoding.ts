@@ -4,27 +4,29 @@ import {
   Logix5000ClassCodes,
 } from './constants';
 
-export function EncodeReadTemplateServiceData(offset, bytesToRead) {
+import { Tag } from './types';
+
+export function EncodeReadTemplateServiceData(offset: number, bytesToRead: number) {
   const buffer = Buffer.allocUnsafe(6);
   buffer.writeUInt32LE(offset, 0);
   buffer.writeUInt16LE(bytesToRead - offset, 4);
   return buffer;
 }
 
-export function EncodeReadTagServiceData(numberOfElements) {
+export function EncodeReadTagServiceData(numberOfElements: number) {
   const buffer = Buffer.allocUnsafe(2);
   buffer.writeUInt16LE(numberOfElements);
   return buffer;
 }
 
-export function EncodeReadTagFragmentedServiceData(numberOfElements, offset) {
+export function EncodeReadTagFragmentedServiceData(numberOfElements: number, offset: number) {
   const buffer = Buffer.allocUnsafe(6);
   buffer.writeUInt16LE(numberOfElements, 0);
   buffer.writeUInt32LE(offset, 2);
   return buffer;
 }
 
-export function EncodeAttributes(attributes) {
+export function EncodeAttributes(attributes: number[]) {
   const buffer = Buffer.allocUnsafe(2 + attributes.length * 2);
   buffer.writeUInt16LE(attributes.length, 0);
   for (let i = 0; i < attributes.length; i++) {
@@ -33,7 +35,7 @@ export function EncodeAttributes(attributes) {
   return buffer;
 }
 
-export function EncodeReadModifyWriteMasks(ORmasks, ANDmasks) {
+export function EncodeReadModifyWriteMasks(ORmasks: number[], ANDmasks: number[]) {
   const buffer = Buffer.alloc(2 + 2 * ORmasks.length);
   buffer.writeUInt16LE(ORmasks.length, 0);
   for (let i = 0; i < ORmasks.length; i++) {
@@ -43,14 +45,14 @@ export function EncodeReadModifyWriteMasks(ORmasks, ANDmasks) {
   return buffer;
 }
 
-export function EncodeSymbolPath(tag) {
+export function EncodeSymbolPath(tag: Tag) {
   switch (typeof tag) {
     case 'string':
       return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
     case 'number':
       return EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Symbol),
-        new EPath.Segments.Logical.InstanceID(tag),
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, Logix5000ClassCodes.Symbol),
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, tag),
       ]);
     case 'object':
       return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));

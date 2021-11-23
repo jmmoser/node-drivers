@@ -1,6 +1,4 @@
 // EIP-CIP-V1 3.5, page 3-53
-
-import { InvertKeyValues } from '../../../utils';
 import { ClassCodes } from '../constants/index';
 import CIPRequest, { CIPResponseHandler } from '../request';
 import EPath from '../epath/index';
@@ -8,19 +6,17 @@ import { Ref } from '../../../types';
 import Connection from './Connection';
 
 /** EIP-CIP-V1 3-5.5, page 3.56 */
-const ServiceCodes = {
-  ForwardClose: 0x4E, // Closes a connection
-  UnconnectedSend: 0x52, // Unconnected send service
-  ForwardOpen: 0x54, // Opens a connection
-  GetConnectionData: 0x56, // For diagnostics of a connection
-  SearchConnectionData: 0x57, // For diagnostics of a connection
-  GetConnectionOwner: 0x5A, // Determine the owner of a redundant connection
-  LargeForwardOpen: 0x5B, // Opens a connection, maximum data size is 65535 bytes
+enum ServiceCodes {
+  ForwardClose = 0x4E, // Closes a connection
+  UnconnectedSend = 0x52, // Unconnected send service
+  ForwardOpen = 0x54, // Opens a connection
+  GetConnectionData = 0x56, // For diagnostics of a connection
+  SearchConnectionData = 0x57, // For diagnostics of a connection
+  GetConnectionOwner = 0x5A, // Determine the owner of a redundant connection
+  LargeForwardOpen = 0x5B, // Opens a connection, maximum data size is 65535 bytes
 };
 
 const ServiceCodeSet = new Set(Object.values(ServiceCodes));
-
-const ServiceNames = InvertKeyValues(ServiceCodes) as { [key: number]: string };
 
 /** CIP Vol 1 Table 3-5.29 */
 const StatusDescriptions: { [key: number]: string | { [key: number]: string }} = {
@@ -105,7 +101,7 @@ const ConnectionManagerEPath = EPath.Encode(true, [
 
 function ConnectionManagerCIPRequest(service: number, data: Buffer, responseDecoder: CIPResponseHandler) {
   return new CIPRequest(service, ConnectionManagerEPath, data, responseDecoder, {
-    serviceNames: ServiceNames,
+    serviceNames: ServiceCodes,
   });
 }
 
@@ -199,7 +195,7 @@ export default class ConnectionManager {
       buffer,
       request,
       {
-        serviceNames: ServiceNames,
+        serviceNames: ServiceCodes,
         acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service],
         statusHandler: (statusCode: number, extendedBuffer: Buffer, cb: (a0: string, a1: string, a2: string) => void) => {
           switch (statusCode) {
@@ -416,7 +412,7 @@ export default class ConnectionManager {
 
   static TranslateResponse(response) {
     if (ServiceCodeSet.has(response.service.code)) {
-      response.service.name = ServiceNames[response.service.code] || response.service.name;
+      response.service.name = ServiceCodes[response.service.code] || response.service.name;
       if (response.status.code !== 0) {
         const err = StatusDescriptions[response.status.code];
         switch (typeof err) {
