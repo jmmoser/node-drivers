@@ -1,12 +1,13 @@
 import { Ref } from '../../../types';
 import { getBits } from '../../../utils';
 import Segments from './segments/index';
+import Segment from './segment';
 
 class EPath {
   padded: boolean;
-  // segments: any[];
+  segments: Segment[];
 
-  constructor(padded: boolean, segments) {
+  constructor(padded: boolean, segments: Segment[]) {
     this.padded = padded;
     this.segments = segments;
   }
@@ -34,8 +35,7 @@ class EPath {
       const symbol = symbols[i];
       const symbolAndMembers = symbol.split('[');
       const symbolName = symbolAndMembers[0];
-
-      segments.push(new Segments.Data.ANSIExtendedSymbol(symbolName));
+      segments.push(new Segments.Data(Segments.Data.SubtypeCodes.ANSIExtendedSymbol, symbolName));
 
       if (symbolAndMembers.length > 1) {
         const membersStringWithBracket = symbolAndMembers[1];
@@ -105,7 +105,7 @@ class EPath {
     return segments;
   }
 
-  static EncodeSize(padded: boolean, segments) {
+  static EncodeSize(padded: boolean, segments: Segment[]) {
     if (!Array.isArray(segments)) {
       throw new Error(`Segments must be an array. Received: ${typeof segments}`);
     }
@@ -116,7 +116,7 @@ class EPath {
     return size;
   }
 
-  static Encode(padded: boolean, segments) {
+  static Encode(padded: boolean, segments: Segment[]) {
     let size = 0;
     for (let i = 0; i < segments.length; i++) {
       size += segments[i].encodeSize(padded);
@@ -126,7 +126,7 @@ class EPath {
     return buffer;
   }
 
-  static EncodeTo(buffer: Buffer, offset: number, padded: boolean, segments) {
+  static EncodeTo(buffer: Buffer, offset: number, padded: boolean, segments: Segment[]) {
     if (!Array.isArray(segments)) {
       throw new Error(`Segments must be an array. Received: ${typeof segments}`);
     }

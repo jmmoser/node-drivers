@@ -2,7 +2,7 @@ import { CallbackPromise, Callback } from '../utils';
 import Layer from './layer';
 import { LayerNames } from './constants';
 import EIPPacket from '../core/eip/packet';
-import CPF, { ConnectedAddressValue } from '../core/eip/cpf';
+import CPF, { CPFConnectedAddressValue, CPFListIdentityValue } from '../core/eip/cpf';
 
 const {
   CommandCodes,
@@ -135,7 +135,7 @@ export default class EIPLayer extends Layer {
     });
   }
 
-  listServices(callback?: Function) {
+  listServices(callback?: Callback<EIPPacket>) {
     return CallbackPromise(callback, (resolver) => {
       queueUserRequest(this, EIPPacket.ListServicesRequest(this._senderContext), null, (error?: Error, reply?: any) => {
         if (error) {
@@ -149,7 +149,7 @@ export default class EIPLayer extends Layer {
     });
   }
 
-  listIdentity(options?: { targets?: Target[] }, callback?: Function) {
+  listIdentity(options?: { targets?: Target[] }, callback?: Callback<CPFListIdentityValue[]>) {
     let targetsSpecified = false;
     const targets: { host: string; port: number }[] = [];
 
@@ -157,6 +157,7 @@ export default class EIPLayer extends Layer {
       callback = arguments[0]; // eslint-disable-line no-param-reassign, prefer-destructuring
     } else {
       if (Array.isArray(options?.targets)) {
+        targetsSpecified = true;
         options!.targets.map((target) => {
           if (typeof target === 'string') {
             const parts = target.split(':', 2);
@@ -204,7 +205,7 @@ export default class EIPLayer extends Layer {
       targets.push({} as any);
     }
 
-    const identities: any[] = [];
+    const identities: CPFListIdentityValue[] = [];
 
     return CallbackPromise(callback, (resolver) => {
       let timeoutHandler = setTimeout(finalizer, startingTimeout);
@@ -230,23 +231,22 @@ export default class EIPLayer extends Layer {
           if (targetsSpecified) {
             resolver.resolve(sortedIdentities);
           } else if (identities.length === 1) {
-            resolver.resolve(sortedIdentities[0]);
+            resolver.resolve([sortedIdentities[0]]);
           } else {
-            resolver.resolve(null);
+            resolver.resolve(undefined);
           }
         }
       }
 
-      function internalListIdentityReplyHandler(error?: Error, reply?: any) {
+      function internalListIdentityReplyHandler(error?: Error, reply?: EIPPacket) {
         if (error) {
           finalizer(error, reply);
-        } else if (Array.isArray(reply.items) && reply.items.length === 1) {
-          identities.push(reply.items[0]);
+        } else if (reply && Array.isArray(reply.items) && reply.items.length === 1 && reply.items[0].type.code === CPF.ItemTypeIDs.ListIdentity) {
+          identities.push(reply.items[0].value as CPFListIdentityValue);
           clearTimeout(timeoutHandler);
           if (targetsSpecified) {
             timeoutHandler = setTimeout(finalizer, resetTimeout);
             return;
-            // return true;
           }
           finalizer();
         } else {
@@ -261,7 +261,7 @@ export default class EIPLayer extends Layer {
     });
   }
 
-  listInterfaces(callback?: Function) {
+  listInterfaces(callback?: Callback<EIPPacket>) {
     return CallbackPromise(callback, (resolver) => {
       queueUserRequest(this, EIPPacket.ListInterfacesRequest(), null, (error?: Error, reply?: any) => {
         if (error) {
@@ -275,7 +275,7 @@ export default class EIPLayer extends Layer {
     });
   }
 
-  indicateStatus(callback?: Function) {
+  indicateStatus(callback?: Callback<EIPPacket>) {
     return CallbackPromise(callback, (resolver) => {
       queueUserRequest(this, EIPPacket.IndicateStatusRequest(), null, (error?: Error, reply?: any) => {
         if (error) {
@@ -289,7 +289,7 @@ export default class EIPLayer extends Layer {
     });
   }
 
-  cancel(callback?: Function) {
+  cancel(callback?: Callback<EIPPacket>) {
     return CallbackPromise(callback, (resolver) => {
       queueUserRequest(this, EIPPacket.CancelRequest(), null, (error?: Error, reply?: any) => {
         if (error) {
@@ -514,7 +514,7 @@ export default class EIPLayer extends Layer {
             const info = {
               connected: true,
               responseID: addressItem.value as number,
-              connectionID: this._connectedContexts.get(addressItem.value as ConnectedAddressValue),
+              connectionID: this._connectedContexts.get(addressItem.value as CPFConnectedAddressValue),
             };
             // console.log(info);
             /** DO NOT SEND CONTEXT FOR CONNECTED MESSAGES */

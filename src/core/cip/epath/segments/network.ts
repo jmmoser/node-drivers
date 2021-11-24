@@ -13,6 +13,8 @@ import {
 
 import { Ref, CodedValue } from '../../../../types';
 
+import Segment from '../segment';
+
 export enum SubtypeCodes {
   Schedule = 1,
   FixedTag = 2,
@@ -21,7 +23,7 @@ export enum SubtypeCodes {
   Extended = 31,
 };
 
-export default class NetworkSegment {
+export default class NetworkSegment implements Segment {
   subtype: CodedValue;
   value: number;
 

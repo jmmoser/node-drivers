@@ -31,6 +31,8 @@ import {
 
 import { Ref } from '../../../../types';
 
+import Segment from '../segment';
+
 function serializeAddress(address: Buffer | number | string) {
   if (Buffer.isBuffer(address)) {
     return address;
@@ -60,7 +62,7 @@ function validate(number: number, address: Buffer) {
   }
 }
 
-export default class PortSegment {
+export default class PortSegment implements Segment {
   number: number;
   address: Buffer;
 

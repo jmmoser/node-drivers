@@ -3,7 +3,7 @@ import CIPIdentity from '../cip/objects/Identity';
 
 import { Ref, CodedValue } from '../../types';
 
-enum ItemTypeIDs {
+export enum ItemTypeIDs {
   NullAddress = 0x0000, // address
   ListIdentity = 0x000C, // response
   ConnectedAddress = 0x00A1, // address
@@ -21,9 +21,9 @@ const SocketFamilyNames: { [key: number]: string } = Object.freeze({
 
 type NullAddressValue = null;
 
-export type ConnectedAddressValue = number;
+export type CPFConnectedAddressValue = number;
 
-type ListIdentityValue = {
+export type CPFListIdentityValue = {
   encapsulationProtocolVersion: number;
   socket: {
     family: CodedValue;
@@ -53,7 +53,7 @@ type UnconnectedMessageValue = Buffer;
 
 export interface CPFPacket {
   type: CodedValue;
-  value: NullAddressValue | ConnectedAddressValue | ListIdentityValue | ListServicesValue | SequencedAddressValue | UnconnectedMessageValue;
+  value: NullAddressValue | CPFConnectedAddressValue | CPFListIdentityValue | ListServicesValue | SequencedAddressValue | UnconnectedMessageValue;
 }
 
 export default class CPF {
@@ -90,7 +90,7 @@ export default class CPF {
     return null;
   }
 
-  static DecodeConnectedAddressValue(buffer: Buffer, offsetRef: Ref, dataLength: number): ConnectedAddressValue {
+  static DecodeConnectedAddressValue(buffer: Buffer, offsetRef: Ref, dataLength: number): CPFConnectedAddressValue {
     if (dataLength === 4) {
       const value = buffer.readUInt32LE(offsetRef.current);
       offsetRef.current += 4;
@@ -99,7 +99,7 @@ export default class CPF {
     throw new Error(`EIP Connected Address CPF item expected length 4, received: ${dataLength}`);
   }
 
-  static DecodeListIdentityValue(buffer: Buffer, offsetRef: Ref, dataLength: number): ListIdentityValue {
+  static DecodeListIdentityValue(buffer: Buffer, offsetRef: Ref, dataLength: number): CPFListIdentityValue {
     const encapsulationProtocolVersion = buffer.readUInt16LE(offsetRef.current);
     offsetRef.current += 2;
 

@@ -10,6 +10,8 @@ import { DataType, IDataTypeOption, StructDataType, AbbrStructDataType, ArrayDat
 
 import { Ref } from '../../../../types';
 
+import Segment from '../segment';
+
 function DecodeDataType(buffer: Buffer, offsetRef: Ref): IDataTypeOption {
   let type;
   const code = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
@@ -139,7 +141,7 @@ function encodeTo(buffer: Buffer, offset: number, type: IDataTypeOption) {
   return offset;
 }
 
-export default class DataTypeSegment {
+export default class DataTypeSegment implements Segment {
   value: IDataTypeOption;
 
   constructor(value: IDataTypeOption) {

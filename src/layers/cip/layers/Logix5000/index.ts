@@ -49,7 +49,7 @@ import {
   SymbolType,
 } from './constants';
 
-import { Ref } from '../../../../types';
+import { CodedValue, Ref } from '../../../../types';
 import { Tag } from './types';
 import Layer from '../../../layer';
 
@@ -639,6 +639,11 @@ async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: s
   }
   return 1;
 }
+
+interface AttributeResponse {
+  attribute: CodedValue;
+  value: any
+};
 
 export default class Logix5000 extends CIPLayer {
   _templates: Map<number, Template>;
@@ -1249,6 +1254,7 @@ export default class Logix5000 extends CIPLayer {
           if (error) {
             resolver.reject(error, reply);
           } else {
+
             try {
               const { data } = reply;
 
@@ -1259,6 +1265,19 @@ export default class Logix5000 extends CIPLayer {
               for (let i = 0; i < attributeCount; i++) {
                 const attribute: number = DecodeTypedData(data, offsetRef, DataType.UINT);
                 const status = DecodeTypedData(data, offsetRef, DataType.UINT);
+
+                if (!(attribute in TemplateInstanceAttributeDataTypes)) {
+                  throw new Error(`Unknown template attribute received: ${attribute}`);
+                }
+
+                // /** https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates */
+                // function isInObject<T>(object: T, key: number | T): key is T {
+                //   return (key as number) in object;
+                // }
+
+                // if (!isInObject(TemplateInstanceAttributeCodes, attribute)) {
+                //   throw new Error(`Unknown template attribute received: ${attribute}`);
+                // }
 
                 const attributeDataType = TemplateInstanceAttributeDataTypes[attribute];
 
@@ -1292,7 +1311,7 @@ export default class Logix5000 extends CIPLayer {
    * Use to determine when the tags list and
    * structure information need refreshing
    * */
-  readControllerAttributes(callback?: Function) {
+  readControllerAttributes(callback?: Callback<AttributeResponse[]>) {
     return CallbackPromise(callback, (resolver) => {
       const service = CommonServiceCodes.GetAttributeList;
 
@@ -1314,7 +1333,7 @@ export default class Logix5000 extends CIPLayer {
           resolver.reject(error, reply);
         } else {
           try {
-            const attributeResponses = [];
+            const attributeResponses: AttributeResponse[] = [];
             const { data } = reply!;
             const offsetRef = { current: 0 };
 
@@ -1333,8 +1352,10 @@ export default class Logix5000 extends CIPLayer {
                 const attributeValue = DecodeTypedData(data, offsetRef, attributeDataType);
 
                 attributeResponses.push({
-                  code: attribute,
-                  name: ControllerInstanceAttributeCodes[attribute],
+                  attribute: {
+                    code: attribute,
+                    name: ControllerInstanceAttributeCodes[attribute],
+                  },
                   value: attributeValue,
                 });
               } else {

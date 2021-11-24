@@ -1,6 +1,5 @@
 import {
   Functions,
-  FunctionNames,
   ErrorDescriptions,
 } from './constants';
 
@@ -130,7 +129,7 @@ export default class PDU {
     return {
       fn: {
         code: fn,
-        name: (FunctionNames as any)[fn & 0x7F] || 'Unknown',
+        name: Functions[fn & 0x7F] || 'Unknown',
       },
       data,
       error,

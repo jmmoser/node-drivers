@@ -3,7 +3,6 @@ import CIPAttribute from '../attribute';
 
 import {
   ClassCodes,
-  ClassNames,
 } from '../constants/index';
 
 import {
@@ -31,7 +30,7 @@ const InstanceAttribute = Object.freeze({
       return 0;
     }).map((classCode: number) => ({
       code: classCode,
-      name: ClassNames[classCode] || 'Unknown',
+      name: ClassCodes[classCode] || 'Unknown',
     })),
   )),
   MaxSupportedConnections: new CIPAttribute(ClassCodes.MessageRouter, 2, 'Max Supported Connected', DataType.UINT),

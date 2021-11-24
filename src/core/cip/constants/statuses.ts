@@ -92,7 +92,7 @@ export enum GeneralStatusCodes {
 // });
 
 // CIP-V1-1.0 Appendix B-1. General status codes
-export const GeneralStatusDescriptions = Object.freeze({
+export const GeneralStatusDescriptions: { [key: number]: string } = Object.freeze({
   0x01: 'A connection related service failed along the connection path.',
   0x02: 'Resources needed for the object to perform the requested service were unavailable.',
   0x03: 'See Status Code 0x20, which is the preferred value to use for this condition.',

@@ -17,7 +17,7 @@ const IPAddressDataType = DataType.TRANSFORM(
   }
 );
 
-const InterfaceConfigurationStatusDescriptions = {
+const InterfaceConfigurationStatusDescriptions: { [key: number]: string} = {
   0: 'The Interface Configuration attribute has not been configured.',
   1: 'The Interface Configuration attribute contains valid configuration.',
 };

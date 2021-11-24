@@ -1,6 +1,6 @@
 // EIP-CIP-V1 3.5, page 3-53
 import { ClassCodes } from '../constants/index';
-import CIPRequest, { CIPResponseHandler } from '../request';
+import CIPRequest, { CIPResponseHandler, CIPResponse } from '../request';
 import EPath from '../epath/index';
 import { Ref } from '../../../types';
 import Connection from './Connection';
@@ -135,28 +135,66 @@ function errorDataHandler(buffer: Buffer, offsetRef: Ref, res: { status: { type:
   }
 }
 
-function connectionDataResponse(buffer: Buffer, offsetRef: Ref) {
-  const res = {};
-  res.ConnectionNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-  res.ConnectionState = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-  res.OriginatorPort = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-  res.TargetPort = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-  res.ConnectionSerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-  res.OriginatorVendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-  res.OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  res.OriginatorOtoTCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  res.TargetOtoTCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  res.ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+interface ConnectionDataResponse {
+  ConnectionNumber: number;
+  ConnectionState: number;
+  OriginatorPort: number;
+  TargetPort: number;
+  ConnectionSerialNumber: number;
+  OriginatorVendorID: number;
+  OriginatorSerialNumber: number;
+  OriginatorOtoTCID: number;
+  TargetOtoTCID: number;
+  ConnectionTimeoutMultiplierOtoT: number;
+  OriginatorRPIOtoT: number;
+  OriginatorAPIOtoT: number;
+  OriginatorTtoOCID: number;
+  TargetTtoOCID: number;
+  ConnectionTimeoutMultiplierTtoO: number;
+  OriginatorRPITtoO: number;
+  OriginatorAPITtoO: number;
+}
+
+function connectionDataResponse(buffer: Buffer, offsetRef: Ref): ConnectionDataResponse {
+  const ConnectionNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const ConnectionState = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const OriginatorPort = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const TargetPort = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const ConnectionSerialNumber = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const OriginatorVendorID = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+  const OriginatorSerialNumber = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  const OriginatorOtoTCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  const TargetOtoTCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  const ConnectionTimeoutMultiplierOtoT = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   offsetRef.current += 3; // Reserved
-  res.OriginatorRPIOtoT = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  res.OriginatorAPIOtoT = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  res.OriginatorTtoOCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  res.TargetTtoOCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  res.ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
+  const OriginatorRPIOtoT = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  const OriginatorAPIOtoT = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  const OriginatorTtoOCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  const TargetTtoOCID = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  const ConnectionTimeoutMultiplierTtoO = buffer.readUInt8(offsetRef.current); offsetRef.current += 1;
   offsetRef.current += 3; // Reserved
-  res.OriginatorRPITtoO = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  res.OriginatorAPITtoO = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
-  return res;
+  const OriginatorRPITtoO = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+  const OriginatorAPITtoO = buffer.readUInt32LE(offsetRef.current); offsetRef.current += 4;
+
+  return {
+    ConnectionNumber,
+    ConnectionState,
+    OriginatorPort,
+    TargetPort,
+    ConnectionSerialNumber,
+    OriginatorVendorID,
+    OriginatorSerialNumber,
+    OriginatorOtoTCID,
+    TargetOtoTCID,
+    ConnectionTimeoutMultiplierOtoT,
+    OriginatorRPIOtoT,
+    OriginatorAPIOtoT,
+    OriginatorTtoOCID,
+    TargetTtoOCID,
+    ConnectionTimeoutMultiplierTtoO,
+    OriginatorRPITtoO,
+    OriginatorAPITtoO,
+  };
 }
 
 interface UnconnectedSendOptions {
@@ -197,37 +235,60 @@ export default class ConnectionManager {
       {
         serviceNames: ServiceCodes,
         acceptedServiceCodes: [ServiceCodes.UnconnectedSend, request.service],
-        statusHandler: (statusCode: number, extendedBuffer: Buffer, cb: (a0: string, a1: string, a2: string) => void) => {
+        statusHandler: (statusCode: number, extendedBuffer: Buffer) => {
           switch (statusCode) {
             case 1:
               if (extendedBuffer.length === 2) {
                 switch (extendedBuffer.readUInt16LE(0)) {
                   case 0x0204:
-                    cb('Unconnected Send Error', 'Timeout', 'timeout');
-                    break;
+                    return {
+                      name: 'Unconnected Send Error',
+                      description: 'Timeout',
+                      type: 'timeout',
+                    };
                   case 0x0311:
-                    cb('Unconnected Send Error', 'Invalid Port ID specified in the route path field.', 'routing');
-                    break;
+                    return {
+                      name: 'Unconnected Send Error',
+                      description: 'Invalid Port ID specified in the route path field.',
+                      type: 'routing',
+                    };
                   case 0x0312:
-                    cb('Unconnected Send Error', 'Invalid Node Address specified in the route path field.', 'routing');
-                    break;
+                    return {
+                      name: 'Unconnected Send Error',
+                      description: 'Invalid Node Address specified in the route path field.',
+                      type: 'routing',
+                    };
                   case 0x0315:
-                    cb('Unconnected Send Error', 'Invalid segment type in the route path field.', 'routing');
-                    break;
+                    return {
+                      name: 'Unconnected Send Error',
+                      description: 'Invalid segment type in the route path field.',
+                      type: 'routing',
+                    };
                   default:
                     break;
                 }
               }
               break;
             case 2:
-              cb('Unconnected Send Error', 'Resource error. The CIP Router lacks the resources to fully process the Unconnected Send Request.', 'resource');
-              break;
+              return {
+                name: 'Unconnected Send Error',
+                description: 'Resource error. The CIP Router lacks the resources to fully process the Unconnected Send Request.',
+                type: 'resource',
+              };
             case 4:
-              cb('Unconnected Send Error', 'Segment type error. The CIP Router experienced a parsing error when extracting the Explicit Messaging Request from the Unconnected Send Request Service Data.', 'parsing');
-              break;
+              return {
+                name: 'Unconnected Send Error',
+                description: 'Segment type error. The CIP Router experienced a parsing error when extracting the Explicit Messaging Request from the Unconnected Send Request Service Data.',
+                type: 'parsing',
+              };
             default:
               break;
           }
+          return {
+            name: 'Unknown',
+            description: 'Unknown',
+            type: 'unknown',
+          };
         },
         errorDataHandler,
       },
@@ -410,7 +471,7 @@ export default class ConnectionManager {
     );
   }
 
-  static TranslateResponse(response) {
+  static TranslateResponse(response: CIPResponse) {
     if (ServiceCodeSet.has(response.service.code)) {
       response.service.name = ServiceCodes[response.service.code] || response.service.name;
       if (response.status.code !== 0) {

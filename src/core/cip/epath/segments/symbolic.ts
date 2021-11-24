@@ -12,17 +12,19 @@ import {
 
 import { Ref } from '../../../../types';
 
-const ExtendedStringFormatCodes = Object.freeze({
-  DoubleByteCharacters: 1,
-  TripleByteCharacters: 2,
-  Numeric: 6,
-});
+import Segment from '../segment';
 
-const ExtendedStringNumericTypeCodes = Object.freeze({
-  USINT: 6,
-  UINT: 7,
-  UDINT: 8,
-});
+enum ExtendedStringFormatCodes {
+  DoubleByteCharacters = 1,
+  TripleByteCharacters = 2,
+  Numeric = 6,
+};
+
+enum ExtendedStringNumericTypeCodes {
+  USINT = 6,
+  UINT = 7,
+  UDINT = 8,
+};
 
 type SymbolicSegmentValue = number | string | Buffer;
 
@@ -86,7 +88,7 @@ function validate(value: SymbolicSegmentValue, extendedFormat: number, extendedS
   }
 }
 
-class SymbolicSegment {
+class SymbolicSegment implements Segment {
   value: SymbolicSegmentValue;
   extendedFormat: number;
   extendedSize: number;

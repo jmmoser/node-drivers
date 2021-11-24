@@ -11,6 +11,8 @@ import {
 
 import { CodedValue, Ref } from '../../../../types';
 
+import Segment from '../segment';
+
 enum SubtypeCodes {
   Simple = 0,
   ANSIExtendedSymbol = 17,
@@ -41,11 +43,11 @@ function validate(subtype: number, value: DataValue) {
   }
 }
 
-export default class DataSegment {
+export default class DataSegment implements Segment {
   subtype: CodedValue;
   value: DataValue;
 
-  constructor(subtype: number, value: DataValue) {
+  constructor(subtype: SubtypeCodes, value: DataValue) {
     validate(subtype, value);
 
     this.subtype = {
@@ -54,6 +56,8 @@ export default class DataSegment {
     };
     this.value = value;
   }
+
+  static SubtypeCodes = SubtypeCodes;
 
   encodeSize() {
     switch (this.subtype.code) {

@@ -2,9 +2,9 @@ import Layer from '../layer';
 import ConnectionLayer from './layers/connection';
 import { CommonServiceCodes } from '../../core/cip/constants/index';
 import EPath from '../../core/cip/epath/index';
-import CIPRequest from '../../core/cip/request';
+import CIPRequest, { CIPResponse } from '../../core/cip/request';
 
-import { CallbackPromise } from '../../utils';
+import { CallbackPromise, Callback } from '../../utils';
 import { LayerNames } from '../constants';
 
 import * as PCCCHandler from './handlers/pccc';
@@ -23,7 +23,7 @@ export default class CIPLayer extends Layer {
     this._counter = CreateCounter({ maxValue: 0x100000000 });
   }
 
-  sendRequest(connected: boolean, request: CIPRequest, callback?: Function) {
+  sendRequest(connected: boolean, request: CIPRequest, callback?: Callback<CIPResponse>) {
     return CallbackPromise(callback, (resolver) => {
       const context = this.contextCallback((error?: Error, message?: Buffer) => {
         try {
@@ -46,10 +46,10 @@ export default class CIPLayer extends Layer {
     });
   }
 
-  exploreAttributes(classCode: number, instanceID: number, maxAttribute: number, callback?: Function) {
+  exploreAttributes(classCode: number, instanceID: number, maxAttribute?: number, callback?: Callback<{ code: number; data: Buffer; }[]>) {
     if (typeof maxAttribute === 'function') {
       callback = maxAttribute;
-      maxAttribute = null;
+      maxAttribute = undefined;
     }
 
     if (maxAttribute == null) {
@@ -62,7 +62,7 @@ export default class CIPLayer extends Layer {
       const attributes = [];
 
       // for (let j = 0; j < 30; j++) {
-      for (let i = 1; i < maxAttribute; i++) {
+      for (let i = 1; i < maxAttribute!; i++) {
         attributes.push(i);
       }
       // }

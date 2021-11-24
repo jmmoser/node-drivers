@@ -3,8 +3,6 @@
 import {
   ClassCodes,
   CommonServiceCodes,
-  CommonServiceNames,
-  GeneralStatusNames,
   GeneralStatusCodes,
   GeneralStatusDescriptions,
 } from './constants/index';
@@ -19,12 +17,12 @@ interface CIPStatus extends CodedValue {
   error: boolean;
 }
 
-interface CIPResponse {
+export interface CIPResponse {
   request?: Buffer;
   service: CodedValue;
   status: CIPStatus;
   value?: any;
-  // data: Buffer;
+  data: Buffer;
 }
 
 export type CIPResponseHandler = CIPRequest | ((buffer: Buffer, offsetRef: Ref, response?: CIPResponse) => any);
@@ -61,7 +59,7 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptio
   const service = {
     code: serviceCode,
     hex: `0x${serviceCode.toString(16).padStart(2, '0')}`,
-    name: CommonServiceNames[serviceCode],
+    name: CommonServiceCodes[serviceCode],
   };
 
   if (!service.name) {
@@ -88,13 +86,13 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptio
 
   const status: CIPStatus = {
     code: statusCode,
-    name: GeneralStatusNames[statusCode] || '',
+    name: GeneralStatusCodes[statusCode] || '',
     description: GeneralStatusDescriptions[statusCode] || (statusError ? 'CIP Error' : ''),
     error: statusError,
     extended: extendedStatus
   }
 
-  // const data = buffer.slice(offsetRef.current);
+  const data = buffer.slice(offsetRef.current);
 
   if (typeof opts.statusHandler === 'function') {
     const statusHandlerOutput = opts.statusHandler(statusCode, extendedStatus);
@@ -114,7 +112,7 @@ function DecodeResponse(buffer: Buffer, offsetRef: Ref, options: CIPRequestOptio
     request,
     service,
     // value,
-    // data,
+    data,
     status
   };
 

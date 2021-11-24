@@ -17,6 +17,8 @@ import {
 
 import { CodedValue, Ref } from '../../../../types';
 
+import Segment from '../segment';
+
 enum TypeCodes {
   ClassID = 0,
   InstanceID = 1,
@@ -269,7 +271,12 @@ function DecodeElectronicKey(buffer: Buffer, offsetRef: Ref): ElectronicKeyValue
   };
 }
 
-export default class LogicalSegment {
+/** https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates */
+function isFormat(format: number | FormatCodes): format is FormatCodes {
+  return format in FormatCodes;
+}
+
+export default class LogicalSegment implements Segment {
   type: CodedValue;
   format: CodedValue;
   value: LogicalValue;
@@ -328,10 +335,10 @@ export default class LogicalSegment {
       /** Electronic Key Segment, no pad byte */
       value = DecodeElectronicKey(buffer, offsetRef);
     } else {
-      const valueSize = LogicalFormatSizes[format];
-      if (valueSize == null) {
+      if (!isFormat(format)) {
         throw new Error(`Unexpected Logical Segment Format: ${format}`);
       }
+      const valueSize = LogicalFormatSizes[format];
 
       if (valueSize > 1 && padded) {
         // offset += 1; /** Pad byte */
