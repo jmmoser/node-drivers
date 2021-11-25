@@ -2,6 +2,7 @@ import {
   DataType,
   DataTypeCodes,
   IDataTypeOption,
+  UnknownDataType
 } from '../../../../core/cip/datatypes/index';
 
 import {
@@ -136,7 +137,7 @@ export class Member {
  *    Defines whether a tag value remains constant. Tags with this attribute
  *    set cannot be changed programmatically.)
  */
-export const SymbolInstanceAttributeDataTypes = Object.freeze({
+export const SymbolInstanceAttributeDataTypes: { [key: number]: IDataTypeOption | undefined } = Object.freeze({
   [SymbolInstanceAttributeCodes.Name]: DataType.STRING,
   [SymbolInstanceAttributeCodes.Type]: DataType.TRANSFORM(
     DataType.UINT,
@@ -165,7 +166,8 @@ export enum TemplateInstanceAttributeCodes {
   StructureSize = 0x05,
 };
 
-export const TemplateInstanceAttributeDataTypes: { [key in TemplateInstanceAttributeCodes]: IDataTypeOption } = Object.freeze({
+// export const TemplateInstanceAttributeDataTypes: { [key in TemplateInstanceAttributeCodes]: IDataTypeOption } = Object.freeze({
+export const TemplateInstanceAttributeDataTypes: { [key: number]: IDataTypeOption | undefined } = Object.freeze({
   [TemplateInstanceAttributeCodes.StructureHandle]: DataType.UINT,
   [TemplateInstanceAttributeCodes.MemberCount]: DataType.UINT,
   [TemplateInstanceAttributeCodes.DefinitionSize]: DataType.UDINT,
@@ -179,7 +181,7 @@ export enum TemplateClassAttributeCodes {
   Unknown8 = 8,
 };
 
-export const TemplateClassAttributeDataTypes = Object.freeze({
+export const TemplateClassAttributeDataTypes: { [key: number]: UnknownDataType | undefined } = Object.freeze({
   [TemplateClassAttributeCodes.Unknown1]: DataType.UNKNOWN(2),
   [TemplateClassAttributeCodes.Unknown2]: DataType.UNKNOWN(4),
   [TemplateClassAttributeCodes.Unknown3]: DataType.UNKNOWN(4),

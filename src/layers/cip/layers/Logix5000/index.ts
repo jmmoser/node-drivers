@@ -1,6 +1,6 @@
 import CIPLayer from '../../ciplayer';
 import EPath from '../../../../core/cip/epath/index';
-import CIPRequest from '../../../../core/cip/request';
+import CIPRequest, { CIPResponse } from '../../../../core/cip/request';
 import * as Encoding from './encoding';
 
 // const RECORD_TYPES = {
@@ -219,7 +219,7 @@ function statusHandler(code: number, extended: Buffer, cb: Function) {
 }
 
 /** Use driver specific error handling if exists */
-async function send(self: Logix5000, service: number, path: Buffer, data: Buffer | undefined, callback: Function /* , timeout */) {
+async function send(self: Logix5000, service: number, path: Buffer, data: Buffer | undefined, callback: Callback<CIPResponse> /* , timeout */) {
   try {
     const request = new CIPRequest(service, path, data, undefined, {
       serviceNames: SymbolServiceCodes,
@@ -231,21 +231,21 @@ async function send(self: Logix5000, service: number, path: Buffer, data: Buffer
     if (response.status.error) {
       callback(new Error(response.status.description), response);
     } else {
-      callback(null, response);
+      callback(undefined, response);
     }
   } catch (err) {
     console.log(err);
-    callback(err);
+    callback(err as Error);
   }
 }
 
-function sendPromise(self: Logix5000, service: number, path: Buffer, data: Buffer) {
+function sendPromise(self: Logix5000, service: number, path: Buffer, data: Buffer): Promise<CIPResponse> {
   return new Promise((resolve, reject) => {
-    send(self, service, path, data, (error?: Error, reply?: any) => {
+    send(self, service, path, data, (error, reply) => {
       if (error) {
         reject(error);
       } else {
-        resolve(reply);
+        resolve(reply!);
       }
     });
   });
@@ -278,7 +278,7 @@ async function readTagFragmented(self: Logix5000, path: Buffer, elements) {
   return Buffer.concat(chunks);
 }
 
-function encodeFullSymbolPath(scope: string, symbol) {
+function encodeFullSymbolPath(scope: string | undefined, symbol: Tag) {
   const symbolPath = Encoding.EncodeSymbolPath(symbol);
 
   if (scope) {
@@ -291,7 +291,7 @@ function encodeFullSymbolPath(scope: string, symbol) {
   return symbolPath;
 }
 
-function parseListTagsResponse(reply, attributes, tags, modifier) {
+function parseListTagsResponse(reply: CIPResponse, attributes, tags, modifier) {
   const { data } = reply;
   const { length } = data;
 
@@ -301,9 +301,17 @@ function parseListTagsResponse(reply, attributes, tags, modifier) {
   let lastInstanceID = 0;
 
   while (offsetRef.current < length) {
-    const tag = {};
-
-    tag.id = DecodeTypedData(data, offsetRef, DataType.UDINT);
+    // const tag = {
+    //   id: DecodeTypedData(data, offsetRef, DataType.UDINT),
+    // };
+    const tag: {
+      id: number;
+      attributes: { [key: number]: any | undefined }
+     } = {
+      id: DecodeTypedData(data, offsetRef, DataType.UDINT),
+      attributes: {},
+     };
+    // tag.id = DecodeTypedData(data, offsetRef, DataType.UDINT);
     lastInstanceID = tag.id;
 
     for (let i = 0; i < attributes.length; i++) {
@@ -312,7 +320,7 @@ function parseListTagsResponse(reply, attributes, tags, modifier) {
       if (!attributeDataType) {
         throw new Error(`Unknown attribute ${attribute}`);
       }
-      tag[attribute] = DecodeTypedData(data, offsetRef, attributeDataType);
+      tag.attributes[attribute] = DecodeTypedData(data, offsetRef, attributeDataType);
     }
 
     if (hasModifier) {
@@ -382,9 +390,9 @@ function parseTemplateNameInfo(data: Buffer, offset: number, cb: (a0: { name: st
 //   return error;
 // }
 
-function scopedGenerator(...params: string[]) {
+function scopedGenerator(...params: (string|undefined)[]) {
   const separator = '::';
-  const args = [...params].filter((arg) => !!arg);
+  const args = [...params].filter((arg) => !!arg) as string[];
   const preface = args.length > 0 ? args.join(separator) + separator : '';
   return () => preface + [...arguments].join(separator);
 }
@@ -1203,12 +1211,14 @@ export default class Logix5000 extends CIPLayer {
 
       const { data } = reply;
 
+
+
       const offsetRef = { current: 0 };
       const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-      const attributes = {};
+      const attributes: { [key: number]: {} } = {};
 
       for (let i = 0; i < attributeCount; i++) {
-        const attribute = DecodeTypedData(data, offsetRef, DataType.UINT);
+        const attribute: number = DecodeTypedData(data, offsetRef, DataType.UINT);
         const status = DecodeTypedData(data, offsetRef, DataType.UINT);
 
         const attributeDataType = TemplateClassAttributeDataTypes[attribute];
@@ -1269,10 +1279,10 @@ export default class Logix5000 extends CIPLayer {
                 if (!(attribute in TemplateInstanceAttributeDataTypes)) {
                   throw new Error(`Unknown template attribute received: ${attribute}`);
                 }
-
+                
                 // /** https://www.typescriptlang.org/docs/handbook/2/narrowing.html#using-type-predicates */
-                // function isInObject<T>(object: T, key: number | T): key is T {
-                //   return (key as number) in object;
+                // function isInObject<T>(object: T, key: any): key is T {
+                //   return key in object;
                 // }
 
                 // if (!isInObject(TemplateInstanceAttributeCodes, attribute)) {
