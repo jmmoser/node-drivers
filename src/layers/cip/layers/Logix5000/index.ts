@@ -57,6 +57,12 @@ interface Attributes {
   [key: number]: any;
 }
 
+interface AttributeValue {
+  code: number;
+  name: string;
+  value: any;
+}
+
 interface Template {
   members: unknown[];
 }
@@ -135,7 +141,7 @@ async function parseReadTagMemberStructure(layer: Logix5000, structureType: Symb
   return structValues;
 }
 
-async function parseReadTag(layer: Logix5000, scope, tag: string, elements, data: Buffer) {
+async function parseReadTag(layer: Logix5000, scope: string, tag: string, elements: number, data: Buffer) {
   if (data.length === 0) {
     return undefined;
   }
@@ -291,7 +297,7 @@ function encodeFullSymbolPath(scope: string | undefined, symbol: Tag) {
   return symbolPath;
 }
 
-function parseListTagsResponse(reply: CIPResponse, attributes, tags, modifier) {
+function parseListTagsResponse(reply: CIPResponse, attributes: number[], tags, modifier) {
   const { data } = reply;
   const { length } = data;
 
@@ -422,7 +428,7 @@ async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, 
 
   const highestListedSymbolInstanceIDScope = scope || DEFAULT_SCOPE;
   if (layer._highestListedSymbolInstanceIDs.has(highestListedSymbolInstanceIDScope)) {
-    instanceID = layer._highestListedSymbolInstanceIDs.get(highestListedSymbolInstanceIDScope);
+    instanceID = layer._highestListedSymbolInstanceIDs.get(highestListedSymbolInstanceIDScope)!;
   }
 
   for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true)) {
@@ -656,6 +662,8 @@ interface AttributeResponse {
 export default class Logix5000 extends CIPLayer {
   _templates: Map<number, Template>;
   _templateInstanceAttributes: Map<number, Attributes>;
+  _tagNameToSymbolInstanceID: Map<string, number>;
+  _highestListedSymbolInstanceIDs: Map<string, number>;
 
   constructor(lowerLayer: Layer, options) {
     options = {
@@ -735,7 +743,7 @@ export default class Logix5000 extends CIPLayer {
   //   // }
   // }
 
-  readTag(tag: string, elements, callback?: Function) {
+  readTag(tag: Tag, elements?: number, callback?: Callback<any | any[]>) {
     if (callback == null && typeof elements === 'function') {
       callback = elements;
       elements = undefined;
@@ -748,7 +756,6 @@ export default class Logix5000 extends CIPLayer {
       }
 
       if (elements != null) {
-        elements = parseInt(elements, 10);
         if (!Number.isFinite(elements) || elements <= 0 || elements > 0xFFFF) {
           resolver.reject('If specified, elements must be a positive integer between 1 and 65535');
           return;
@@ -816,7 +823,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  writeTag(tag: Tag, value, callback?: Function) {
+  writeTag(tag: Tag, value: any, callback?: Callback<CIPResponse>) {
     return CallbackPromise(callback, async (resolver) => {
       if (!tag) {
         resolver.reject('tag must be specified');
@@ -844,8 +851,8 @@ export default class Logix5000 extends CIPLayer {
 
       const valueDataLength = EncodeSize(tagType.dataType, value);
 
+      // TODO: move this to encoding
       const data = Buffer.alloc(4 + valueDataLength);
-
       data.writeUInt16LE(tagType.dataType.code, 0);
       data.writeUInt16LE(1, 2);
       EncodeTo(data, 4, tagType.dataType, value);
@@ -909,7 +916,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  async readSymbolAttributeList(scope: string | undefined, tag: Tag, attributes, callback?: Function) {
+  async readSymbolAttributeList(scope: string | undefined, tag: Tag, attributes?: number[], callback?: Function) {
     if (arguments.length === 1) {
       tag = scope;
       scope = undefined;
@@ -932,14 +939,13 @@ export default class Logix5000 extends CIPLayer {
     }
 
     return CallbackPromise(callback, async (resolver) => {
-      const service = CommonServiceCodes.GetAttributeList;
-
       const symbolID = await getSymbolInstanceID(this, scope, tag);
       if (symbolID == null) {
         resolver.reject(`Unable to determine symbol instance: ${scope ? `${scope}.` : ''}${tag}`);
         return;
       }
 
+      const service = CommonServiceCodes.GetAttributeList;
       const path = encodeFullSymbolPath(scope, symbolID);
       const requestData = Encoding.EncodeAttributes(attributes);
 
@@ -980,14 +986,14 @@ export default class Logix5000 extends CIPLayer {
 
             resolver.resolve(attributeResults);
           } catch (err) {
-            resolver.reject(err, reply);
+            resolver.reject(err as Error, reply);
           }
         }
       });
     });
   }
 
-  async readSymbolAttributesAll(scope: string | undefined, tag: Tag, callback?: Function) {
+  async readSymbolAttributesAll(scope: string | undefined, tag: Tag, callback?: Callback<AttributeValue[]>) {
     if (arguments.length === 1) {
       tag = scope;
       scope = undefined;
@@ -1018,47 +1024,31 @@ export default class Logix5000 extends CIPLayer {
           try {
             const { data } = reply;
             const offsetRef = { current: 0 };
-            const attributes: { name: string; value: any; code: number; }[] = [];
 
-            const appendAttribute = (code: number) => {
-              attributes.push({
+            const attributes = [
+              SymbolInstanceAttributeCodes.Type,
+              SymbolInstanceAttributeCodes.Unknown3,
+              SymbolInstanceAttributeCodes.Name,
+              SymbolInstanceAttributeCodes.Unknown5,
+              SymbolInstanceAttributeCodes.Unknown6,
+              SymbolInstanceAttributeCodes.Bytes,
+              SymbolInstanceAttributeCodes.ArrayDimensionLengths,
+            ].reduce((accum, code) => {
+              accum.push({
                 name: SymbolInstanceAttributeCodes[code] || 'Unknown',
-                value: DecodeTypedData(data, offsetRef, SymbolInstanceAttributeDataTypes[code]),
+                value: DecodeTypedData(data, offsetRef, SymbolInstanceAttributeDataTypes[code]!),
                 code,
               });
-            };
-
-            /** Attribute 2 */
-            // appendAttribute(SymbolInstanceAttributeCodes.Type, code => new SymbolType(code));
-            appendAttribute(SymbolInstanceAttributeCodes.Type);
-
-            /** Attribute 3 */
-            appendAttribute(3);
-
-            /** Attribute 1 */
-            appendAttribute(SymbolInstanceAttributeCodes.Name);
-
-            /** Attribute 5 */
-            appendAttribute(5);
-
-            /** Attribute 6 */
-            appendAttribute(6);
-
-            /** Attribute 7 */
-            appendAttribute(SymbolInstanceAttributeCodes.Bytes);
-
-            /** Attribute 8 */
-            appendAttribute(SymbolInstanceAttributeCodes.ArrayDimensionLengths);
-
-            // console.log(`OFFSET: ${offset} : ${data.length}`);
-
-            resolver.resolve(attributes.sort((a, b) => {
+              return accum;
+            }, [] as AttributeValue[]).sort((a, b) => {
               if (a.code < b.code) return -1;
               if (a.code > b.code) return 1;
               return 0;
-            }));
+            });
+
+            resolver.resolve(attributes);
           } catch (err) {
-            resolver.reject(err, reply);
+            resolver.reject(err as Error, reply);
           }
         }
       });
@@ -1210,8 +1200,6 @@ export default class Logix5000 extends CIPLayer {
       ]));
 
       const { data } = reply;
-
-
 
       const offsetRef = { current: 0 };
       const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
