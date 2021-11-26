@@ -50,7 +50,7 @@ import {
 } from './constants';
 
 import { CodedValue, Ref } from '../../../../types';
-import { Tag } from './types';
+import { Tag, TagListResponse, TagObject } from './types';
 import Layer from '../../../layer';
 
 interface Attributes {
@@ -141,7 +141,7 @@ async function parseReadTagMemberStructure(layer: Logix5000, structureType: Symb
   return structValues;
 }
 
-async function parseReadTag(layer: Logix5000, scope: string, tag: string, elements: number, data: Buffer) {
+async function parseReadTag(layer: Logix5000, scope: string | undefined, tag: string, elements: number, data: Buffer) {
   if (data.length === 0) {
     return undefined;
   }
@@ -214,22 +214,21 @@ async function parseReadTag(layer: Logix5000, scope: string, tag: string, elemen
   return values;
 }
 
-function statusHandler(code: number, extended: Buffer, cb: Function) {
-  let error = GenericServiceStatusDescriptions[code];
-  if (typeof error === 'object' && Buffer.isBuffer(extended) && extended.length >= 0) {
-    error = error[extended.readUInt16LE(0)];
-  }
-  if (error) {
-    cb(null, error);
-  }
-}
-
 /** Use driver specific error handling if exists */
 async function send(self: Logix5000, service: number, path: Buffer, data: Buffer | undefined, callback: Callback<CIPResponse> /* , timeout */) {
   try {
     const request = new CIPRequest(service, path, data, undefined, {
       serviceNames: SymbolServiceCodes,
-      statusHandler,
+      statusHandler: (code: number, extended: Buffer) => {
+        let error = GenericServiceStatusDescriptions[code];
+        let description;
+        if (typeof error === 'object' && Buffer.isBuffer(extended) && extended.length >= 0) {
+          description = error[extended.readUInt16LE(0)];
+        }
+        return {
+          description,
+        };
+      }
     });
 
     const response = await self.sendRequest(true, request);
@@ -257,7 +256,7 @@ function sendPromise(self: Logix5000, service: number, path: Buffer, data: Buffe
   });
 }
 
-async function readTagFragmented(self: Logix5000, path: Buffer, elements) {
+async function readTagFragmented(self: Logix5000, path: Buffer, elements: number) {
   const service = SymbolServiceCodes.ReadFragmented;
 
   const offsetRef = { current: 0 };
@@ -265,7 +264,7 @@ async function readTagFragmented(self: Logix5000, path: Buffer, elements) {
 
   for (; ;) {
     const reqData = Encoding.EncodeReadTagFragmentedServiceData(elements, offsetRef.current);
-    const reply = await sendPromise(self, service, path, reqData, 5000);
+    const reply = await sendPromise(self, service, path, reqData);
 
     /** remove the tag type bytes if already received */
     Logix5000DecodeDataType(reply.data, offsetRef);
@@ -297,7 +296,7 @@ function encodeFullSymbolPath(scope: string | undefined, symbol: Tag) {
   return symbolPath;
 }
 
-function parseListTagsResponse(reply: CIPResponse, attributes: number[], tags, modifier) {
+function parseListTagsResponse(reply: CIPResponse, attributes: number[], tags: TagListResponse[], modifier) {
   const { data } = reply;
   const { length } = data;
 
@@ -310,13 +309,10 @@ function parseListTagsResponse(reply: CIPResponse, attributes: number[], tags, m
     // const tag = {
     //   id: DecodeTypedData(data, offsetRef, DataType.UDINT),
     // };
-    const tag: {
-      id: number;
-      attributes: { [key: number]: any | undefined }
-     } = {
+    const tag: TagListResponse = {
       id: DecodeTypedData(data, offsetRef, DataType.UDINT),
       attributes: {},
-     };
+    };
     // tag.id = DecodeTypedData(data, offsetRef, DataType.UDINT);
     lastInstanceID = tag.id;
 
@@ -505,15 +501,10 @@ async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInp
   return info;
 }
 
-async function* listTags(layer: Logix5000, attributes, scope: string | undefined, instance: number, shouldGroup: boolean, modifier) {
+async function* listTags(layer: Logix5000, attributes: number[], scope: string | undefined, instance: number, shouldGroup: boolean, modifier?) {
   let instanceID = instance != null ? instance : 0;
 
-  // const MIN_TIMEOUT = 700;
-  const MIN_TIMEOUT = 1000;
-  const MAX_TIMEOUT = 5000;
   const MAX_RETRY = 5;
-
-  let timeout = MIN_TIMEOUT;
 
   const service = SymbolServiceCodes.GetInstanceAttributeList;
   const data = Encoding.EncodeAttributes(attributes);
@@ -527,7 +518,7 @@ async function* listTags(layer: Logix5000, attributes, scope: string | undefined
 
     if (retry <= MAX_RETRY) {
       try {
-        reply = await sendPromise(layer, service, path, data, timeout);
+        reply = await sendPromise(layer, service, path, data);
       } catch (err) {
         // console.log(instanceID, path, data)
         retry++;
@@ -536,9 +527,8 @@ async function* listTags(layer: Logix5000, attributes, scope: string | undefined
 
       if (reply) {
         retry = 0;
-        timeout = MIN_TIMEOUT;
 
-        const tags = [];
+        const tags: TagListResponse[] = [];
         const lastInstanceID = parseListTagsResponse(reply, attributes, tags, modifier);
 
         if (shouldGroup) {
@@ -554,9 +544,6 @@ async function* listTags(layer: Logix5000, attributes, scope: string | undefined
         }
 
         instanceID = lastInstanceID + 1;
-      } else {
-        timeout *= 2;
-        timeout = timeout > MAX_TIMEOUT ? MAX_TIMEOUT : timeout;
       }
     } else {
       break;
@@ -787,12 +774,12 @@ export default class Logix5000 extends CIPLayer {
               const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
 
               let value;
-              const tagName = typeof tag.name === 'string'
+              const tagName = typeof (tag as TagObject).name === 'string'
                 ? tag.name
                 : (typeof tag === 'string' ? tag : null);
 
               if (tagName && tagType && tagType.dataType.code === Logix5000DataTypeCodes.Program) {
-                value = {};
+                value = {} as { [key: string]: any };
 
                 const listAttributes = [
                   SymbolInstanceAttributeCodes.Name,
@@ -811,7 +798,7 @@ export default class Logix5000 extends CIPLayer {
 
               resolver.resolve(value);
             } else {
-              resolver.resolve(await parseReadTag(this, null, tag, elements, data));
+              resolver.resolve(await parseReadTag(this, undefined, tag, elements, data));
             }
           } catch (err) {
             console.log(err);
@@ -819,7 +806,7 @@ export default class Logix5000 extends CIPLayer {
             resolver.reject(err as Error, reply);
           }
         }
-      }, 5000);
+      });
     });
   }
 
