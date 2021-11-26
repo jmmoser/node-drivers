@@ -396,7 +396,7 @@ function scopedGenerator(...params: (string|undefined)[]) {
   const separator = '::';
   const args = [...params].filter((arg) => !!arg) as string[];
   const preface = args.length > 0 ? args.join(separator) + separator : '';
-  return () => preface + [...arguments].join(separator);
+  return (...args: any[]) => preface + [...args].join(separator);
 }
 
 async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, tag: Tag) {
@@ -456,7 +456,7 @@ async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, 
  * If scope is not specified, scope may be first segment of tag
  */
 
-async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInput, attributes) {
+async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInput, attributes: number[]) {
   const info = {};
 
   if (!Array.isArray(attributes)) {
@@ -471,7 +471,7 @@ async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInp
 
   const buildSymbolAttributeKey = scopedGenerator(scope);
 
-  const newAttributes = [];
+  const newAttributes: number[] = [];
 
   attributes.forEach((attribute) => {
     const symbolAttributeKey = buildSymbolAttributeKey(symbolInstanceID, attribute);
@@ -651,6 +651,7 @@ export default class Logix5000 extends CIPLayer {
   _templateInstanceAttributes: Map<number, Attributes>;
   _tagNameToSymbolInstanceID: Map<string, number>;
   _highestListedSymbolInstanceIDs: Map<string, number>;
+  _tags: Map<string, any>;
 
   constructor(lowerLayer: Layer, options) {
     options = {
