@@ -50,7 +50,7 @@ import {
 } from './constants';
 
 import { CodedValue, Ref } from '../../../../types';
-import { Tag, TagListResponse, TagObject } from './types';
+import { TagInput, TagListResponse, TagObject } from './types';
 import Layer from '../../../layer';
 
 interface Attributes {
@@ -141,7 +141,7 @@ async function parseReadTagMemberStructure(layer: Logix5000, structureType: Symb
   return structValues;
 }
 
-async function parseReadTag(layer: Logix5000, scope: string | undefined, tag: string, elements: number, data: Buffer) {
+async function parseReadTag(layer: Logix5000, scope: string | undefined, tag: TagInput, elements: number, data: Buffer) {
   if (data.length === 0) {
     return undefined;
   }
@@ -161,11 +161,9 @@ async function parseReadTag(layer: Logix5000, scope: string | undefined, tag: st
   } else {
     const tagSegments = tag.split('.');
 
-    const tagInfo = await getSymbolInfo(layer, scope, tagSegments[0], [
+    const [tagType] = await getSymbolInfo(layer, scope, tagSegments[0], [
       SymbolInstanceAttributeCodes.Type,
     ]);
-
-    const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
 
     let templateType = tagType;
     for (let i = 1; i < tagSegments.length; i++) {
@@ -189,7 +187,6 @@ async function parseReadTag(layer: Logix5000, scope: string | undefined, tag: st
     }
 
     if (!templateType) {
-      console.log(tagInfo, scope, tag);
       throw new Error(`Invalid tag: ${tag}`);
     }
 
@@ -283,7 +280,7 @@ async function readTagFragmented(self: Logix5000, path: Buffer, elements: number
   return Buffer.concat(chunks);
 }
 
-function encodeFullSymbolPath(scope: string | undefined, symbol: Tag) {
+function encodeFullSymbolPath(scope: string | undefined, symbol: TagInput) {
   const symbolPath = Encoding.EncodeSymbolPath(symbol);
 
   if (scope) {
@@ -399,7 +396,7 @@ function scopedGenerator(...params: (string|undefined)[]) {
   return (...args: any[]) => preface + [...args].join(separator);
 }
 
-async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, tag: Tag) {
+async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, tag: TagInput) {
   let tagName;
   switch (typeof tag) {
     case 'string':
@@ -442,65 +439,6 @@ async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, 
   return undefined;
 }
 
-/**
- * Allows getting the type of any tag/member
- * ((scope -> symbol) -> member)
- *
- * User could enter:
- *  - symbol => read the entire symbol
- *  - scope
- *  - scope.symbol
- *  - symbol.member => need the member type
- *  - scope.symbol.member
- *
- * If scope is not specified, scope may be first segment of tag
- */
-
-async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInput, attributes: number[]) {
-  const info = {};
-
-  if (!Array.isArray(attributes)) {
-    return info;
-  }
-
-  const symbolInstanceID = await getSymbolInstanceID(layer, scope, tagInput);
-  if (symbolInstanceID == null) {
-    console.log(`Unable to determine symbol instance ID for tag: ${scope ? `${scope}.` : ''}${tagInput}`);
-    return info;
-  }
-
-  const buildSymbolAttributeKey = scopedGenerator(scope);
-
-  const newAttributes: number[] = [];
-
-  attributes.forEach((attribute) => {
-    const symbolAttributeKey = buildSymbolAttributeKey(symbolInstanceID, attribute);
-    if (layer._tags.has(symbolAttributeKey)) {
-      info[attribute] = layer._tags.get(symbolAttributeKey);
-    } else {
-      newAttributes.push(attribute);
-    }
-  });
-
-  if (newAttributes.length > 0) {
-    for await (const tags of listTags(layer, newAttributes, scope, symbolInstanceID, true)) {
-      for (let i = 0; i < tags.length; i++) {
-        const tag = tags[i];
-        newAttributes.forEach((attribute) => {
-          layer._tags.set(buildSymbolAttributeKey(tag.id, attribute), tag[attribute]);
-
-          if (tag.id === symbolInstanceID) {
-            info[attribute] = tag[attribute];
-          }
-        });
-      }
-      break;
-    }
-  }
-
-  return info;
-}
-
 async function* listTags(layer: Logix5000, attributes: number[], scope: string | undefined, instance: number, shouldGroup: boolean, modifier?) {
   let instanceID = instance != null ? instance : 0;
 
@@ -511,7 +449,7 @@ async function* listTags(layer: Logix5000, attributes: number[], scope: string |
 
   let retry = 0;
 
-  for (;;) {
+  for (; ;) {
     const path = encodeFullSymbolPath(scope, instanceID);
 
     let reply;
@@ -551,91 +489,146 @@ async function* listTags(layer: Logix5000, attributes: number[], scope: string |
   }
 }
 
-async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: string) {
+/**
+ * Allows getting the type of any tag/member
+ * ((scope -> symbol) -> member)
+ *
+ * User could enter:
+ *  - symbol => read the entire symbol
+ *  - scope
+ *  - scope.symbol
+ *  - symbol.member => need the member type
+ *  - scope.symbol.member
+ *
+ * If scope is not specified, scope may be first segment of tag
+ */
+
+async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInput: TagInput, attributes: number[]): Promise<SymbolType[]> {
+  const info: { [key: number]: SymbolType } = {};
+
+  const symbolInstanceID = await getSymbolInstanceID(layer, scope, tagInput);
+  if (symbolInstanceID == null) {
+    throw new Error(`Unable to determine symbol instance ID for tag: ${scope ? `${scope}.` : ''}${tagInput}`);
+    // console.log(`Unable to determine symbol instance ID for tag: ${scope ? `${scope}.` : ''}${tagInput}`);
+    // return info;
+  }
+
+  const buildSymbolAttributeKey = scopedGenerator(scope);
+
+  const newAttributes: number[] = [];
+
+  attributes.forEach((attribute) => {
+    const symbolAttributeKey = buildSymbolAttributeKey(symbolInstanceID, attribute);
+    if (layer._tags.has(symbolAttributeKey)) {
+      info[attribute] = layer._tags.get(symbolAttributeKey);
+    } else {
+      newAttributes.push(attribute);
+    }
+  });
+
+  if (newAttributes.length > 0) {
+    for await (const tags of listTags(layer, newAttributes, scope, symbolInstanceID, true)) {
+      for (let i = 0; i < tags.length; i++) {
+        const tag = tags[i];
+        newAttributes.forEach((attribute) => {
+          layer._tags.set(buildSymbolAttributeKey(tag.id, attribute), tag[attribute]);
+
+          if (tag.id === symbolInstanceID) {
+            info[attribute] = tag[attribute];
+          }
+        });
+      }
+      break;
+    }
+  }
+
+  return attributes.map((attribute) => {
+    const symbolInfo = info[attribute];
+    if (symbolInfo == null) {
+      throw new Error('Unable to read attribute: ' + attribute);
+    }
+    return symbolInfo;
+  });
+}
+
+async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: string): Promise<number> {
   if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
-    try {
-      const symbolParts = tag.split('.');
-      if (symbolParts.length === 1) {
-        const [
-          typeInfo,
-          arrayDimensionLengthsInfo,
-        ] = await layer.readSymbolAttributeList(scope, symbolParts[0], [
-          SymbolInstanceAttributeCodes.Type,
-          SymbolInstanceAttributeCodes.ArrayDimensionLengths,
-        ]);
+    const symbolParts = tag.split('.');
+    if (symbolParts.length === 1) {
+      const [
+        typeInfo,
+        arrayDimensionLengthsInfo,
+      ] = await layer.readSymbolAttributeList(scope, symbolParts[0], [
+        SymbolInstanceAttributeCodes.Type,
+        SymbolInstanceAttributeCodes.ArrayDimensionLengths,
+      ]);
 
-        // TODO: Update this section when reading multidimensional arrays is figured out
-        if (typeInfo.value && typeInfo.value.dimensions > 0) {
-          if (
-            Array.isArray(arrayDimensionLengthsInfo.value)
-            && arrayDimensionLengthsInfo.value.length > 0
-          ) {
-            let totalLength = 1;
-            for (let i = 0; i < arrayDimensionLengthsInfo.value.length; i++) {
-              const arrayDimensionLength = arrayDimensionLengthsInfo.value[i];
-              if (arrayDimensionLength > 0) {
-                totalLength *= arrayDimensionLength;
-              }
-            }
-            return totalLength;
-          }
-        }
-      } else {
-        const symbolPartStartIdx = 1;
-        const tagInfo = await getSymbolInfo(layer, scope, symbolParts[0], [
-          SymbolInstanceAttributeCodes.Type,
-        ]);
-
-        const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
-
-        if (tagType && tagType.dataType.code === Logix5000DataTypeCodes.Program) {
-          return getSymbolSize(layer, symbolParts[0], symbolParts.slice(1).join('.'));
-        }
-
-        let memberInfo;
-
-        if (tagType && tagType.template && tagType.template.id != null) {
-          let template;
-          let templateID = tagType.template.id;
-
-          for (let i = symbolPartStartIdx; i < symbolParts.length; i++) {
-            let symbolPart = symbolParts[i];
-            const symbolPartElementIndex = symbolPart.indexOf('[');
-            if (symbolPartElementIndex >= 0) {
-              symbolPart = symbolPart.substring(0, symbolPartElementIndex);
-            }
-
-            template = await layer.readTemplate(templateID);
-            templateID = null;
-            memberInfo = null;
-
-            if (template && Array.isArray(template.members)) {
-              for (let memberIdx = 0; memberIdx < template.members.length; memberIdx++) {
-                const member = template.members[memberIdx];
-
-                if (member.name === symbolPart) {
-                  memberInfo = member;
-                  if (member.type && member.type.template && member.type.template.id != null) {
-                    templateID = member.type.template.id;
-                  }
-                  break;
-                }
-              }
-            }
-            if (templateID == null) {
-              break;
+      // TODO: Update this section when reading multidimensional arrays is figured out
+      if (typeInfo.value && typeInfo.value.dimensions > 0) {
+        if (
+          Array.isArray(arrayDimensionLengthsInfo.value)
+          && arrayDimensionLengthsInfo.value.length > 0
+        ) {
+          let totalLength = 1;
+          for (let i = 0; i < arrayDimensionLengthsInfo.value.length; i++) {
+            const arrayDimensionLength = arrayDimensionLengthsInfo.value[i];
+            if (arrayDimensionLength > 0) {
+              totalLength *= arrayDimensionLength;
             }
           }
-
-          // TODO: Update this section when reading multidimensional arrays is figured out
-          if (memberInfo && memberInfo.type && memberInfo.type.dimensions === 1) {
-            return memberInfo.info;
-          }
+          return totalLength;
         }
       }
-    } catch (err) {
-      // Ignore error
-      console.log(err);
+    } else {
+      const symbolPartStartIdx = 1;
+      const [tagType] = await getSymbolInfo(layer, scope, symbolParts[0], [
+        SymbolInstanceAttributeCodes.Type,
+      ]);
+
+      if (tagType && tagType.dataType.code === Logix5000DataTypeCodes.Program) {
+        return getSymbolSize(layer, symbolParts[0], symbolParts.slice(1).join('.'));
+      }
+
+      let memberInfo;
+
+      if (tagType?.template?.id != null) {
+        let template;
+        let templateID = tagType.template.id;
+
+        for (let i = symbolPartStartIdx; i < symbolParts.length; i++) {
+          let symbolPart = symbolParts[i];
+          const symbolPartElementIndex = symbolPart.indexOf('[');
+          if (symbolPartElementIndex >= 0) {
+            symbolPart = symbolPart.substring(0, symbolPartElementIndex);
+          }
+
+          template = await layer.readTemplate(templateID);
+          templateID = null;
+          memberInfo = null;
+
+          if (template && Array.isArray(template.members)) {
+            for (let memberIdx = 0; memberIdx < template.members.length; memberIdx++) {
+              const member = template.members[memberIdx];
+
+              if (member.name === symbolPart) {
+                memberInfo = member;
+                if (member.type && member.type.template && member.type.template.id != null) {
+                  templateID = member.type.template.id;
+                }
+                break;
+              }
+            }
+          }
+          if (templateID == null) {
+            break;
+          }
+        }
+
+        // TODO: Update this section when reading multidimensional arrays is figured out
+        if (memberInfo && memberInfo.type && memberInfo.type.dimensions === 1) {
+          return memberInfo.info;
+        }
+      }
     }
   }
   return 1;
@@ -684,54 +677,9 @@ export default class Logix5000 extends CIPLayer {
     this._templateInstanceAttributes = new Map();
     this._templates = new Map();
     this._tags = new Map();
-
-    // this._controllerAttributes = null;
-
-    /** GET PROCESSOR IDENTITY INFO */
-    // this.sendRequest(false, )
   }
 
-  // async resetAllSaved(layer) {
-  //   layer._tagNameToSymbolInstanceID = new Map();
-  //   layer._templates = new Map();
-  //   layer._tags = new Map();
-  //   layer._templateInstanceAttributes = new Map();
-  //   layer._highestListedSymbolInstanceID = -1;
-
-  //   if (layer._db) {
-  //     await layer._db.clear();
-  //   }
-  // }
-
-  // async setControllerAttributes(layer, attributes, save) {
-  //   if (layer._controllerAttributes) {
-  //     let shouldReset = false;
-  //     if (layer._controllerAttributes.length !== attributes.length) {
-  //       shouldReset = true;
-  //     } else {
-  //       for (let i = 0; i < layer._controllerAttributes.length; i++) {
-  //         if (layer._controllerAttributes[i].value !== attributes[i].value) {
-  //           shouldReset = true;
-  //           break;
-  //         }
-  //       }
-  //     }
-
-  //     if (shouldReset) {
-  //       await this.resetAllSaved(layer);
-  //     }
-  //   }
-
-  //   // layer._controllerAttributes = attributes;
-
-  //   // if (save) {
-  //   //   layer._db.append({
-  //   //     type: ''
-  //   //   });
-  //   // }
-  // }
-
-  readTag(tag: Tag, elements?: number, callback?: Callback<any | any[]>) {
+  readTag(tag: TagInput, elements?: number, callback?: Callback<any | any[]>) {
     if (callback == null && typeof elements === 'function') {
       callback = elements;
       elements = undefined;
@@ -765,14 +713,12 @@ export default class Logix5000 extends CIPLayer {
           try {
             data = reply.status.code !== GeneralStatusCodes.PartialTransfer
               ? reply.data
-              : await readTagFragmented(this, path, elements);
+              : await readTagFragmented(this, path, elements!);
 
             if (data.length === 0) {
-              const tagInfo = await getSymbolInfo(this, undefined, tag, [
+              const [tagType] = await getSymbolInfo(this, undefined, tag, [
                 SymbolInstanceAttributeCodes.Type,
               ]);
-
-              const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
 
               let value;
               const tagName = typeof (tag as TagObject).name === 'string'
@@ -811,23 +757,16 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  writeTag(tag: Tag, value: any, callback?: Callback<CIPResponse>) {
+  writeTag(tag: TagInput, value: any, callback?: Callback<CIPResponse>) {
     return CallbackPromise(callback, async (resolver) => {
       if (!tag) {
         resolver.reject('tag must be specified');
         return;
       }
 
-      const tagInfo = await getSymbolInfo(this, undefined, tag, [
+      const [tagType] = await getSymbolInfo(this, undefined, tag, [
         SymbolInstanceAttributeCodes.Type,
       ]);
-
-      if (!tagInfo) {
-        resolver.reject(`Invalid tag: ${tag}`);
-        return;
-      }
-
-      const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
 
       if (tagType.atomic !== true) {
         resolver.reject('Writing to structure tags is not currently supported');
@@ -855,7 +794,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  readModifyWriteTag(tag: Tag, ORmasks: number[] | Buffer, ANDmasks: number[] | Buffer, callback?: Function) {
+  readModifyWriteTag(tag: TagInput, ORmasks: number[] | Buffer, ANDmasks: number[] | Buffer, callback?: Callback<CIPResponse>) {
     return CallbackPromise(callback, (resolver) => {
       if (tag == null) {
         resolver.reject('tag must be specified');
@@ -904,7 +843,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  async readSymbolAttributeList(scope: string | undefined, tag: Tag, attributes?: number[], callback?: Function) {
+  async readSymbolAttributeList(scope: string | undefined, tag: TagInput, attributes?: number[], callback?: Callback<AttributeValue[]>) {
     if (arguments.length === 1) {
       tag = scope;
       scope = undefined;
@@ -935,7 +874,7 @@ export default class Logix5000 extends CIPLayer {
 
       const service = CommonServiceCodes.GetAttributeList;
       const path = encodeFullSymbolPath(scope, symbolID);
-      const requestData = Encoding.EncodeAttributes(attributes);
+      const requestData = Encoding.EncodeAttributes(attributes!);
 
       send(this, service, path, requestData, (error?: Error, reply?: any) => {
         if (error) {
@@ -946,7 +885,7 @@ export default class Logix5000 extends CIPLayer {
 
             const offsetRef = { current: 0 };
             const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-            const attributeResults = [];
+            const attributeResults: AttributeValue[] = [];
 
             for (let i = 0; i < attributeCount; i++) {
               const code = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
@@ -981,7 +920,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  async readSymbolAttributesAll(scope: string | undefined, tag: Tag, callback?: Callback<AttributeValue[]>) {
+  async readSymbolAttributesAll(scope: string | undefined, tag: TagInput, callback?: Callback<AttributeValue[]>) {
     if (arguments.length === 1) {
       tag = scope;
       scope = undefined;
@@ -1170,7 +1109,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  readTemplateClassAttributes(callback?: Function) {
+  readTemplateClassAttributes(callback?: Callback<{ [key: number]: any }>) {
     return CallbackPromise(callback, async (resolver) => {
       const service = CommonServiceCodes.GetAttributeList;
 
@@ -1191,7 +1130,7 @@ export default class Logix5000 extends CIPLayer {
 
       const offsetRef = { current: 0 };
       const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-      const attributes: { [key: number]: {} } = {};
+      const attributes: { [key: number]: any } = {};
 
       for (let i = 0; i < attributeCount; i++) {
         const attribute: number = DecodeTypedData(data, offsetRef, DataType.UINT);
@@ -1214,7 +1153,7 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  readTemplateInstanceAttributes(templateID: number, callback?: Function): Promise<Attributes> {
+  readTemplateInstanceAttributes(templateID: number, callback?: Callback<Attributes>) {
     return CallbackPromise(callback, (resolver) => {
       try {
         if (this._templateInstanceAttributes.has(templateID)) {
