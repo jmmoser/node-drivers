@@ -6,3 +6,5 @@ playground*
 coverage/
 
 .DS_Store
+
+dist/
