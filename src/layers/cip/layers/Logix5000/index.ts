@@ -22,6 +22,7 @@ import {
   Encode,
   EncodeSize,
   EncodeTo,
+  IDataTypeOption,
 } from '../../../../core/cip/datatypes/index';
 
 import { DecodeTypedData } from '../../../../core/cip/datatypes/decoding';
@@ -356,38 +357,27 @@ function parseListTagsResponse(reply: CIPResponse, attributes: number[], tags: T
 //   return res;
 // }
 
-function parseTemplateMemberName(data: Buffer, offset: number, cb: (a0: string) => void) {
-  const nullIndex = data.indexOf(0x00, offset);
+function parseTemplateMemberName(data: Buffer, offsetRef: Ref): string {
+  const current = offsetRef.current;
+  const nullIndex = data.indexOf(0x00, current);
 
   if (nullIndex >= 0) {
-    cb(data.toString('ascii', offset, nullIndex));
-    return nullIndex + 1;
+    offsetRef.current = nullIndex + 1;
+    return data.toString('ascii', current, nullIndex);
   }
 
-  cb(`(${data.toString('ascii', offset)})`);
-  return data.length;
+  offsetRef.current = data.length;
+  return `(${data.toString('ascii', current)})`
 }
 
-function parseTemplateNameInfo(data: Buffer, offset: number, cb: (a0: { name: string; extra: string; }) => void) {
-  return parseTemplateMemberName(data, offset, (fullname) => {
-    const parts = fullname.split(';');
-    cb({
-      name: parts.length > 0 ? parts[0] : '',
-      extra: parts.length > 1 ? parts[1] : '',
-    });
-  });
+function parseTemplateNameInfo(data: Buffer, offsetRef: Ref) {
+  const fullname = parseTemplateMemberName(data, offsetRef);
+  const parts = fullname.split(';');
+  return {
+    name: parts.length > 0 ? parts[0] : '',
+    extra: parts.length > 1 ? parts[1] : '',
+  };
 }
-
-// function getError(code, extended) {
-//   let error = GenericServiceStatusDescriptions[code];
-//   if (typeof error === 'object') {
-//     if (Buffer.isBuffer(extended) && extended.length >= 2) {
-//       return error[extended.readUInt16LE(0)];
-//     }
-//   }
-
-//   return error;
-// }
 
 function scopedGenerator(...params: (string|undefined)[]) {
   const separator = '::';
@@ -424,10 +414,10 @@ async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, 
     instanceID = layer._highestListedSymbolInstanceIDs.get(highestListedSymbolInstanceIDScope)!;
   }
 
-  for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true)) {
+  for await (const tags of listTags(layer, [SymbolInstanceAttributeCodes.Name], scope, instanceID + 1, true) as AsyncGenerator<TagListResponse[]>) {
     for (let i = 0; i < tags.length; i++) {
       const tag = tags[i];
-      layer._tagNameToSymbolInstanceID.set(createScopedSymbolName(tag[SymbolInstanceAttributeCodes.Name]), tag.id);
+      layer._tagNameToSymbolInstanceID.set(createScopedSymbolName(tag.attributes[SymbolInstanceAttributeCodes.Name]), tag.id);
       layer._highestListedSymbolInstanceIDs.set(highestListedSymbolInstanceIDScope, tag.id);
     }
 
@@ -439,7 +429,7 @@ async function getSymbolInstanceID(layer: Logix5000, scope: string | undefined, 
   return undefined;
 }
 
-async function* listTags(layer: Logix5000, attributes: number[], scope: string | undefined, instance: number, shouldGroup: boolean, modifier?) {
+async function* listTags(layer: Logix5000, attributes: number[], scope: string | undefined, instance: number, shouldGroup: boolean, modifier?: (tagInfo: TagListResponse) => any) {
   let instanceID = instance != null ? instance : 0;
 
   const MAX_RETRY = 5;
@@ -528,13 +518,14 @@ async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInp
 
   if (newAttributes.length > 0) {
     for await (const tags of listTags(layer, newAttributes, scope, symbolInstanceID, true)) {
-      for (let i = 0; i < tags.length; i++) {
-        const tag = tags[i];
+      const tagslist = tags as TagListResponse[];
+      for (let i = 0; i < tagslist.length; i++) {
+        const tag = tagslist[i];
         newAttributes.forEach((attribute) => {
-          layer._tags.set(buildSymbolAttributeKey(tag.id, attribute), tag[attribute]);
+          layer._tags.set(buildSymbolAttributeKey(tag.id, attribute), tag.attributes[attribute]);
 
           if (tag.id === symbolInstanceID) {
-            info[attribute] = tag[attribute];
+            info[attribute] = tag.attributes[attribute];
           }
         });
       }
@@ -551,8 +542,16 @@ async function getSymbolInfo(layer: Logix5000, scope: string | undefined, tagInp
   });
 }
 
+function getDataTypeCode(dataType: IDataTypeOption) {
+  if (typeof dataType === 'function') {
+    return dataType().code;
+  } else {
+    return dataType.code;
+  }
+}
+
 async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: string): Promise<number> {
-  if (typeof tag === 'string' && /\[\d+\]$/.test(tag) === false) {
+  if (/\[\d+\]$/.test(tag) === false) {
     const symbolParts = tag.split('.');
     if (symbolParts.length === 1) {
       const [
@@ -585,7 +584,9 @@ async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: s
         SymbolInstanceAttributeCodes.Type,
       ]);
 
-      if (tagType && tagType.dataType.code === Logix5000DataTypeCodes.Program) {
+      const dataTypeCode = getDataTypeCode(tagType.dataType);
+
+      if (tagType && dataTypeCode === Logix5000DataTypeCodes.Program) {
         return getSymbolSize(layer, symbolParts[0], symbolParts.slice(1).join('.'));
       }
 
@@ -603,7 +604,7 @@ async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: s
           }
 
           template = await layer.readTemplate(templateID);
-          templateID = null;
+          let memberTemplateID = null;
           memberInfo = null;
 
           if (template && Array.isArray(template.members)) {
@@ -613,13 +614,13 @@ async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: s
               if (member.name === symbolPart) {
                 memberInfo = member;
                 if (member.type && member.type.template && member.type.template.id != null) {
-                  templateID = member.type.template.id;
+                  memberTemplateID = member.type.template.id;
                 }
                 break;
               }
             }
           }
-          if (templateID == null) {
+          if (memberTemplateID == null) {
             break;
           }
         }
@@ -670,7 +671,7 @@ export default class Logix5000 extends CIPLayer {
 
     super(lowerLayer, options, 'logix5000.cip');
 
-    this.options = options;
+    // this.options = options;
 
     this._highestListedSymbolInstanceIDs = new Map();
     this._tagNameToSymbolInstanceID = new Map();
@@ -725,7 +726,7 @@ export default class Logix5000 extends CIPLayer {
                 ? tag.name
                 : (typeof tag === 'string' ? tag : null);
 
-              if (tagName && tagType && tagType.dataType.code === Logix5000DataTypeCodes.Program) {
+              if (tagName && tagType && getDataTypeCode(tagType.dataType) === Logix5000DataTypeCodes.Program) {
                 value = {} as { [key: string]: any };
 
                 const listAttributes = [
@@ -733,9 +734,10 @@ export default class Logix5000 extends CIPLayer {
                   SymbolInstanceAttributeCodes.Type,
                 ];
 
-                for await (const programTag of listTags(this, listAttributes, tag, 0, false)) {
-                  const programTagName = programTag[SymbolInstanceAttributeCodes.Name];
-                  if (programTag[SymbolInstanceAttributeCodes.Type].system === false) {
+                for await (const _programTag of listTags(this, listAttributes, tag, 0, false)) {
+                  const programTag = _programTag as TagListResponse;
+                  const programTagName = programTag.attributes[SymbolInstanceAttributeCodes.Name];
+                  if (programTag.attributes[SymbolInstanceAttributeCodes.Type].system === false) {
                     value[programTagName] = await this.readTag(`${tagName}.${programTagName}`);
                   } else {
                     value[programTagName] = undefined;
@@ -778,9 +780,10 @@ export default class Logix5000 extends CIPLayer {
 
       const valueDataLength = EncodeSize(tagType.dataType, value);
 
+
       // TODO: move this to encoding
       const data = Buffer.alloc(4 + valueDataLength);
-      data.writeUInt16LE(tagType.dataType.code, 0);
+      data.writeUInt16LE(getDataTypeCode(tagType.dataType), 0);
       data.writeUInt16LE(1, 2);
       EncodeTo(data, 4, tagType.dataType, value);
 
@@ -822,7 +825,7 @@ export default class Logix5000 extends CIPLayer {
       }
 
       for (let i = 0; i < sizeOfMasks; i++) {
-        if (ORmasks[i] < 0 || ORmasks > 0xFF || ANDmasks[i] < 0 || ANDmasks > 0xFF) {
+        if (ORmasks[i] < 0 || ORmasks[i] > 0xFF || ANDmasks[i] < 0 || ANDmasks[i] > 0xFF) {
           resolver.reject('Values in masks must be greater than or equal to zero and less than or equal to 255');
           return;
         }
@@ -843,24 +846,11 @@ export default class Logix5000 extends CIPLayer {
     });
   }
 
-  async readSymbolAttributeList(scope: string | undefined, tag: TagInput, attributes?: number[], callback?: Callback<AttributeValue[]>) {
-    if (arguments.length === 1) {
-      tag = scope;
-      scope = undefined;
-    }
-
-    if (arguments.length === 2) {
-      if (typeof tag !== 'string') {
-        tag = scope;
-        scope = undefined;
-      }
-    }
-
-    if (typeof attributes === 'function') {
-      callback = attributes;
-      attributes = undefined;
-    }
-
+  async readSymbolAttributeList({
+    scope, tag, attributes, callback,
+  } : { 
+    scope: string | undefined, tag: TagInput, attributes?: number[], callback?: Callback<AttributeValue[]>
+  }) {
     if (!Array.isArray(attributes)) {
       attributes = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11];
     }
@@ -921,18 +911,6 @@ export default class Logix5000 extends CIPLayer {
   }
 
   async readSymbolAttributesAll(scope: string | undefined, tag: TagInput, callback?: Callback<AttributeValue[]>) {
-    if (arguments.length === 1) {
-      tag = scope;
-      scope = undefined;
-    }
-
-    if (arguments.length === 2) {
-      if (typeof tag !== 'string') {
-        tag = scope;
-        scope = undefined;
-      }
-    }
-
     return CallbackPromise(callback, async (resolver) => {
       const service = CommonServiceCodes.GetAttributesAll;
 
@@ -988,10 +966,10 @@ export default class Logix5000 extends CIPLayer {
       SymbolInstanceAttributeCodes.Type,
     ];
 
-    function modifier(tagInfo) {
+    function modifier(tagInfo: TagListResponse) {
       return {
-        name: tagInfo[SymbolInstanceAttributeCodes.Name],
-        type: tagInfo[SymbolInstanceAttributeCodes.Type],
+        name: tagInfo.attributes[SymbolInstanceAttributeCodes.Name],
+        type: tagInfo.attributes[SymbolInstanceAttributeCodes.Type],
       };
     }
 
@@ -1064,28 +1042,24 @@ export default class Logix5000 extends CIPLayer {
         const dataLength = data.length;
         const members = [];
 
-        let offset = 0;
+        let offsetRef = { current: 0 };
         for (let i = 0; i < attributes[TemplateInstanceAttributeCodes.MemberCount]; i++) {
-          if (offset < dataLength - 8) {
-            const info = data.readUInt16LE(offset); offset += 2;
-            const type = data.readUInt16LE(offset); offset += 2;
-            const memberOffset = data.readUInt32LE(offset); offset += 4;
+          if (offsetRef.current < dataLength - 8) {
+            // TODO: move this to decoding
+            const info = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+            const type = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+            const memberOffset = data.readUInt32LE(offsetRef.current); offsetRef.current += 4;
             members.push(new Member(type, info, memberOffset));
           }
         }
 
-        let structureName;
-        let nameExtra;
-        offset = parseTemplateNameInfo(data, offset, (info) => {
-          structureName = info.name;
-          nameExtra = info.extra;
-        });
+        const { name: structureName, extra: nameExtra } = parseTemplateNameInfo(data, offsetRef);
 
         /** Read the member names */
         for (let i = 0; i < members.length; i++) {
           const member = members[i];
-          offset = parseTemplateMemberName(data, offset, (name) => { member.name = name; });
-          if (member.type.dataType.code === DataTypeCodes.SINT && member.name.indexOf('ZZZZZZZZZZ') === 0) {
+          member.name = parseTemplateMemberName(data, offsetRef);
+          if (getDataTypeCode(member.type.dataType) === DataTypeCodes.SINT && member.name.indexOf('ZZZZZZZZZZ') === 0) {
             /** Member is a host member for holding boolean members */
             member.host = true;
           }
@@ -1096,8 +1070,8 @@ export default class Logix5000 extends CIPLayer {
           nameExtra,
           members: members.filter((member) => !member.host),
           // members,
-          extra: data.slice(offset),
-          extraAscii: data.slice(offset).toString('ascii'),
+          extra: data.slice(offsetRef.current),
+          extraAscii: data.slice(offsetRef.current).toString('ascii'),
         };
 
         this._templates.set(templateID, template);

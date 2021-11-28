@@ -35,7 +35,7 @@ export function EncodeAttributes(attributes: number[]) {
   return buffer;
 }
 
-export function EncodeReadModifyWriteMasks(ORmasks: number[], ANDmasks: number[]) {
+export function EncodeReadModifyWriteMasks(ORmasks: number[] | Buffer, ANDmasks: number[] | Buffer) {
   const buffer = Buffer.alloc(2 + 2 * ORmasks.length);
   buffer.writeUInt16LE(ORmasks.length, 0);
   for (let i = 0; i < ORmasks.length; i++) {
