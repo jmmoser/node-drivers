@@ -859,7 +859,7 @@ export default class Logix5000 extends CIPLayer {
       }
 
       for (let i = 0; i < sizeOfMasks; i++) {
-        if (ORmasks[i] < 0 || ORmasks > 0xFF || ANDmasks[i] < 0 || ANDmasks > 0xFF) {
+        if (ORmasks[i] < 0 || ORmasks[i] > 0xFF || ANDmasks[i] < 0 || ANDmasks[i] > 0xFF) {
           resolver.reject('Values in masks must be greater than or equal to zero and less than or equal to 255');
           return;
         }
