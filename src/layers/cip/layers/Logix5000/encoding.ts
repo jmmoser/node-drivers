@@ -4,7 +4,7 @@ import {
   Logix5000ClassCodes,
 } from './constants';
 
-import { Tag } from './types';
+import { TagInput } from './types';
 
 export function EncodeReadTemplateServiceData(offset: number, bytesToRead: number) {
   const buffer = Buffer.allocUnsafe(6);
@@ -45,7 +45,7 @@ export function EncodeReadModifyWriteMasks(ORmasks: number[] | Buffer, ANDmasks:
   return buffer;
 }
 
-export function EncodeSymbolPath(tag: Tag) {
+export function EncodeSymbolPath(tag: TagInput) {
   switch (typeof tag) {
     case 'string':
       return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
@@ -55,7 +55,14 @@ export function EncodeSymbolPath(tag: Tag) {
         new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, tag),
       ]);
     case 'object':
-      return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag));
+      if (tag.id) {
+        return EPath.Encode(true, [
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, Logix5000ClassCodes.Symbol),
+          new EPath.Segments.Logical(EPath.Segments.Logical.Types.InstanceID, tag.id),
+        ]);
+      } else if (tag.name) {
+        return EPath.Encode(true, EPath.ConvertSymbolToSegments(tag.name));
+      }
     default:
       throw new Error('Tag must be a tag name, symbol instance number, or a tag object');
   }

@@ -294,7 +294,7 @@ function encodeFullSymbolPath(scope: string | undefined, symbol: TagInput) {
   return symbolPath;
 }
 
-function parseListTagsResponse(reply: CIPResponse, attributes: number[], tags: TagListResponse[], modifier) {
+function parseListTagsResponse(reply: CIPResponse, attributes: number[], tags: TagListResponse[], modifier?: (tagInfo: TagListResponse) => any) {
   const { data } = reply;
   const { length } = data;
 
@@ -557,10 +557,14 @@ async function getSymbolSize(layer: Logix5000, scope: string | undefined, tag: s
       const [
         typeInfo,
         arrayDimensionLengthsInfo,
-      ] = await layer.readSymbolAttributeList(scope, symbolParts[0], [
-        SymbolInstanceAttributeCodes.Type,
-        SymbolInstanceAttributeCodes.ArrayDimensionLengths,
-      ]);
+      ] = await layer.readSymbolAttributeList({
+        scope,
+        tag: symbolParts[0],
+        attributes: [
+          SymbolInstanceAttributeCodes.Type,
+          SymbolInstanceAttributeCodes.ArrayDimensionLengths,
+        ]
+      });
 
       // TODO: Update this section when reading multidimensional arrays is figured out
       if (typeInfo.value && typeInfo.value.dimensions > 0) {
