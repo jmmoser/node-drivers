@@ -166,12 +166,17 @@ async function parseReadTag(layer: Logix5000, scope: string | undefined, tag: Ta
       SymbolInstanceAttributeCodes.Type,
     ]);
 
-    let templateType = tagType;
+    let templateType: SymbolType | null = tagType;
+    const templateID = tagType.template?.id;
+    if (templateID == null) {
+      throw new Error('Unable to determine template id');
+    }
+
     for (let i = 1; i < tagSegments.length; i++) {
       const tagSegment = tagSegments[i];
-      const template = await layer.readTemplate(templateType.template.id);
+      const template = await layer.readTemplate(templateID);
       if (!template || !Array.isArray(template.members)) {
-        throw new Error(`Unable to read template: ${templateType.template.id}`);
+        throw new Error(`Unable to read template: ${templateID}`);
       }
       const { members } = template;
       templateType = null;
@@ -644,6 +649,16 @@ interface AttributeResponse {
   value: any
 };
 
+interface Logix5000Options {
+  port?: number;
+  slot?: number;
+  route?: Buffer;
+  optimize?: boolean;
+  networkConnectionParameters?: {
+    maximumSize?: number;
+  }
+}
+
 export default class Logix5000 extends CIPLayer {
   _templates: Map<number, Template>;
   _templateInstanceAttributes: Map<number, Attributes>;
@@ -651,7 +666,7 @@ export default class Logix5000 extends CIPLayer {
   _highestListedSymbolInstanceIDs: Map<string, number>;
   _tags: Map<string, any>;
 
-  constructor(lowerLayer: Layer, options) {
+  constructor(lowerLayer: Layer, options?: Logix5000Options) {
     options = {
       port: 1,
       slot: 0,
@@ -669,9 +684,7 @@ export default class Logix5000 extends CIPLayer {
     //   new EPath.Segments.Logical.InstanceID(0x01)
     // ]);
 
-    options.route = options.route || [
-      new EPath.Segments.Port(options.port, options.slot),
-    ];
+    options.route = options.route || EPath.Encode(false, [new EPath.Segments.Port(options.port!, options.slot!)]);
 
     super(lowerLayer, options, 'logix5000.cip');
 

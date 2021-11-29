@@ -33,7 +33,9 @@ import { Ref } from '../../../../types';
 
 import Segment from '../segment';
 
-function serializeAddress(address: Buffer | number | string) {
+type Address = Buffer | number | string;
+
+function serializeAddress(address: Address) {
   if (Buffer.isBuffer(address)) {
     return address;
   }
@@ -52,7 +54,7 @@ function serializeAddress(address: Buffer | number | string) {
   throw new Error(`Unexpected port address, unable to serialize: ${address}`);
 }
 
-function validate(number: number, address: Buffer) {
+function validate(number: number, address: Address) {
   if (!Number.isInteger(number) || number < 0 || number > 65535) {
     throw new Error(`Port segment port number must be an integer between 0 and 65535. Received: ${number}`);
   }
@@ -62,12 +64,40 @@ function validate(number: number, address: Buffer) {
   }
 }
 
+function getAddressSize(address: Address) {
+  switch (typeof address) {
+    case 'number':
+      return unsignedIntegerSize(address);
+    case 'string':
+      return address.length;
+    case 'object': 
+      if (Buffer.isBuffer(address)) {
+        return address.length;
+      }
+    default:
+      throw new Error('EPath Port segment error address is invalid type: ' + address);
+  }
+}
+
+function encodeAddress(buffer: Buffer, offset: number, address: Address): number {
+  if (Buffer.isBuffer(address)) {
+    return address.copy(buffer, offset) + offset;
+  }
+
+  if (typeof address === 'string') {
+    return buffer.write(address, offset, 'ascii') + offset;
+  }
+
+  return encodeUnsignedInteger(buffer, offset, address, unsignedIntegerSize(address));
+}
+
 export default class PortSegment implements Segment {
   number: number;
-  address: Buffer;
+  // address: Buffer;
+  address: Address;
 
-  constructor(number: number, address: Buffer) {
-    address = serializeAddress(address);
+  constructor(number: number, address: Address) {
+    // address = serializeAddress(address);
 
     validate(number, address);
 
@@ -75,13 +105,13 @@ export default class PortSegment implements Segment {
     this.address = address;
   }
 
-  static EncodeSize(number: number, address: Buffer) {
+  static EncodeSize(number: number, address: Address) {
     let size = 1;
     if (number >= 15) {
       size += 2;
     }
 
-    const addressLength = address.length;
+    const addressLength = getAddressSize(address);
 
     size += addressLength;
 
@@ -93,7 +123,7 @@ export default class PortSegment implements Segment {
     return size;
   }
 
-  static EncodeTo(buffer: Buffer, offset: number, number: number, address: Buffer) {
+  static EncodeTo(buffer: Buffer, offset: number, number: number, address: Address) {
     const startingOffset = offset;
 
     let code = 0;
@@ -103,7 +133,7 @@ export default class PortSegment implements Segment {
       code |= number;
     }
 
-    const addressLength = address.length;
+    const addressLength = getAddressSize(address);
 
     if (addressLength > 1) {
       code |= 0b00010000;
@@ -119,11 +149,12 @@ export default class PortSegment implements Segment {
       offset = buffer.writeUInt16LE(number, offset);
     }
 
-    const addressLengthCopied = address.copy(buffer, offset);
+    offset = encodeAddress(buffer, offset, address);
+    // const addressLengthCopied = address.copy(buffer, offset);
 
-    if (addressLengthCopied < addressLength) {
-      throw new Error('Buffer is not large enough');
-    }
+    // if (addressLengthCopied < addressLength) {
+    //   throw new Error('Buffer is not large enough');
+    // }
 
     offset += addressLength;
 
@@ -134,7 +165,7 @@ export default class PortSegment implements Segment {
     return offset;
   }
 
-  static Encode(number: number, address: Buffer) {
+  static Encode(number: number, address: Address) {
     const buffer = Buffer.alloc(PortSegment.EncodeSize(number, address));
     PortSegment.EncodeTo(buffer, 0, number, address);
     return buffer;
