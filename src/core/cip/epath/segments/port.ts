@@ -35,25 +35,6 @@ import Segment from '../segment';
 
 type Address = Buffer | number | string;
 
-function serializeAddress(address: Address) {
-  if (Buffer.isBuffer(address)) {
-    return address;
-  }
-
-  if (typeof address === 'number' && Number.isInteger(address) && address >= 0) {
-    const addressSize = unsignedIntegerSize(address);
-    const buffer = Buffer.alloc(addressSize);
-    encodeUnsignedInteger(buffer, 0, address, addressSize);
-    return buffer;
-  }
-
-  if (typeof address === 'string') {
-    return Buffer.from(address, 'ascii');
-  }
-
-  throw new Error(`Unexpected port address, unable to serialize: ${address}`);
-}
-
 function validate(number: number, address: Address) {
   if (!Number.isInteger(number) || number < 0 || number > 65535) {
     throw new Error(`Port segment port number must be an integer between 0 and 65535. Received: ${number}`);
