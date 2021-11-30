@@ -28,7 +28,7 @@ enum ExtendedStringNumericTypeCodes {
 
 type SymbolicSegmentValue = number | string | Buffer;
 
-function validate(value: SymbolicSegmentValue, extendedFormat: number, extendedSize: number) {
+function validate(value: SymbolicSegmentValue, extendedSize: number, extendedFormat?: number) {
   if (extendedFormat == null) {
     if (typeof value !== 'string' && !Buffer.isBuffer(value)) {
       throw new Error(`Non-extended Symbol segment value must be a string or buffer. Received ${value}`);
@@ -88,12 +88,12 @@ function validate(value: SymbolicSegmentValue, extendedFormat: number, extendedS
   }
 }
 
-class SymbolicSegment implements Segment {
+export default class SymbolicSegment implements Segment {
   value: SymbolicSegmentValue;
-  extendedFormat: number;
   extendedSize: number;
+  extendedFormat?: number;
 
-  constructor(value: SymbolicSegmentValue, extendedFormat: number, extendedSize: number) {
+  constructor(value: SymbolicSegmentValue, extendedSize: number, extendedFormat?: number) {
     if (extendedSize == null) {
       switch (extendedFormat) {
         case ExtendedStringFormatCodes.DoubleByteCharacters:
@@ -131,33 +131,15 @@ class SymbolicSegment implements Segment {
       }
     }
 
-    validate(value, extendedFormat, extendedSize);
+    validate(value, extendedSize, extendedFormat);
+
     this.extendedFormat = extendedFormat;
     this.extendedSize = extendedSize;
     this.value = value;
   }
 
   encodeSize() {
-    switch (this.extendedFormat) {
-      case ExtendedStringFormatCodes.DoubleByteCharacters:
-        return 2 + 2 * this.extendedSize;
-      case ExtendedStringFormatCodes.TripleByteCharacters:
-        return 2 + 3 * this.extendedSize;
-      case ExtendedStringFormatCodes.Numeric: {
-        switch (this.extendedSize) {
-          case ExtendedStringNumericTypeCodes.USINT:
-            return 3;
-          case ExtendedStringNumericTypeCodes.UINT:
-            return 4;
-          case ExtendedStringNumericTypeCodes.UDINT:
-            return 6;
-          default:
-            throw new Error(`Invalid Port Segment Extended String Format Numeric size ${this.extendedSize}`);
-        }
-      }
-      default:
-        return 1 + (this.value as Buffer).length;
-    }
+    return SymbolicSegment.EncodeSize(this.value, this.extendedSize, this.extendedFormat);
   }
 
   encode() {
@@ -166,47 +148,73 @@ class SymbolicSegment implements Segment {
     return buffer;
   }
 
-  encodeTo(buffer: Buffer, offset: number) {
-    if (buffer.length - offset < this.encodeSize()) {
-      throw new Error('Buffer to encode symbolic segment is not large enough');
+  static EncodeSize(value: SymbolicSegmentValue, extendedSize: number, extendedFormat?: number) {
+    switch (extendedFormat) {
+      case ExtendedStringFormatCodes.DoubleByteCharacters:
+        return 2 + 2 * extendedSize;
+      case ExtendedStringFormatCodes.TripleByteCharacters:
+        return 2 + 3 * extendedSize;
+      case ExtendedStringFormatCodes.Numeric: {
+        switch (extendedSize) {
+          case ExtendedStringNumericTypeCodes.USINT:
+            return 3;
+          case ExtendedStringNumericTypeCodes.UINT:
+            return 4;
+          case ExtendedStringNumericTypeCodes.UDINT:
+            return 6;
+          default:
+            throw new Error(`Invalid Port Segment Extended String Format Numeric size ${extendedSize}`);
+        }
+      }
+      default:
+        return 1 + (value as Buffer).length;
     }
+  }
+
+  static EncodeTo(buffer: Buffer, offset: number, value: SymbolicSegmentValue, extendedSize: number, extendedFormat?: number) {
+    // if (buffer.length - offset < this.encodeSize()) {
+    //   throw new Error('Buffer to encode symbolic segment is not large enough');
+    // }
+
+    validate(value, extendedSize, extendedFormat);
 
     let code = 0b01100000;
-    if (this.extendedFormat == null) {
-      code |= ((this.value as Buffer).length & 0b11111);
+    if (extendedFormat == null) {
+      code |= ((typeof value === 'number' ? value : value.length) & 0b11111);
     }
     offset = buffer.writeUInt8(code, offset);
 
-    if (this.extendedFormat == null) {
-      if (Buffer.isBuffer(this.value)) {
-        offset += this.value.copy(buffer, offset);
+    if (extendedFormat == null) {
+      /** value can only be a buffer or a string */
+      if (Buffer.isBuffer(value)) {
+        offset += value.copy(buffer, offset);
       } else {
-        offset += buffer.write(this.value as string, offset, 'ascii');
+        offset += buffer.write(value as string, offset, 'ascii');
       }
     } else {
       offset = buffer.writeUInt8(
-        ((this.extendedFormat & 0b111) << 5) | (this.extendedSize & 0b11111),
+        ((extendedFormat & 0b111) << 5) | (extendedSize & 0b11111),
         offset,
       );
-      switch (this.extendedFormat) {
+      switch (extendedFormat) {
         case ExtendedStringFormatCodes.DoubleByteCharacters:
-          (this.value as Buffer).copy(buffer, offset);
-          offset += 2 * this.extendedSize;
+          (value as Buffer).copy(buffer, offset);
+          offset += 2 * extendedSize;
           break;
         case ExtendedStringFormatCodes.TripleByteCharacters:
-          (this.value as Buffer).copy(buffer, offset);
-          offset += 3 * this.extendedSize;
+          (value as Buffer).copy(buffer, offset);
+          offset += 3 * extendedSize;
           break;
         case ExtendedStringFormatCodes.Numeric: {
-          switch (this.extendedSize) {
+          switch (extendedSize) {
             case ExtendedStringNumericTypeCodes.USINT:
-              offset = buffer.writeUInt8(this.value as number, offset);
+              offset = buffer.writeUInt8(value as number, offset);
               break;
             case ExtendedStringNumericTypeCodes.UINT:
-              offset = buffer.writeUInt16LE(this.value as number, offset);
+              offset = buffer.writeUInt16LE(value as number, offset);
               break;
             case ExtendedStringNumericTypeCodes.UDINT:
-              offset = buffer.writeUInt32LE(this.value as number, offset);
+              offset = buffer.writeUInt32LE(value as number, offset);
               break;
             default:
               break;
@@ -219,6 +227,14 @@ class SymbolicSegment implements Segment {
     }
 
     return offset;
+  }
+
+  encodeTo(buffer: Buffer, offset: number) {
+    if (buffer.length - offset < this.encodeSize()) {
+      throw new Error('Buffer to encode symbolic segment is not large enough');
+    }
+
+    return SymbolicSegment.EncodeTo(buffer, offset, this.value, this.extendedSize, this.extendedFormat);
   }
 
   static Decode(buffer: Buffer, offsetRef: Ref, segmentCode: number /* , padded */) {
@@ -276,26 +292,47 @@ class SymbolicSegment implements Segment {
         return new SymbolicSegment.Single(value, extendedSize);
     }
   }
+
+  static Encode(value: SymbolicSegmentValue, extendedSize: number, extendedFormat?: number) {
+    const size = this.EncodeSize(value, extendedSize, extendedFormat);
+    const buffer = Buffer.alloc(size);
+    this.EncodeTo(buffer, 0, value, extendedSize, extendedFormat);
+    return buffer;
+  }
+
+  static EncodeSingle(value: SymbolicSegmentValue, extendedSize: ExtendedStringNumericTypeCodes) {
+    return this.Encode(value, extendedSize);
+  }
+
+  static EncodeDouble(value: SymbolicSegmentValue, extendedSize: ExtendedStringNumericTypeCodes) {
+    return this.Encode(value, extendedSize, ExtendedStringFormatCodes.DoubleByteCharacters);
+  }
+
+  static EncodeTriple(value: SymbolicSegmentValue, extendedSize: ExtendedStringNumericTypeCodes) {
+    return this.Encode(value, extendedSize, ExtendedStringFormatCodes.TripleByteCharacters);
+  }
+
+  static EncodeNumeric(value: SymbolicSegmentValue, extendedSize: ExtendedStringNumericTypeCodes) {
+    return this.Encode(value, extendedSize, ExtendedStringFormatCodes.Numeric);
+  }
 }
 
-SymbolicSegment.Single = class SingleByteSymbolicSegment extends SymbolicSegment {};
+// SymbolicSegment.Single = class SingleByteSymbolicSegment extends SymbolicSegment {};
 
-SymbolicSegment.Double = class DoubleByteSymbolicSegment extends SymbolicSegment {
-  constructor(value, extendedSize) {
-    super(value, ExtendedStringFormatCodes.DoubleByteCharacters, extendedSize);
-  }
-};
+// SymbolicSegment.Double = class DoubleByteSymbolicSegment extends SymbolicSegment {
+//   constructor(value, extendedSize) {
+//     super(value, ExtendedStringFormatCodes.DoubleByteCharacters, extendedSize);
+//   }
+// };
 
-SymbolicSegment.Triple = class TripleByteSymbolicSegment extends SymbolicSegment {
-  constructor(value, extendedSize) {
-    super(value, ExtendedStringFormatCodes.TripleByteCharacters, extendedSize);
-  }
-};
+// SymbolicSegment.Triple = class TripleByteSymbolicSegment extends SymbolicSegment {
+//   constructor(value, extendedSize) {
+//     super(value, ExtendedStringFormatCodes.TripleByteCharacters, extendedSize);
+//   }
+// };
 
-SymbolicSegment.Numeric = class NumericByteSymbolicSegment extends SymbolicSegment {
-  constructor(value, extendedSize) {
-    super(value, ExtendedStringFormatCodes.Numeric, extendedSize);
-  }
-};
-
-export default SymbolicSegment;
+// SymbolicSegment.Numeric = class NumericByteSymbolicSegment extends SymbolicSegment {
+//   constructor(value, extendedSize) {
+//     super(value, ExtendedStringFormatCodes.Numeric, extendedSize);
+//   }
+// };
