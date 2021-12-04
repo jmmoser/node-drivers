@@ -1,12 +1,12 @@
 /* eslint-disable no-undef */
 
-import EPath from '../../src/core/cip/epath/index';
+import EPath from '../../dist/core/cip/epath/index.js';
 
 describe('EPath Encode', () => {
   test('Logical(ClassID, InstanceID, AttributeID)', () => {
     expect(
       EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(0x6C),
+        new EPath.Segments.Logical(EPath.Segments.Logical.Types.ClassID, 0x6C),
         new EPath.Segments.Logical.InstanceID(2130),
         new EPath.Segments.Logical.AttributeID(1),
       ]),

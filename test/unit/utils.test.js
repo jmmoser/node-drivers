@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-import { getBits } from '../../src/utils';
+import { getBits } from '../../dist/utils.js';
 
 describe('getBits', () => {
   test('getBits', () => {

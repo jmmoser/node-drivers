@@ -355,15 +355,15 @@ export default class LogicalSegment implements Segment {
 
     switch (type) {
       case TypeCodes.ClassID:
-        return LogicalSegment.CreateClassID(value as number, format);
+        return new LogicalSegment(TypeCodes.ClassID, value, format);
       case TypeCodes.InstanceID:
-        return LogicalSegment.CreateInstanceID(value as number, format);
+        return new LogicalSegment(TypeCodes.InstanceID, value, format);
       case TypeCodes.AttributeID:
-        return LogicalSegment.CreateAttributeID(value as number, format);
+        return new LogicalSegment(TypeCodes.AttributeID, value, format);
       case TypeCodes.MemberID:
-        return LogicalSegment.CreateMemberID(value as number, format);
+        return new LogicalSegment(TypeCodes.MemberID, value, format);
       case TypeCodes.ServiceID:
-        return LogicalSegment.CreateServiceID(value as number, format);
+        return new LogicalSegment(TypeCodes.ServiceID, value, format);
       case TypeCodes.Special:
         return new LogicalSegment(TypeCodes.Special, value, format);
       case TypeCodes.ConnectionPoint:
@@ -372,26 +372,6 @@ export default class LogicalSegment implements Segment {
         throw new Error(`Invalid logical segment type: ${type}`);
     }
     // return new LogicalSegment(type, format, value);
-  }
-
-  static CreateClassID(value: number, format?: number) {
-    return new LogicalSegment(TypeCodes.ClassID, value, format);
-  }
-
-  static CreateInstanceID(value: number, format?: number) {
-    return new LogicalSegment(TypeCodes.InstanceID, value, format);
-  }
-
-  static CreateAttributeID(value: number, format?: number) {
-    return new LogicalSegment(TypeCodes.AttributeID, value, format);
-  }
-
-  static CreateMemberID(value: number, format?: number) {
-    return new LogicalSegment(TypeCodes.MemberID, value, format);
-  }
-
-  static CreateServiceID(value: number, format?: number) {
-    return new LogicalSegment(TypeCodes.ServiceID, value, format);
   }
 
   /** Helper function for the only kind of Special Logical Segment */
@@ -413,9 +393,11 @@ export default class LogicalSegment implements Segment {
     return new LogicalSegment(TypeCodes.Special, value, SpecialFormatCodes.ElectronicKey);
   }
 
-  static get Types() {
-    return TypeCodes;
-  }
+  static Types = TypeCodes;
+
+  // static get Types() {
+  //   return TypeCodes;
+  // }
 
   static get Formats() {
     return FormatCodes;

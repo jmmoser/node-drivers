@@ -686,7 +686,7 @@ export default class Logix5000 extends CIPLayer {
 
     options.route = options.route || EPath.Encode(false, [new EPath.Segments.Port(options.port!, options.slot!)]);
 
-    super(lowerLayer, options, 'logix5000.cip');
+    super(lowerLayer, options);
 
     // this.options = options;
 

@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 
-import { DataTypeCodes, DataType } from '../../src/core/cip/datatypes/index';
-import EPath from '../../src/core/cip/epath/index';
+import { DataTypeCodes, DataType } from '../../dist/core/cip/datatypes/index.js';
+import EPath from '../../dist/core/cip/epath/index.js';
 
 const { DataType: DataTypeSegment } = EPath.Segments;
 

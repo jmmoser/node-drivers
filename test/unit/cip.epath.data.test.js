@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-import EPath from '../../src/core/cip/epath/index';
+import EPath from '../../dist/core/cip/epath/index.js';
 
 const { Data } = EPath.Segments;
 
