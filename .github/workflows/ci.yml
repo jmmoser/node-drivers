@@ -4,11 +4,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         path: node-drivers
 
-    - uses: actions/setup-node@v2
+    - uses: actions/setup-node@v4
       with:
         node-version: '20'
 
@@ -20,7 +20,7 @@ jobs:
 
     - run: sudo apt-get install -y cmake binutils libcap-dev
 
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         repository: jmmoser/OpENer
         path: OpENer
@@ -35,7 +35,7 @@ jobs:
     - working-directory: node-drivers
       run: node test/integration/eip.js
 
-    - uses: actions/setup-python@v2
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.x'
     
