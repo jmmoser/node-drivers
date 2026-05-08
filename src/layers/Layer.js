@@ -24,8 +24,11 @@ function internalDestroy(layer, error) {
   layer.__contextToCallbackTimeouts.forEach((handle) => clearTimeout(handle));
   layer.__contextToCallbackTimeouts.clear(); // eslint-disable-line no-underscore-dangle
 
-  layer.__contextToCallback.forEach((cb) => cb(error)); // eslint-disable-line no-underscore-dangle
+  const callbacks = Array.from(layer.__contextToCallback.values());
   layer.__contextToCallback.clear(); // eslint-disable-line no-underscore-dangle
+  for (const cb of callbacks) {
+    try { cb(error); } catch (e) { /* swallow — destroy must not throw */ }
+  }
 
   layer.__idContext.clear(); // eslint-disable-line
 
