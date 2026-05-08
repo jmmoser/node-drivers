@@ -17,8 +17,8 @@
     "udp"
   ],
   "scripts": {
-    "test": "node --test --experimental-test-coverage 'test/unit/*.test.js'",
-    "test-watch": "node --test --watch 'test/unit/*.test.js'"
+    "test": "node --test --experimental-test-coverage test/unit/*.test.js",
+    "test-watch": "node --test --watch test/unit/*.test.js"
   },
   "repository": {
     "type": "git",
