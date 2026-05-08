@@ -1,10 +1,10 @@
-/* eslint-disable no-undef */
-
-const { PCCCDataType } = require('../../src/layers/pccc/constants');
-const {
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { PCCCDataType } from '../../src/layers/pccc/constants.js';
+import {
   DecodeDataDescriptor,
   DecodeTypedData,
-} = require('../../src/layers/pccc/decoding');
+} from '../../src/layers/pccc/decoding.js';
 
 const buffer1 = Buffer.from([
   0b10010111,
@@ -30,26 +30,26 @@ const buffer2 = Buffer.from([
 describe('DecodeDataDescriptor', () => {
   test('Integer Array', () => {
     const offsetRef = { current: 0 };
-    expect(DecodeDataDescriptor(buffer1, offsetRef)).toStrictEqual({
+    assert.deepEqual(DecodeDataDescriptor(buffer1, offsetRef), {
       type: PCCCDataType.Array,
       size: 7,
     });
-    expect(offsetRef).toStrictEqual({ current: 2 });
+    assert.deepEqual(offsetRef, { current: 2 });
 
-    expect(DecodeDataDescriptor(buffer1, offsetRef)).toStrictEqual({
+    assert.deepEqual(DecodeDataDescriptor(buffer1, offsetRef), {
       type: PCCCDataType.Integer,
       size: 2,
     });
-    expect(offsetRef).toStrictEqual({ current: 3 });
+    assert.deepEqual(offsetRef, { current: 3 });
   });
 
   test('Extended Integer Array', () => {
     const offsetRef = { current: 0 };
-    expect(DecodeDataDescriptor(buffer2, offsetRef)).toStrictEqual({
+    assert.deepEqual(DecodeDataDescriptor(buffer2, offsetRef), {
       type: PCCCDataType.Array,
       size: 21,
     });
-    expect(offsetRef).toStrictEqual({ current: 4 });
+    assert.deepEqual(offsetRef, { current: 4 });
   });
 });
 
@@ -57,11 +57,10 @@ describe('DecodeType', () => {
   test('Integer Array', () => {
     const offsetRef = { current: 0 };
     const descriptor = DecodeDataDescriptor(buffer1, offsetRef);
-    expect(
+    assert.deepEqual(
       DecodeTypedData(buffer1, offsetRef, descriptor.type, descriptor.size),
-    ).toStrictEqual(
       [0, -2, 255],
     );
-    expect(offsetRef).toStrictEqual({ current: buffer1.length });
+    assert.deepEqual(offsetRef, { current: buffer1.length });
   });
 });

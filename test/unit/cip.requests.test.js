@@ -1,18 +1,17 @@
-/* eslint-disable no-undef */
-
-const CIPRequest = require('../../src/layers/cip/core/request');
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
+import CIPRequest from '../../src/layers/cip/core/request.js';
 
 describe('Encoding', () => {
   test('Encode', () => {
-    expect(
+    assert.deepEqual(
       new CIPRequest(0x01, Buffer.from([0x20, 0x02, 0x24, 0x01])).encode(),
-    ).toEqual(
       Buffer.from([0x01, 0x02, 0x20, 0x02, 0x24, 0x01]),
     );
   });
 
   test('Encode Multi', () => {
-    expect(
+    assert.deepEqual(
       new CIPRequest.Multi([
         new CIPRequest(
           0x4C,
@@ -27,7 +26,6 @@ describe('Encoding', () => {
           Buffer.from([0x01, 0x00]),
         ),
       ]).encode(),
-    ).toEqual(
       Buffer.from([
         0x0A,
         0x02,
@@ -36,7 +34,7 @@ describe('Encoding', () => {
         0x06, 0x00,
         0x12, 0x00,
         0x4C, 0x04, 0x91, 0x05, 0x70, 0x61, 0x72, 0x74, 0x73, 0x00, 0x01, 0x00,
-        0x4C, 0x07, 0x91, 0x0B, 0x43, 0x6F, 0x6E, 0x74, 0x72, 0x6F, 0x6C, 0x57, 0x6F, 0x72, 0x64, 0x00, 0x01, 0x00 // eslint-disable-line
+        0x4C, 0x07, 0x91, 0x0B, 0x43, 0x6F, 0x6E, 0x74, 0x72, 0x6F, 0x6C, 0x57, 0x6F, 0x72, 0x64, 0x00, 0x01, 0x00, // eslint-disable-line
       ]),
     );
   });
@@ -83,9 +81,9 @@ describe('Decoding', () => {
     const offsetRef = { current: 0 };
     const response = multiRequest.response(responseBuffer, offsetRef);
 
-    expect(response.service.code).toBe(10);
-    expect(response.status.code).toBe(0);
-    expect(response.value).toHaveLength(2);
+    assert.equal(response.service.code, 10);
+    assert.equal(response.status.code, 0);
+    assert.equal(response.value.length, 2);
     console.log(offsetRef, responseBuffer.length, response);
   });
 });
