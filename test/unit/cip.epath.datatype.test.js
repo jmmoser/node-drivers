@@ -1,7 +1,6 @@
-/* eslint-disable no-undef */
-
-const { DataTypeCodes, DataType } = require('../../src/layers/cip/core/datatypes');
-const EPath = require('../../src/layers/cip/core/epath');
+import { describe, test, expect } from 'vitest';
+import { DataTypeCodes, DataType } from '../../src/layers/cip/core/datatypes/index.js';
+import EPath from '../../src/layers/cip/core/epath/index.js';
 
 const { DataType: DataTypeSegment } = EPath.Segments;
 

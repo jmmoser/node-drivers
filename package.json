@@ -17,8 +17,8 @@
     "udp"
   ],
   "scripts": {
-    "test": "jest --verbose --runInBand --coverage",
-    "test-watch": "jest --verbose --runInBand --coverage --watch"
+    "test": "vitest run --coverage",
+    "test-watch": "vitest --coverage"
   },
   "repository": {
     "type": "git",
@@ -27,18 +27,13 @@
   "author": "Justin Moser",
   "license": "MIT",
   "devDependencies": {
-    "@types/jest": "^27.0.2",
+    "@vitest/coverage-v8": "^1.6.0",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.25.2",
-    "jest": "^27.3.1"
+    "vitest": "^1.6.0"
   },
   "engines": {
     "node": ">=14.0.0"
-  },
-  "jest": {
-    "roots": [
-      "./test/unit"
-    ]
   }
 }

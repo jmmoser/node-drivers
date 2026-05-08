@@ -1,6 +1,5 @@
-/* eslint-disable no-undef */
-
-const EPath = require('../../src/layers/cip/core/epath');
+import { describe, test, expect } from 'vitest';
+import EPath from '../../src/layers/cip/core/epath/index.js';
 
 const { Logical } = EPath.Segments;
 

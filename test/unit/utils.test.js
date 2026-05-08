@@ -1,6 +1,5 @@
-/* eslint-disable no-undef */
-
-const { getBits } = require('../../src/utils');
+import { describe, test, expect } from 'vitest';
+import { getBits } from '../../src/utils.js';
 
 describe('getBits', () => {
   test('getBits', () => {

@@ -1,13 +1,7 @@
-/* eslint-disable no-undef */
-
-const {
-  DataType,
-  Encode,
-} = require('../../src/layers/cip/core/datatypes');
-
-const { DecodeTypedData } = require('../../src/layers/cip/core/datatypes/decoding');
-
-const EPath = require('../../src/layers/cip/core/epath');
+import { describe, test, expect } from 'vitest';
+import { DataType, Encode } from '../../src/layers/cip/core/datatypes/index.js';
+import { DecodeTypedData } from '../../src/layers/cip/core/datatypes/decoding.js';
+import EPath from '../../src/layers/cip/core/epath/index.js';
 
 describe('Encoding', () => {
   test('SINT positive', () => {
