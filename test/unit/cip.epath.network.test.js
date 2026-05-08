@@ -1,12 +1,12 @@
-/* eslint-disable no-undef */
-
-const EPath = require('../../src/layers/cip/core/epath');
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
+import EPath from '../../src/layers/cip/core/epath/index.js';
 
 const { Network } = EPath.Segments;
 
 describe('Network Segment Production Inhibit Time', () => {
   test('Encode', () => {
-    expect(new Network.ProductionInhibitTime(5).encode()).toEqual(Buffer.from([0x43, 0x05]));
+    assert.deepEqual(new Network.ProductionInhibitTime(5).encode(), Buffer.from([0x43, 0x05]));
   });
   test('Decode', () => {
     const offsetRef = { current: 0 };
@@ -14,7 +14,7 @@ describe('Network Segment Production Inhibit Time', () => {
     const output = [
       new Network.ProductionInhibitTime(5),
     ];
-    expect(EPath.Decode(buffer, offsetRef, true, false)).toStrictEqual(output);
-    expect(offsetRef.current).toBe(2);
+    assert.deepEqual(EPath.Decode(buffer, offsetRef, true, false), output);
+    assert.equal(offsetRef.current, 2);
   });
 });
