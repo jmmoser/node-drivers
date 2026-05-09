@@ -30,24 +30,45 @@ jobs:
         ./setup_posix.sh
         make
         sudo setcap cap_net_raw+ep ./src/ports/POSIX/OpENer
-        ./src/ports/POSIX/OpENer lo &
+        nohup ./src/ports/POSIX/OpENer lo > /tmp/opener.log 2>&1 &
+
+    - name: Wait for OpENer to listen on 44818
+      run: |
+        for i in {1..30}; do
+          if (exec 3<>/dev/tcp/127.0.0.1/44818) 2>/dev/null; then
+            exec 3<&- 3>&-
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "OpENer did not start listening on 44818" >&2
+        cat /tmp/opener.log >&2 || true
+        exit 1
 
     - working-directory: node-drivers
       run: node test/integration/eip.js
 
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
-    
+        python-version: '3.11'
+
     - working-directory: node-drivers
       run: |
-        pip install -U pymodbus
-        python ./test/integration/modbus/server.py &
+        pip install 'pymodbus<3'
+        nohup python -u ./test/integration/modbus/server.py > /tmp/modbus-server.log 2>&1 &
+
+    - name: Wait for modbus server to listen on 5020
+      run: |
+        for i in {1..30}; do
+          if (exec 3<>/dev/tcp/127.0.0.1/5020) 2>/dev/null; then
+            exec 3<&- 3>&-
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "Modbus server did not start listening on 5020" >&2
+        cat /tmp/modbus-server.log >&2 || true
+        exit 1
 
     - working-directory: node-drivers
       run: node test/integration/modbus/client.js
-      
-
-
-
-    
