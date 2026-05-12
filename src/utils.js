@@ -46,27 +46,18 @@ export function decodeUnsignedInteger(data, offset, size) {
 }
 
 /**
- * @param {Object|Map} obj
+ * Returns a new plain object or Map with keys and values swapped.
+ * @template K, V
+ * @param {Record<string, V> | Map<K, V>} obj
+ * @returns {Record<string, string> | Map<V, K>}
  */
 export function InvertKeyValues(obj) {
-  let inverted;
-  switch (Object.prototype.toString.call(obj)) {
-    case '[object Object]':
-      inverted = {};
-      Object.entries(obj).forEach(([key, value]) => {
-        inverted[value] = key;
-      });
-      break;
-    case '[object Map]':
-      inverted = new Map();
-      obj.entries().forEach(([key, value]) => {
-        inverted.set(value, key);
-      });
-      break;
-    default:
-      break;
+  if (obj instanceof Map) {
+    return new Map(Array.from(obj, ([key, value]) => [value, key]));
   }
-  return inverted;
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [value, key]),
+  );
 }
 
 /**
