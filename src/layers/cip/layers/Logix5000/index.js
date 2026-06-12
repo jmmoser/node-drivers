@@ -53,14 +53,14 @@ import {
 
 const DEFAULT_SCOPE = '__DEFAULT_GLOBAL_SCOPE__';
 
-function Logix5000DecodeDataType(buffer, offsetRef, cb) {
+function Logix5000DecodeDataType(buffer, offsetRef) {
   const startingOffset = offsetRef.current;
-  const type = EPath.Decode(buffer, offsetRef, null, false, cb);
+  const segment = EPath.Decode(buffer, offsetRef, null, false);
   /** TODO: Why is this necessary? */
   if (offsetRef.current - startingOffset < 2) {
     offsetRef.current += 1;
   }
-  return type;
+  return segment;
 }
 
 async function readTagFragmented(layer, path, elements) {
@@ -69,20 +69,21 @@ async function readTagFragmented(layer, path, elements) {
   const reqData = Buffer.allocUnsafe(6);
   reqData.writeUInt16LE(elements, 0);
 
-  const offsetRef = { current: 0 };
+  let requestOffset = 0;
   const chunks = [];
 
   while (true) {
-    reqData.writeUInt32LE(offsetRef.current, 2);
+    reqData.writeUInt32LE(requestOffset, 2);
     const reply = await sendPromise(layer, service, path, reqData, 5000);
 
-    /** remove the tag type bytes if already received */
+    /** each reply starts with the tag type; keep it on the first chunk only */
+    const offsetRef = { current: 0 };
     Logix5000DecodeDataType(reply.data, offsetRef);
     const dataTypeOffset = offsetRef.current;
     chunks.push(chunks.length > 0 ? reply.data.slice(dataTypeOffset) : reply.data);
 
     if (reply.status.code === GeneralStatusCodes.PartialTransfer) {
-      offsetRef.current = reply.data.length - dataTypeOffset;
+      requestOffset += reply.data.length - dataTypeOffset;
     } else if (reply.status.code === 0) {
       break;
     } else {
@@ -101,7 +102,7 @@ async function parseReadTagMemberStructure(layer, structureType, data, offset) {
 
   const template = await layer.readTemplate(structureType.template.id);
   if (!template || !Array.isArray(template.members)) {
-    return new Error(`Unable to read template: ${structureType.template.id}`);
+    throw new Error(`Unable to read template: ${structureType.template.id}`);
   }
 
   const { members } = template;
@@ -153,15 +154,15 @@ async function parseReadTag(layer, scope, tag, elements, data) {
     return undefined;
   }
 
-  let typeInfo;
-  const offset = Logix5000DecodeDataType(data, 0, (val) => { typeInfo = val.value; });
+  const offsetRef = { current: 0 };
+  const typeSegment = Logix5000DecodeDataType(data, offsetRef);
+  const typeInfo = typeSegment ? typeSegment.value : undefined;
 
   if (!typeInfo) {
     throw new Error('Unable to decode data type from read tag response data');
   }
 
   const values = [];
-  const offsetRef = { current: offset };
 
   if (!typeInfo.constructed || typeInfo.abbreviated === false) {
     for (let i = 0; i < elements; i++) {
@@ -225,8 +226,12 @@ async function parseReadTag(layer, scope, tag, elements, data) {
 
 function statusHandler(code, extended, cb) {
   let error = GenericServiceStatusDescriptions[code];
-  if (typeof error === 'object' && Buffer.isBuffer(extended) && extended.length >= 0) {
-    error = error[extended.readUInt16LE(0)];
+  if (typeof error === 'object') {
+    if (Buffer.isBuffer(extended) && extended.length >= 2) {
+      error = error[extended.readUInt16LE(0)];
+    } else {
+      error = undefined;
+    }
   }
   if (error) {
     cb(null, error);
@@ -234,14 +239,14 @@ function statusHandler(code, extended, cb) {
 }
 
 /** Use driver specific error handling if exists */
-async function send(self, service, path, data, callback /* , timeout */) {
+async function send(self, service, path, data, callback, timeout) {
   try {
     const request = new CIPRequest(service, path, data, null, {
       serviceNames: SymbolServiceNames,
       statusHandler,
     });
 
-    const response = await self.sendRequest(true, request);
+    const response = await self.sendRequest(true, request, null, timeout);
     // console.log(response);
     if (response.status.error) {
       callback(response.status.description, response);
@@ -395,11 +400,11 @@ function parseTemplateNameInfo(data, offset, cb) {
 //   return error;
 // }
 
-function scopedGenerator() {
+function scopedGenerator(...scopeArgs) {
   const separator = '::';
-  const args = [...arguments].filter((arg) => !!arg);
-  const preface = args.length > 0 ? args.join(separator) + separator : '';
-  return () => preface + [...arguments].join(separator);
+  const scopes = scopeArgs.filter((arg) => !!arg);
+  const preface = scopes.length > 0 ? scopes.join(separator) + separator : '';
+  return (...parts) => preface + parts.join(separator);
 }
 
 async function getSymbolInstanceID(layer, scope, tag) {
@@ -886,7 +891,7 @@ export default class Logix5000 extends CIPLayer {
       }
 
       for (let i = 0; i < sizeOfMasks; i++) {
-        if (ORmasks[i] < 0 || ORmasks > 0xFF || ANDmasks[i] < 0 || ANDmasks > 0xFF) {
+        if (ORmasks[i] < 0 || ORmasks[i] > 0xFF || ANDmasks[i] < 0 || ANDmasks[i] > 0xFF) {
           resolver.reject('Values in masks must be greater than or equal to zero and less than or equal to 255');
           return;
         }

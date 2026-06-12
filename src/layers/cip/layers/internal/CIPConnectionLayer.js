@@ -488,6 +488,7 @@ class CIPConnectionLayer extends Layer {
   }
 
   handleDestroy() {
+    stopResend(this);
     this._connectionState = 0;
     this._sequenceCount = 0;
     this.sendInfo = null;
