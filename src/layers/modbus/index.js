@@ -10,7 +10,6 @@ const {
   ReadInputRegisters,
   ReadHoldingRegisters,
   WriteSingleCoil,
-  WriteMultipleCoils,
   WriteSingleHoldingRegister,
   // WriteMultipleHoldingRegisters
 } = MB.Functions;
@@ -22,6 +21,13 @@ const DefaultOptions = {
 };
 
 function readRequest(self, fn, address, count, callback) {
+  if (typeof count === 'function' && callback == null) {
+    callback = count; // eslint-disable-line no-param-reassign
+    count = undefined; // eslint-disable-line no-param-reassign
+  }
+  if (count == null) {
+    count = 1; // eslint-disable-line no-param-reassign
+  }
   return CallbackPromise(callback, (resolver) => {
     self._send(PDU.EncodeReadRequest(fn, address, count), {}, resolver);
   });
@@ -92,20 +98,20 @@ export default class Modbus extends Layer {
     return readRequest(this, ReadInputRegisters, inputAddressing, count, callback);
   }
 
-  readHoldingRegisters(inputAddressing, count = 1, callback) {
+  readHoldingRegisters(inputAddressing, count, callback) {
     return readRequest(this, ReadHoldingRegisters, inputAddressing, count, callback);
   }
 
   writeSingleCoil(inputAddressing, value, callback) {
-    const values = [value ? 0x00FF : 0x0000];
+    /** 0xFF00 is the only valid ON value for function 0x05 */
+    const values = [value ? 0xFF00 : 0x0000];
     return writeRequest(this, WriteSingleCoil, inputAddressing, values, callback);
   }
 
   writeMultipleCoils(inputAddressing, values, callback) {
-    for (let i = 0; i < values.length; i++) {
-      values[i] = values[i] ? 0x00FF : 0x0000;
-    }
-    return writeRequest(this, WriteMultipleCoils, inputAddressing, values, callback);
+    return CallbackPromise(callback, (resolver) => {
+      this._send(PDU.EncodeWriteMultipleCoilsRequest(inputAddressing, values), {}, resolver);
+    });
   }
 
   writeSingleHoldingRegister(inputAddressing, values, callback) {

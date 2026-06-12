@@ -145,8 +145,14 @@ export default class Layer extends EventEmitter {
 
   static forwardTo(layer, data, info, context) {
     if (layer._defragger != null) { // eslint-disable-line no-underscore-dangle
-      data = layer._defragger.defrag(data); // eslint-disable-line no-underscore-dangle
-      if (data == null) return;
+      /** one chunk may complete several frames; forward each one */
+      let frame = layer._defragger.defrag(data); // eslint-disable-line no-underscore-dangle
+      while (frame != null) {
+        layer.emit('data', frame, info, context);
+        layer.handleData(frame, info, context);
+        frame = layer._defragger.defrag(); // eslint-disable-line no-underscore-dangle
+      }
+      return;
     }
     layer.emit('data', data, info, context);
     layer.handleData(data, info, context);
