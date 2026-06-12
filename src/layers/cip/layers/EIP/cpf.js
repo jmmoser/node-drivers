@@ -126,7 +126,7 @@ class Packet {
           value.flags.supportsCIPClass0or1UDPBasedConnections = !!getBits(flags, 8, 9);
 
           let nameLength;
-          for (nameLength = 0; nameLength <= 16; nameLength++) {
+          for (nameLength = 0; nameLength < 16; nameLength++) {
             if (buffer[offsetRef.current + nameLength] === 0) {
               break;
             }
