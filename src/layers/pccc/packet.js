@@ -229,6 +229,10 @@ export default class PCCCPacket {
       throw new Error(`Unsupported address: ${address}`);
     }
 
+    if (info.id == null) {
+      throw new Error(`Writing to ${info.datatype} files is not currently supported (address: ${address})`);
+    }
+
     const valueCount = values.length;
     const dataValueLength = valueCount * info.size;
     const dataTypeLength = DataTypeEncodingLength(info.id, info.size);
