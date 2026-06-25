@@ -46,7 +46,9 @@ export default class PDU {
         if (Buffer.isBuffer(value) && value.length === 2) {
           value.copy(buffer, offset, 0, 2);
         } else if (Number.isFinite(value)) {
-          buffer.writeInt16BE(value, offset);
+          /** registers are unsigned 16-bit on the wire; mask so negative
+           * inputs encode as two's complement instead of throwing */
+          buffer.writeUInt16BE(value & 0xFFFF, offset);
         } else {
           throw new Error('Modbus write request error: currently supports buffer, array of 2-byte buffers, or array of finite numbers');
         }
@@ -55,6 +57,25 @@ export default class PDU {
       throw new Error('Modbus write request error: currently supports buffer, array of 2-byte buffers, or array of finite numbers');
     }
 
+    return buffer;
+  }
+
+  /**
+   * Function 0x0F layout: fn(1), address(2), quantity of outputs(2),
+   * byte count(1), coil values packed LSB-first
+   */
+  static EncodeWriteMultipleCoilsRequest(address, values) {
+    const byteCount = Math.ceil(values.length / 8);
+    const buffer = Buffer.alloc(6 + byteCount);
+    buffer.writeUInt8(Functions.WriteMultipleCoils, 0);
+    buffer.writeUInt16BE(address, 1);
+    buffer.writeUInt16BE(values.length, 3);
+    buffer.writeUInt8(byteCount, 5);
+    for (let i = 0; i < values.length; i++) {
+      if (values[i]) {
+        buffer[6 + (i >> 3)] |= 1 << (i & 0b111);
+      }
+    }
     return buffer;
   }
 

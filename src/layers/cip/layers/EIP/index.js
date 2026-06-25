@@ -307,8 +307,8 @@ export default class EIPLayer extends Layer {
           clearTimeout(timeoutHandler);
           if (hostsSpecified) {
             timeoutHandler = setTimeout(finalizer, resetTimeout);
-            return;
-            // return true;
+            /** keep this callback registered for replies from the remaining hosts */
+            return true;
           }
           finalizer();
         } else {

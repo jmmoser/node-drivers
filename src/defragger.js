@@ -8,22 +8,27 @@ export default class Defragger {
     this._lengthHandler = lengthHandler;
   }
 
+  /**
+   * Appends data, if given, and returns the next complete frame or null.
+   * Call again without data to drain any remaining buffered frames.
+   */
   defrag(data) {
-    let defraggedData = null;
+    if (data != null && data.length > 0) {
+      this._dataLength += data.length;
+      this._data = Buffer.concat([this._data, data], this._dataLength);
+    }
 
-    this._dataLength += data.length;
-    this._data = Buffer.concat([this._data, data], this._dataLength);
-
-    while (
+    if (
       this._dataLength > 0
       && this._completeHandler(this._data, { current: 0 }, this._dataLength)
     ) {
       const length = this._lengthHandler(this._data, { current: 0 });
-      defraggedData = this._data.slice(0, length);
+      const frame = this._data.slice(0, length);
       this._dataLength -= length;
       this._data = this._data.slice(length);
+      return frame;
     }
 
-    return defraggedData;
+    return null;
   }
 }

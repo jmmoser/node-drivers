@@ -48,6 +48,9 @@ jobs:
     - working-directory: node-drivers
       run: node test/integration/eip.js
 
+    - working-directory: node-drivers
+      run: node test/integration/cip-connected.js
+
     - uses: actions/setup-python@v5
       with:
         python-version: '3.11'

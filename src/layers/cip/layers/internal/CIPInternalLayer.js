@@ -27,10 +27,8 @@ class CIPInternalLayer extends Layer {
     }
   }
 
-  sendRequest(connected, request, callback) {
+  sendRequest(connected, request, callback, timeout) {
     return CallbackPromise(callback, (resolver) => {
-      const timeout = null;
-
       const context = this.contextCallback((error, message) => {
         try {
           if (error) {

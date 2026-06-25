@@ -240,8 +240,11 @@ export default class TCPLayer extends Layer {
         });
       }
     } else if (this._connectionState === 0) {
-      /** Reconnect */
-      connect(this);
+      /** Reconnect only when there is something to send, otherwise a
+       * deferred wakeup after close() would reopen the connection */
+      if (this.hasRequest()) {
+        connect(this);
+      }
     }
   }
 

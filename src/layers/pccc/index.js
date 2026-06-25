@@ -248,8 +248,10 @@ export default class PCCCLayer extends Layer {
       const callback = this.callbackForContext(savedContext.context);
       if (callback != null) {
         callback(getError(packet.status), packet, info);
-        return;
       }
+      /** internal replies must never be forwarded to upper layers,
+       * even if the callback was already consumed */
+      return;
     }
 
     this.forward(packet.data, info, savedContext.context);

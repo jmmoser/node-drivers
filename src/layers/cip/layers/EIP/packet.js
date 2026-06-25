@@ -158,7 +158,7 @@ export default class EIPPacket {
     buffer.writeUInt16LE(command, OFFSET_COMMAND);
     buffer.writeUInt16LE(dataLength, OFFSET_DATA_LENGTH);
     buffer.writeUInt32LE(sessionHandle, OFFSET_SESSION_HANDLE);
-    buffer.writeUInt32LE(status.code, OFFSET_STATUS);
+    buffer.writeUInt32LE(status, OFFSET_STATUS);
     (senderContext || NullSenderContext).copy(buffer, OFFSET_SENDER_CONTEXT, 0, 8);
     buffer.writeUInt32LE(options, OFFSET_OPTIONS);
     if (dataLength > 0) {
