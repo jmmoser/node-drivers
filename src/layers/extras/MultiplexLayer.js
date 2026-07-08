@@ -14,7 +14,7 @@ function incrementContext(self) {
 function layerContext(self, layer, context) {
   if (layer != null) {
     if (context == null) {
-      context = incrementContext(this); // eslint-disable-line no-param-reassign
+      context = incrementContext(self); // eslint-disable-line no-param-reassign
     }
     self.__contextToLayer.set(context, layer);
   }
@@ -49,6 +49,7 @@ export default class MultiplexLayer extends Layer {
     return CallbackPromise(callback, async (resolver) => {
       if (this._disconnecting === 1) {
         resolver.resolve();
+        return;
       }
 
       this._disconnecting = 1;

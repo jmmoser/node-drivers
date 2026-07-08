@@ -41,18 +41,27 @@ export function EncodeSize(dataType, value) {
     case DataTypeCodes.EPATH:
       return EPath.EncodeSize(dataType.padded, value);
     case DataTypeCodes.ARRAY: {
-      const bounds = (dataType.upperBound - dataType.lowerBound) + 1;
-      const size = EncodeSize(dataType.itemType, value[0]);
-      return bounds * size;
-    }
-    case DataTypeCodes.ABBREV_ARRAY:
       if (!Array.isArray(value)) {
         throw new Error(`Value must be an array to determine encoding size. Received ${typeof value}`);
       }
-      if (value.length === 0) {
-        return 0;
+      /** sum per element — item types like SHORT_STRING vary in size */
+      const bounds = (dataType.upperBound - dataType.lowerBound) + 1;
+      let size = 0;
+      for (let i = 0; i < bounds; i++) {
+        size += EncodeSize(dataType.itemType, value[i]);
       }
-      return value.length * EncodeSize(dataType.itemType, value[0]);
+      return size;
+    }
+    case DataTypeCodes.ABBREV_ARRAY: {
+      if (!Array.isArray(value)) {
+        throw new Error(`Value must be an array to determine encoding size. Received ${typeof value}`);
+      }
+      let size = 0;
+      for (let i = 0; i < value.length; i++) {
+        size += EncodeSize(dataType.itemType, value[i]);
+      }
+      return size;
+    }
     case DataTypeCodes.STRUCT: {
       let size = 0;
       for (let i = 0; i < dataType.members.length; i++) {

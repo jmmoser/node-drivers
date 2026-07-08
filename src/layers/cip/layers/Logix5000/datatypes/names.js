@@ -1,7 +1,7 @@
 import {
   InvertKeyValues,
-} from '../../../../../utils';
+} from '../../../../../utils.js';
 
-import DataTypeCodes from './codes';
+import DataTypeCodes from './codes.js';
 
 export default InvertKeyValues(DataTypeCodes);

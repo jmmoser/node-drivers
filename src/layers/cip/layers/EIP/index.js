@@ -70,7 +70,9 @@ function setupCallbacks(self) {
     if (packet.status.code === 0) {
       setConnectionState(self, 2);
       self._sessionHandle = packet.sessionHandle;
-      if (self._connectCallback) self._connectCallback();
+      const connectCallbacks = self._connectCallbacks;
+      self._connectCallbacks = [];
+      connectCallbacks.forEach((connectCallback) => connectCallback());
       self.sendNextMessage();
       sendUserRequests(self);
     } else {
@@ -192,6 +194,7 @@ export default class EIPLayer extends Layer {
     this._sessionHandle = 0;
     this._context = Buffer.alloc(8);
     this._userRequests = [];
+    this._connectCallbacks = [];
 
     setConnectionState(this, 0);
     setupCallbacks(this);
@@ -236,7 +239,7 @@ export default class EIPLayer extends Layer {
               switch (typeof host) {
                 case 'string': {
                   const parts = host.split(':', 2);
-                  if (parts.length === 0) {
+                  if (parts.length === 1) {
                     hosts.push({ host: parts[0] });
                   } else {
                     hosts.push({ host: parts[0], port: parts[1] });
@@ -343,7 +346,9 @@ export default class EIPLayer extends Layer {
       if (callback) callback();
       return;
     }
-    this._connectCallback = callback;
+    /** queue, don't overwrite — a connect while RegisterSession is in
+     * flight must not silently drop the earlier caller's callback */
+    if (callback) this._connectCallbacks.push(callback);
     if (this._connectionState > 0) return;
     setConnectionState(this, 1);
     this.send(EIPPacket.RegisterSessionRequest(this._context), null, true);

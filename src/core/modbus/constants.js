@@ -15,7 +15,7 @@ export const Functions = Object.freeze({
   EncapsulatedInterfaceTransport: 0x2B,
 });
 
-export const SearialLineFunctions = Object.freeze({
+export const SerialLineFunctions = Object.freeze({
   ReadExceptionStatus: 0x07,
   Diagnostics: 0x08,
   GetCommEventCounter: 0x0B,
@@ -23,7 +23,10 @@ export const SearialLineFunctions = Object.freeze({
   ReportServerID: 0x11,
 });
 
-export const FunctionNames = InvertKeyValues(Functions);
+/** @deprecated misspelled alias kept for backwards compatibility */
+export const SearialLineFunctions = SerialLineFunctions;
+
+export const FunctionNames = InvertKeyValues({ ...Functions, ...SerialLineFunctions });
 
 export const ErrorDescriptions = Object.freeze({
   0x01: 'Illegal function',

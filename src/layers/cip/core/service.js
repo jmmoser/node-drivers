@@ -1,6 +1,6 @@
 /* eslint-disable max-classes-per-file */
 
-import CIPFeature from './feature';
+import CIPFeature from './feature.js';
 
 class CIPService extends CIPFeature {}
 

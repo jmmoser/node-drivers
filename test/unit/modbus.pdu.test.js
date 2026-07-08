@@ -86,3 +86,57 @@ describe('Modbus TCP frame', () => {
     assert.deepEqual(packet.pdu.value, [7]);
   });
 });
+
+describe('Modbus PDU malformed responses', () => {
+  /**
+   * Every length field inside a response comes off the wire; before
+   * bounds-checking was added, each of these threw ERR_OUT_OF_RANGE from
+   * the socket data handler (an uncaught exception) instead of producing
+   * a decodable error.
+   */
+
+  it('flags a register byte count exceeding the received data', () => {
+    const pdu = PDU.Decode(hex('03 06 2b'), { current: 0 }, 3);
+    assert.match(pdu.error.message, /Malformed/);
+    assert.equal(pdu.value, undefined);
+  });
+
+  it('flags an odd register byte count', () => {
+    const pdu = PDU.Decode(hex('03 03 01 02 03'), { current: 0 }, 5);
+    assert.match(pdu.error.message, /Malformed/);
+  });
+
+  it('flags a coil byte count exceeding the received data', () => {
+    const pdu = PDU.Decode(hex('01 05 cd'), { current: 0 }, 3);
+    assert.match(pdu.error.message, /Malformed/);
+  });
+
+  it('flags an exception response with no exception code', () => {
+    const pdu = PDU.Decode(hex('83'), { current: 0 }, 1);
+    assert.match(pdu.error.message, /Malformed/);
+  });
+
+  it('flags a truncated write response', () => {
+    const pdu = PDU.Decode(hex('06 0001'), { current: 0 }, 3);
+    assert.match(pdu.error.message, /Malformed/);
+  });
+
+  it('still decodes a valid frame after the checks', () => {
+    const pdu = PDU.Decode(hex('01 03 cd 6b 05'), { current: 0 }, 5);
+    assert.equal(pdu.error, undefined);
+    assert.deepEqual(pdu.value, [0xCD, 0x6B, 0x05]);
+  });
+});
+
+describe('Modbus constants', () => {
+  it('resolves serial-line function names', async () => {
+    const constants = await import('../../src/core/modbus/constants.js');
+    /** serial-line codes were omitted from FunctionNames, so responses
+     * decoded with name 'Unknown'; the export name was also misspelled */
+    assert.equal(constants.FunctionNames[0x07], 'ReadExceptionStatus');
+    assert.equal(constants.FunctionNames[0x11], 'ReportServerID');
+    assert.equal(constants.SerialLineFunctions.Diagnostics, 0x08);
+    /** deprecated misspelled alias must keep working */
+    assert.equal(constants.SearialLineFunctions, constants.SerialLineFunctions);
+  });
+});

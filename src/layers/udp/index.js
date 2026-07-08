@@ -140,8 +140,12 @@ export default class UDPLayer extends Layer {
   handleDestroy() {
     this._listening = false;
     if (this.socket) {
-      this.socket.unref();
       removeSocketListeners(this.socket);
+      try {
+        this.socket.close();
+      } catch (err) {
+        /** already closed */
+      }
       this.socket = null;
     }
   }

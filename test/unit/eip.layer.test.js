@@ -145,3 +145,31 @@ describe('EIP layer', () => {
     await transport.close();
   });
 });
+
+describe('EIP layer connect callbacks', () => {
+  it('invokes every callback queued while RegisterSession is in flight', async () => {
+    const transport = new ScriptedTransport();
+    const layer = new EIPLayer(transport);
+
+    let deliverResponse;
+    transport.onNextRequest((message, t) => {
+      deliverResponse = () => t.deliver(
+        hex('6500 0400 44332211 00000000 0000000000000000 00000000 01000000'),
+      );
+    });
+
+    /** a second connect() while registering overwrote the first callback,
+     * which was then never invoked */
+    const first = new Promise((resolve) => layer.connect(() => resolve('first')));
+    const second = new Promise((resolve) => layer.connect(() => resolve('second')));
+
+    assert.equal(transport.sent.length, 1, 'only one RegisterSession request');
+    deliverResponse();
+
+    assert.deepEqual(
+      await withTimeout(Promise.all([first, second]), 'both connect callbacks'),
+      ['first', 'second'],
+    );
+    await transport.close();
+  });
+});

@@ -83,43 +83,69 @@ export default class PDU {
     const fn = PDU.Fn(buffer, offsetRef);
     const data = PDU.Data(buffer, offsetRef, pduLength);
 
+    /**
+     * `data` comes off the wire — every length field inside it must be
+     * validated against the bytes actually received or a malformed frame
+     * turns into an out-of-range read that escapes the socket data handler
+     */
+    const malformed = (reason) => ({
+      code: undefined,
+      message: `Malformed Modbus response (fn ${fn}): ${reason}`,
+    });
+
     let error;
     let value;
     if (fn > 0x80) {
-      const errorCode = data.readUInt8(0);
-      error = {
-        code: errorCode,
-        message: ErrorDescriptions[errorCode] || 'Unknown error',
-      };
+      if (data.length < 1) {
+        error = malformed('exception response missing exception code');
+      } else {
+        const errorCode = data.readUInt8(0);
+        error = {
+          code: errorCode,
+          message: ErrorDescriptions[errorCode] || 'Unknown error',
+        };
+      }
     } else {
       switch (fn) {
         case Functions.ReadCoils:
         case Functions.ReadDiscreteInputs: {
+          const dataLength = data.length < 1 ? -1 : data.readUInt8(0);
+          if (dataLength < 0 || data.length < 1 + dataLength) {
+            error = malformed(`byte count ${dataLength} exceeds received data (${data.length - 1} bytes)`);
+            break;
+          }
           value = [];
-          const dataLength = buffer.readUInt8(offsetRef.current + OFFSET_DATA);
           offsetRef.current += 1;
           for (let i = 0; i < dataLength; i++) {
-            value.push(buffer.readUInt8(offsetRef.current + OFFSET_DATA + i));
+            value.push(data.readUInt8(1 + i));
           }
           offsetRef.current += dataLength;
           break;
         }
         case Functions.ReadHoldingRegisters:
         case Functions.ReadInputRegisters: {
+          const dataLength = data.length < 1 ? -1 : data.readUInt8(0);
+          if (dataLength < 0 || dataLength % 2 !== 0 || data.length < 1 + dataLength) {
+            error = malformed(`register byte count ${dataLength} is odd or exceeds received data (${data.length - 1} bytes)`);
+            break;
+          }
           value = [];
-          const dataLength = buffer.readUInt8(offsetRef.current + OFFSET_DATA);
           offsetRef.current += 1;
           const count = dataLength / 2;
           for (let i = 0; i < count; i++) {
-            value.push(buffer.readUInt16BE(offsetRef.current + OFFSET_DATA + 2 * i));
+            value.push(data.readUInt16BE(1 + 2 * i));
           }
           offsetRef.current += dataLength;
           break;
         }
         case Functions.WriteSingleCoil:
         case Functions.WriteSingleHoldingRegister: {
-          const address = buffer.readUInt16BE(offsetRef.current + OFFSET_DATA);
-          const ivalue = buffer.readUInt16BE(offsetRef.current + OFFSET_DATA + 2);
+          if (data.length < 4) {
+            error = malformed(`expected 4 data bytes, received ${data.length}`);
+            break;
+          }
+          const address = data.readUInt16BE(0);
+          const ivalue = data.readUInt16BE(2);
           offsetRef.current += 4;
           value = {
             address,
@@ -129,8 +155,12 @@ export default class PDU {
         }
         case Functions.WriteMultipleCoils:
         case Functions.WriteMultipleHoldingRegisters: {
-          const address = buffer.readUInt16BE(offsetRef.current + OFFSET_DATA);
-          const count = buffer.readUInt16BE(offsetRef.current + OFFSET_DATA + 2);
+          if (data.length < 4) {
+            error = malformed(`expected 4 data bytes, received ${data.length}`);
+            break;
+          }
+          const address = data.readUInt16BE(0);
+          const count = data.readUInt16BE(2);
           offsetRef.current += 4;
           value = {
             address,

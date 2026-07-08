@@ -4,7 +4,6 @@ import convertToObject from './convertToObject.js';
 
 import {
   getBits,
-  unsignedIntegerSize,
   decodeUnsignedInteger,
 } from '../../../../utils.js';
 
@@ -27,15 +26,23 @@ export function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
   }
 
   switch (dataType.code) {
-    case DataTypeCodes.BOOL:
+    case DataTypeCodes.BOOL: {
       /** BOOL does not change the offset */
-      value = decodeUnsignedInteger(
-        buffer,
-        offsetRef.current,
-        unsignedIntegerSize(dataType.position),
-      );
-      value = getBits(value, dataType.position, dataType.position + 1) > 0;
+      const position = dataType.position || 0;
+      if (position >= 32) {
+        throw new Error(`BOOL bit position not supported: ${position}`);
+      }
+      /** read enough bytes to contain the bit at `position` */
+      let size = 4;
+      if (position < 8) {
+        size = 1;
+      } else if (position < 16) {
+        size = 2;
+      }
+      value = decodeUnsignedInteger(buffer, offsetRef.current, size);
+      value = getBits(value, position, position + 1) > 0;
       break;
+    }
     case DataTypeCodes.SINT:
       value = buffer.readInt8(offsetRef.current); offsetRef.current += 1;
       break;
@@ -84,7 +91,16 @@ export function DecodeTypedData(buffer, offsetRef, dataType, ctx) {
       const width = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
       const length = buffer.readUInt16LE(offsetRef.current); offsetRef.current += 2;
       const total = width * length;
-      value = buffer.toString('utf16le', offsetRef.current, offsetRef.current + total); offsetRef.current += total;
+      /** width is bytes per character */
+      let encoding;
+      if (width === 1) {
+        encoding = 'latin1';
+      } else if (width === 2) {
+        encoding = 'utf16le';
+      } else {
+        throw new Error(`STRINGN character width not supported: ${width}`);
+      }
+      value = buffer.toString(encoding, offsetRef.current, offsetRef.current + total); offsetRef.current += total;
       break;
     }
     case DataTypeCodes.LTIME:

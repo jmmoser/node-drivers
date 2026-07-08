@@ -294,7 +294,7 @@ function handleConnectedMessage(self, data, info) {
   if (savedContext.internal) {
     const callback = self.callbackForContext(savedContext.context);
     if (callback != null) {
-      const response = savedContext.request.response(data);
+      const response = savedContext.request.response(data, { current: 0 });
 
       callback(
         response.status.error ? response.status.description || 'CIP Error' : null,

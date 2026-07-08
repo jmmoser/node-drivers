@@ -454,3 +454,78 @@ describe('Constructed', () => {
     assert.equal(code, 0x43F4);
   });
 });
+
+describe('STRINGN decoding', () => {
+  test('decodes a width-1 STRINGN as single-byte characters', () => {
+    /** STRINGN was always decoded as UTF-16LE, so any width other than 2
+     * silently produced garbage */
+    const offsetRef = { current: 0 };
+    const value = DecodeTypedData(
+      Buffer.from('0100 0400 41424344'.replace(/\s+/g, ''), 'hex'),
+      offsetRef,
+      DataType.STRINGN,
+    );
+    assert.equal(value, 'ABCD');
+    assert.equal(offsetRef.current, 8);
+  });
+
+  test('decodes a width-2 STRINGN as UTF-16LE', () => {
+    const offsetRef = { current: 0 };
+    const value = DecodeTypedData(
+      Buffer.from('0200 0200 41004200'.replace(/\s+/g, ''), 'hex'),
+      offsetRef,
+      DataType.STRINGN,
+    );
+    assert.equal(value, 'AB');
+    assert.equal(offsetRef.current, 8);
+  });
+});
+
+describe('BOOL decoding with bit positions', () => {
+  test('reads a bit at position >= 8', () => {
+    /** the read size was derived from the byte-width of the position
+     * number itself, so positions 8-255 read only one byte and always
+     * decoded as false */
+    const value = DecodeTypedData(
+      Buffer.from([0x00, 0x01]),
+      { current: 0 },
+      DataType.BOOL(8),
+    );
+    assert.equal(value, true);
+  });
+
+  test('reads a bit at position < 8', () => {
+    assert.equal(
+      DecodeTypedData(Buffer.from([0b0000_0100]), { current: 0 }, DataType.BOOL(2)),
+      true,
+    );
+    assert.equal(
+      DecodeTypedData(Buffer.from([0b0000_0100]), { current: 0 }, DataType.BOOL(3)),
+      false,
+    );
+  });
+});
+
+describe('Array encode sizing with variable-size item types', () => {
+  test('ABBREV_ARRAY of SHORT_STRING sums per-element sizes', () => {
+    /** EncodeSize used value[0]'s size for every element, so mixed-length
+     * strings either threw mid-write or corrupted the stream */
+    assert.deepEqual(
+      Encode(DataType.ABBREV_ARRAY(DataType.SHORT_STRING), ['ab', 'longer']),
+      Buffer.concat([
+        Buffer.from([2]), Buffer.from('ab', 'ascii'),
+        Buffer.from([6]), Buffer.from('longer', 'ascii'),
+      ]),
+    );
+  });
+
+  test('ARRAY of SHORT_STRING sums per-element sizes', () => {
+    assert.deepEqual(
+      Encode(DataType.ARRAY(DataType.SHORT_STRING, 0, 1), ['ab', 'wxyz']),
+      Buffer.concat([
+        Buffer.from([2]), Buffer.from('ab', 'ascii'),
+        Buffer.from([4]), Buffer.from('wxyz', 'ascii'),
+      ]),
+    );
+  });
+});

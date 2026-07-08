@@ -159,7 +159,8 @@ const InstanceAttribute = Object.freeze({
     (value) => ({
       code: value,
       owned: getBits(value, 0, 1),
-      configured: getBits(value, 3, 4),
+      /** CIP Vol 1 Table 5-2.3: Configured is bit 2 (bits 1 and 3 are reserved) */
+      configured: getBits(value, 2, 3),
       extendedDeviceStatus: ExtendedDeviceStatusDescriptions[getBits(value, 4, 8)] || 'Vendor/Product specific',
       minorRecoverableFault: getBits(value, 8, 9),
       minorUnrecoverableFault: getBits(value, 9, 10),
