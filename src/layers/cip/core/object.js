@@ -94,7 +94,7 @@ export default function CIPMetaObject(classCode, options) {
       }),
       (value) => value[1],
     )),
-    OptionalServiceList: new CIPAttribute.Class(4, 'Optional Service List', DataType.TRANSFORM(
+    OptionalServiceList: new CIPAttribute.Class(5, 'Optional Service List', DataType.TRANSFORM(
       DataType.STRUCT([
         DataType.UINT,
         DataType.PLACEHOLDER((length) => DataType.ABBREV_ARRAY(DataType.UINT, length)),
@@ -184,7 +184,7 @@ export default function CIPMetaObject(classCode, options) {
           instance = 0;
         }
         attributeID = (
-          ClassAttributeGroup.getCode(attribute) || CommonClassAttribute.getCode(attribute)
+          ClassAttributeGroup.getCode(attribute) || CommonClassAttributeGroup.getCode(attribute)
         );
       } else {
         /** instance attribute */

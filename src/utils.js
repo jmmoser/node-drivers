@@ -59,9 +59,9 @@ export function InvertKeyValues(obj) {
       break;
     case '[object Map]':
       inverted = new Map();
-      obj.entries().forEach(([key, value]) => {
+      for (const [key, value] of obj.entries()) {
         inverted.set(value, key);
-      });
+      }
       break;
     default:
       break;
@@ -150,7 +150,12 @@ export function CallbackPromise(callback, func, timeout) {
     }
 
     try {
-      return func(resolver);
+      const result = func(resolver);
+      if (result != null && typeof result.then === 'function') {
+        /** an async func's rejection must settle the promise, not vanish */
+        result.then(undefined, (err) => resolver.reject(err));
+      }
+      return result;
     } catch (err) {
       resolver.reject(err);
       return resolver;

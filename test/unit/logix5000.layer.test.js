@@ -222,3 +222,90 @@ describe('CIP connection layer: resend keep-alive', () => {
     await transport.close();
   });
 });
+
+describe('Logix5000: writeTag symbol resolution', () => {
+  /** GetInstanceAttributeList (0x55) reply listing one symbol:
+   * instance 0x0A named 'TagA' */
+  const nameListReply = hex('d5 00 00 00 0a000000 0400 54616741');
+  /** GetInstanceAttributeList reply with instance 0x0A's type: DINT */
+  const typeListReply = hex('d5 00 00 00 0a000000 c400');
+
+  it('rejects (instead of hanging) when the tag does not exist', async () => {
+    const { transport, responder, layer } = createStack();
+    responder.replyToConnected(nameListReply);
+
+    /** the unknown-tag guard could never fire (getSymbolInfo returns an
+     * object, never null), so tagType.atomic threw inside an async
+     * executor whose rejection was discarded — the promise never settled */
+    await assert.rejects(
+      withTimeout(layer.writeTag('DoesNotExist', 5), 'writeTag unknown tag', 3000),
+      /Invalid tag/,
+    );
+    await transport.close();
+  });
+
+  it('resolves member-access tags against the base symbol name', async () => {
+    const { transport, responder, layer } = createStack();
+    responder.replyToConnected(nameListReply);
+    responder.replyToConnected(typeListReply);
+    responder.replyToConnected(hex('cd 00 00 00'));
+
+    /** the member-stripping line was commented out, so 'TagA.Member' was
+     * looked up verbatim in the symbol list and never matched */
+    const reply = await withTimeout(layer.writeTag('TagA.Member', 1), 'writeTag dotted tag', 3000);
+    assert.equal(reply.status.code, 0);
+
+    /** the write request must address the full dotted path */
+    assert.deepEqual(
+      responder.connectedRequests[2],
+      hex('4d 07 9104 54616741 9106 4d656d626572 c400 0100 01000000'),
+    );
+    await transport.close();
+  });
+});
+
+describe('Logix5000: readTemplate', () => {
+  it('clamps per-fragment read sizes to 16 bits for very large templates', async () => {
+    const { transport, responder, layer } = createStack();
+
+    /** GetAttributeList reply: handle, member count 1,
+     * definition size 16400 words (=> 65580 definition bytes, > 0xFFFF),
+     * structure size 4 */
+    responder.replyToConnected(hex(
+      '83 00 00 00'
+      + '0400'
+      + '0100 0000 3412'
+      + '0200 0000 0100'
+      + '0400 0000 10400000'
+      + '0500 0000 04000000',
+    ));
+
+    const definition = Buffer.alloc(65580);
+    /** member record: info 0, type DINT (0xC4), offset 0 */
+    definition.writeUInt16LE(0x00C4, 2);
+    definition.write('MyTemplate;ZZ\0Member1\0', 8, 'ascii');
+
+    const chunk1 = definition.subarray(0, 40000);
+    const chunk2 = definition.subarray(40000);
+    /** status 0x06 = partial transfer, more to read */
+    responder.replyToConnected(Buffer.concat([hex('cc 00 06 00'), chunk1]));
+    responder.replyToConnected(Buffer.concat([hex('cc 00 00 00'), chunk2]));
+
+    /** the remaining-bytes field is UINT16 on the wire; writing 65580
+     * unclamped threw ERR_OUT_OF_RANGE and the read never succeeded */
+    const template = await withTimeout(layer.readTemplate(0x32), 'readTemplate', 5000);
+
+    assert.equal(template.name, 'MyTemplate');
+    assert.deepEqual(template.members.map((member) => member.name), ['Member1']);
+
+    const readRequests = responder.connectedRequests.slice(1);
+    assert.equal(readRequests.length, 2);
+    /** template read request: service(1) path-size(1) path(4) offset(4) count(2) */
+    assert.equal(readRequests[0].readUInt32LE(6), 0);
+    assert.equal(readRequests[0].readUInt16LE(10), 0xFFFF);
+    assert.equal(readRequests[1].readUInt32LE(6), 40000);
+    assert.equal(readRequests[1].readUInt16LE(10), 25580);
+
+    await transport.close();
+  });
+});

@@ -71,7 +71,11 @@ function encodeSize(type) {
       }
       break;
     case DataTypeCodes.ARRAY:
-      size = 8 + encodeSize(type.itemType);
+      /** bounds encode with 1, 2, or 4 bytes each — must match encodeTo */
+      size = 6
+        + unsignedIntegerSize(type.lowerBound)
+        + unsignedIntegerSize(type.upperBound)
+        + encodeSize(type.itemType);
       break;
     case DataTypeCodes.ABBREV_STRUCT:
       size = 4;

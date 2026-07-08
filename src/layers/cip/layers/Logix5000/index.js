@@ -411,8 +411,8 @@ async function getSymbolInstanceID(layer, scope, tag) {
   let tagName;
   switch (typeof tag) {
     case 'string':
-      tagName = tag;
-      // tagName = tag.split('.')[0];
+      /** the symbol list holds base names — strip member/element access */
+      [tagName] = tag.split('.');
       break;
     case 'number':
       return tag;
@@ -830,12 +830,13 @@ export default class Logix5000 extends CIPLayer {
         SymbolInstanceAttributeCodes.Type,
       ]);
 
-      if (!tagInfo) {
+      const tagType = tagInfo ? tagInfo[SymbolInstanceAttributeCodes.Type] : undefined;
+
+      /** getSymbolInfo returns an empty object when the symbol lookup fails */
+      if (tagType == null) {
         resolver.reject(`Invalid tag: ${tag}`);
         return;
       }
-
-      const tagType = tagInfo[SymbolInstanceAttributeCodes.Type];
 
       if (tagType.atomic !== true) {
         resolver.reject('Writing to structure tags is not currently supported');
@@ -1141,7 +1142,9 @@ export default class Logix5000 extends CIPLayer {
 
         while (true) {
           reqData.writeUInt32LE(reqOffset, 0);
-          reqData.writeUInt16LE(bytesToRead - reqOffset, 4);
+          /** remaining bytes can exceed 16 bits for very large templates;
+           * the device replies with a partial transfer and we continue */
+          reqData.writeUInt16LE(Math.min(bytesToRead - reqOffset, 0xFFFF), 4);
           const reply = await sendPromise(this, service, path, reqData, 5000);
           chunks.push(reply.data);
 
@@ -1204,45 +1207,49 @@ export default class Logix5000 extends CIPLayer {
 
   readTemplateClassAttributes(callback) {
     return CallbackPromise(callback, async (resolver) => {
-      const service = CommonServiceCodes.GetAttributeList;
+      try {
+        const service = CommonServiceCodes.GetAttributeList;
 
-      const path = EPath.Encode(true, [
-        new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Template),
-        new EPath.Segments.Logical.InstanceID(0),
-      ]);
+        const path = EPath.Encode(true, [
+          new EPath.Segments.Logical.ClassID(Logix5000ClassCodes.Template),
+          new EPath.Segments.Logical.InstanceID(0),
+        ]);
 
-      const reply = await sendPromise(this, service, path, encodeAttributes([
-        TemplateClassAttributeCodes.Unknown1,
-        TemplateClassAttributeCodes.Unknown2,
-        TemplateClassAttributeCodes.Unknown3,
-        TemplateClassAttributeCodes.Unknown8,
-        /** 9 timed out?? */
-      ]));
+        const reply = await sendPromise(this, service, path, encodeAttributes([
+          TemplateClassAttributeCodes.Unknown1,
+          TemplateClassAttributeCodes.Unknown2,
+          TemplateClassAttributeCodes.Unknown3,
+          TemplateClassAttributeCodes.Unknown8,
+          /** 9 timed out?? */
+        ]));
 
-      const { data } = reply;
+        const { data } = reply;
 
-      const offsetRef = { current: 0 };
-      const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
-      const attributes = {};
+        const offsetRef = { current: 0 };
+        const attributeCount = data.readUInt16LE(offsetRef.current); offsetRef.current += 2;
+        const attributes = {};
 
-      for (let i = 0; i < attributeCount; i++) {
-        const attribute = DecodeTypedData(data, offsetRef, DataType.UINT);
-        const status = DecodeTypedData(data, offsetRef, DataType.UINT);
+        for (let i = 0; i < attributeCount; i++) {
+          const attribute = DecodeTypedData(data, offsetRef, DataType.UINT);
+          const status = DecodeTypedData(data, offsetRef, DataType.UINT);
 
-        const attributeDataType = TemplateClassAttributeDataTypes[attribute];
+          const attributeDataType = TemplateClassAttributeDataTypes[attribute];
 
-        if (attributeDataType == null) {
-          throw new Error(`Unknown template attribute received: ${attribute}`);
+          if (attributeDataType == null) {
+            throw new Error(`Unknown template attribute received: ${attribute}`);
+          }
+
+          if (status === 0) {
+            attributes[attribute] = DecodeTypedData(data, offsetRef, attributeDataType);
+          } else {
+            throw new Error(`Attribute ${attribute} has error status: ${GenericServiceStatusDescriptions[status] || 'Unknown'}`);
+          }
         }
 
-        if (status === 0) {
-          attributes[attribute] = DecodeTypedData(data, offsetRef, attributeDataType);
-        } else {
-          throw new Error(`Attribute ${attribute} has error status: ${GenericServiceStatusDescriptions[status] || 'Unknown'}`);
-        }
+        resolver.resolve(attributes);
+      } catch (err) {
+        resolver.reject(err);
       }
-
-      resolver.resolve(attributes);
     });
   }
 

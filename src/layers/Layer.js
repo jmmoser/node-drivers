@@ -224,6 +224,7 @@ export default class Layer extends EventEmitter {
     if (timeout != null && timeout > 0) {
       const timeoutHandle = setTimeout(() => {
         this.__contextToCallback.delete(context);
+        this.__contextToCallbackTimeouts.delete(context);
         callback(`Timeout (${timeout}ms)`);
       }, timeout);
 
@@ -268,7 +269,8 @@ export default class Layer extends EventEmitter {
   }
 
   clearContexts() {
-    const entries = this.__idContext.entries();
+    /** materialize before clear() — Map iterators are live views */
+    const entries = Array.from(this.__idContext.entries());
     this.__idContext.clear();
     return entries;
   }

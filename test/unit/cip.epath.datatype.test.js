@@ -91,3 +91,18 @@ describe('Decoding', () => {
     assert.equal(offsetRef.current, 3);
   });
 });
+
+describe('ARRAY segment size/write agreement', () => {
+  test('bounds larger than one byte encode within the reported size', () => {
+    /** encodeSize() assumed 1-byte bounds while encodeTo() wrote 1, 2, or
+     * 4 bytes per bound, so any bound > 255 threw a RangeError mid-encode
+     * (or corrupted a larger EPATH buffer) */
+    const segment = new DataTypeSegment(DataType.ARRAY(DataType.UINT, 0, 300, 0xC7, 0xC7));
+    const encoded = segment.encode();
+    assert.equal(encoded.length, segment.encodeSize());
+    assert.deepEqual(
+      encoded,
+      Buffer.from([0xA3, 0x08, 0xC7, 0x01, 0x00, 0xC7, 0x02, 0x2C, 0x01, 0xC7]),
+    );
+  });
+});

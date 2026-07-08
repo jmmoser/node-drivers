@@ -93,7 +93,7 @@
 //       buffer.writeUInt16LE(address, 0);
 //       buffer.writeUInt16LE(values.length, 2);
 //       for (let i = 0; i < values.length; i++) {
-//         buffer.writeUInt16LE(values[i]);
+//         buffer.writeUInt16LE(values[i], 4 + 2 * i);
 //       }
 
 //       send(this, Services.WriteHoldingRegisters, buffer, (error, reply) => {
@@ -139,7 +139,7 @@
 
 // /** Use driver specific error handling if exists */
 // function send(self, service, data, callback) {
-//   self.sendRequest(false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
+//   self.sendRequest(false, new CIPRequest(service, MODBUS_EPATH, data), self.contextCallback(callback));
 // }
 
 // const Services = Object.freeze({
@@ -245,7 +245,7 @@
 // //       buffer.writeUInt16LE(address, 0);
 // //       buffer.writeUInt16LE(values.length, 2);
 // //       for (let i = 0; i < values.length; i++) {
-// //         buffer.writeUInt16LE(values[i]);
+// //         buffer.writeUInt16LE(values[i], 4 + 2 * i);
 // //       }
 
 // //       send(this, Services.WriteHoldingRegisters, buffer, (error, reply) => {
@@ -292,7 +292,7 @@
 
 // // /** Use driver specific error handling if exists */
 // // function send(self, service, data, callback) {
-// //   self.sendRequest(false, new CIPRequest(service, MODBUS_EPATH, data), this.contextCallback(callback));
+// //   self.sendRequest(false, new CIPRequest(service, MODBUS_EPATH, data), self.contextCallback(callback));
 // // }
 
 // // const Services = Object.freeze({

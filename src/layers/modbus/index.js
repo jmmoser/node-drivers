@@ -20,6 +20,15 @@ const DefaultOptions = {
   },
 };
 
+/** Coil/discrete-input responses pack one status per bit, LSB first */
+function unpackBits(bytes, count) {
+  const values = [];
+  for (let i = 0; i < count; i++) {
+    values.push(((bytes[i >> 3] >> (i & 0b111)) & 1) === 1);
+  }
+  return values;
+}
+
 function readRequest(self, fn, address, count, callback) {
   if (typeof count === 'function' && callback == null) {
     callback = count; // eslint-disable-line no-param-reassign
@@ -28,8 +37,13 @@ function readRequest(self, fn, address, count, callback) {
   if (count == null) {
     count = 1; // eslint-disable-line no-param-reassign
   }
+  const unpacksBits = fn === ReadCoils || fn === ReadDiscreteInputs;
   return CallbackPromise(callback, (resolver) => {
-    self._send(PDU.EncodeReadRequest(fn, address, count), {}, resolver);
+    const sendResolver = unpacksBits ? {
+      resolve: (bytes) => resolver.resolve(unpackBits(bytes, count)),
+      reject: resolver.reject,
+    } : resolver;
+    self._send(PDU.EncodeReadRequest(fn, address, count), {}, sendResolver);
   });
 }
 
@@ -48,6 +62,7 @@ export default class Modbus extends Layer {
         const cOpts = {
           unitID: 0xFF,
           protocolID: 0,
+          timeout: 10000,
           ...options,
         };
 
@@ -67,12 +82,14 @@ export default class Modbus extends Layer {
               return resolver;
             }),
             this._transactionCounter,
+            cOpts.timeout,
           );
 
+          /** ?? not || — unitID 0 (broadcast) and protocolID 0 are valid overrides */
           const message = Frames.TCP.Encode(
             this._transactionCounter,
-            opts.protocolID || cOpts.protocolID,
-            opts.unitID || cOpts.unitID,
+            opts.protocolID ?? cOpts.protocolID,
+            opts.unitID ?? cOpts.unitID,
             pdu,
           );
 

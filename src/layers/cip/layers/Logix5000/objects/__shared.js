@@ -1,7 +1,7 @@
-import { getBits } from '../../../../../utils';
-import Logix5000DataType from '../datatypes/codes';
-import Logix5000DatatypeNames from '../datatypes/names';
-import { DataType, DataTypeCodes, DataTypeNames } from '../../../core/datatypes';
+import { getBits } from '../../../../../utils.js';
+import Logix5000DataType from '../datatypes/codes.js';
+import Logix5000DatatypeNames from '../datatypes/names.js';
+import { DataType, DataTypeCodes, DataTypeNames } from '../../../core/datatypes/index.js';
 
 class SymbolType {
   constructor(code) {
@@ -36,6 +36,8 @@ class SymbolType {
     this.dataType = dataType;
   }
 }
+
+export { SymbolType };
 
 export default {
   SymbolType,

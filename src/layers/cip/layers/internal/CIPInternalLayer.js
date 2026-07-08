@@ -65,7 +65,7 @@ class CIPInternalLayer extends Layer {
 
       const attributes = [];
 
-      for (let i = 1; i < maxAttribute; i++) {
+      for (let i = 1; i <= maxAttribute; i++) {
         try {
           const path = EPath.Encode(true, [
             new EPath.Segments.Logical.ClassID(classCode),
@@ -112,7 +112,7 @@ class CIPInternalLayer extends Layer {
 
   handleData(data, info, context) {
     if (context && context.internal === false) {
-      const response = context.request.response(data);
+      const response = context.request.response(data, { current: 0 });
       // console.log(response);
       if (context.type === 'pccc') {
         this.forward(

@@ -1,6 +1,6 @@
-import CIPMetaObject from '../../../core/object';
-import CIPAttribute from '../../../core/attribute';
-import { DataType } from '../../../core/datatypes';
+import CIPMetaObject from '../../../core/object.js';
+import CIPAttribute from '../../../core/attribute.js';
+import { DataType } from '../../../core/datatypes/index.js';
 
 const InstanceAttribute = Object.freeze({
   StructureHandle: new CIPAttribute.Instance(1, 'StructureHandle', DataType.UINT), /** Calculated CRC value for members of the structure */

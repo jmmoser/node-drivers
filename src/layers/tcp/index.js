@@ -90,10 +90,14 @@ function connect(layer) {
     socket.once('error', (err) => {
       setConnectionState(layer, TCPStateCodes.Disconnected, err);
       layer.destroy(err);
+      /** a refused/failed connection emits 'error', never 'timeout' —
+       * the connect promise must still settle or connected() hangs */
+      resolve(false);
     });
 
     socket.once('close', () => {
       setConnectionState(layer, TCPStateCodes.Disconnected);
+      resolve(false);
     });
 
     socket.once('timeout', () => {
@@ -168,7 +172,7 @@ export default class TCPLayer extends Layer {
           connectTimeout: 500,
         });
 
-        if (await layer.connected()) { // eslint-disable-line no-await-in-loop
+        if (await connect(layer)) { // eslint-disable-line no-await-in-loop
           yield { host, port };
         }
 
@@ -179,7 +183,7 @@ export default class TCPLayer extends Layer {
 
   connected(callback) {
     return CallbackPromise(callback, async (resolver) => {
-      resolver.resolve(await this._connect);
+      resolver.resolve(this._connect != null ? await this._connect : false);
     });
   }
 
@@ -206,6 +210,11 @@ export default class TCPLayer extends Layer {
     this._disconnect = CallbackPromise(callback, async (resolver) => {
       if (this._connectionState === TCPStateCodes.Connecting) {
         setConnectionState(this, TCPStateCodes.Disconnected);
+        /** abort the in-flight handshake or the OS completes it later
+         * and the established socket leaks */
+        if (this.socket && !this.socket.destroyed) {
+          this.socket.destroy();
+        }
         resolver.resolve();
       } else if (this._connectionState === TCPStateCodes.Connected) {
         // console.log(`TCP layer queue size at disconnect: ${this.requestQueueSize()}`);

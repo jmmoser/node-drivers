@@ -37,20 +37,30 @@ function withTimeout(promise, label, ms = 1000) {
 }
 
 describe('Modbus TCP layer: spec example frames', () => {
-  it('readCoils 20-38 (spec 6.1)', async () => {
+  it('readCoils 20-38 unpacks 19 coil statuses LSB-first (spec 6.1)', async () => {
     const { transport, layer } = createStack();
     transport.reply(hex('0001 0000 0006 ff 01 03 cd 6b 05'));
     const value = await layer.readCoils(0x0013, 0x13);
     assert.deepEqual(transport.sent, [hex('0001 0000 0006 ff 01 0013 0013')]);
-    assert.deepEqual(value, [0xCD, 0x6B, 0x05]);
+    /** 0xCD, 0x6B, 0x05 unpack to the spec's coil statuses 20-38; the
+     * undefined pad bits of the last byte must not leak into the result */
+    assert.deepEqual(value, [
+      true, false, true, true, false, false, true, true,
+      true, true, false, true, false, true, true, false,
+      true, false, true,
+    ]);
   });
 
-  it('readDiscreteInputs 197-218 (spec 6.2)', async () => {
+  it('readDiscreteInputs 197-218 unpacks 22 input statuses (spec 6.2)', async () => {
     const { transport, layer } = createStack();
     transport.reply(hex('0001 0000 0006 ff 02 03 ac db 35'));
     const value = await layer.readDiscreteInputs(0x00C4, 0x16);
     assert.deepEqual(transport.sent, [hex('0001 0000 0006 ff 02 00c4 0016')]);
-    assert.deepEqual(value, [0xAC, 0xDB, 0x35]);
+    assert.deepEqual(value, [
+      false, false, true, true, false, true, false, true,
+      true, true, false, true, true, false, true, true,
+      true, false, true, false, true, true,
+    ]);
   });
 
   it('readHoldingRegisters 108-110 (spec 6.3)', async () => {
@@ -211,6 +221,47 @@ describe('Modbus TCP layer: framing', () => {
       await withTimeout(Promise.all([first, second]), 'coalesced responses'),
       [[1], [2]],
     );
+  });
+});
+
+describe('Modbus TCP layer: robustness', () => {
+  it('rejects a response whose byte count exceeds the received data', async () => {
+    const { transport, layer } = createStack();
+    /** byte count claims 6 data bytes but the frame only carries 1 —
+     * must reject, not crash the process with an out-of-range read */
+    transport.reply(hex('0001 0000 0004 ff 03 06 2b'));
+    await assert.rejects(
+      withTimeout(layer.readHoldingRegisters(0x006B, 3), 'malformed byte count'),
+      /Malformed/,
+    );
+  });
+
+  it('rejects an exception response missing its exception code', async () => {
+    const { transport, layer } = createStack();
+    transport.reply(hex('0001 0000 0002 ff 83'));
+    await assert.rejects(
+      withTimeout(layer.readHoldingRegisters(0, 1), 'empty exception frame'),
+      /Malformed/,
+    );
+  });
+
+  it('rejects with a timeout when the server never responds', async () => {
+    const { transport, layer } = createStack({ timeout: 50 });
+    transport.ignoreNextRequest();
+    await assert.rejects(
+      withTimeout(layer.readHoldingRegisters(0, 1), 'unanswered request'),
+      /Timeout/,
+    );
+  });
+
+  it('honors a per-request unitID of 0 (broadcast)', async () => {
+    const { transport, layer } = createStack();
+    transport.reply(hex('0001 0000 0005 00 03 02 0007'));
+    const value = await withTimeout(new Promise((resolve, reject) => {
+      layer._send(hex('03 0000 0001'), { unitID: 0 }, { resolve, reject });
+    }), 'unitID 0 request');
+    assert.deepEqual(transport.sent, [hex('0001 0000 0006 00 03 0000 0001')]);
+    assert.deepEqual(value, [7]);
   });
 });
 
