@@ -3,6 +3,7 @@ import Layer from '../../../Layer.js';
 import EIPPacket from './packet.js';
 
 import CPF from './cpf.js';
+import { ConnectionStates, createStateMachine } from '../../../connectionState.js';
 
 const {
   CommandCodes,
@@ -31,21 +32,36 @@ function EncodeSendUnitDataMessage(
   return EIPPacket.Encode(CommandCodes.SendUnitData, sessionHandle, 0, null, 0, dataPacket);
 }
 
-function setConnectionState(layer, state) {
-  // console.log(`EIP connection state: ${layer._connectionState} => ${state}`);
-  layer._connectionState = state;
+/** Session states: Disconnected (no session), Connecting (RegisterSession
+ * in flight), Connected (session registered) */
+const SessionStates = ConnectionStates;
+
+const setConnectionState = createStateMachine('EIP layer', {
+  [SessionStates.Disconnected]: [SessionStates.Connecting],
+  [SessionStates.Connecting]: [SessionStates.Connected, SessionStates.Disconnected],
+  [SessionStates.Connected]: [SessionStates.Disconnected],
+});
+
+function flushConnectCallbacks(layer, error) {
+  const connectCallbacks = layer._connectCallbacks;
+  layer._connectCallbacks = [];
+  connectCallbacks.forEach((connectCallback) => connectCallback(error));
 }
 
 function cleanup(layer) {
   layer._sessionHandle = 0;
+  /** replies to abandoned registrations will never arrive on a new transport */
+  layer._staleRegistrations = 0;
   layer._userCallbacks.clear();
   layer._unconnectedContexts.clear();
   layer._connectedContexts.clear();
-  setConnectionState(layer, 0);
+  setConnectionState(layer, SessionStates.Disconnected);
 }
 
 function sendUserRequests(self) {
-  if (self._connectionState === 0 || self._connectionState === 2) {
+  /** user commands do not need a session, but hold them while a
+   * session is being registered so they carry its handle */
+  if (self._connectionState !== SessionStates.Connecting) {
     // let buffer;
     let request;
     while ((request = self._userRequests.shift())) { // eslint-disable-line no-cond-assign
@@ -67,16 +83,37 @@ function setupCallbacks(self) {
   self._callbacks.set(CommandCodes.RegisterSession, (packet) => {
     // console.log('RegisterSession');
     // console.log(packet);
+    if (self._staleRegistrations > 0) {
+      /** reply to a RegisterSession abandoned by disconnect(); replies
+       * arrive in request order, so it is the oldest one outstanding */
+      self._staleRegistrations -= 1;
+      if (packet.status.code === 0) {
+        self.send(
+          EIPPacket.UnregisterSessionRequest(packet.sessionHandle, self._context),
+          null,
+          true,
+        );
+      }
+      return;
+    }
+
+    if (self._connectionState !== SessionStates.Connecting) {
+      return;
+    }
+
     if (packet.status.code === 0) {
-      setConnectionState(self, 2);
+      setConnectionState(self, SessionStates.Connected);
       self._sessionHandle = packet.sessionHandle;
-      const connectCallbacks = self._connectCallbacks;
-      self._connectCallbacks = [];
-      connectCallbacks.forEach((connectCallback) => connectCallback());
+      flushConnectCallbacks(self);
       self.sendNextMessage();
       sendUserRequests(self);
     } else {
-      setConnectionState(self, 0);
+      /** the device refused the session: fail every waiting caller
+       * instead of leaving them, and the queued requests, pending */
+      self.destroy(new InfoError(
+        packet,
+        packet.status.description || `EIP RegisterSession error code ${packet.status.code}`,
+      ));
     }
   });
 
@@ -146,6 +183,16 @@ function setupCallbacks(self) {
   });
 }
 
+function removeUserCallback(self, command, callback) {
+  const callbacks = self._userCallbacks.get(command);
+  if (callbacks) {
+    const index = callbacks.indexOf(callback);
+    if (index >= 0) {
+      callbacks.splice(index, 1);
+    }
+  }
+}
+
 function incrementContext(self) {
   for (let i = 0; i < 8; i++) {
     self._context[i] = (self._context[i] + 1) % 0x100;
@@ -161,7 +208,7 @@ function queueUserRequest(self, message, info, callback) {
     if (!self._userCallbacks.has(command)) {
       self._userCallbacks.set(command, []);
     }
-    self._userCallbacks.get(command).push(callback.bind(self));
+    self._userCallbacks.get(command).push(callback);
   }
 
   self._userRequests.push({
@@ -195,8 +242,9 @@ export default class EIPLayer extends Layer {
     this._context = Buffer.alloc(8);
     this._userRequests = [];
     this._connectCallbacks = [];
+    this._staleRegistrations = 0;
 
-    setConnectionState(this, 0);
+    this._connectionState = SessionStates.Disconnected;
     setupCallbacks(this);
 
     this.setDefragger(EIPPacket.IsComplete, EIPPacket.Length);
@@ -272,8 +320,10 @@ export default class EIPLayer extends Layer {
     return CallbackPromise(callback, (resolver) => {
       let timeoutHandler;
 
-      function finalizer(error, reply) {
+      const finalizer = (error, reply) => {
         clearTimeout(timeoutHandler);
+        /** stop collecting: no later reply may reach this call */
+        removeUserCallback(this, CommandCodes.ListIdentity, internalListIdentityReplyHandler); // eslint-disable-line no-use-before-define
         if (error) {
           resolver.reject(error, reply);
         } else {
@@ -298,7 +348,7 @@ export default class EIPLayer extends Layer {
             resolver.resolve(null);
           }
         }
-      }
+      };
 
       timeoutHandler = setTimeout(finalizer, startingTimeout);
 
@@ -308,7 +358,7 @@ export default class EIPLayer extends Layer {
         } else if (Array.isArray(reply.items) && reply.items.length === 1) {
           identities.push(reply.items[0]);
           clearTimeout(timeoutHandler);
-          if (hostsSpecified) {
+          if (hostsSpecified && identities.length < hosts.length) {
             timeoutHandler = setTimeout(finalizer, resetTimeout);
             /** keep this callback registered for replies from the remaining hosts */
             return true;
@@ -317,6 +367,7 @@ export default class EIPLayer extends Layer {
         } else {
           finalizer('Unexpected result', reply);
         }
+        return false;
       }
 
       hosts.forEach((host, idx) => {
@@ -341,38 +392,44 @@ export default class EIPLayer extends Layer {
   }
 
   // TODO: can this use CallbackPromise?
+  /** callback(error) is called once the session is registered or has failed */
   connect(callback) {
-    if (this._connectionState === 2) {
+    if (this._connectionState === SessionStates.Connected) {
       if (callback) callback();
       return;
     }
     /** queue, don't overwrite — a connect while RegisterSession is in
      * flight must not silently drop the earlier caller's callback */
     if (callback) this._connectCallbacks.push(callback);
-    if (this._connectionState > 0) return;
-    setConnectionState(this, 1);
+    if (this._connectionState === SessionStates.Connecting) return;
+    setConnectionState(this, SessionStates.Connecting);
     this.send(EIPPacket.RegisterSessionRequest(this._context), null, true);
   }
 
   disconnect(callback) {
     return CallbackPromise(callback, (resolver) => {
-      if (this._connectionState !== 0) {
+      if (this._connectionState === SessionStates.Connected) {
         this.send(
           EIPPacket.UnregisterSessionRequest(this._sessionHandle, this._context),
           null,
           true,
         );
-        setConnectionState(this, 0);
+        this._sessionHandle = 0;
+      } else if (this._connectionState === SessionStates.Connecting) {
+        /** no handle yet: unregister the session when its reply arrives */
+        this._staleRegistrations += 1;
+        flushConnectCallbacks(this, new Error('EIP session disconnected before registration completed'));
       }
+      setConnectionState(this, SessionStates.Disconnected);
       resolver.resolve();
     });
   }
 
   sendNextMessage() {
     if (this.hasRequest()) {
-      if (this._connectionState === 0) {
+      if (this._connectionState === SessionStates.Disconnected) {
         this.connect();
-      } else if (this._connectionState === 2) {
+      } else if (this._connectionState === SessionStates.Connected) {
         const request = this.getNextRequest();
 
         if (request) {
@@ -415,15 +472,21 @@ export default class EIPLayer extends Layer {
     const { command } = packet;
 
     if (this._userCallbacks.has(command)) {
+      /** user commands carry no request identifier, and replies arrive in
+       * request order, so each reply belongs to the oldest waiting caller.
+       * That caller stays first in line while it returns true. */
       const callbacks = this._userCallbacks.get(command);
-      // this._userCallbacks.delete(command);
-      // callbacks.forEach(callback => {
-      //   callback.apply(this, [packet]);
-      // });
+      const callback = callbacks[0];
+      if (callback == null) {
+        console.log('EIP Error: Unexpected reply, no request waiting:', packet);
+        return;
+      }
 
       const error = packet.status.code !== 0 ? packet.status.description || `EIP error code ${packet.status.code}` : null;
 
-      this._userCallbacks.set(command, callbacks.filter((callback) => callback(error, packet)));
+      if (callback(error, packet) !== true) {
+        removeUserCallback(this, command, callback);
+      }
     } else if (this._callbacks.has(command)) {
       this._callbacks.get(command)(packet);
     } else {
@@ -435,9 +498,12 @@ export default class EIPLayer extends Layer {
   }
 
   handleDestroy(error) {
-    this._userCallbacks.forEach((callbacks) => {
-      callbacks.forEach((cb) => cb(error));
-    });
+    const userCallbacks = [...this._userCallbacks.values()].flat();
+    this._userCallbacks.clear();
+    /** their callbacks are failed below, so never send them later */
+    this._userRequests.length = 0;
+    userCallbacks.forEach((cb) => cb(error || 'EIP layer destroyed'));
+    flushConnectCallbacks(this, error || new Error('EIP layer destroyed'));
     cleanup(this);
   }
 }

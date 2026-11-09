@@ -34,6 +34,11 @@ function internalDestroy(layer, error) {
 
   layer.clearRequestQueue();
 
+  /** a partial frame from the old stream would corrupt framing of the next */
+  if (layer._defragger != null) { // eslint-disable-line no-underscore-dangle
+    layer._defragger.reset(); // eslint-disable-line no-underscore-dangle
+  }
+
   layer.handleDestroy(error);
 }
 
@@ -63,8 +68,6 @@ export default class Layer extends EventEmitter {
     this.__contextToCallback = new Map();
     this.__contextToCallbackTimeouts = new Map();
     this.__idContext = new Map();
-
-    this._open = 0;
 
     if (lowerLayer != null) {
       if (lowerLayer.handlesForwarding !== true) {

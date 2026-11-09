@@ -1,41 +1,33 @@
 import net from 'net';
 import Layer from '../Layer.js';
 import { CallbackPromise } from '../../utils.js';
+import { ConnectionStates, createStateMachine } from '../connectionState.js';
 
 const LOG = false;
 
-const TCPStateCodes = {
-  Disconnecting: -1,
-  Disconnected: 0,
-  Connecting: 1,
-  Connected: 2,
-};
+const TCPStateCodes = ConnectionStates;
 
-function setConnectionState(layer, state) {
-  const previousState = layer._connectionState;
+const setConnectionState = createStateMachine('TCP layer', {
+  [TCPStateCodes.Disconnected]: [TCPStateCodes.Connecting],
+  [TCPStateCodes.Connecting]: [TCPStateCodes.Connected, TCPStateCodes.Disconnected],
+  [TCPStateCodes.Connected]: [TCPStateCodes.Disconnecting, TCPStateCodes.Disconnected],
+  [TCPStateCodes.Disconnecting]: [TCPStateCodes.Disconnected],
+});
 
-  if (previousState !== state) {
-    layer._connectionState = state;
+/** Settles a graceful disconnect, then wakes any requests queued meanwhile */
+function finishDisconnect(layer) {
+  if (layer._connectionState === TCPStateCodes.Disconnecting) {
+    setConnectionState(layer, TCPStateCodes.Disconnected);
+  }
 
-    if (previousState === TCPStateCodes.Connecting && state === TCPStateCodes.Disconnecting) {
-      throw new Error('TCP layer error: attempted to immediately transition from connecting to disconnecting');
-    }
-
-    if (previousState === TCPStateCodes.Connected && state === TCPStateCodes.Connecting) {
-      throw new Error('TCP layer error: attempted to immediately transition from connected to connecting');
-    }
-
-    if (previousState === TCPStateCodes.Disconnected && state === TCPStateCodes.Connected) {
-      throw new Error('TCP layer error: attempted to immediately transition from disconnected to connected');
-    }
-
-    if (previousState === TCPStateCodes.Disconnected && state === TCPStateCodes.Disconnecting) {
-      throw new Error('TCP layer error: attempted to immediately transition from disconnected to disconnecting');
-    }
-
-    if (previousState === TCPStateCodes.Disconnecting && state === TCPStateCodes.Connected) {
-      throw new Error('TCP layer error: attempted to immediately transition from disconnecting to connected');
-    }
+  const resolveDisconnect = layer._resolveDisconnect;
+  layer._resolveDisconnect = null;
+  layer._disconnect = null;
+  if (resolveDisconnect) {
+    resolveDisconnect();
+    /** deferred so close() can clear the queue first, otherwise
+     * requests queued while disconnecting would reconnect */
+    setImmediate(() => layer.sendNextMessage());
   }
 }
 
@@ -49,15 +41,14 @@ function connect(layer) {
   }
 
   if (layer._connectionState === TCPStateCodes.Disconnecting) {
-    /** currently disconnecting */
+    /** currently disconnecting, queued requests are sent once it finishes */
     return false;
   }
 
   layer._connect = new Promise((resolve) => {
     const socket = net.createConnection(layer.options, () => {
-      // console.log('connected');
       /** sanity check to make sure connection state has not changed since started connecting */
-      if (layer._connectionState === TCPStateCodes.Connecting) {
+      if (layer.socket === socket && layer._connectionState === TCPStateCodes.Connecting) {
         setConnectionState(layer, TCPStateCodes.Connected);
         socket.setTimeout(layer.options.timeout);
         resolve(true);
@@ -66,6 +57,9 @@ function connect(layer) {
         resolve(false);
       }
     });
+
+    /** a previous socket's late events must not change the state of this one */
+    const isCurrent = () => layer.socket === socket;
 
     layer.socket = socket;
 
@@ -83,32 +77,39 @@ function connect(layer) {
         console.log('');
       }
 
+      if (!isCurrent()) return;
       layer.emit('data', data);
       layer.forward(data);
     });
 
     socket.once('error', (err) => {
-      setConnectionState(layer, TCPStateCodes.Disconnected, err);
-      layer.destroy(err);
       /** a refused/failed connection emits 'error', never 'timeout' —
        * the connect promise must still settle or connected() hangs */
       resolve(false);
+      if (!isCurrent()) return;
+      setConnectionState(layer, TCPStateCodes.Disconnected);
+      layer.destroy(err);
     });
 
     socket.once('close', () => {
-      setConnectionState(layer, TCPStateCodes.Disconnected);
       resolve(false);
+      if (!isCurrent()) return;
+      setConnectionState(layer, TCPStateCodes.Disconnected);
+      finishDisconnect(layer);
     });
 
     socket.once('timeout', () => {
-      setConnectionState(layer, TCPStateCodes.Disconnected);
-      layer.destroy(socket.connecting ? 'TCP layer connect timeout' : 'TCP layer write timeout');
       if (socket.connecting) {
         resolve(false);
       }
+      if (!isCurrent()) return;
+      setConnectionState(layer, TCPStateCodes.Disconnected);
+      layer.destroy(socket.connecting ? 'TCP layer connect timeout' : 'TCP layer write timeout');
     });
 
     socket.once('end', () => {
+      /** the peer's FIN answering our own end() is part of a graceful disconnect */
+      if (!isCurrent() || layer._connectionState !== TCPStateCodes.Connected) return;
       /** Might not be an error, assume it is an error until use case arrises */
       setConnectionState(layer, TCPStateCodes.Disconnected);
       layer.destroy('TCP layer socket received FIN while connected');
@@ -151,7 +152,6 @@ export default class TCPLayer extends Layer {
     this.options = opts;
 
     this._connectionState = TCPStateCodes.Disconnected;
-    this._desiredState = TCPStateCodes.Disconnected;
   }
 
   handleDefaultOptions(defaultOptions) {
@@ -188,51 +188,37 @@ export default class TCPLayer extends Layer {
   }
 
   disconnect(callback) {
-    const hasCallback = typeof callback === 'function';
-
-    if (this._connectionState === TCPStateCodes.Disconnected) {
-      if (hasCallback) {
-        setImmediate(callback);
-      }
-      return undefined;
-    }
-
-    if (this._connectionState === TCPStateCodes.Disconnecting) {
-      if (hasCallback) {
-        if (!Array.isArray(this._additionalDisconnectCallbacks)) {
-          this._additionalDisconnectCallbacks = [];
-        }
-        this._additionalDisconnectCallbacks.push(callback);
-      }
-      return this._disconnect;
-    }
-
-    this._disconnect = CallbackPromise(callback, async (resolver) => {
-      if (this._connectionState === TCPStateCodes.Connecting) {
-        setConnectionState(this, TCPStateCodes.Disconnected);
-        /** abort the in-flight handshake or the OS completes it later
-         * and the established socket leaks */
-        if (this.socket && !this.socket.destroyed) {
-          this.socket.destroy();
-        }
-        resolver.resolve();
-      } else if (this._connectionState === TCPStateCodes.Connected) {
-        // console.log(`TCP layer queue size at disconnect: ${this.requestQueueSize()}`);
-        setConnectionState(this, TCPStateCodes.Disconnecting);
-        this.socket.end(() => {
+    return CallbackPromise(callback, async (resolver) => {
+      switch (this._connectionState) {
+        case TCPStateCodes.Connecting:
           setConnectionState(this, TCPStateCodes.Disconnected);
-          resolver.resolve();
-        });
-      } else {
-        throw new Error(`Unexpected state while disconnecting: ${this._connectionState}`);
+          /** abort the in-flight handshake or the OS completes it later
+           * and the established socket leaks */
+          if (this.socket && !this.socket.destroyed) {
+            this.socket.destroy();
+          }
+          break;
+        case TCPStateCodes.Connected:
+          setConnectionState(this, TCPStateCodes.Disconnecting);
+          this._disconnect = new Promise((resolve) => {
+            this._resolveDisconnect = resolve;
+          });
+          this.socket.end(() => finishDisconnect(this));
+          await this._disconnect;
+          break;
+        case TCPStateCodes.Disconnecting:
+          /** every concurrent caller settles when the one disconnect does */
+          await this._disconnect;
+          break;
+        default:
+          break;
       }
+      resolver.resolve();
     });
-
-    return this._disconnect;
   }
 
   sendNextMessage() {
-    if (this._connectionState === 2) {
+    if (this._connectionState === TCPStateCodes.Connected) {
       const request = this.getNextRequest();
       if (request) {
         if (LOG) {
@@ -248,7 +234,7 @@ export default class TCPLayer extends Layer {
           setImmediate(() => this.sendNextMessage());
         });
       }
-    } else if (this._connectionState === 0) {
+    } else if (this._connectionState === TCPStateCodes.Disconnected) {
       /** Reconnect only when there is something to send, otherwise a
        * deferred wakeup after close() would reopen the connection */
       if (this.hasRequest()) {
@@ -265,10 +251,11 @@ export default class TCPLayer extends Layer {
       removeSocketListeners(this.socket);
     }
 
-    this._disconnect = null;
-    if (Array.isArray(this._additionalDisconnectCallbacks)) {
-      this._additionalDisconnectCallbacks.forEach((callback) => callback());
-      this._additionalDisconnectCallbacks.length = 0;
-    }
+    /** the socket is gone and its listeners with it, so no 'close' event
+     * will move the state for us */
+    setConnectionState(this, TCPStateCodes.Disconnected);
+
+    /** settle a graceful disconnect whose socket was torn down first */
+    finishDisconnect(this);
   }
 }

@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 
 import Logix5000 from '../../src/layers/cip/layers/Logix5000/index.js';
@@ -306,6 +306,123 @@ describe('Logix5000: readTemplate', () => {
     assert.equal(readRequests[1].readUInt32LE(6), 40000);
     assert.equal(readRequests[1].readUInt16LE(10), 25580);
 
+    await transport.close();
+  });
+});
+
+describe('CIP connection layer: connection state', () => {
+  it('recovers when a Forward Close is never answered', async () => {
+    const { transport, responder, layer } = createStack();
+    responder.replyToConnected(hex('cc 00 0000 c400 39300000'));
+    await withTimeout(layer.readTag('TagA', 1), 'readTag');
+
+    const connectionLayer = layer.lowerLayer;
+    responder.answerForwardClose = false;
+
+    mock.timers.enable({ apis: ['setTimeout'] });
+    let disconnected;
+    try {
+      disconnected = connectionLayer.disconnect();
+      assert.equal(connectionLayer._connectionState, -1);
+      mock.timers.tick(5000);
+    } finally {
+      mock.timers.reset();
+    }
+    await disconnected;
+
+    /** the timeout resolved disconnect() but left the layer disconnecting,
+     * where it could never connect again */
+    assert.equal(connectionLayer._connectionState, 0);
+
+    responder.answerForwardClose = true;
+    responder.replyToConnected(hex('cc 00 0000 c400 2a000000'));
+    assert.equal(await withTimeout(layer.readTag('TagA', 1), 'readTag after disconnect'), 42);
+    assert.equal(responder.forwardOpenRequests.length, 2);
+    await transport.close();
+  });
+
+  it('keeps duplicate-connection recovery available after a failed attempt', async () => {
+    const { transport, layer } = createStack();
+    const connectionLayer = layer.lowerLayer;
+
+    /** Forward Open fails: general status 0x01, extended 0x0100 (duplicate) */
+    transport.onNextRequest((message, t, request) => {
+      t.deliver(hex('d4 00 01 01 0001'), null, request.context);
+    });
+    let forwardClose;
+    transport.onNextRequest((message, t, request) => { forwardClose = request; });
+
+    const first = layer.readTag('TagA', 1).catch((err) => err);
+    await new Promise(setImmediate);
+    const second = layer.readTag('TagA', 1).catch((err) => err);
+    await new Promise(setImmediate);
+
+    assert.equal(forwardClose.message[0], 0x4E, 'stale connection should be closed');
+    /** the layer dropped to disconnected while closing, so the second read
+     * opened a competing connection */
+    assert.equal(connectionLayer._connectionState, 1, 'still connecting while closing');
+    assert.equal(transport.sent.filter((message) => message[0] === 0x54).length, 1);
+
+    /** Forward Close fails: the layer is destroyed */
+    transport.deliver(hex('ce 00 01 00'), null, forwardClose.context);
+    assert.ok((await first) instanceof Error);
+    assert.ok((await second) instanceof Error);
+
+    /** the flag survived destroy() and disabled recovery for good */
+    assert.equal(connectionLayer._closeAndReconnect, false);
+    await transport.close();
+  });
+
+  it('sends unconnected requests unconnected while a connection is open', async () => {
+    const { transport, responder, layer } = createStack();
+    responder.replyToConnected(hex('cc 00 0000 c400 39300000'));
+    await withTimeout(layer.readTag('TagA', 1), 'readTag');
+
+    let captured;
+    transport.onNextRequest((message, t, request) => {
+      captured = request;
+      t.deliver(hex('81 00 00 00'), null, request.context);
+    });
+
+    const path = EPath.Encode(true, [
+      new EPath.Segments.Logical.ClassID(0x01),
+      new EPath.Segments.Logical.InstanceID(0x01),
+    ]);
+    await withTimeout(layer.sendRequest(false, new CIPRequest(0x01, path)), 'unconnected request');
+
+    /** it was wrapped in the connection (sequence count + connection ID) */
+    assert.equal(captured.info.connectionID, undefined);
+    assert.equal(captured.message[0], 0x01, 'no sequence count prefix');
+    await transport.close();
+  });
+});
+
+describe('Logix5000: symbol listing state', () => {
+  it('rejects listTags when every retry fails instead of ending quietly', async () => {
+    const { transport, responder, layer } = createStack();
+    /** general status 0x05: path destination unknown, for every attempt */
+    for (let i = 0; i < 6; i++) {
+      responder.replyToConnected(hex('d5 00 05 00'));
+    }
+
+    /** giving up looked exactly like reaching the end of the list */
+    await assert.rejects(withTimeout((async () => {
+      for await (const tag of layer.listTags()) { // eslint-disable-line no-unused-vars
+        /** no tags expected */
+      }
+    })(), 'listTags'));
+    await transport.close();
+  });
+
+  it('drops cached symbol information when the layer is destroyed', async () => {
+    const { transport, responder, layer } = createStack();
+    responder.replyToConnected(hex('d5 00 00 00 0a000000 0400 54616741'));
+    await assert.rejects(withTimeout(layer.writeTag('Missing', 5), 'writeTag', 3000));
+    assert.equal(layer._tagNameToSymbolInstanceID.get('TagA'), 0x0A);
+
+    /** e.g. the connection dropped; the controller may have a new program */
+    layer.lowerLayer.destroy('connection lost');
+    assert.equal(layer._tagNameToSymbolInstanceID.size, 0);
     await transport.close();
   });
 });

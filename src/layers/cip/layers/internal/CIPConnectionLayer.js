@@ -9,6 +9,21 @@ import EPath from '../../core/epath/index.js';
 import EIPLayer from '../EIP/index.js';
 import TCPLayer from '../../../tcp/index.js';
 import UDPLayer from '../../../udp/index.js';
+import { ConnectionStates, createStateMachine } from '../../../connectionState.js';
+
+const setConnectionState = createStateMachine('CIP connection layer', {
+  [ConnectionStates.Disconnected]: [ConnectionStates.Connecting],
+  [ConnectionStates.Connecting]: [
+    ConnectionStates.Connected,
+    ConnectionStates.Disconnected,
+    ConnectionStates.Disconnecting,
+  ],
+  [ConnectionStates.Connected]: [ConnectionStates.Disconnecting, ConnectionStates.Disconnected],
+  [ConnectionStates.Disconnecting]: [ConnectionStates.Disconnected],
+});
+
+/** How long to wait for a Forward Close reply before giving up on it */
+const DISCONNECT_TIMEOUT = 5000;
 
 const LARGE_FORWARD_OPEN_SERVICE = ConnectionManager.ServiceCodes.LargeForwardOpen;
 
@@ -189,7 +204,7 @@ function startResend(self, lastMessage) {
  *  unconnected, internal => callback
  *  unconnected, external => context
  */
-function send(self, connected, internal, requestObj, contextOrCallback) {
+function send(self, connected, internal, requestObj, contextOrCallback, timeout) {
   let context;
   let callback;
   if (internal && typeof contextOrCallback === 'function') {
@@ -222,7 +237,7 @@ function send(self, connected, internal, requestObj, contextOrCallback) {
     startResend(self, buffer);
   } else {
     if (internal && callback) {
-      context = self.contextCallback(callback, (c) => `iu${c}`);
+      context = self.contextCallback(callback, (c) => `iu${c}`, timeout);
     }
 
     self.send(request, null, false, {
@@ -309,24 +324,29 @@ function handleConnectedMessage(self, data, info) {
 }
 
 function connect(self) {
-  if (self._connectionState === 1 || self._connectionState === 2) {
+  if (
+    self._connectionState === ConnectionStates.Connecting
+    || self._connectionState === ConnectionStates.Connected
+  ) {
     return self._connect;
   }
 
-  if (self._connectionState === -1) {
+  if (self._connectionState === ConnectionStates.Disconnecting) {
+    /** queued requests are sent once the disconnect finishes */
     return undefined;
   }
 
-  self._connectionState = 1;
+  setConnectionState(self, ConnectionStates.Connecting);
 
   const request = ConnectionManager.ForwardOpen(self, true);
 
   self._connect = new Promise((resolve) => {
     send(self, false, true, request, async (err, res) => {
-      if (err) {
-        self._connectionState = 0;
+      /** a disconnect() or destroy() since this Forward Open was sent owns the state now */
+      const stillConnecting = self._connectionState === ConnectionStates.Connecting;
 
-        if (res) {
+      if (err) {
+        if (stillConnecting && res) {
           if (
             res.service.code === LARGE_FORWARD_OPEN_SERVICE
             && res.status.code === GeneralStatusCodes.ServiceNotSupported
@@ -340,6 +360,7 @@ function connect(self) {
               self.networkConnectionParameters,
             );
             console.log('Large forward open not supported. Attempting normal forward open');
+            setConnectionState(self, ConnectionStates.Disconnected);
             connect(self);
           } else {
             // console.log('CIPConnection Err: Status is not successful or service is not correct');
@@ -350,26 +371,32 @@ function connect(self) {
               && Buffer.compare(res.status.extended, Buffer.from([0x00, 0x01])) === 0
               && !self._closeAndReconnect
             ) {
+              /** duplicate connection: close the stale one, then retry. Stay
+               * connecting meanwhile so no second Forward Open is sent. */
               self._closeAndReconnect = true;
               const closeRequest = ConnectionManager.ForwardClose(self);
 
               send(self, false, true, closeRequest, (closeErr, closeRes) => {
-                if (closeErr || closeRes == null || closeRes.status.code !== 0) {
+                if (self._connectionState !== ConnectionStates.Connecting) {
+                  /** disconnected or destroyed while closing the stale connection */
+                  self._closeAndReconnect = false;
+                } else if (closeErr || closeRes == null || closeRes.status.code !== 0) {
                   console.log('CIP connection unsuccessful close', closeErr, closeRes);
                   self.destroy('Forward Close error');
                 } else {
                   self._closeAndReconnect = false;
-                  self._connectionState = 0;
+                  setConnectionState(self, ConnectionStates.Disconnected);
                   connect(self);
                 }
               });
             } else {
               self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
             }
-            // self.destroy(`${self.name} error: ${res.status.name}, ${res.status.description}`);
           }
+        } else if (stillConnecting) {
+          setConnectionState(self, ConnectionStates.Disconnected);
         }
-      } else if (self._connectionState === 1) {
+      } else if (stillConnecting) {
         const reply = res.value;
         self._OtoTConnectionID = reply.OtoTNetworkConnectionID;
         self._TtoOConnectionID = reply.TtoONetworkConnectionID;
@@ -389,7 +416,7 @@ function connect(self) {
         };
 
         // await self.readAttributes();
-        self._connectionState = 2;
+        setConnectionState(self, ConnectionStates.Connected);
 
         // console.log('CIP Connection connected');
         self.sendNextMessage();
@@ -398,7 +425,7 @@ function connect(self) {
     });
   });
 
-  return undefined;
+  return self._connect;
 }
 
 class CIPConnectionLayer extends Layer {
@@ -414,46 +441,53 @@ class CIPConnectionLayer extends Layer {
 
     mergeOptionsWithDefaults(this, options);
 
-    this._connectionState = 0;
+    this._connectionState = ConnectionStates.Disconnected;
     this._sequenceCount = 0;
   }
 
   disconnect() {
-    if (this._connectionState === 0) {
+    if (this._connectionState === ConnectionStates.Disconnected) {
       return undefined;
     }
 
-    if (this._connectionState === -1) {
+    if (this._connectionState === ConnectionStates.Disconnecting) {
       return this._disconnect;
     }
 
-    this._connectionState = -1;
+    setConnectionState(this, ConnectionStates.Disconnecting);
 
     stopResend(this);
 
     this._disconnect = new Promise((resolve) => {
-      const disconnectTimeout = setTimeout(() => {
-        resolve();
-      }, 5000);
-
       const request = ConnectionManager.ForwardClose(this);
 
       send(this, false, true, request, (err, res) => {
-        clearTimeout(disconnectTimeout);
-        if (err || res == null || res.status.code !== 0) {
+        if (res == null) {
+          /** no reply (timeout, or the transport went away): the target
+           * drops the connection on its own once it times out */
+          console.log('CIP connection close got no reply', err);
+        } else if (err || res.status.code !== 0) {
           console.log('CIP connection unsuccessful close', err, res);
           this.destroy('Forward Close error');
         }
-        this._connectionState = 0;
+
+        /** always leave disconnecting, or nothing can connect again */
+        setConnectionState(this, ConnectionStates.Disconnected);
+        this.sendInfo = null;
+        this._disconnect = null;
         resolve();
-      });
+
+        /** deferred so close() can clear the queue first, otherwise
+         * requests queued while disconnecting would reconnect */
+        setImmediate(() => this.sendNextMessage());
+      }, DISCONNECT_TIMEOUT);
     });
 
     return this._disconnect;
   }
 
   sendNextMessage() {
-    if (this._connectionState === 0) {
+    if (this._connectionState === ConnectionStates.Disconnected) {
       const peek = this.getNextRequest(true);
       if (peek && peek.info) {
         if (peek.info.connected === true) {
@@ -464,14 +498,19 @@ class CIPConnectionLayer extends Layer {
           setImmediate(() => this.sendNextMessage());
         }
       }
-    } else if (this._connectionState === 2) {
+    } else if (this._connectionState === ConnectionStates.Connected) {
       const request = this.getNextRequest();
 
       if (request) {
-        if (request.context == null) {
-          throw new Error('CIP Connection Error: Connected messages must include a context');
+        if (request.info.connected === true) {
+          if (request.context == null) {
+            throw new Error('CIP Connection Error: Connected messages must include a context');
+          }
+          send(this, true, false, request.message, request.context);
+        } else {
+          /** honor the request's own choice of unconnected messaging */
+          send(this, false, false, request.message, request.context);
         }
-        send(this, true, false, request.message, request.context);
         setImmediate(() => this.sendNextMessage());
       }
     }
@@ -489,8 +528,9 @@ class CIPConnectionLayer extends Layer {
 
   handleDestroy() {
     stopResend(this);
-    this._connectionState = 0;
+    setConnectionState(this, ConnectionStates.Disconnected);
     this._sequenceCount = 0;
+    this._closeAndReconnect = false;
     this.sendInfo = null;
   }
 }

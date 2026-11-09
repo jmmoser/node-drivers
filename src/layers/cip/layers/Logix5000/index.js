@@ -407,6 +407,14 @@ function scopedGenerator(...scopeArgs) {
   return (...parts) => preface + parts.join(separator);
 }
 
+function resetCaches(layer) {
+  layer._highestListedSymbolInstanceIDs = new Map();
+  layer._tagNameToSymbolInstanceID = new Map();
+  layer._templateInstanceAttributes = new Map();
+  layer._templates = new Map();
+  layer._tags = new Map();
+}
+
 async function getSymbolInstanceID(layer, scope, tag) {
   let tagName;
   switch (typeof tag) {
@@ -524,6 +532,7 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
   const data = encodeAttributes(attributes);
 
   let retry = 0;
+  let lastError;
 
   while (true) {
     const path = encodeFullSymbolPath(scope, instanceID);
@@ -536,7 +545,7 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
       } catch (err) {
         // console.log(instanceID, path, data)
         retry++;
-        console.log(err);
+        lastError = err;
       }
 
       if (reply) {
@@ -564,7 +573,8 @@ async function* listTags(layer, attributes, scope, instance, shouldGroup, modifi
         timeout = timeout > MAX_TIMEOUT ? MAX_TIMEOUT : timeout;
       }
     } else {
-      break;
+      /** giving up must not look like reaching the end of the list */
+      throw lastError;
     }
   }
 }
@@ -686,11 +696,7 @@ export default class Logix5000 extends CIPLayer {
 
     this.options = options;
 
-    this._highestListedSymbolInstanceIDs = new Map();
-    this._tagNameToSymbolInstanceID = new Map();
-    this._templateInstanceAttributes = new Map();
-    this._templates = new Map();
-    this._tags = new Map();
+    resetCaches(this);
 
     // this._controllerAttributes = null;
 
@@ -698,17 +704,19 @@ export default class Logix5000 extends CIPLayer {
     // this.sendRequest(false, )
   }
 
-  // async resetAllSaved(layer) {
-  //   layer._tagNameToSymbolInstanceID = new Map();
-  //   layer._templates = new Map();
-  //   layer._tags = new Map();
-  //   layer._templateInstanceAttributes = new Map();
-  //   layer._highestListedSymbolInstanceID = -1;
+  /**
+   * Symbol and template information is cached as it is learned. The
+   * cache is dropped whenever the layer is destroyed (e.g. the connection
+   * is lost); call this after the controller's program has changed.
+   */
+  clearCache() {
+    resetCaches(this);
+  }
 
-  //   if (layer._db) {
-  //     await layer._db.clear();
-  //   }
-  // }
+  handleDestroy(error) {
+    resetCaches(this);
+    super.handleDestroy(error);
+  }
 
   // async setControllerAttributes(layer, attributes, save) {
   //   if (layer._controllerAttributes) {
@@ -1094,10 +1102,16 @@ export default class Logix5000 extends CIPLayer {
 
     if (typeof callback === 'function') {
       return (async () => {
-        for await (const tag of listTags(this, attributes, scope, 0, false, modifier)) {
-          if (callback(tag) !== true) {
-           return;
+        try {
+          for await (const tag of listTags(this, attributes, scope, 0, false, modifier)) {
+            if (callback(tag) !== true) {
+              return;
+            }
           }
+        } catch (err) {
+          /** listing failed: done (null), with the reason */
+          callback(null, err);
+          return;
         }
         callback(null); /** use null to let caller know we are done */
       })();
