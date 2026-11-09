@@ -4,10 +4,10 @@ import net from 'node:net';
 
 import TCPLayer from '../../src/layers/tcp/index.js';
 
-function listen() {
+function listen(options = {}) {
   return new Promise((resolve) => {
     const connections = [];
-    const server = net.createServer((socket) => {
+    const server = net.createServer(options, (socket) => {
       connections.push(socket);
       socket.on('data', () => {});
       socket.on('error', () => {});
@@ -135,5 +135,61 @@ describe('TCP layer Scan', () => {
     }
 
     assert.deepEqual(results, []);
+  });
+});
+
+describe('TCP layer graceful disconnect', () => {
+  it('settles every concurrent disconnect when the socket finishes closing', async () => {
+    /** half-open: the peer never answers our FIN, so nothing destroys the layer */
+    const { server, connections } = await listen({ allowHalfOpen: true });
+    const layer = new TCPLayer({ host: '127.0.0.1', port: server.address().port });
+
+    layer.send(Buffer.from([1]), null, false);
+    assert.equal(await withTimeout(layer.connected(), 'connect'), true);
+
+    /** a second caller's callback was only invoked if the layer was
+     * later destroyed, never when the disconnect itself completed */
+    const first = new Promise((resolve) => { layer.disconnect(() => resolve('first')); });
+    const second = new Promise((resolve) => { layer.disconnect(() => resolve('second')); });
+
+    assert.deepEqual(
+      await withTimeout(Promise.all([first, second]), 'both disconnect callbacks'),
+      ['first', 'second'],
+    );
+    assert.equal(layer._connectionState, 0);
+
+    await layer.close();
+    /** a half-open peer never closes its side on its own */
+    connections.forEach((socket) => socket.destroy());
+    await new Promise((resolve) => { server.close(resolve); });
+  });
+
+  it('sends requests queued while disconnecting on a new connection', async () => {
+    const { server, connections } = await listen();
+    const layer = new TCPLayer({ host: '127.0.0.1', port: server.address().port });
+
+    layer.send(Buffer.from([1]), null, false);
+    assert.equal(await withTimeout(layer.connected(), 'connect'), true);
+
+    const received = new Promise((resolve) => {
+      server.on('connection', (socket) => socket.once('data', resolve));
+    });
+
+    const disconnected = layer.disconnect();
+    assert.equal(layer._connectionState, -1, 'layer should be disconnecting');
+    /** this request used to sit in the queue until some later send */
+    layer.send(Buffer.from([2]), null, false);
+    await withTimeout(disconnected, 'disconnect');
+
+    assert.deepEqual(await withTimeout(received, 'queued request'), Buffer.from([2]));
+    assert.equal(connections.length, 2);
+
+    /** the old socket's FIN from the peer must not tear down the new one */
+    await sleep(100);
+    assert.equal(layer._connectionState, 2, 'new connection should stay connected');
+    assert.equal(layer.socket.destroyed, false);
+
+    await layer.close();
+    await new Promise((resolve) => { server.close(resolve); });
   });
 });

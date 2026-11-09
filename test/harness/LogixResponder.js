@@ -20,6 +20,8 @@ export default class LogixResponder {
     this.forwardOpenRequests = [];
     this.forwardCloseRequests = [];
     this.sendInfo = null;
+    /** when false, ForwardClose requests are recorded but never answered */
+    this.answerForwardClose = true;
     transport.respond((message, t, request) => this.handle(message, t, request));
   }
 
@@ -69,6 +71,7 @@ export default class LogixResponder {
       } else if (service === 0x4E) {
         /** ForwardClose: serial(2) vendor(2) originator serial(4) @8 */
         this.forwardCloseRequests.push(message);
+        if (!this.answerForwardClose) return;
         const data = Buffer.alloc(10);
         message.copy(data, 0, 8, 16);
         transport.deliver(

@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
 import Defragger from '../../src/defragger.js';
+import Layer from '../../src/layers/Layer.js';
 
 /**
  * Test protocol: 1-byte length prefix followed by that many payload bytes.
@@ -66,5 +67,35 @@ describe('Defragger', () => {
       }
     }
     assert.deepEqual(frames, [frame(7, 8), frame(9)]);
+  });
+});
+
+describe('Defragger reset on layer destroy', () => {
+  it('drops a partial frame so the next stream frames correctly', () => {
+    /** frames are [length, ...payload] */
+    const isComplete = (buffer, offsetRef, length) => length >= 1 && length >= buffer[0] + 1;
+    const frameLength = (buffer) => buffer[0] + 1;
+
+    class Capture extends Layer {
+      constructor() {
+        super('capture');
+        this.frames = [];
+        this.setDefragger(isComplete, frameLength);
+      }
+
+      handleData(data) {
+        this.frames.push(data);
+      }
+    }
+
+    const layer = new Capture();
+    /** half of a 3-byte frame from a connection that then drops */
+    Layer.forwardTo(layer, Buffer.from([3, 0xAA]));
+    layer.destroy('connection lost');
+
+    /** without a reset the stale bytes prefix the new stream and
+     * every later frame boundary is wrong */
+    Layer.forwardTo(layer, Buffer.from([1, 0x01]));
+    assert.deepEqual(layer.frames, [Buffer.from([1, 0x01])]);
   });
 });

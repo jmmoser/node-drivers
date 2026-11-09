@@ -47,25 +47,22 @@ export default class MultiplexLayer extends Layer {
 
   disconnect(callback) {
     return CallbackPromise(callback, async (resolver) => {
-      if (this._disconnecting === 1) {
-        resolver.resolve();
-        return;
+      if (this._disconnect == null) {
+        this._disconnect = new Promise((resolve) => {
+          const disconnectTimeout = setTimeout(resolve, 10000);
+          Promise.allSettled([...this._layers].map((layer) => layer.disconnect()))
+            .then(() => {
+              clearTimeout(disconnectTimeout);
+              resolve();
+            });
+        }).then(() => {
+          this._disconnect = null;
+        });
       }
 
-      this._disconnecting = 1;
-
-      const disconnectTimeout = setTimeout(() => {
-        this._disconnecting = 0;
-        resolver.resolve();
-      }, 10000);
-
-      await Promise.all([...this._layers].map((layer) => layer.disconnect()));
-
-      if (this._disconnecting === 1) {
-        clearTimeout(disconnectTimeout);
-        this._disconnecting = 0;
-        resolver.resolve();
-      }
+      /** concurrent callers all wait for the one disconnect in progress */
+      await this._disconnect;
+      resolver.resolve();
     });
   }
 
@@ -91,6 +88,8 @@ export default class MultiplexLayer extends Layer {
   }
 
   handleDestroy(error) {
+    /** responses for these contexts can no longer arrive */
+    this.__contextToLayer.clear();
     [...this._layers].forEach((layer) => {
       layer.destroy(error);
     });

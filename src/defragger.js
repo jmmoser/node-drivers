@@ -8,6 +8,12 @@ export default class Defragger {
     this._lengthHandler = lengthHandler;
   }
 
+  /** Drops any partial frame, e.g. when the underlying stream is torn down */
+  reset() {
+    this._dataLength = 0;
+    this._data = Buffer.allocUnsafe(0);
+  }
+
   /**
    * Appends data, if given, and returns the next complete frame or null.
    * Call again without data to drain any remaining buffered frames.

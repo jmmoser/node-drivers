@@ -55,3 +55,26 @@ describe('MultiplexLayer', () => {
     assert.deepEqual(upperB.received, [Buffer.from([0xB2])]);
   });
 });
+
+describe('MultiplexLayer disconnect', () => {
+  it('makes concurrent callers wait for the disconnect in progress', async () => {
+    const transport = new ScriptedTransport();
+    const mux = new MultiplexLayer(transport);
+    const upper = new CaptureLayer(mux, 'upperA');
+
+    let finishUpper;
+    upper.disconnect = () => new Promise((resolve) => { finishUpper = resolve; });
+
+    const settled = [];
+    const first = mux.disconnect().then(() => settled.push('first'));
+    /** the second call used to resolve at once, while still disconnecting */
+    const second = mux.disconnect().then(() => settled.push('second'));
+
+    await sleep(10);
+    assert.deepEqual(settled, [], 'neither caller may settle before the upper layer has');
+
+    finishUpper();
+    await Promise.all([first, second]);
+    assert.deepEqual(settled.sort(), ['first', 'second']);
+  });
+});

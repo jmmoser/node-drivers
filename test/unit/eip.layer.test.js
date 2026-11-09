@@ -173,3 +173,102 @@ describe('EIP layer connect callbacks', () => {
     await transport.close();
   });
 });
+
+/** ListServices reply carrying one service named `name` */
+function listServicesResponse(name) {
+  const item = Buffer.concat([
+    hex('0100 2001'), /** version 1, flags 0x0120 */
+    Buffer.from(name.padEnd(16, '\0'), 'ascii'),
+  ]);
+  const cpf = Buffer.concat([hex('0100 0001'), Buffer.from([item.length, 0]), item]);
+  return Buffer.concat([
+    hex('0400'),
+    Buffer.from([cpf.length, 0]),
+    hex('00000000 00000000 0000000000000000 00000000'),
+    cpf,
+  ]);
+}
+
+describe('EIP layer session state', () => {
+  it('fails waiting connect callbacks when RegisterSession is refused', async () => {
+    const transport = new ScriptedTransport();
+    const layer = new EIPLayer(transport);
+    /** status 0x01: invalid or unsupported command */
+    transport.reply(hex('6500 0400 00000000 01000000 0000000000000000 00000000 01000000'));
+
+    /** the callback was never invoked, so callers waited forever */
+    const error = await withTimeout(new Promise((resolve) => layer.connect(resolve)), 'connect');
+    assert.ok(error instanceof Error, 'connect callback should receive an error');
+    assert.equal(layer._connectionState, 0);
+    await transport.close();
+  });
+
+  it('unregisters a session whose registration completes after disconnect', async () => {
+    const transport = new ScriptedTransport();
+    const layer = new EIPLayer(transport);
+
+    let deliverRegistration;
+    transport.onNextRequest((message, t) => {
+      deliverRegistration = () => t.deliver(
+        hex('6500 0400 44332211 00000000 0000000000000000 00000000 01000000'),
+      );
+    });
+
+    const connectResult = new Promise((resolve) => layer.connect(resolve));
+    await layer.disconnect();
+    assert.ok((await connectResult) instanceof Error, 'pending connect should fail on disconnect');
+
+    /** the late reply used to move the layer back to registered */
+    deliverRegistration();
+    assert.equal(layer._connectionState, 0, 'layer must stay disconnected');
+    assert.equal(layer._sessionHandle, 0);
+    assert.deepEqual(
+      transport.sent[transport.sent.length - 1],
+      hex('6600 0000 44332211 00000000 0000000000000000 00000000'),
+      'the orphaned session should be unregistered',
+    );
+    await transport.close();
+  });
+});
+
+describe('EIP layer user command replies', () => {
+  it('gives each concurrent caller its own reply', async () => {
+    const transport = new ScriptedTransport();
+    const layer = new EIPLayer(transport);
+    transport.reply(listServicesResponse('First'));
+    transport.reply(listServicesResponse('Second'));
+
+    /** every waiting callback received every reply, so both calls
+     * resolved with the first reply */
+    const [first, second] = await withTimeout(
+      Promise.all([layer.listServices(), layer.listServices()]),
+      'listServices',
+    );
+    assert.equal(first[0].value.name, 'First');
+    assert.equal(second[0].value.name, 'Second');
+    await transport.close();
+  });
+
+  it('stops listening once a multi-host listIdentity finishes', async () => {
+    const transport = new ScriptedTransport();
+    const layer = new EIPLayer(transport);
+    transport.reply(listIdentityResponse(10));
+    transport.ignoreNextRequest(); /** the second host never answers */
+
+    const identities = await withTimeout(
+      layer.listIdentity({ hosts: ['192.168.1.10', '192.168.1.20'] }),
+      'listIdentity',
+      5000,
+    );
+    assert.equal(identities.length, 1);
+
+    /** the finished call's callback stayed registered forever and
+     * consumed replies meant for later calls */
+    assert.equal(layer._userCallbacks.get(EIPPacket.CommandCodes.ListIdentity).length, 0);
+
+    transport.reply(listIdentityResponse(30));
+    const identity = await withTimeout(layer.listIdentity(), 'second listIdentity');
+    assert.equal(identity.value.socket.address, '192.168.1.30');
+    await transport.close();
+  });
+});
