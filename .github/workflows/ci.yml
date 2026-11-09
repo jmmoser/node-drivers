@@ -29,6 +29,8 @@ jobs:
       env:
         # OpENer declares cmake_minimum_required < 3.5, which CMake 4 rejects
         CMAKE_POLICY_VERSION_MINIMUM: '3.5'
+        # GCC 14+ made these OpENer warnings fatal by default
+        CFLAGS: -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=implicit-int
       run: |
         ./setup_posix.sh
         make
