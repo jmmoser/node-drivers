@@ -26,6 +26,9 @@ jobs:
         path: OpENer
 
     - working-directory: OpENer/bin/posix
+      env:
+        # OpENer declares cmake_minimum_required < 3.5, which CMake 4 rejects
+        CMAKE_POLICY_VERSION_MINIMUM: '3.5'
       run: |
         ./setup_posix.sh
         make
